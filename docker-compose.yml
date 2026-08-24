@@ -1,0 +1,10 @@
+# DUNGEON RIFT — docker compose up --build → http://localhost:8080
+services:
+  dungeon-rift:
+    build: .
+    container_name: dungeon-rift
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped

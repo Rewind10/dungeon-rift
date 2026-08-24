@@ -1,0 +1,322 @@
+# ⚔️ DUNGEON RIFT v1.28.1 — Roguelike Co-op Multiplayer 2D
+
+Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
+niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
+
+## 🚀 Avvio
+```bash
+docker compose up --build      # → http://localhost:8080
+# oppure, con solo Node ≥ 18:
+npm start
+```
+Test: `npm test`
+
+## 🎮 Comandi
+| Azione | Tasto |
+|---|---|
+| Movimento | WASD / frecce |
+| Mira | Mouse |
+| Spara | Click sinistro / Spazio |
+| **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
+| Abilità 1 / 2 | Q / E |
+| Negozio: pronto | Spazio |
+| Musica | M |
+| Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.49 (Beholder: l'Occhio Tiranno torna con lo Sguardo multi-raggio)
+- **👁️ Beholder** (ex Occhio Vagante) reintrodotto nel roster: **non spara**, ti **DEBILITA con lo Sguardo** se
+  entri nel suo **campo visivo**. Le **eyestalks ruotano** e alternano i tre sguardi (**weaken/slow/sunder**) ogni
+  ~4s, con il **fascio che cambia colore**. **Render RASTER PUPPET** (illustrazione ritagliata: `beholder/body.png`)
+  con **iride che segue** e **pupilla che si dilata**. tier 3, 130 PV, gittata 340. Nel pool dal primo stage.
+- Test: **246 passati, 0 falliti**.
+
+## 🆕 Novita v1.48 (fix Troll: cammina davvero + ombra ai piedi)
+- **🐛 Camminata**: i mostri **lenti** (Troll) non restano più in **idle mentre scivolano** — soglie del rilevamento
+movimento abbassate con isteresi (0.28/0.10). Ora walk/idle si attivano correttamente.
+- **🐛 Grounding**: lo sprite-sheet non **fluttua** più e l'**ombra è ai piedi** (prima l'ombra generica era ~28px sotto).
+- Test: **234 passati, 0 falliti**.
+
+## 🆕 Novita v1.47 (Troll delle Caverne: SPRITE SHEET animato)
+- **👹 Troll delle Caverne** (ex Bruto): ora reso con un **vero sprite sheet** frame-by-frame (idle/walk/attack, 3 fogli
+5×5 @256px) disegnato a mano → **camminata naturale** e **martellata** completa; **mirror L/R** per la direzione.
+- **🧩 Nuovo motore sprite-sheet** (`SHEETS`+`_drawSheet`): stato→animazione, frame dal tempo o dalla fase d'attacco,
+ancoraggio ai piedi, ombra e hit-flash. Il danno dello slam scatta al 72% dello swing (coincide con l'impatto).
+- Test: **234 passati, 0 falliti**.
+
+## 🆕 Novita v1.46 (Bruto senza tremore + Melma TOP-DOWN)
+- **👹 Bruto**: camminata **rifatta** (niente più "parkinson"): un dondolio lento, braccia in sincronia, piede che si
+solleva morbido; anti‑sfarfallio con **isteresi**. Parti ritagliate meglio.
+- **🟢 Melma Corrosiva**: ora è una **pozza fluo vista dall'alto** che **striscia** (wobble + edge‑glow), mantiene lo
+**sputo di bolle d'acido** ad alto danno.
+- Test: **226 passati, 0 falliti**.
+
+## 🆕 Novita v1.45 (Melma: striscia + salta e sputa acido)
+- **🟢 Melma Corrosiva rifatta**: ora **striscia** lenta (niente più saltelli su‑e‑giù); il **salto** avviene **solo
+in attacco**, quando **sputa un ventaglio di bolle d'acido ad ALTO danno** a distanza ravvicinata (IA blob).
+- **🎨 Sprite senza bocca** + **edge‑glow** verde; **occhi che si illuminano nella direzione di movimento**.
+- Test: **226 passati, 0 falliti**.
+
+## 🆕 Novita v1.44 (Melma Corrosiva squash&stretch + Bruto affinato)
+- **🟢 Melma Corrosiva** (4° puppet): blob acido in **squash & stretch** (respira, saltella appiattendosi/allungandosi,
+schizza in avanti) con **aura verde**, **nucleo pulsante**, occhi che avvampano e **bolle acide**. Nel pool dal 1° stage.
+- **👹 Bruto**: la camminata ora **solleva i piedi** (falcata più ampia) e lo **slam è più impattante** (doppia onda + polvere + hit-stop + scossone).
+- Melma e Bruto compaiono **dal primo stage** per valutazione. Test: **221 passati, 0 falliti**.
+
+## 🆕 Novita v1.43 (Bruto ridisegnato, vagabondaggio & anti-incastro)
+- **👹 Bruto**: camminata **lumbering** distinta dallo zombie (braccia in sincronia, waddle) e **SLAM overhead** —
+alza i pugni sopra la testa e li **schianta a terra** (area + forte respinta) quando entri nel suo campo visivo.
+- **🧭 Vagabondaggio**: i nemici che **non ti vedono** ora **vagano a caso** per la mappa (ti inseguono solo quando ti individuano).
+- **🧱 Anti-incastro**: nessun nemico (**boss compresi**) resta più incastrato — rilevatore di wedge + recupero/scivolamento.
+- Test: **213 passati, 0 falliti**.
+
+## 🆕 Novita v1.42 (Bruto delle Caverne: tank PUPPET con slam ad area)
+- **👹 Bruto delle Caverne** (3° puppet, tank): enorme e lento, **braccia enormi** con grande dondolio in camminata e
+**SLAM ad area** in due tempi (carica → schianto del busto in avanti/giù) con onda d'urto e respinta. Nel pool dall'ondata 4.
+- **🖼️ Artwork del bestiario** aggiunti in `public/assets/art/` (overview + concept del Bruto); `ROSTER.md` aggiornato.
+- **🟣 Incluso:** sfere del Negromante +30% (`projSpeed` 250→325, da v1.41).
+- Test: **206 passati, 0 falliti**.
+
+## 🆕 Novita v1.39 (Negromante PUPPET + motore puppet generico + migliorie)
+- **🧙 Negromante** (2° puppet): fluttua, **evoca zombi minori** (max 4) e **spara sfere debilitanti** (curse) **solo quando entri nel suo campo visivo** (cono fov con telegrafo). Nel pool dall'ondata 3.
+- **🧩 Motore puppet generico** (`PUPPETS[key]` + `PROF[key]`): nuovo nemico = "manifest + profilo".
+- **✨ Migliorie a tutti i puppet:** hit-reaction (squash+rinculo), **morte con crollo dei pezzi**, inclinazione nel movimento, ombra dinamica, tint per gli **elite**.
+- Test: **193 passati, 0 falliti**.
+
+## 🆕 Novita v1.38 (occhi che avvampano al colpo · via il cerchio verde)
+- **👁️ Occhi verdi che avvampano** quando lo zombie viene colpito (feedback di danno); lampo verde anche di spalle.
+- **🟢 Rimosso il cerchio verde** attorno al nemico (disco veleno + alone puppet reso molto tenue).
+- Test: **190 passati, 0 falliti**.
+
+## 🆕 Novita v1.37 (roster essenziale: SOLO lo Zombie Putrido in render PUPPET)
+- **🧟 Un solo nemico d'ondata**: rimossi Negromante, Spettro e Occhio Vagante. Lo **Zombie Putrido** è ora reso col
+**RENDER PUPPET** (6 pezzi PNG + overlay vettoriale) e **sostituisce** il vecchio zombie vettoriale.
+- **🎞️ Attacco in due tempi** (carica → colpo) con **affondo del corpo in avanti**.
+- **🌑 Ombra a terra sfocata** alla base dei piedi (radica il mostro sulla mappa) e **camminata più aggressiva e lenta**.
+- Test: **190 passati, 0 falliti**.
+
+## 🆕 Novita v1.35 (Troll rimosso · Mercante Nero riempito · Occhio Vagante: lo Sguardo)
+- **🗑️ Troll rimosso**: il Troll delle Caverne esce dal roster (sprite non convincente). Pool a **4 archetipi**:
+  Zombie · Spettro · Negromante · Occhio Vagante.
+- **🖤 Fix Mercante Nero "vuoto"**: il box appariva centrato ma senza offerte. Le card ora si **ricostruiscono solo
+  al cambio offerta** (prima venivano ricreate ~20 volte/sec, riavviando l'animazione d'ingresso → restavano invisibili).
+- **👁 Occhio Vagante — attacco "Sguardo"**: non spara più. Se sei nel suo **campo visivo** (cono, con LOS libera)
+  subisci un **debuff** che si rinnova finché resti sotto lo sguardo. Tre tipi (uno per occhio): **weaken** (attacco
+  indebolito), **slow** (velocità ridotta), **sunder** (meno difesa). **Sprite -20%** e **tentacoli tutt'intorno** al bulbo,
+  con **fascio dello sguardo** colorato per tipo. Test: **176 passati, 0 falliti**.
+
+## 🆕 Novita v1.32 (Bestiario ampliato: Spettro & Occhio Vagante, Troll rifinito, Mercante Nero al top)
+- **👻 Spettro (nuovo)**: nemico etereo/translucido, veloce, con **occhi ardenti** e corpo che sfuma in code
+  ondulate. IA **`wraith`**: si avventa in mischia e **"sfasa" (phase-blink)** verso di te attraversando gli
+  ostacoli. Nel pool dall'**ondata 2** (tier 2, 92 PV).
+- **👁️ Occhio Vagante (nuovo)**: bulbo oculare fluttuante con **eye-stalks** e tentacoli, iride che segue e
+  pupilla che dilata in attacco. IA **`strafer`**: orbita a distanza e scaglia **raggi arcani**. Nel pool
+  dall'**ondata 4** (tier 3, 118 PV, gittata 320).
+- **🪓 Troll rifinito**: braccia massicce **senza mani/artigli**, occhi **rossi**, animazioni di passo/respiro.
+- **💀 Mercante Nero "al top"**: veste con gradiente, **bordo runico pulsante**, spalle a punta bordate,
+  volto-teschio con occhi viola ardenti e **mani ossute** che presentano la merce; beacon a doppia colonna.
+- **🧟 Pool a 5 archetipi**: Zombie · Spettro · Negromante · Occhio Vagante · Troll. Test: **177 passati, 0 falliti**.
+
+## 🆕 Novita v1.31 (Ampolla della salute, Troll anticipato, Mercante Nero al centro)
+- **🧪 Ampolla dei Punti Salute**: gli HP sono ora una **boccetta** che si riempie di liquido rosso in base alla
+percentuale di salute (numero PV al centro), con la fila **VITE** e i cuori sotto. Spostata **a fianco della barra
+abilità** e resa **molto più grande**; sotto il 30% pulsa in rosso acceso.
+- **👹 Troll dall'ondata 3**: il Troll delle Caverne entra nel pool già dalla wave 3 (prima dalla 5).
+- **🕯️ Mercante Nero centrato**: la sua finestra compare al **centro dello schermo** con velo scuro di sfondo;
+il Mercante Errante normale resta in basso.
+
+## 🆕 Novita v1.30 (Bestiario essenziale: Zombie, Negromante, Troll in vista frontale)
+- **👾 Roster ridotto a 3**: rimossi tutti gli altri nemici delle ondate. Restano **solo Zombie Putrido, Negromante e
+Troll delle Caverne**, tutti ridipinti in **grigio molto molto scuro** con occhi/accento luminosi per la personalità.
+- **🪤 Mimic mantenuto come cassa**: la **Bestia Mimica** resta nel gioco **solo come cassa-mima** (e in modalità Tesoro),
+fuori dal pool delle ondate — aprire una cassa-mima evoca di nuovo un vero mimic.
+- **🖼️ Vista FRONTALE (billboard)**: i tre mostri **guardano la camera**, si specchiano verso il movimento e mostrano il
+dorso quando si allontanano — nuovo stile **dark-cartoon** ricco di dettaglio (mascella che si spalanca sullo zombie,
+cappello + bastone-orbe sul negromante, braccia-mazza e zanne sul troll). Test: **175 passati, 0 falliti**.
+
+## 🆕 Novita v1.29 (Negromante: proiettili in vista, evocazioni al buio)
+- **🧙 IA reattiva alla linea di vista**: il **Negromante** spara **proiettili magici** quando ti ha **nel campo visivo**
+(LOS libera e in gittata); se invece sei **nascosto** dietro i muri, **evoca scheletri** (2 ogni 8s) e **avanza** per stanarti.
+- **🟣 Evocazione viola**: l'anello dell'evocazione ora usa il colore del mostro (viola per il Negromante).
+
+## 🆕 Novita v1.28 (maledizione del Negromante + cunicoli a prova di boss)
+- **💀 Maledizione**: gli incantesimi del Negromante fanno danno **e** indeboliscono per **4,5s** (danno −40%,
+velocità −20%), con notifica **"SEI STATO MALEDETTO"** e aura viola sul personaggio.
+- **🕳️ Cunicoli boss-proof**: nuova passata che allarga i colli di bottiglia a **≥3 tile** → **100%** delle mappe
+ora fa passare anche il mega-boss (prima 83%). Verificato su 2100 mappe.
+
+## 🆕 Novita v1.27 (braccia ai lati & rimozione Predone Goblin)
+- **🦾 Zombie**: le braccia ora scendono **lungo i fianchi** a riposo e si protendono **in avanti solo in attacco**(via l'effetto "insetto"). Testa già centrata.
+- **🗑️ Rimosso il Predone Goblin**: tolto dal roster; il Signore della Guerra ora evoca **Zombie**, ondate e
+fallback usano lo **Zombie Putrido**. Roster: **9 nemici** + 3 boss. Test: **180 passati, 0 falliti**.
+
+## 🆕 Novita v1.26 (nemici ridisegnati + animazioni attacco/morte)
+
+Tre nemici **ridisegnati** (dark-fantasy vettoriale) con nuove animazioni di **attacco** e **morte** (idle/camminata
+già presenti): **🧟 Zombie Putrido** (braccia protese, occhi neri, morso), **🧙 Negromante** (cappuccio, occhi viola,
+orbe che divampa) e **🪓 Orco Berserker** (ascia a doppia lama, zanne, fendente). Alla morte i nemici **crollano e
+svaniscono** (il negromante si **dissolve in volute viola**). Solo questi **3** per ora. Canvas 2D puro, zero dipendenze.
+
+## 🆕 Novita v1.25 (terzo lotto di oggetti scenografici)
+Aggiunti **6 nuovi oggetti** (per tema, cap 3-4): **🌉 ponti di legno**, **🪜 scale a chiocciola**, **⛲ pozzi/cisterne**
+(acqua luminosa), **⚙️ grate/inferriate**, **💠 cristalli giganti** (landmark luminoso) e **🗿 statue rituali con
+gemma** (luminosa). Con i 3 lotti la mappa ha ora **18 oggetti scenografici** totali.
+
+## 🆕 Novita v1.24 (secondo lotto di oggetti scenografici)
+Aggiunti **6 nuovi oggetti** (per tema, cap 3-4): **🏛️ archi diroccati**, **🧊 stalattiti**, **☠️ forche/patiboli**,
+**🔮 obelischi arcani** (rune pulsanti + glow), **🏮 lanterne appese** (illuminano) e **🩸 macchie di sangue** a terra.
+Distribuiti come **zone tematiche coerenti** legate ai biomi (Cripta/Lava/Foresta/Ghiaccio/Arcano).
+
+## 🆕 Novita v1.23 (muri neri, terreno vivo, nuovi oggetti & fix mercante)
+1. **🖤 Muri QUASI NERI** (contrasto 0.50→0.15) nettamente staccati dal pavimento; **terreno meno piatto** con rocce,
+   massi, ciottoli e buche sparse.
+2. **⚡ Crepe grandi** (2-3 per mappa, molto piu grandi) al posto delle rune pulsanti (rimosse).
+3. **🗿 6 nuovi oggetti scenografici** (per tema): stalagmiti, pile di teschi, macerie, ragnatele giganti, cristalli
+   luminosi, altari rituali. Cap 3-4 per tipo.
+4. **🐀 Animaletti piu grandi** (~2x). **🛒 Mercante Errante**: fix del click + beacon sempre visibile + marker minimappa.
+
+## 🆕 Novita v1.22 (caverna organica, ombre nette, animaletti & cluster)
+1. **🗺️ Conformazione ORGANICA** (caverna varia) al posto del layout a stanze "piatto"; connettivita garantita.
+2. **🖤 Muri a contrasto 0.50** + **ombra MARCATA** muro→pavimento (linea di contatto scura): stacco netto.
+3. **🐀 Animaletti** (ratti, ragni, scarafaggi) che sfrecciano sul pavimento evitando i muri.
+4. **🕯️ Decorazioni a CLUSTER** coerenti (cimitero/ossario/deposito/fungaia/gabbia), **max 3-4 per tipo**; solo le
+   **torce** restano numerose. **Casse scenografiche** + **mimic solo dalle casse** (casse-mima al 30%).
+
+## 🆕 Novita v1.21 (muri quasi neri, nebbia volumetrica & rune pulsanti)
+1. **🖤 Muri MOLTO piu scuri** (quasi neri): la roccia dei muri e scurita ~30% del colore del tema, distinta dal
+   pavimento (invariato).
+2. **🌫️ Nebbia volumetrica a strati** che deriva lentamente + **rune/crepe che pulsano** sul pavimento (glow del
+   colore del tema, visibili anche nel buio della torcia).
+3. **🗑️ Rimossi** laghi/pozze, colonne, pilastri e statue.
+
+## 🆕 Novita v1.20 (stanze grandi, pozze-lago & decorazioni ricche)
+1. **🏛️ Layout a STANZE** — stanza centrale grande + 4 stanze angolari (NO/NE/SO/SE) con **corridoi larghi 3 tile**:
+   il **boss passa ovunque**, niente piu cunicoli stretti o nemici incastrati. Connettivita garantita.
+2. **💧 Pozze naturali** — solo 1-2 per mappa, forma organica tipo **lago** (desaturata, con profondita), del colore del tema.
+3. **🕯️ Decorazioni ricche e bilanciate** — bracieri e candelabri (che illuminano), funghi bioluminescenti, casse,
+   barili, sacchi, statue demoniache (occhi luminosi), gabbie sospese con scheletro, pilastri.
+
+## 🆕 Novita v1.19 (texture roccia realistica, stanze attigue & niente glow)
+1. **🪨 Texture ROCCIA realistica** su pavimento e muri: rilievo/bump (illuminazione 3D), domain-warp, crepe, umidita e
+   muschio — colorata sul tema. Canvas 2D puro, zero dipendenze.
+2. **🚪 Mappa meno "quadratona"** — tramezzi con varchi creano **stanze minori attigue** (connettivita garantita).
+3. **🚫 Glow rimosso** (bloom + tasto B): schermo piu pulito. Restano torcia (L) e alone tondo.
+
+## 🆕 Novita v1.18 (caverna vera: terra/roccia, pozze uniche & decorazioni)
+1. **🕳️ Look da CAVERNA** — pavimento "terra" e muri "roccia" organici, **senza griglia** (mottling + ombre ai bordi).
+2. **🩸 Pozze come forma UNICA irregolare** con profondita (conca scura + centro scuro), del colore del tema.
+3. **🪦 Decorazioni ripristinate** (bare, scheletri, accampamenti, rocce...) e mix per tema di nuovo ricco.
+4. **🔥 Torce molto meno frequenti** e irregolari (niente piu griglia di aloni).
+
+## 🆕 Novita v1.17 (dungeon di pietra: mappa ripulita, pozze & torce ai lati)
+1. **⭕ Alone tondo grande** attorno all'eroe (niente piu cono direzionale); mappa un filo meno scura.
+2. **🧱 Pavimento e muri in pietra** (lastre + blocchi) e **mappa ripulita** (molte meno decorazioni "alla rinfusa").
+3. **☠️ Pavimento rivisto**: via spuntoni e "pallini"; ora **pozze** acido/fuoco/freddo/arcano **del colore della mappa** che brillano.
+4. **🔥 Torce ai lati** della mappa (perimetro) come nuove fonti di luce.
+
+## 🆕 Novita v1.16 (torcia nel buio: mappa oscura & cono di luce)
+1. **🔦 Modalita torcia** — mappa quasi nera "bucata" da un **cono di luce** nella direzione di mira + alone attorno
+   al giocatore. Torce, proiettili e sorgenti restano visibili; boss/elite si intravedono. Tasto **`L`** on/off.
+2. **🌑 Bloom piu tenue** — glow generale ridotto (0.85→0.5): resta su nemici/spari/eroi/effetti senza esagerare.
+3. **✨ Pulviscolo ambientale** — polvere che fluttua e brilla nel fascio di luce (atmosfera).
+
+## 🆕 Novita v1.15 (dungeon neon: bloom & glow)
+1. **🌟 Bloom / glow diffuso** — proiettili, torce, occhi dei nemici e accenti degli eroi "irradiano" luce (look
+   twin-stick moderno) restando nel **tema dungeon cupo**. Canvas 2D puro, offscreen a bassa risoluzione: leggero.
+2. **🔫 Proiettili neon** — nucleo bianco + alone saturo + scia: vere scie luminose.
+3. **👁️ Nemici emissivi** — alone colorato attorno a ogni mostro (piu forte per elite/boss), stile "orb neon".
+4. **⌨️ Tasto `B`** per attivare/disattivare il bloom (salvato) — utile sui PC lenti.
+
+## 🆕 Novita v1.13 (entita un po' piu grandi, senza perdere fluidita)
+1. **🔎 Personaggio, nemici, boss e prop piu grandi** (visivo +45%) per un colpo d'occhio piu imponente.
+2. **⚡ Fluidita preservata** — la collisione resta quasi invariata (~1.08x, come la v1.12) e c'e un **+5% velocita**:
+   occhi grandi, hitbox piccola. Nessuna modifica a mappa/densita.
+3. **🔧 Fix Mercante Nero** — a fine round compare **un solo** mercante: il Nero **al posto** di quello ufficiale
+   (~30%), altrimenti l'ufficiale. Mai entrambi.
+
+## 🆕 Novita v1.12 (Mercante Nero & HUD ridisegnato)
+1. **💀 Mercante Nero** — secondo mercante sinistro (teschio, altare, lanterna viola) con **patti rischio/ricompensa**:
+   potenziamenti forti ma con una maledizione. Ben differenziato dal Mercante Errante.
+2. **🎲 Apparizione casuale** — il Mercante Nero non e sempre presente: compare a caso (~35%) e si nasconde lontano.
+3. **🎨 HUD ridisegnato** — barra abilita piu grande e caratteristica (icone grandi, etichette, pulsazione);
+   gli **eventi ora compaiono al centro**, grandi e molto visibili.
+
+## 🆕 Novita v1.11 (mercante, creature & attacchi alla Hades)
+1. **🧙 NPC Mercante Errante** — appare in mappa (spesso in una micro-area); avvicinati per comprare **3 offerte
+   casuali** con le monete (cura, +PV, arma, potere, vita, buff).
+2. **👹 Nemici ridisegnati** — non piu pallini: creature dettagliate con corpo, arti, corna, zanne, ali e occhi.
+3. **⚔️ Attacchi vari (stile Hades)** — **zone telegrafate** a terra, **ventagli** di proiettili, **raffiche** e **affondi**.
+4. **🕯️ Mappe piu scure + micro-aree** — nicchie/stanzette laterali arredate; illuminazione piu intima e cupa.
+5. **🐛 Fix movimento** — risolto il blocco del personaggio (era lo scatto col tasto destro che azzerava i tasti).
+
+## 🆕 Novita v1.10 (icone emporio, poteri & dungeon tetri)
+1. **🎨 Icone emporio uniche per personaggio** — armatura, stivali e arma hanno icone-immagine dedicate e
+   **diverse per i 3 eroi** (Enforcer blu, Recon verde, Glitch cyan).
+2. **🎴 Piu poteri, scelta tra 2** — catalogo boon ampliato (23 totali, +6 nuovi); a fine ondata si sceglie 1 di 2.
+3. **🛒 Emporio a 3 slot e piu costoso** — rimossi Anello e Amuleto; oggetti molto piu cari (scelta di lungo periodo).
+4. **🪦 Dungeon piu tetri** — tombe, cadaveri, strumenti di tortura, gabbie, piu ragnatele/catene/teschi; atmosfera oscurata.
+5. **🐛 Fix "movimento autonomo"** — azzeramento input su perdita focus/chat: niente piu personaggio che si muove da solo.
+
+## 🆕 Novita v1.9 (pausa, nuove abilita & scenografia)
+1. **⏸️ Pausa nel negozio** — a fine ondata (scelta poteri / negozio / emporio) il mondo si **congela**;
+   in singolo riparte solo col tasto **Continua**. I drop rimasti a terra vengono **raccolti in automatico**.
+2. **⚔️ 2 abilita per eroe + nuove** — 🎯 **Torretta Schierabile** (Enforcer) e 🎯 **Colpo del Cecchino**
+   (Recon, sostituisce lo scatto ridondante). Lo **scatto** universale (tasto destro) resta invariato; Glitch mantiene
+   Bullet-Time + Frattura di Dati.
+3. **🏛️ Piu elementi scenografici** — colonne, cristalli, statue, funghi, catene, pozze, stendardi, sarcofagi.
+4. **🏷️ Versione nel titolo** — mostrata nella scheda del browser e come badge nel menu.
+
+## 🆕 Novita v1.8 (monete & emporio equipaggiamento)
+1. **🪙 Monete di vario taglio** — i nemici droppano monete oltre all'XP: 🟤 Bronzo (1),
+   ⚪ Argento (5), 🟡 Oro (20). Boss ed elite ne lasciano di piu; raccolta con calamita come l'XP.
+2. **🏪 Emporio dell'equipaggiamento** — un secondo negozio (a monete) con **3 slot** (Armatura, Stivali, Arma) potenziabili per
+   **5 tier**: 🛡️ Armatura, 👟 Stivali, ⚔️ Arma, 💍 Anello, 📿 Amuleto.
+   Ogni tier costa piu del precedente: costruisci il tuo personaggio nel tempo.
+3. **Due economie complementari** — **XP** per micro-potenziamenti ripetibili, **monete** per equipaggiamento a slot.
+
+## 🆕 Novita v1.7 (stats, ricompense combo & sinergie)
+1. **🏆 Schermata di fine partita con statistiche** — riepilogo della run con **classifica co-op**
+   (uccisioni, **combo massima** 🔥, danni, boon, sinergie e arma) e **durata** ⏱, con medaglie 🥇🥈🥉.
+2. **🔥 Ricompense combo a soglie** — la combo ora sblocca bonus: **15** = Frenesia (cadenza),
+   **25** = Nova ad area, **40** = Cura + Egida. Mantenere la catena diventa una scelta tattica.
+3. **🔗 Sinergie tra Boon** — coppie compatibili sbloccano effetti potenziati: **Deflagrazione Tossica**
+   (Tossina+Esplosivi), **Catena Gelida** (Catena+Gelo), **Cercatore** (Homing+Perforazione), **Sete di Sangue**
+   (Vampirismo+Adrenalina).
+
+## 🆕 Novita v1.6 (combo, minimappa & homing)
+1. **🔥 Sistema COMBO / streak** — le uccisioni consecutive riempiono un **combo meter**: ogni catena
+   fa salire un **moltiplicatore di XP** (fino a **x2.5**). Se smetti di uccidere per qualche secondo la combo
+   **decade** e riparte da zero. Punteggi alti = crescita esponenziale (stile Hades / Vampire Survivors).
+2. **🗺️ Minimappa in tempo reale** — in basso a sinistra: muri, portale d'uscita, **alleati**,
+   **nemici** (con boss in rosso ed **elite** in oro) e lo **scrigno del tesoro** 👑. Colpo d'occhio
+   costante sul campo di battaglia, utile soprattutto in co-op fino a 6.
+3. **🎯 3 nuovi Boon** — **Mira Guidata** (proiettili che curvano verso i nemici),
+   **Avidita** (+30% XP raccolta, potenzia le combo) e **Baluardo** (-12% a tutti i danni subiti).
+
+## ✨ Novita v1.5 (profondita & game feel)
+1. **🎴 Poteri a scelta (stile Hades)** — a fine ondata scegli **1 di 3 carte** con **effetti unici e impilabili**:
+   Rimbalzo, Perforazione, **Catena di Fulmini**, **Tossina** (veleno), **Colpi Esplosivi**, Onda di Ritorno,
+   Vampirismo, Sdoppiamento, Occhio di Falco, Proiettili Giganti, **Tocco Gelido**, Aura di Spine,
+   Adrenalina Pura, Scudo Vitale. Combinali per creare **build** sempre diverse.
+2. **💥 Hit-stop + evoluzione armi** — micro **freeze-frame** sui critici e sulle uccisioni di boss/élite
+   (game feel "pesante"). Porta un'arma a **Lv.3** con la statistica giusta e si **evolve** in una versione
+   potentissima con nome proprio (Uragano d'Acciaio, Tempesta di Piombo, Lancia del Giudizio).
+3. **🌊 Modalità ondata** — ogni ondata è un evento diverso: **Orda** (sciami), **Caccia** (élite),
+   **Sopravvivenza** (resisti al timer), **Tesoro** 👑 (uccidi lo scrigno fuggitivo prima che scappi con il loot),
+   Assalto (standard).
+
+Include (dalle versioni precedenti): sistema di **vite** (2), **XP raccoglibile + negozio statistiche**,
+**item drop** (pozioni, stivali, corazza, casse armi, +100% danno, invulnerabilità, Cuore Fenice),
+**20 livelli** con **MEGA boss finale** AZ'GAROTH, **temi mappa** (Cripta, Lava, Foresta, Ghiaccio, Arcano),
+dash che attraversa i nemici, 3 armi raccoglibili, musica tetra da dungeon, casse con bonus/mimic,
+3 eroi caratterizzati, 10 mostri + boss, netcode autoritativo.
+
+## 🗂️ Architettura (file dedicati)
+```
+shared/  constants, mathutils, loot (BOON + EVO + item + XP), monsters, heroes,
+         mapgen (temi), pathfinding, ai, waves (MODALITÀ)
+server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP)
+public/  index.html (scelta boon), style.css
+public/js/ net, input, audio, renderer (boon-fx, tesoro, MINIMAPPA), hud (boon+modalita+COMBO), main (hit-stop, combo)
+```
+
+Buon divertimento nel Rift! 🗡️

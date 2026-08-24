@@ -1,0 +1,10 @@
+{
+ "name": "troll",
+ "cols": 5, "rows": 5, "cell": 256,
+ "charH": 150,
+ "anims": {
+  "idle":   { "file": "idle.png",   "frames": 24, "fps": 8,  "ax": 132, "ay": 198 },
+  "walk":   { "file": "walk.png",   "frames": 24, "fps": 13, "ax": 130, "ay": 199 },
+  "attack": { "file": "attack.png", "frames": 25, "fps": 30, "ax": 137, "ay": 205, "oneShot": true }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "name": "beholder",
+ "charH": 677,
+ "originX": 512,
+ "feetY": 1430,
+ "centerX": 511.0,
+ "centerY": 753.0,
+ "core": [
+  515,
+  816
+ ],
+ "parts": [
+  {
+   "name": "body",
+   "z": 0,
+   "w": 496,
+   "h": 677,
+   "ox": 248.0,
+   "oy": 338.5,
+   "ax": 512,
+   "ay": 1430
+  }
+ ]
+}

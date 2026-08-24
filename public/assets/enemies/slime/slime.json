@@ -1,0 +1,19 @@
+{
+ "name": "slime",
+ "topdown": true,
+ "charH": 584,
+ "originX": 512,
+ "feetY": 0,
+ "parts": [
+  {
+   "name": "body",
+   "z": 0,
+   "w": 576,
+   "h": 584,
+   "ox": 288.0,
+   "oy": 292.0,
+   "ax": 512,
+   "ay": 0
+  }
+ ]
+}

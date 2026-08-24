@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DUNGEON RIFT v1.49.0 — Roguelike Co-op</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div id="waveInfo"><span class="lbl">ONDATA</span> <b id="waveNum">1</b></div>
+    <div id="phaseInfo"></div>
+    <div id="enemyCount"><span class="lbl">NEMICI</span> <b id="ecNum">0</b></div>
+  </div>
+  <div id="modeBanner" class="hidden"></div>
+  <div id="comboMeter" class="hidden"><div class="cm-num"><b id="comboN">0</b><span>COMBO</span></div><div class="cm-bar"><i id="comboBar"></i></div><div id="comboMult">x1.0</div></div>
+  <div id="abilityBar"></div>
+  <div id="vitals">
+    <div id="hpFlask" title="Punti salute">
+      <svg viewBox="0 0 120 150" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <clipPath id="flaskClip"><path d="M46 18 L46 46 Q26 66 22 96 Q18 132 60 138 Q102 132 98 96 Q94 66 74 46 L74 18 Z"/></clipPath>
+          <linearGradient id="hpLiq" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ff2e2e"/><stop offset="0.55" stop-color="#e01020"/><stop offset="1" stop-color="#8a0410"/>
+          </linearGradient>
+          <radialGradient id="flaskGlass" cx="0.4" cy="0.3" r="0.8">
+            <stop offset="0" stop-color="rgba(180,200,255,.18)"/><stop offset="1" stop-color="rgba(20,26,44,.35)"/>
+          </radialGradient>
+        </defs>
+        <path d="M46 18 L46 46 Q26 66 22 96 Q18 132 60 138 Q102 132 98 96 Q94 66 74 46 L74 18 Z" fill="url(#flaskGlass)"/>
+        <g clip-path="url(#flaskClip)">
+          <rect id="hpLiquid" x="0" y="150" width="120" height="150" fill="url(#hpLiq)"/>
+          <ellipse id="hpSurface" cx="60" cy="150" rx="60" ry="4" fill="#ff5a5a" opacity="0.9"/>
+        </g>
+        <path d="M40 44 Q48 30 44 20" stroke="rgba(220,235,255,.55)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <rect x="42" y="8" width="36" height="12" rx="3" fill="#7a5a34" stroke="#4a3520" stroke-width="2"/>
+        <path d="M46 18 L46 46 Q26 66 22 96 Q18 132 60 138 Q102 132 98 96 Q94 66 74 46 L74 18 Z" fill="none" stroke="#cfe0ff" stroke-opacity=".5" stroke-width="2.5"/>
+      </svg>
+      <div id="hpText"><b id="hpVal">–</b><small id="hpMax">/–</small></div>
+    </div>
+    <div id="lifeRow" title="Vite"></div>
+  </div>
+  <div id="statChips"></div>
+  <div id="bossBarWrap" class="hidden"><div id="bossName"></div><div id="bossBar"><i></i></div></div>
+  <div id="killfeed"></div>
+  <div id="centerFeed"></div>
+</div>
+<div id="menu">
+  <div class="menu-card">
+    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.49.0</small></h1>
+    <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori</p>
+    <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
+    <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
+    <h2>Scegli il tuo eroe</h2>
+    <div id="heroSelect"></div>
+    <div id="heroDetail"></div>
+    <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
+    <div id="menuMsg"></div>
+    <details class="help">
+      <summary>Comandi & guida</summary>
+      <ul>
+        <li><b>WASD / frecce</b> — movimento · <b>Mouse</b> — mira · <b>Click sx / Spazio</b> — spara</li>
+        <li><b>Tasto destro / Shift</b> — scatto (attraversa i nemici)</li>
+        <li><b>Q / E</b> — abilità · <b>M</b> — musica</li>
+        <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ e <b>oggetti</b> 🎁.</li>
+        <li>A fine ondata scegli un <b>Potere</b> 🎴 e spendi la XP nel negozio.</li>
+        <li>Porta un'arma a <b>Lv.3</b> con la statistica giusta per <b>evolverla</b>! ✦</li>
+        <li>Modalità ondata: <b>Orda</b>, <b>Caccia</b>, <b>Sopravvivenza</b>, <b>Tesoro</b> 👑. <b>20 livelli</b> → MEGA BOSS.</li>
+      </ul>
+    </details>
+  </div>
+  <div class="credits">Motore custom · netcode autoritativo · audio procedurale · nessuna dipendenza</div>
+</div>
+<div id="lobby" class="hidden">
+  <div class="menu-card">
+    <h2>Sala d'attesa — <span id="lobbyRoom"></span></h2>
+    <div id="lobbyPlayers"></div>
+    <p class="tag">Il primo che preme <b>Avvia</b> fa partire la run per tutti.</p>
+    <button id="startBtn" class="primary">⚔️  AVVIA LA RUN</button>
+    <button id="changeHeroBtn" class="ghost">Cambia eroe</button>
+  </div>
+</div>
+<div id="upgradeScreen" class="hidden">
+  <div class="upgrade-inner">
+    <div id="boonSection" class="hidden">
+      <h2>🎴 SCEGLI UN POTERE</h2>
+      <div id="boonCards"></div>
+    </div>
+    <div id="gearSection">
+      <h2>🪙 EMPORIO — equipaggiamento (monete)</h2>
+      <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
+      <div id="gearCards"></div>
+    </div>
+    <h2>NEGOZIO — spendi la tua esperienza</h2>
+    <div class="shop-xp">Hai <b id="shopXp">0</b> ✦ XP disponibile</div>
+    <div id="upgradeCards"></div>
+    <p class="shop-hint">Scegli 1 potere e acquista più volte le statistiche. Premi <b>Spazio</b> (o il pulsante) quando sei pronto.</p>
+    <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady(); window.HUD.hideShop();">✔  PRONTO — Prossima ondata</button>
+  </div>
+</div>
+<div id="endScreen" class="hidden">
+  <div class="menu-card">
+    <h1 id="endTitle"></h1><div id="endStats"></div>
+    <button id="restartBtn" class="primary">Torna al menu</button>
+  </div>
+</div>
+<div id="merchantPanel" class="hidden">
+  <div class="merch-head" id="merchHead">🧙 <b>Mercante Errante</b> — hai <b id="merchCoins">0</b> 🪙</div>
+  <div id="merchantCards"></div>
+  <div class="merch-hint">Avvicinati per comprare · clic su un'offerta</div>
+</div>
+<div id="chatWrap"><div id="chatLog"></div><input id="chatInput" class="hidden" maxlength="120" placeholder="Messaggio… (Invio per inviare, Esc per chiudere)"></div>
+<script src="/shared/constants.js"></script>
+<script src="/shared/mathutils.js"></script>
+<script src="/shared/monsters.js"></script>
+<script src="/shared/heroes.js"></script>
+<script src="/shared/loot.js"></script>
+<script src="/js/audio.js"></script>
+<script src="/js/net.js"></script>
+<script src="/js/input.js"></script>
+<script src="/js/renderer.js"></script>
+<script src="/js/hud.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>
