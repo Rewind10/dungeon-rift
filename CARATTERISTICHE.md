@@ -1,10 +1,30 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.52.0`
+**Versione attuale:** `1.54.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## ✦ Esperienza: tronco triplicato, coda smorzata *(novita v1.54)*
+- I **primi sei livelli** di ogni statistica costano il **triplo** di prima: con base 10 la scaletta e'
+  **30 · 48 · 66 · 185 · 517 · 1449**. La prima ondata frutta circa 56 XP e il primo livello ne costa 30, quindi
+  si decide dove spendere fin dall'inizio.
+- Il **settimo** livello e' adeguato al nuovo tronco (2.463) e l'**ottavo** solo ritoccato (4.187): la coda e'
+  volutamente smorzata, altrimenti gli ultimi due livelli sarebbero irraggiungibili in qualsiasi partita.
+- Portare **una sola** statistica al tetto costa **8.945 XP**, piu' di quanta se ne raccolga in una run intera.
+  Il tetto si tocca solo alimentando la **combo** (moltiplicatore XP fino a x2.5), che diventa a tutti gli
+  effetti la seconda economia del gioco insieme alle monete.
+
+## 🎯 Il mercato si sceglie, il portale si vede, l'esperienza costa *(novita v1.53)*
+- **Destinazioni nel menu di pausa.** Fra un'ondata e l'altra, dopo la carta e il negozio XP, scegli dove
+  andare: **prossima ondata** oppure **dal fabbro**. Il mercato non arriva piu' a cadenza fissa: ci vai quando
+  ti serve, a qualunque ondata. In co-op vale la scelta di chi preme per primo.
+- **Il portale EXIT si vede.** Nella mappa del mercato il fabbro sta a poche tile dal punto in cui atterri e il
+  portale poco oltre, dalla parte opposta: prima compri, poi esci. Prima l'uscita era la cella piu' lontana dal
+  centro della mappa, quindi fuori schermo.
+- **Esperienza molto piu' cara.** Curva spezzata in due regimi: primi 3 livelli quasi lineari, poi x2.8 a
+  livello. *(Superata dalla v1.54, che ha triplicato tutto il tronco — vedi sopra.)*
 
 ## 🏪 Il MERCATO: l'Emporio diventa un luogo *(novita v1.52)*
 - Ogni **3 ondate** si entra in una **mappa di sosta senza nemici**. Al centro c'e' il **fabbro

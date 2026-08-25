@@ -2,6 +2,83 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.54.0] — 2026-08-25 · "Esperienza: tronco triplicato, coda smorzata"
+
+Ritaratura della sola curva del negozio XP: la v1.53 era ancora troppo generosa nel tratto in cui si spende
+davvero. Nessun'altra modifica.
+
+#### ✦ Tre regimi invece di due
+- **Livelli 1-6 × 3.** Tutto il tronco costa il triplo della v1.53. La prima ondata frutta ~56 XP e il primo
+  livello ne costa **30**: la spesa diventa una decisione dalla partita numero uno, non da metà run.
+- **Livello 7 adeguato** al nuovo tronco (1.352 → **2.463**): triplicandolo sarebbe finito a 4.056, cioè sopra
+  l'ottavo della v1.53 — la curva si sarebbe ribaltata.
+- **Livello 8 solo ritoccato** (3.786 → **4.187**, +11%). Gli ultimi due livelli sono smorziati apposta
+  (`STAT_TAIL_MULT` 1.7 invece di 2.8): triplicati sarebbero diventati **decorativi**, fuori portata in
+  qualunque run. Così restano trofei di fine partita.
+
+  | Livello | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|
+  | v1.53 (base 10) | 10 | 16 | 22 | 62 | 172 | 483 | 1352 | 3786 |
+  | **v1.54** | **30** | **48** | **66** | **185** | **517** | **1449** | **2463** | **4187** |
+  | rapporto | ×3.00 | ×3.00 | ×3.00 | ×2.98 | ×3.01 | ×3.00 | ×1.82 | ×1.11 |
+
+- Portare **una** statistica al tetto passa da 5.903 a **8.945 XP** — più dell'intera raccolta di una run
+  (~7.500). L'albero completo da 35.418 a **53.670**. Il tetto di una singola statistica è ora raggiungibile
+  solo giocando la **COMBO** (moltiplicatore XP fino a ×2.5), che diventa a tutti gli effetti la seconda
+  economia del gioco.
+- Segnale misurato: i bot dei test (che comprano a caso) passano da ondata 7 a ondata 4 nello stesso tempo
+  simulato. Sono bot stupidi — indicatore di direzione, non verdetto.
+
+#### 🧪 Test
+- `testV153` aggiornato: verifica il fattore ×3 sui primi sei livelli, l'adeguamento del settimo, il ritocco
+  contenuto dell'ottavo, la monotonia della curva e che il bottino della prima ondata basti per **un solo**
+  livello. **312 passati, 0 falliti.**
+
+---
+
+### [1.53.0] — 2026-08-25 · "Il mercato si sceglie, il portale si vede, l'esperienza costa"
+
+#### 🚪 Il portale EXIT del mercato ora si vede
+- `mapgen` piazza l'uscita nella cella **più lontana dal centro**: in una mappa di combattimento ha senso, in
+  una **sosta** no — atterri al centro e il portale è fuori schermo. Il mercato ora si dispone da sé
+  (`_layoutMarket`): **fabbro a ~4 tile** dal punto di atterraggio, **portale a ~9 dalla parte opposta**.
+  Appena arrivi vedi il fabbro; girandoti vedi la via d'uscita.
+- La tile `T_EXIT` viene spostata **nella griglia**, non solo in `map.exit`: il client disegna il portale
+  scandendo le tile quando riceve la mappa, quindi cambiare solo `map.exit` avrebbe lasciato il bagliore
+  vecchio dov'era.
+
+#### 🎯 Il mercato è una destinazione, non una cadenza
+- Sparisce la regola "ogni 3 ondate". Il menu di pausa fra un'ondata e l'altra ha ora **due pulsanti**:
+  **▶ PROSSIMA ONDATA** e **🔨 VAI DAL FABBRO**. Ci vai quando ti serve, a qualunque ondata.
+- **Co-op:** vale la **prima scelta espressa**, coerente con la regola del portale ("il primo che entra decide").
+- I pulsanti stanno in `#shopActions`: aggiungere una destinazione futura = un `<button>` in più lì e un
+  valore di `dest` in più in `_afterShop()`. **Spazio** resta la scorciatoia per l'ondata successiva.
+
+#### ✦ Esperienza: apertura più dolce, coda molto più dura
+- La curva della v1.51 (`2.05^n` uniforme) era ripida **già al secondo livello** — 10 → 21 → 42 quando ancora
+  non hai reddito — e comunque troppo mite in fondo. Ora è **spezzata**: i primi 3 livelli sono quasi lineari,
+  poi si sale di **2.8× a livello**.
+
+  | Livello | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|
+  | v1.51 (base 10) | 10 | 21 | 42 | 86 | 177 | 362 | 742 | 1522 |
+  | **v1.53** | 10 | **16** | **22** | 62 | 172 | **483** | **1352** | **3786** |
+
+- Portare **una** statistica al tetto passa da **2.968** a **5.903 XP**, cioè circa **l'intera raccolta di una
+  run**. L'albero completo passa da 17.760 a **35.418 XP**. Specializzarsi non è più consigliato: è obbligato,
+  e la **COMBO** (moltiplicatore XP fino a ×2.5) diventa la leva che decide quanto puoi permetterti.
+- Segnale misurato: i bot dei test, che compravano a caso, ora si fermano quasi sempre al **boss dell'ondata 5**
+  invece di superarlo. Sono bot stupidi, quindi è un indicatore di direzione, non un verdetto — ma la direzione
+  è quella richiesta.
+
+#### 🧪 Test
+- Nuovo **testV153**: destinazioni del menu di pausa, prima-scelta-vince in co-op, distanze di fabbro e portale
+  dal punto di atterraggio, unicità della tile EXIT nella griglia, monotonia e severità della nuova curva XP.
+  `testV18` e `testV152` aggiornati alla scelta esplicita; i bot dei full-run passano dal fabbro nel 25% dei
+  casi. **309 passati, 0 falliti.**
+
+---
+
 ### [1.52.0] — 2026-08-25 · "MERCATO: l'Emporio smette di essere un pannello e diventa un luogo"
 
 L'acquisto diretto dell'equipaggiamento a fine ondata — nascosto in v1.51 — è sostituito da una **mappa di sosta**

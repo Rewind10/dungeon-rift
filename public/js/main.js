@@ -16,7 +16,7 @@
   function showLobby(players) { lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
   function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.startMusic(false); }
 
-  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
+  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), (dest) => Net.shopReady(dest || 'wave')); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
   // v1.52 — l'offerta arriva sia dal pannello di fine ondata (se riabilitato) sia dal mercante del MERCATO:
   // 'near' distingue i due casi.
@@ -148,7 +148,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Enter') { const ci = $('chatInput'); if (ci.classList.contains('hidden')) { Input.clearKeys(); ci.classList.remove('hidden'); ci.focus(); } else { const t = ci.value.trim(); if (t) Net.chat(t); ci.value = ''; ci.classList.add('hidden'); Input.clearKeys(); Input.canvas && Input.canvas.focus(); } e.preventDefault(); }
     else if (e.code === 'Escape') { const ci = $('chatInput'); if (!ci.classList.contains('hidden')) { ci.value = ''; ci.classList.add('hidden'); } }
-    else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { Net.shopReady(); HUD.hideShop(); }
+    else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { Net.shopReady('wave'); HUD.hideShop(); }
     else if (e.code === 'KeyM') A.toggleMusic();
   });
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

@@ -14,7 +14,7 @@
     buyGear(slot) { this.send({ t: C.MSG.BUY_GEAR, slot }); },
     buyMerchant(id, dark) { this.send({ t: C.MSG.BUY_MERCHANT, id, dark: dark ? 1 : 0 }); },
     pickBoon(id) { this.send({ t: C.MSG.PICK_BOON, id }); },
-    shopReady() { this.send({ t: C.MSG.SHOP_READY }); },
+    shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
     setHero(h) { this.send({ t: 'sethero', hero: h }); },
     chat(text) { this.send({ t: C.MSG.CHAT, text }); },
     _ping() { setInterval(() => this.send({ t: C.MSG.PING, ts: performance.now() }), 2000); },

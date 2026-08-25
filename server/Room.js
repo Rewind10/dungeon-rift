@@ -45,7 +45,7 @@ class Room {
       // v1.52 — MAPPA MERCATO: sosta senza nemici. Niente casse (il 30% sarebbe un mimic, cioe' un nemico
       // in una stanza che promette sicurezza) e niente Mercante Errante: quello resta un incontro delle
       // ondate normali. Qui c'e' solo il MERCANTE DELL'EQUIPAGGIAMENTO, al centro della mappa.
-      this.spawnGearMerchant();
+      this._layoutMarket();
       this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, market: 1 });
       return;
     }
@@ -153,16 +153,35 @@ class Room {
 
   // ===== MERCATO (v1.52) — mappa di sosta ogni MARKET_EVERY ondate =====
   // Sostituisce l'acquisto diretto dell'equipaggiamento a fine ondata: ora l'Emporio e' un LUOGO.
-  spawnGearMerchant() {
-    const m = this.map, T = C.TILE, cx = (m.w / 2) | 0, cy = (m.h / 2) | 0;
-    let best = null, bd = Infinity;
-    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
-      if (m.grid[y * m.w + x] !== C.T_FLOOR) continue;
-      const d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
-      if (d < bd) { bd = d; best = { x, y }; }
+  // v1.53 — layout del MERCATO. mapgen mette l'uscita nella cella PIU' LONTANA dal centro: in una mappa
+  // di combattimento ha senso, in una sosta no — atterri al centro e il portale e' fuori schermo.
+  // Qui riposizioniamo entrambi: fabbro a ~SMITH_DIST tile dallo spawn, portale a ~EXIT_DIST dalla parte
+  // opposta. Cosi' appena arrivi vedi il fabbro, e girandoti vedi la via d'uscita.
+  _layoutMarket() {
+    const m = this.map, T = C.TILE, W = m.w, H = m.h;
+    const cx = (m.spawn.x / T) | 0, cy = (m.spawn.y / T) | 0;
+    const cells = [];
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+      const t = m.grid[y * W + x];
+      if (t !== C.T_FLOOR && t !== C.T_EXIT) continue;
+      cells.push({ x, y, d: Math.hypot(x - cx, y - cy), a: Math.atan2(y - cy, x - cx) });
     }
-    const pos = best ? { x: best.x * T + T / 2, y: best.y * T + T / 2 } : { x: m.spawn.x, y: m.spawn.y };
-    this.gearMerchant = { x: pos.x, y: pos.y, r: 18 };
+    if (!cells.length) { this.gearMerchant = { x: m.spawn.x, y: m.spawn.y, r: 18 }; return; }
+    const nearest = (want, filter) => {
+      let best = null, bd = Infinity;
+      for (const c of cells) { if (filter && !filter(c)) continue; const d = Math.abs(c.d - want); if (d < bd) { bd = d; best = c; } }
+      return best;
+    };
+    const smith = nearest(C.MARKET_SMITH_DIST) || cells[0];
+    const back = Math.atan2(smith.y - cy, smith.x - cx) + Math.PI;   // direzione opposta al fabbro
+    const away = (c) => (c !== smith) && Math.cos(c.a - back) > 0.3;
+    const exitC = nearest(C.MARKET_EXIT_DIST, away) || nearest(C.MARKET_EXIT_DIST, c => c !== smith) || cells[cells.length - 1];
+    // sposta la casella EXIT: va spostata NELLA GRIGLIA, non solo in map.exit, perche' il client
+    // disegna il portale scandendo le tile T_EXIT quando riceve la mappa.
+    for (let i = 0; i < m.grid.length; i++) if (m.grid[i] === C.T_EXIT) m.grid[i] = C.T_FLOOR;
+    m.grid[exitC.y * W + exitC.x] = C.T_EXIT;
+    m.exit = { x: exitC.x, y: exitC.y };
+    this.gearMerchant = { x: smith.x * T + T / 2, y: smith.y * T + T / 2, r: 18 };
     for (const p of this.players.values()) p._nearGear = false;
   }
   updateGearMerchant() {
@@ -192,9 +211,13 @@ class Room {
       this._forceNewMap = true; this.nextWave(); return;
     }
   }
-  // Dopo il pannello di fine ondata: mercato o ondata successiva.
+  // v1.53 — dopo il pannello di fine ondata la DESTINAZIONE la sceglie il giocatore (pulsanti del menu di
+  // pausa), non piu' una cadenza fissa ogni N ondate. In co-op vale la PRIMA scelta espressa, coerente con
+  // la regola del portale ("il primo che entra decide"). Aggiungere una destinazione nuova = un altro
+  // valore di dest qui e un pulsante in piu' in #shopActions.
   _afterShop() {
-    if (this.wave > 0 && this.wave % C.MARKET_EVERY === 0 && this.wave < Waves.FINAL_WAVE) this.enterMarket();
+    const dest = this.shopDest; this.shopDest = null;
+    if (dest === 'market' && this.wave < Waves.FINAL_WAVE) this.enterMarket();
     else this.nextWave();
   }
 
@@ -569,7 +592,7 @@ class Room {
     for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) list.push({ id, icon: sy.icon, name: sy.name, n: 1, syn: 1, desc: sy.desc }); }
     this.sendTo(p.id, { t: C.MSG.BOONS, boons: list });
   }
-  shopReady(pid) { const p = this.players.get(pid); if (p) p.ready = true; }
+  shopReady(pid, dest) { const p = this.players.get(pid); if (!p) return; p.ready = true; if (dest && !this.shopDest) this.shopDest = dest; }
 
   update(dt) {
     this.time += dt; this.dt = dt; this.flowTimer -= dt;
@@ -608,7 +631,7 @@ class Room {
   }
   _waveDone() { if (this.wave >= Waves.FINAL_WAVE) this.victory(); else this.enterShop(); }
   enterShop() {
-    this.phase = C.PHASE_SHOP; this.shopTimer = 45;
+    this.phase = C.PHASE_SHOP; this.shopTimer = 45; this.shopDest = null;
     // v1.9 — raccolta automatica dei drop rimasti a terra (la pausa non fa perdere nulla).
     const recip = this.alivePlayers[0] || [...this.players.values()].find(p => p.connected) || null;
     if (recip) {

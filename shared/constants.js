@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.52.0',
+    VERSION: '1.54.0',
     // v1.51 — level up fra le ondate
     BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
     SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
@@ -23,9 +23,11 @@
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     DASH_CD: 3.2, DASH_TIME: 0.20, DASH_IFRAME: 0.28, DASH_SPEED: 3.0,
     BULLET_RADIUS: 5, XP_MAGNET: 120, FINAL_WAVE: 20,
-    // v1.52 — mappa MERCATO ogni N ondate. E' INTERSTIZIALE: non consuma un numero d'ondata, quindi
-    // la cadenza dei boss (ogni 5) resta intatta e non c'e' collisione all'ondata 15.
-    MARKET_EVERY: 3, MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84,
+    // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
+    // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).
+    // SMITH_DIST / EXIT_DIST sono in TILE dal centro della mappa: fabbro e portale devono stare entrambi
+    // vicino al punto in cui atterri, altrimenti l'uscita non si vede (era la cella piu' lontana dal centro).
+    MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84, MARKET_SMITH_DIST: 4, MARKET_EXIT_DIST: 9,
     COMBO_TIME: 3.6, COMBO_STEP: 0.05, COMBO_CAP: 1.5, COMBO_MIN: 3,
     COIN_MAGNET: 130,
     COINS: [

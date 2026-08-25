@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>DUNGEON RIFT v1.52.0 — Roguelike Co-op</title>
+<title>DUNGEON RIFT v1.54.0 — Roguelike Co-op</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -50,7 +50,7 @@
 </div>
 <div id="menu">
   <div class="menu-card">
-    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.52.0</small></h1>
+    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.54.0</small></h1>
     <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori</p>
     <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
     <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
@@ -97,8 +97,11 @@
     <h2>NEGOZIO — spendi la tua esperienza</h2>
     <div class="shop-xp">Hai <b id="shopXp">0</b> ✦ XP disponibile</div>
     <div id="upgradeCards"></div>
-    <p class="shop-hint">Scegli <b>1 potere fra 3</b>, poi investi la XP: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Premi <b>Spazio</b> (o il pulsante) quando sei pronto.</p>
-    <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady(); window.HUD.hideShop();">✔  PRONTO — Prossima ondata</button>
+    <p class="shop-hint">Scegli <b>1 potere fra 3</b>, poi investi la XP: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Poi scegli dove andare: <b>avanti</b> con l'ondata successiva, oppure dal <b>fabbro</b> a potenziare l'equipaggiamento con le monete. <b>Spazio</b> = prossima ondata.</p>
+    <div id="shopActions">
+      <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady('wave'); window.HUD.hideShop();">▶  PROSSIMA ONDATA</button>
+      <button id="shopMarketBtn" class="ghost" onclick="window.Net.shopReady('market'); window.HUD.hideShop();">🔨  VAI DAL FABBRO</button>
+    </div>
   </div>
 </div>
 <div id="endScreen" class="hidden">

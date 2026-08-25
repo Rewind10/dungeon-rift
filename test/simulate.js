@@ -102,7 +102,7 @@ function testFullRun(n, label) {
   console.log(`\n[TEST 8] Partita completa — ${n} bot (${label})`);
   const room = new Room('r' + n); for (let i = 0; i < n; i++) room.addPlayer('b' + i, { send() {} }, 'B' + i, Heroes.ORDER[i % 3]); room.startGame();
   const dt = 1 / C.TICK_RATE; let ticks = 0, maxMs = 0, tot = 0, nan = null, pWall = 0, maxMon = 0;
-  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (Math.random() < 0.3) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, 5)].id); if (!p.ready) room.shopReady(p.id); } }
+  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (Math.random() < 0.3) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, 5)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
   console.log(`  fase: ${room.phase} · ondata: ${room.wave} · ~${(ticks / C.TICK_RATE) | 0}s · perf avg ${(tot / ticks).toFixed(3)}ms max ${maxMs.toFixed(2)}ms · picco ${maxMon} mostri`);
   assert(nan === null, 'nessun NaN (' + (nan || 'ok') + ')'); assert(maxMs < (1000 / C.TICK_RATE) * 3, 'no tick catastrofico'); assert((tot / ticks) < (1000 / C.TICK_RATE), 'perf media OK'); assert(pWall === 0, 'giocatori mai nei muri'); assert(room.wave >= 1, 'run progredita');
 }
@@ -201,7 +201,7 @@ function testV18() {
   const dt = 1 / C.TICK_RATE; const c0 = p.coins; for (let i = 0; i < 60; i++) room.update(dt); assert(p.coins > c0, 'le monete vengono raccolte avvicinandosi');
   // --- acquisto equipaggiamento ---
   // v1.52 — l'acquisto avviene nella mappa MERCATO, stando vicino al fabbro (non piu' dal pannello di fine ondata).
-  room.wave = 3; room.phase = C.PHASE_SHOP; room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
   p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
   const dr0 = p.stats.dmgReduce, hp0 = room.effMaxHp(p);
   const armorDef = Loot.GEAR_BY_SLOT.armor; const cost1 = Loot.gearCost(armorDef, 0);
@@ -627,8 +627,8 @@ function testV152() {
   console.log('\n[TEST 26] Novita v1.52 — mappa MERCATO ogni 3 ondate + fabbro dell\'equipaggiamento');
   const dt = 1 / C.TICK_RATE, T = C.TILE;
   const room = new Room('v152'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
-  assert(C.MARKET_EVERY === 3, 'il mercato compare ogni 3 ondate');
-  room.wave = 3; room.phase = C.PHASE_SHOP; room._afterShop();
+  // v1.53 — niente piu' cadenza fissa: al mercato ci si va scegliendolo dal menu di pausa
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
   assert(room.phase === C.PHASE_MARKET, 'dopo l\'ondata 3 si entra nel MERCATO');
   assert(room.wave === 3, 'il mercato e\' INTERSTIZIALE: non consuma un numero d\'ondata');
   assert(room.monsters.length === 0 && room.pending === 0, 'nel mercato non ci sono nemici');
@@ -658,14 +658,73 @@ function testV152() {
   // ondate non multiple di 3: si tira dritto
   room.wave = 4; room.phase = C.PHASE_SHOP; room._afterShop();
   assert(room.phase !== C.PHASE_MARKET && room.wave === 5, 'dopo l\'ondata 4 si passa direttamente alla 5');
-  // la 15 e' boss E multiplo di 3: essendo interstiziale il mercato la SEGUE, non la sostituisce
-  assert(Waves.isBossWave(15) && (15 % C.MARKET_EVERY === 0), 'il mercato non mangia l\'ondata boss 15');
+  // essendo interstiziale, il mercato non consuma mai un'ondata: nemmeno quelle boss
+  room.wave = 15; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  assert(room.phase === C.PHASE_MARKET && room.wave === 15, 'il mercato SEGUE l\'ondata boss, non la sostituisce');
   // nessun NaN girando nel mercato
   const r2 = new Room('v152b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
-  r2.wave = 3; r2.phase = C.PHASE_SHOP; r2._afterShop();
+  r2.wave = 3; r2.phase = C.PHASE_SHOP; r2.shopReady('b', 'market'); r2._afterShop();
   for (let i = 0; i < C.TICK_RATE * 5; i++) { r2.setInput('b', bot(r2, p2)); r2.update(dt); if (hasNaN(r2)) break; }
   assert(hasNaN(r2) === null, 'nessun NaN nel mercato');
   ok('novita v1.52 verificate');
+}
+function testV153() {
+  console.log('\n[TEST 27] Novita v1.53/1.54 — uscita del mercato centrale, destinazioni nel menu di pausa, XP triplicata');
+  const T = C.TILE;
+  const room = new Room('v153'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+
+  // --- 1) il MERCATO si sceglie, non capita ---
+  room.wave = 2; room.phase = C.PHASE_SHOP; room._afterShop();
+  assert(room.phase !== C.PHASE_MARKET && room.wave === 3, 'senza scelta si va all ondata successiva');
+  room.wave = 2; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  assert(room.phase === C.PHASE_MARKET, 'scegliendo "market" si entra dal fabbro, a qualunque ondata');
+  assert(room.wave === 2, 'la sosta non consuma un numero d ondata');
+
+  // --- 2) fabbro E portale vicini al punto di atterraggio ---
+  const sx = room.map.spawn.x, sy = room.map.spawn.y;
+  const ex = room.map.exit.x * T + T / 2, ey = room.map.exit.y * T + T / 2;
+  const dSmith = MU.dist(sx, sy, room.gearMerchant.x, room.gearMerchant.y) / T;
+  const dExit = MU.dist(sx, sy, ex, ey) / T;
+  assert(dSmith <= C.MARKET_SMITH_DIST + 4, 'il fabbro e a portata di sguardo dallo spawn (' + dSmith.toFixed(1) + ' tile)');
+  assert(dExit <= C.MARKET_EXIT_DIST + 6, 'il portale EXIT e vicino al centro, non piu la cella piu lontana (' + dExit.toFixed(1) + ' tile)');
+  assert(dExit > dSmith, 'il portale sta oltre il fabbro: prima compri, poi esci');
+  // la tile EXIT e' stata spostata NELLA GRIGLIA (il client disegna il portale da li)
+  let nExit = 0, exitIdx = -1;
+  for (let i = 0; i < room.map.grid.length; i++) if (room.map.grid[i] === C.T_EXIT) { nExit++; exitIdx = i; }
+  assert(nExit === 1, 'nella griglia c e una sola tile EXIT (' + nExit + ')');
+  assert(exitIdx === room.map.exit.y * room.map.w + room.map.exit.x, 'la tile EXIT nella griglia coincide con map.exit');
+  assert(room.map.grid[Math.round(room.gearMerchant.y / T - 0.5) * room.map.w + Math.round(room.gearMerchant.x / T - 0.5)] !== C.T_WALL, 'il fabbro non e dentro un muro');
+
+  // --- 3) in co-op vale la PRIMA scelta espressa ---
+  const r2 = new Room('v153b'); r2.addPlayer('a', { send() {} }, 'A', 'enforcer'); r2.addPlayer('c', { send() {} }, 'C', 'recon'); r2.startGame();
+  r2.wave = 4; r2.phase = C.PHASE_SHOP; r2.shopDest = null;
+  r2.shopReady('a', 'market'); r2.shopReady('c', 'wave');
+  assert(r2.shopDest === 'market', 'in co-op decide chi sceglie per primo');
+
+  // --- 4) curva XP: apertura piu dolce, coda molto piu dura ---
+  const base = 10;
+  // v1.54 — il tronco (livelli 1-6) e' TRIPLICATO rispetto alla v1.53; la coda (7-8) e' alzata ma smorzata,
+  // altrimenti gli ultimi due livelli sarebbero fuori portata in qualunque run.
+  const V153 = [10, 16, 22, 62, 172, 483, 1352, 3786];
+  assert(Loot.STAT_SOFT_LEVELS === 3, 'i primi 3 livelli restano nel tratto quasi lineare');
+  assert(Loot.STAT_START_MULT === 3, 'la curva parte 3x piu alta della v1.53');
+  let tripled = true;
+  for (let n = 0; n < 6; n++) if (Loot.statCost(base, n) / V153[n] < 2.95) tripled = false;
+  assert(tripled, 'i primi 6 livelli costano almeno il triplo della v1.53');
+  assert(Loot.statCost(base, 6) > V153[6] * 1.5, 'il 7 livello e adeguato al nuovo tronco (' + Loot.statCost(base, 6) + ' contro ' + V153[6] + ')');
+  const l8 = Loot.statCost(base, 7);
+  assert(l8 > V153[7] && l8 < V153[7] * 1.3, 'l 8 livello sale solo leggermente (' + l8 + ' contro ' + V153[7] + ')');
+  assert(Loot.statCost(base, 6) > Loot.statCost(base, 5), 'il 7 livello resta sopra il 6 (tronco triplicato incluso)');
+  let one = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) one += Loot.statCost(base, n);
+  assert(one > 8000, 'portare UNA statistica al tetto costa oltre 8.000 XP, piu di una run intera (' + one + ')');
+  const tree = Loot.XP_STATS.reduce((a, s) => { let t = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) t += Loot.statCost(s.base, n); return a + t; }, 0);
+  assert(tree > 50000, 'l albero completo supera i 50.000 XP (' + tree + ')');
+  // la prima ondata (~56 XP) deve bastare per UN solo livello: la spesa e una scelta da subito
+  assert(Loot.statCost(base, 0) > 25 && Loot.statCost(base, 0) < 56, 'col bottino della prima ondata si compra un solo livello (' + Loot.statCost(base, 0) + ' XP)');
+  // la curva resta monotona: nessun livello costa meno del precedente
+  let mono = true; for (let n = 1; n < Loot.STAT_MAX_LEVEL; n++) if (Loot.statCost(base, n) <= Loot.statCost(base, n - 1)) mono = false;
+  assert(mono, 'la curva dei costi e monotona crescente');
+  ok('novita v1.53 verificate');
 }
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
@@ -689,8 +748,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.52)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.54)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

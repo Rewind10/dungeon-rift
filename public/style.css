@@ -183,6 +183,11 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .mc .ds{font-size:11px;color:#d8cbb4;line-height:1.25}
 .mc .cost{font-weight:800;font-size:14px;margin-top:2px}
 .merch-hint{margin-top:8px;font-size:11px;color:#b9a884;text-align:center}
+/* v1.53 — destinazioni del menu di pausa (facile aggiungerne altre: basta un altro <button> qui dentro) */
+#shopActions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+#shopActions button{min-width:230px}
+#shopMarketBtn{border-color:#a9772e;color:#ffcf4a}
+#shopMarketBtn:hover{background:rgba(169,119,46,.18)}
 /* v1.52 — MERCATO: pannello del fabbro (stessa cornice del Mercante Errante, carte .gc dell'emporio) */
 #gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.96),rgba(14,10,8,.96));border:2px solid #a9772e;border-radius:16px;padding:12px 14px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(620px,94vw)}
 #gearPanel.hidden{display:none}

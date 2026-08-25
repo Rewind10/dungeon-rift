@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.52.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.54.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,26 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.54 (esperienza: tronco triplicato, coda smorzata)
+- **✦ I primi 6 livelli di ogni statistica costano il TRIPLO**: con base 10 la scaletta passa da
+  10/16/22/62/172/483 a **30/48/66/185/517/1449**. La prima ondata frutta ~56 XP e il primo livello ne costa 30:
+  si sceglie dove spendere dalla partita numero uno.
+- **Il 7° livello e' adeguato** al nuovo tronco (1.352 → 2.463) e l'**8° solo ritoccato** (3.786 → 4.187): la coda
+  e' smorzata apposta, altrimenti gli ultimi due livelli sarebbero fuori portata in qualunque run.
+- Massimizzare UNA statistica costa ora **8.945 XP**, piu' dell'intera raccolta di una run: il tetto si tocca
+  solo giocando la **combo**, che diventa la seconda economia del gioco.
+- Test: **312 passati, 0 falliti**.
+
+## 🆕 Novita v1.53 (il mercato si sceglie, il portale si vede, l'esperienza costa)
+- **🎯 Il MERCATO e' una destinazione, non una cadenza**: nel menu di pausa fra un'ondata e l'altra ci sono due
+  pulsanti — **PROSSIMA ONDATA** e **VAI DAL FABBRO**. Ci vai quando ti serve. In co-op decide chi sceglie per primo.
+- **🚪 Il portale EXIT ora si vede**: nel mercato fabbro e portale sono disposti vicino al punto in cui atterri
+  (~4 e ~9 tile) invece che nella cella piu' lontana dal centro, che era fuori schermo.
+- **✦ Esperienza molto piu' cara**: curva spezzata — i primi 3 livelli costano MENO di prima (10/16/22), poi si
+  sale di 2.8x. Massimizzare UNA statistica costa ~5.900 XP, quanto l'intera raccolta di una run; l'albero
+  completo ~35.400. Ci si specializza per forza, e la combo diventa la leva vera.
+- Test: **309 passati, 0 falliti**.
 
 ## 🆕 Novita v1.52 (MERCATO: l'Emporio diventa un luogo, non un pannello)
 - **🏪 Mappa MERCATO ogni 3 ondate**: nessun nemico, il **fabbro dell'equipaggiamento** al centro, si prosegue
