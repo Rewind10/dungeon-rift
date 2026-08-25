@@ -68,26 +68,27 @@
   // tutto, l'ordine non contava). Ora 2.05^n con TETTO a 8: maxare l'intero albero costa ~17.700 XP, cioe'
   // molto piu' di quanto se ne raccolga. Si specializza, e la COMBO (moltiplicatore XP fino a x2.5) e i boon
   // di raccolta diventano finalmente una leva reale su quanto puoi permetterti.
-  // v1.54 — curva a TRE REGIMI. Rispetto alla v1.53 tutto il tronco iniziale costa il TRIPLO: la spesa
-  // diventa una decisione dalla primissima ondata (che ne frutta ~56, cioe' un solo livello).
-  //   • livelli 1-3  (bought < STAT_SOFT_LEVELS): crescita quasi lineare, ma partendo da base x STAT_START_MULT
-  //   • livelli 4-6  (fino a STAT_TAIL_LEVEL):    x STAT_COST_MULT a livello — la salita ripida
-  //   • livelli 7-8  (oltre STAT_TAIL_LEVEL):     x STAT_TAIL_MULT, crescita SMORZATA
-  // Il tetto e' smorzato apposta: triplicando anche la coda, gli ultimi due livelli sarebbero diventati
-  // decorativi (fuori portata in qualunque run). Cosi' restano trofei di fine partita, raggiungibili solo
-  // giocando la COMBO (moltiplicatore XP fino a x2.5).
-  // Costi con base 10 — v1.53: 10 16 22 62 172 483 1352 3786 → v1.54: 30 48 66 185 517 1449 2463 4187.
-  // Una statistica al tetto passa da 5.903 a 8.945 XP (piu' dell'intera raccolta di una run, ~7.500);
-  // l'albero completo da 35.418 a 53.670.
-  const STAT_COST_MULT = 2.8, STAT_MAX_LEVEL = 8, STAT_SOFT_LEVELS = 3;
-  const STAT_START_MULT = 3, STAT_TAIL_LEVEL = 5, STAT_TAIL_MULT = 1.7;
+  // v1.55 — il costo di ogni livello e' ora una TABELLA esplicita di moltiplicatori su `base`, un valore
+  // per livello. La taratura procede per interventi diretti sui numeri ("triplica i primi sei, raddoppia gli
+  // ultimi due") e nessuna formula unica riesce a seguirli senza distorcere il resto della curva: con una
+  // tabella si tocca esattamente il livello che si vuole toccare, e i costi sono leggibili a colpo d'occhio.
+  //
+  //   livello        1     2     3     4     5      6      7      8
+  //   base 10       90   144   198   555  1551   4347   4926   8374
+  //   salto          —  +60%  +38% +180% +179%  +180%   +13%   +70%
+  //
+  // NOTA sul 7° livello: costa solo il 13% piu' del 6°, perche' il tronco e' stato triplicato e la coda
+  // raddoppiata — la discontinuita' e' voluta ma crea un gradino piatto li' in mezzo. Se il 7° dovesse
+  // sembrare "regalato" dopo il muro del 6°, e' il primo numero da alzare.
+  //
+  // Reddito reale: una run vale nell'ordine dei 18.000 XP (misurato su partita vera, ~240 XP alla sola
+  // ondata 2; il vecchio modello senza combo ne stimava 99 e sottostimava di ~2.4x). Portare UNA statistica
+  // al tetto costa 20.185 XP, quindi piu' di una run intera; l'albero completo 121.110, cioe' fuori portata.
+  const STAT_MAX_LEVEL = 8;
+  const STAT_COST_STEPS = [9, 14.4, 19.8, 55.5, 155.1, 434.7, 492.6, 837.4];
   function statCost(base, bought) {
-    const b0 = base * STAT_START_MULT;
-    if (bought < STAT_SOFT_LEVELS) return Math.round(b0 * (1 + bought * 0.6));
-    const soft = b0 * (1 + (STAT_SOFT_LEVELS - 1) * 0.6);
-    const steep = Math.min(bought, STAT_TAIL_LEVEL) - STAT_SOFT_LEVELS + 1;
-    const tail = Math.max(0, bought - STAT_TAIL_LEVEL);
-    return Math.round(soft * Math.pow(STAT_COST_MULT, steep) * Math.pow(STAT_TAIL_MULT, tail));
+    const k = STAT_COST_STEPS[Math.max(0, Math.min(bought, STAT_COST_STEPS.length - 1))];
+    return Math.round(base * k);
   }
 
   // ===== BOON a scelta (stile Hades): effetti UNICI impilabili =====
@@ -190,5 +191,5 @@
     return out;
   }
 
-  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_COST_MULT, STAT_MAX_LEVEL, STAT_SOFT_LEVELS, STAT_START_MULT, STAT_TAIL_LEVEL, STAT_TAIL_MULT, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, GEAR, GEAR_BY_SLOT, GEAR_RANK, GEAR_RARITY, gearCost, coinsFor };
+  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, GEAR, GEAR_BY_SLOT, GEAR_RANK, GEAR_RARITY, gearCost, coinsFor };
 });

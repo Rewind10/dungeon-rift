@@ -1,10 +1,20 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.54.0`
+**Versione attuale:** `1.55.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## ✦ Costi XP a tabella: primi sei x3, ultimi due x2 *(novita v1.55)*
+- Scaletta dei costi con base 10: **90 · 144 · 198 · 555 · 1551 · 4347 · 4926 · 8374**. Il primo livello costa
+  90 contro i ~130 XP della prima ondata: se ne compra uno solo, e va scelto.
+- Portare **una sola** statistica al tetto costa **20.185 XP**, piu' di quanta se ne raccolga in una run intera
+  (~18.000). L'albero completo, 121.110, e' fuori portata per progetto: non esiste una run che massimizzi tutto.
+- I costi sono una **tabella** di moltiplicatori, uno per livello, non una formula: si ritocca il singolo
+  livello senza deformare il resto della curva.
+- *Nota:* il 7° livello costa solo il 13% piu' del 6°, mentre ogni salto precedente e' +180%. E' un gradino
+  piatto voluto dal ritocco (tronco x3, coda x2): se in partita sembra regalato, e' il primo numero da alzare.
 
 ## ✦ Esperienza: tronco triplicato, coda smorzata *(novita v1.54)*
 - I **primi sei livelli** di ogni statistica costano il **triplo** di prima: con base 10 la scaletta e'
@@ -12,9 +22,7 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   si decide dove spendere fin dall'inizio.
 - Il **settimo** livello e' adeguato al nuovo tronco (2.463) e l'**ottavo** solo ritoccato (4.187): la coda e'
   volutamente smorzata, altrimenti gli ultimi due livelli sarebbero irraggiungibili in qualsiasi partita.
-- Portare **una sola** statistica al tetto costa **8.945 XP**, piu' di quanta se ne raccolga in una run intera.
-  Il tetto si tocca solo alimentando la **combo** (moltiplicatore XP fino a x2.5), che diventa a tutti gli
-  effetti la seconda economia del gioco insieme alle monete.
+- *(Superata dalla v1.55, che ha triplicato ancora il tronco e raddoppiato la coda — vedi sopra.)*
 
 ## 🎯 Il mercato si sceglie, il portale si vede, l'esperienza costa *(novita v1.53)*
 - **Destinazioni nel menu di pausa.** Fra un'ondata e l'altra, dopo la carta e il negozio XP, scegli dove

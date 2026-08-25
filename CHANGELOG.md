@@ -2,6 +2,43 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.55.0] — 2026-08-25 · "Costi XP a tabella: primi sei ×3, ultimi due ×2"
+
+#### 📏 Prima di tutto: il modello di reddito era sbagliato
+Le tarature 1.51→1.54 sono state calcolate su una stima **senza combo**, che valutava l'ondata 2 a ~99 XP.
+Misurata in partita vera ne frutta **240**: il modello sottostimava di circa **2.4×**. Una run non vale ~7.500
+XP ma **~18.000**. Tutte le conclusioni precedenti su "quanto puoi permetterti" erano ottimistiche di
+conseguenza — ed e' il motivo per cui il negozio continuava a sembrare facile nonostante due giri di rincari.
+
+#### ✦ Nuova scaletta
+| Livello | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| v1.54 (base 10) | 30 | 48 | 66 | 185 | 517 | 1449 | 2463 | 4187 |
+| **v1.55** | **90** | **144** | **198** | **555** | **1551** | **4347** | **4926** | **8374** |
+| rapporto | ×3 | ×3 | ×3 | ×3 | ×3 | ×3 | ×2 | ×2 |
+
+- Portare **una** statistica al tetto: da 8.945 a **20.185 XP** — piu' di una run intera anche col reddito
+  reale. L'albero completo: da 53.670 a **121.110**, cioe' fuori portata per progetto.
+- Il primo livello costa **90** contro i ~130 XP della prima ondata: si compra una cosa sola, e si sceglie.
+
+#### 🧰 I costi sono ora una TABELLA, non una formula
+- `STAT_COST_STEPS` elenca un moltiplicatore per livello. La taratura procede per interventi diretti sui
+  numeri ("triplica i primi sei, raddoppia gli ultimi due") e nessuna formula unica li segue senza distorcere
+  il resto della curva — la v1.54 aveva gia' richiesto tre regimi e due costanti di raccordo. Con la tabella si
+  tocca esattamente il livello che si vuole toccare, e la scaletta si legge a colpo d'occhio.
+
+#### ⚠️ Nota sul 7° livello
+Triplicando il tronco e raddoppiando la coda, il **7° costa solo il 13% piu' del 6°** (4.926 contro 4.347),
+mentre ogni salto precedente era di +180%. E' un gradino piatto in mezzo al muro: dopo aver pagato il 6°, il 7°
+sembra regalato. Se in partita da' fastidio, e' il primo numero da alzare — riga `STAT_COST_STEPS`, settimo
+valore.
+
+#### 🧪 Test
+- `testV153` verifica il fattore ×3 sui primi sei livelli, il ×2 sugli ultimi due, la monotonia, la
+  proporzionalita' al `base` della statistica e le soglie di costo complessivo. **309 passati, 0 falliti.**
+
+---
+
 ### [1.54.0] — 2026-08-25 · "Esperienza: tronco triplicato, coda smorzata"
 
 Ritaratura della sola curva del negozio XP: la v1.53 era ancora troppo generosa nel tratto in cui si spende

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.54.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.55.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,15 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.55 (costi XP a tabella: primi sei x3, ultimi due x2)
+- **✦ Nuova scaletta** (base 10): **90 · 144 · 198 · 555 · 1551 · 4347 · 4926 · 8374**. Massimizzare UNA
+  statistica costa **20.185 XP**, piu' di una run intera; l'albero completo 121.110, fuori portata per progetto.
+- **📏 Modello di reddito corretto**: le tarature precedenti stimavano l'ondata 2 a ~99 XP, in partita vera ne
+  frutta **240**. Una run vale ~18.000 XP, non ~7.500 — ecco perche' il negozio sembrava ancora facile.
+- **🧰 I costi sono una tabella** (`STAT_COST_STEPS`), non una formula: si tocca il singolo livello senza
+  distorcere il resto della curva.
+- Test: **309 passati, 0 falliti**.
 
 ## 🆕 Novita v1.54 (esperienza: tronco triplicato, coda smorzata)
 - **✦ I primi 6 livelli di ogni statistica costano il TRIPLO**: con base 10 la scaletta passa da

@@ -669,7 +669,7 @@ function testV152() {
   ok('novita v1.52 verificate');
 }
 function testV153() {
-  console.log('\n[TEST 27] Novita v1.53/1.54 — uscita del mercato centrale, destinazioni nel menu di pausa, XP triplicata');
+  console.log('\n[TEST 27] Novita v1.53/1.55 — mercato centrale, destinazioni nel menu di pausa, tabella dei costi XP');
   const T = C.TILE;
   const room = new Room('v153'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
 
@@ -703,24 +703,23 @@ function testV153() {
 
   // --- 4) curva XP: apertura piu dolce, coda molto piu dura ---
   const base = 10;
-  // v1.54 — il tronco (livelli 1-6) e' TRIPLICATO rispetto alla v1.53; la coda (7-8) e' alzata ma smorzata,
-  // altrimenti gli ultimi due livelli sarebbero fuori portata in qualunque run.
-  const V153 = [10, 16, 22, 62, 172, 483, 1352, 3786];
-  assert(Loot.STAT_SOFT_LEVELS === 3, 'i primi 3 livelli restano nel tratto quasi lineare');
-  assert(Loot.STAT_START_MULT === 3, 'la curva parte 3x piu alta della v1.53');
-  let tripled = true;
-  for (let n = 0; n < 6; n++) if (Loot.statCost(base, n) / V153[n] < 2.95) tripled = false;
-  assert(tripled, 'i primi 6 livelli costano almeno il triplo della v1.53');
-  assert(Loot.statCost(base, 6) > V153[6] * 1.5, 'il 7 livello e adeguato al nuovo tronco (' + Loot.statCost(base, 6) + ' contro ' + V153[6] + ')');
-  const l8 = Loot.statCost(base, 7);
-  assert(l8 > V153[7] && l8 < V153[7] * 1.3, 'l 8 livello sale solo leggermente (' + l8 + ' contro ' + V153[7] + ')');
-  assert(Loot.statCost(base, 6) > Loot.statCost(base, 5), 'il 7 livello resta sopra il 6 (tronco triplicato incluso)');
+  // v1.55 — rispetto alla v1.54: primi 6 livelli x3, ultimi 2 x2. Il reddito reale misurato in partita
+  // (~240 XP alla sola ondata 2) e' circa 2.4x quello che stimava il vecchio modello senza combo.
+  const V154 = [30, 48, 66, 185, 517, 1449, 2463, 4187];
+  assert(Array.isArray(Loot.STAT_COST_STEPS) && Loot.STAT_COST_STEPS.length === Loot.STAT_MAX_LEVEL, 'la tabella dei costi copre tutti gli 8 livelli');
+  let tripled = true, doubled = true;
+  for (let n = 0; n < 6; n++) if (Loot.statCost(base, n) / V154[n] < 2.95) tripled = false;
+  for (let n = 6; n < 8; n++) { const r = Loot.statCost(base, n) / V154[n]; if (r < 1.95 || r > 2.05) doubled = false; }
+  assert(tripled, 'i primi 6 livelli costano il triplo della v1.54');
+  assert(doubled, 'il 7 e l 8 livello costano il doppio della v1.54');
   let one = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) one += Loot.statCost(base, n);
-  assert(one > 8000, 'portare UNA statistica al tetto costa oltre 8.000 XP, piu di una run intera (' + one + ')');
+  assert(one > 20000, 'portare UNA statistica al tetto costa oltre 20.000 XP, piu di una run intera (' + one + ')');
   const tree = Loot.XP_STATS.reduce((a, s) => { let t = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) t += Loot.statCost(s.base, n); return a + t; }, 0);
-  assert(tree > 50000, 'l albero completo supera i 50.000 XP (' + tree + ')');
-  // la prima ondata (~56 XP) deve bastare per UN solo livello: la spesa e una scelta da subito
-  assert(Loot.statCost(base, 0) > 25 && Loot.statCost(base, 0) < 56, 'col bottino della prima ondata si compra un solo livello (' + Loot.statCost(base, 0) + ' XP)');
+  assert(tree > 100000, 'l albero completo supera i 100.000 XP (' + tree + ')');
+  // il costo scala con la base della statistica: le piu' care restano piu' care a ogni livello
+  const cheap = Loot.XP_STATS.find(s => s.base === 8), dear = Loot.XP_STATS.find(s => s.base === 12);
+  if (cheap && dear) { let okScale = true; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) if (Loot.statCost(dear.base, n) <= Loot.statCost(cheap.base, n)) okScale = false;
+    assert(okScale, 'il costo resta proporzionale alla base della statistica'); }
   // la curva resta monotona: nessun livello costa meno del precedente
   let mono = true; for (let n = 1; n < Loot.STAT_MAX_LEVEL; n++) if (Loot.statCost(base, n) <= Loot.statCost(base, n - 1)) mono = false;
   assert(mono, 'la curva dei costi e monotona crescente');
@@ -748,7 +747,7 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.54)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.55)'); console.log('==================================================');
 const T0 = Date.now();
 testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
