@@ -685,8 +685,8 @@ function testV153() {
   const ex = room.map.exit.x * T + T / 2, ey = room.map.exit.y * T + T / 2;
   const dSmith = MU.dist(sx, sy, room.gearMerchant.x, room.gearMerchant.y) / T;
   const dExit = MU.dist(sx, sy, ex, ey) / T;
-  assert(dSmith <= C.MARKET_SMITH_DIST + 4, 'il fabbro e a portata di sguardo dallo spawn (' + dSmith.toFixed(1) + ' tile)');
-  assert(dExit <= C.MARKET_EXIT_DIST + 6, 'il portale EXIT e vicino al centro, non piu la cella piu lontana (' + dExit.toFixed(1) + ' tile)');
+  assert(dSmith <= 10, 'il fabbro e a portata di sguardo dallo spawn (' + dSmith.toFixed(1) + ' tile)');
+  assert(dExit <= 16, 'il portale EXIT e in vista dallo spawn (' + dExit.toFixed(1) + ' tile)');
   assert(dExit > dSmith, 'il portale sta oltre il fabbro: prima compri, poi esci');
   // la tile EXIT e' stata spostata NELLA GRIGLIA (il client disegna il portale da li)
   let nExit = 0, exitIdx = -1;
@@ -725,6 +725,70 @@ function testV153() {
   assert(mono, 'la curva dei costi e monotona crescente');
   ok('novita v1.53 verificate');
 }
+function testV156() {
+  console.log('\n[TEST 28] Novita v1.56 — il MERCATO e un VILLAGGIO: mappa meta, senza muri, 5 edifici e 5 abitanti');
+  const MapGen = require('../shared/mapgen.js');
+  const T = C.TILE, m = MapGen.generateMarket(4242);
+  const at = (x, y) => m.grid[y * m.w + x];
+
+  // --- dimensioni: circa META della mappa di combattimento ---
+  const areaMkt = m.w * m.h, areaFight = C.MAP_W * C.MAP_H;
+  assert(m.w < C.MAP_W && m.h < C.MAP_H, 'la mappa del mercato e piu piccola di quella di combattimento');
+  assert(areaMkt / areaFight > 0.40 && areaMkt / areaFight < 0.60, 'e circa la META come area (' + Math.round(areaMkt / areaFight * 100) + '%)');
+
+  // --- niente muri interni oltre agli edifici ---
+  let border = 0, inner = 0;
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    if (at(x, y) !== C.T_WALL) continue;
+    if (x < 2 || y < 2 || x >= m.w - 2 || y >= m.h - 2) border++; else inner++;
+  }
+  const bTiles = MapGen.VILLAGE.buildings.reduce((a, b) => a + b.bw * b.bh, 0);
+  assert(inner === bTiles, 'gli unici muri interni sono gli edifici (' + inner + ' tile contro ' + bTiles + ' attesi)');
+  assert(border > 0, 'il bordo resta murato');
+
+  // --- 5 edifici solidi, 5 abitanti ---
+  const buildings = m.props.filter(p => p.type === 'building');
+  assert(buildings.length === 5, 'ci sono 5 costruzioni (' + buildings.length + ')');
+  assert(buildings.every(b => b.kind && b.name && b.bw > 0 && b.bh > 0), 'ogni costruzione ha tipo, nome e ingombro');
+  assert(new Set(buildings.map(b => b.kind)).size === 5, 'le 5 costruzioni sono tutte diverse');
+  let solid = true;
+  for (const b of buildings) { const tx = (b.x / T) | 0, ty = (b.y / T) | 0; if (at(tx, ty) !== C.T_WALL) solid = false; }
+  assert(solid, 'le costruzioni sono blocchi solidi: la collisione arriva dalla griglia');
+  assert(m.village.npcs.length === 5, 'ci sono 5 abitanti (' + m.village.npcs.length + ')');
+  assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo e una bottega attiva: il fabbro');
+  assert(m.village.npcs.filter(n => n.soon).length === 4, 'gli altri 4 sono segnati come chiusi');
+
+  // --- nessun abitante e nessun arredo dentro un muro ---
+  const inWall = (o) => at((o.x / T) | 0, (o.y / T) | 0) === C.T_WALL;
+  assert(!m.village.npcs.some(inWall), 'nessun abitante finisce dentro un edificio');
+  assert(!m.props.filter(p => p.type !== 'building').some(inWall), 'nessun arredo finisce dentro un edificio');
+
+  // --- percorso: si arriva, si vede il fabbro, si esce ---
+  assert(at((m.spawn.x / T) | 0, (m.spawn.y / T) | 0) !== C.T_WALL, 'lo spawn e su pavimento');
+  assert(at(m.exit.x, m.exit.y) === C.T_EXIT, 'il portale EXIT e sulla griglia');
+  assert(at((m.village.smith.x / T) | 0, (m.village.smith.y / T) | 0) !== C.T_WALL, 'il fabbro e su pavimento');
+  // corridoio centrale libero dallo spawn al portale
+  let corridor = true; const cx = (m.spawn.x / T) | 0;
+  for (let y = m.exit.y; y <= ((m.spawn.y / T) | 0); y++) if (at(cx, y) === C.T_WALL) corridor = false;
+  assert(corridor, 'la colonna centrale fra spawn e portale e sgombra');
+
+  // --- villaggio illuminato e senza pericoli ---
+  assert(m.lit === 1, 'il villaggio e illuminato (niente maschera del buio)');
+  assert(m.market === 1, 'la mappa si dichiara mercato');
+  assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente punti di spawn nemici ne casse');
+  assert(m.theme && m.theme.id === 'village', 'usa il tema dedicato del villaggio');
+
+  // --- la stanza vera generata dal Room coincide col villaggio ---
+  const room = new Room('v156'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa il villaggio');
+  assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
+  assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro del villaggio');
+  // i giocatori non nascono dentro un edificio
+  let inside = false; for (let i = 0; i < 40; i++) { room.newMap(1000 + i, 3, true); for (const q of room.players.values()) if (room.isWallAt(q.x, q.y)) inside = true; }
+  assert(!inside, 'nessun giocatore compare dentro un edificio');
+  ok('novita v1.56 verificate');
+}
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
   const Mon = require('../shared/monsters.js');
@@ -747,8 +811,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.55)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.56)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV156(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -290,16 +290,19 @@
       // STEP C2 — cresta illuminata in cima ai muri esposti
       for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_WALL) continue; if (gt(x, y - 1) !== C.T_WALL) { const px = x * T, py = y * T; const gr = g.createLinearGradient(0, py, 0, py + T * 0.6); gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(px, py, T, T * 0.6); } }
       // v1.23 — DETTAGLI TERRENO: rocce, ciottoli, buche/crateri (pavimento meno piatto, non bloccanti)
+      // v1.56 — nel VILLAGGIO restano solo i ciottoli: massi, buche e crepe facevano sembrare la piazza
+      // un crollo, non un posto dove qualcuno vive e vende.
+      const village = !!m.market;
       for (let y = 2; y < m.h - 2; y++) for (let x = 2; x < m.w - 2; x++) {
         if (m.grid[y * m.w + x] !== C.T_FLOOR) continue; const px = x * T, py = y * T;
         const r1 = HSH(x * 5 + 1, y * 7 + 2), r2 = HSH(x * 3 + 9, y * 11 + 4), r3 = HSH(x * 13 + 5, y * 2 + 7);
         const cx = px + T * (0.22 + r1 * 0.56), cy = py + T * (0.22 + r2 * 0.56);
-        if (r3 < 0.11) { // masso / roccia
+        if (r3 < 0.11 && !village) { // masso / roccia
           const ss = 5 + r1 * 6; const gr = g.createLinearGradient(cx, cy - ss, cx, cy + ss); gr.addColorStop(0, '#474d5a'); gr.addColorStop(1, '#232935'); 
           g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(cx, cy + ss * 0.85, ss * 0.95, ss * 0.4, 0, 0, 7); g.fill();
           g.fillStyle = gr; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx - ss, cy + ss * 0.4); g.lineTo(cx - ss * 0.4, cy - ss); g.lineTo(cx + ss * 0.6, cy - ss * 0.6); g.lineTo(cx + ss, cy + ss * 0.3); g.lineTo(cx + ss * 0.2, cy + ss); g.closePath(); g.fill(); g.stroke();
           g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - ss * 0.4, cy - ss); g.lineTo(cx - ss * 0.5, cy + ss * 0.6); g.stroke();
-        } else if (r3 < 0.22) { // buca / cratere
+        } else if (r3 < 0.22 && !village) { // buca / cratere
           const ss = 6 + r2 * 7; g.fillStyle = 'rgba(0,0,0,.5)'; g.beginPath(); g.ellipse(cx, cy, ss, ss * 0.72, 0, 0, 7); g.fill();
           const ig = g.createRadialGradient(cx, cy - 1, 1, cx, cy, ss); ig.addColorStop(0, 'rgba(0,0,0,.55)'); ig.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = ig; g.beginPath(); g.ellipse(cx, cy, ss, ss * 0.72, 0, 0, 7); g.fill();
           g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1; g.beginPath(); g.ellipse(cx, cy - 1.5, ss * 0.92, ss * 0.62, 0, Math.PI, 0); g.stroke();
@@ -308,7 +311,7 @@
         }
       }
       // v1.23 — 2-3 CREPE grandi (fissure profonde, non luminose): molto piu lunghe e larghe delle vecchie
-      { const sc0 = (m.seed >>> 0) || 1; const rr = (n) => { let z = (sc0 + n * 99991) >>> 0; z = ((z ^ (z >> 13)) * 1274126177) >>> 0; return (z >>> 0) / 4294967296; };
+      if (!village) { const sc0 = (m.seed >>> 0) || 1; const rr = (n) => { let z = (sc0 + n * 99991) >>> 0; z = ((z ^ (z >> 13)) * 1274126177) >>> 0; return (z >>> 0) / 4294967296; };
         const nCr = 2 + (rr(0) < 0.5 ? 1 : 0); let made = 0, tries = 0;
         while (made < nCr && tries < 160) { tries++;
           const gx = 3 + ((rr(tries * 3) * (m.w - 6)) | 0), gy = 3 + ((rr(tries * 3 + 1) * (m.h - 6)) | 0);
@@ -351,6 +354,8 @@
       this.runes = [];
       this.torches = []; this.campfires = []; this.glows = [];
       for (const p of (m.props || [])) {
+        if (p.type === 'building') { this._bakeBuilding(g, p); this.torches.push({ x: p.x - p.bw / 2 + 16, y: p.y + p.bh / 2 - 6 }); continue; }  // v1.56 — edificio del villaggio (+ lanterna sulla porta)
+        if (p.type === 'lamp_post') { this._bakeProp(g, p); const V = window.GAME.Constants.VIS_SCALE || 1; this.torches.push({ x: p.x, y: p.y - 26 * (p.s || 1) * V }); continue; }  // v1.56
         if (p.type === 'torch') { this.torches.push(p); continue; }
         if (p.type === 'camp') { this.campfires.push(p); this._bakeCamp(g, p); continue; }
         if (p.type === 'brazier') { this._bakeProp(g, p); this.torches.push({ x: p.x, y: p.y - 6 }); continue; }
@@ -401,8 +406,100 @@
       for (const p of world.players) { if (p.d) continue; const h = HERO[p.h] || HERO.enforcer; const q = w2m(p.x, p.y); const me = world.me && p.i === world.me.i; ctx.fillStyle = me ? '#ffffff' : (h.accent || '#8bd6ff'); ctx.beginPath(); ctx.arc(q.x, q.y, me ? 3 : 2.4, 0, 7); ctx.fill(); if (me) { ctx.strokeStyle = h.accent || '#8bd6ff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.6, 0, 7); ctx.stroke(); } }
       ctx.restore();
     },
+    // v1.56 — edificio del villaggio. Disegnato in px di MONDO (niente VIS_SCALE): deve coprire esattamente
+    // il blocco di tile solide che gli fa da collisione, altrimenti si vedrebbe la roccia sotto.
+    _bakeBuilding(g, p) {
+      const w = p.bw, h = p.bh, x0 = -w / 2, y0 = -h / 2;
+      const PAL = {
+        forge:  { wall: '#4a3a2a', wall2: '#33271b', roof: '#5b2f22', roof2: '#3a1d14', trim: '#ffb14a' },
+        inn:    { wall: '#4b3f2b', wall2: '#33291b', roof: '#3f5230', roof2: '#26331d', trim: '#ffd97a' },
+        shop:   { wall: '#443a30', wall2: '#2e2620', roof: '#4a4433', roof2: '#2f2b20', trim: '#9fe0ff' },
+        temple: { wall: '#4a4a52', wall2: '#31313a', roof: '#3b3f5c', roof2: '#252840', trim: '#c9b0ff' },
+        tower:  { wall: '#464049', wall2: '#2e2a31', roof: '#4a2f3f', roof2: '#2c1a26', trim: '#ff9ad0' },
+      };
+      const c = PAL[p.kind] || PAL.shop;
+      g.save(); g.translate(p.x, p.y);
+      // ombra proiettata
+      g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, x0 + 8, y0 + 12, w, h, 10); g.fill();
+      // corpo
+      const bg = g.createLinearGradient(0, y0, 0, y0 + h); bg.addColorStop(0, c.wall); bg.addColorStop(1, c.wall2);
+      g.fillStyle = bg; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3;
+      this._rr(g, x0, y0, w, h, 8); g.fill(); g.stroke();
+      // travi verticali
+      g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2;
+      for (let i = 1; i < 5; i++) { const xx = x0 + (w * i / 5); g.beginPath(); g.moveTo(xx, y0 + h * 0.42); g.lineTo(xx, y0 + h); g.stroke(); }
+      // tetto: copre il 55% alto, con spiovente e tegole
+      const rh = h * 0.55;
+      const rg = g.createLinearGradient(0, y0 - 6, 0, y0 + rh); rg.addColorStop(0, c.roof); rg.addColorStop(1, c.roof2);
+      g.fillStyle = rg; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(x0 - 10, y0 + rh); g.lineTo(x0 + w * 0.18, y0 - 8); g.lineTo(x0 + w * 0.82, y0 - 8); g.lineTo(x0 + w + 10, y0 + rh); g.closePath(); g.fill(); g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5;
+      for (let i = 1; i < 6; i++) { const yy = y0 - 6 + (rh + 4) * i / 6; g.beginPath(); g.moveTo(x0 - 10 + (10 + w * 0.18) * (i / 6), yy); g.lineTo(x0 + w + 10 - (10 + w * 0.18) * (i / 6), yy); g.stroke(); }
+      // porta + finestre illuminate
+      const dw = Math.min(30, w * 0.20), dh = h * 0.34;
+      g.fillStyle = '#241a12'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2;
+      this._rr(g, -dw / 2, y0 + h - dh, dw, dh, 3); g.fill(); g.stroke();
+      g.fillStyle = c.trim; g.beginPath(); g.arc(dw / 2 - 6, y0 + h - dh / 2, 2, 0, 7); g.fill();
+      const wy = y0 + rh + (h - rh) * 0.28, ww = Math.min(20, w * 0.14), wh = Math.min(16, h * 0.2);
+      for (const sx of [-w * 0.30, w * 0.30]) {
+        g.fillStyle = 'rgba(255,190,90,.85)'; this._rr(g, sx - ww / 2, wy - wh / 2, ww, wh, 2); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; this._rr(g, sx - ww / 2, wy - wh / 2, ww, wh, 2); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(sx, wy - wh / 2); g.lineTo(sx, wy + wh / 2); g.stroke();
+      }
+      // insegna per tipo, sopra la porta
+      const ICON = { forge: '\u2692', inn: '\uD83C\uDF7A', shop: '\uD83D\uDCE6', temple: '\u26EA', tower: '\uD83D\uDD2E' };
+      g.save(); g.translate(0, y0 + rh + 4);
+      g.fillStyle = 'rgba(20,14,8,.9)'; g.strokeStyle = c.trim; g.lineWidth = 2; this._rr(g, -17, -11, 34, 22, 5); g.fill(); g.stroke();
+      g.font = '15px Segoe UI'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = c.trim; g.fillText(ICON[p.kind] || '\uD83C\uDFE0', 0, 1);
+      g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.restore();
+      // comignolo fumante per la fucina
+      if (p.kind === 'forge') {
+        g.fillStyle = c.wall2; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 2;
+        this._rr(g, x0 + w * 0.62, y0 - 26, 16, 24, 2); g.fill(); g.stroke();
+        g.fillStyle = 'rgba(255,140,60,.5)'; g.beginPath(); g.ellipse(x0 + w * 0.62 + 8, y0 - 24, 7, 3, 0, 0, 7); g.fill();
+      }
+      // nome della bottega, su targa: senza sfondo il tetto se lo mangiava
+      { const ny = y0 - 30; g.font = 'bold 13px Segoe UI'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        const tw = g.measureText(p.name || '').width;
+        g.fillStyle = 'rgba(14,10,6,.85)'; g.strokeStyle = c.trim; g.lineWidth = 2;
+        this._rr(g, -tw / 2 - 10, ny - 11, tw + 20, 22, 6); g.fill(); g.stroke();
+        g.fillStyle = '#f4e3b8'; g.fillText(p.name || '', 0, ny + 1);
+        g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
+      g.restore();
+    },
     _bakeProp(g, p) { const VIS = (window.GAME.Constants.VIS_SCALE || 1); g.save(); g.translate(p.x, p.y); g.scale((p.s || 1) * VIS, (p.s || 1) * VIS); const rot = (p.r || 0) * Math.PI * 2;
       switch (p.type) {
+        case 'lamp_post': { // v1.56 — lampione del villaggio
+          g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(0, 16, 9, 4, 0, 0, 7); g.fill();
+          g.strokeStyle = '#2a2118'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 14); g.lineTo(0, -22); g.stroke();
+          g.fillStyle = '#3a2e20'; g.strokeStyle = '#1a140d'; g.lineWidth = 2; this._rr(g, -7, -34, 14, 14, 3); g.fill(); g.stroke();
+          const lg = g.createRadialGradient(0, -27, 1, 0, -27, 12); lg.addColorStop(0, 'rgba(255,215,120,.95)'); lg.addColorStop(1, 'rgba(255,160,40,0)');
+          g.fillStyle = lg; g.beginPath(); g.arc(0, -27, 12, 0, 7); g.fill(); g.lineCap = 'butt'; break; }
+        case 'market_stall': { // v1.56 — banco del mercato con tendone a strisce
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(0, 15, 22, 6, 0, 0, 7); g.fill();
+          g.strokeStyle = '#3a2a18'; g.lineWidth = 3; g.beginPath(); g.moveTo(-18, 14); g.lineTo(-18, -10); g.moveTo(18, 14); g.lineTo(18, -10); g.stroke();
+          g.fillStyle = '#4a3524'; g.strokeStyle = '#241a10'; g.lineWidth = 2; this._rr(g, -20, 0, 40, 14, 2); g.fill(); g.stroke();
+          for (let i = 0; i < 5; i++) { g.fillStyle = (i % 2) ? '#a9302e' : '#e8d9b0'; g.beginPath(); g.moveTo(-20 + i * 8, -10); g.lineTo(-20 + (i + 1) * 8, -10); g.lineTo(-20 + i * 8 + 4, -2); g.closePath(); g.fill(); }
+          g.strokeStyle = '#241a10'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-20, -10); g.lineTo(20, -10); g.stroke();
+          g.fillStyle = '#c98a3a'; g.beginPath(); g.arc(-8, 2, 3, 0, 7); g.arc(0, 3, 3, 0, 7); g.fill();
+          g.fillStyle = '#7dbf5a'; g.beginPath(); g.arc(9, 2, 3, 0, 7); g.fill(); break; }
+        case 'fence': { // v1.56 — staccionata
+          g.strokeStyle = '#4a3524'; g.lineWidth = 3; g.lineCap = 'round';
+          for (const xx of [-16, 0, 16]) { g.beginPath(); g.moveTo(xx, 10); g.lineTo(xx, -12); g.stroke(); }
+          g.lineWidth = 2.5; for (const yy of [-6, 2]) { g.beginPath(); g.moveTo(-20, yy); g.lineTo(20, yy); g.stroke(); }
+          g.lineCap = 'butt'; break; }
+        case 'tree': { // v1.56 — alberello del villaggio
+          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(0, 16, 14, 5, 0, 0, 7); g.fill();
+          g.fillStyle = '#3d2b1a'; g.strokeStyle = '#211609'; g.lineWidth = 2; this._rr(g, -4, -6, 8, 22, 2); g.fill(); g.stroke();
+          const cg = g.createRadialGradient(-4, -20, 3, 0, -16, 22); cg.addColorStop(0, '#4e7a3c'); cg.addColorStop(1, '#22361d');
+          g.fillStyle = cg; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2;
+          g.beginPath(); g.arc(-8, -18, 12, 0, 7); g.arc(8, -20, 11, 0, 7); g.arc(0, -28, 12, 0, 7); g.fill(); g.stroke(); break; }
+        case 'signpost': { // v1.56 — cartello del villaggio
+          g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 14, 8, 4, 0, 0, 7); g.fill();
+          g.strokeStyle = '#3a2a18'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 13); g.lineTo(0, -14); g.stroke();
+          g.fillStyle = '#5a4326'; g.strokeStyle = '#241a10'; g.lineWidth = 2; this._rr(g, -22, -22, 44, 15, 2); g.fill(); g.stroke();
+          g.fillStyle = '#f0dcae'; g.font = 'bold 10px Segoe UI'; g.textAlign = 'center'; g.fillText('MERCATO', 0, -11); g.textAlign = 'left'; break; }
         case 'rock': case 'rockSmall': { const s = p.type === 'rock' ? 14 : 8; g.fillStyle = '#3a4152'; g.strokeStyle = '#242a38'; g.lineWidth = 2; g.beginPath(); g.moveTo(-s, s * .5); g.lineTo(-s * .5, -s); g.lineTo(s * .6, -s * .7); g.lineTo(s, s * .4); g.lineTo(s * .2, s); g.closePath(); g.fill(); g.stroke(); break; }
         case 'bones': { g.strokeStyle = '#cfc9b6'; g.lineWidth = 3; g.lineCap = 'round'; g.rotate(rot); for (let i = 0; i < 3; i++) { g.save(); g.rotate(i * 1.1); g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); g.restore(); } break; }
         case 'skull': { g.rotate(rot * .3); g.fillStyle = '#d8d2c0'; g.strokeStyle = '#8f8874'; g.lineWidth = 1.5; g.beginPath(); g.arc(0, -1, 7, 0, 7); g.fill(); g.stroke(); g.fillRect(-5, 4, 10, 5); g.fillStyle = '#1a1a22'; g.beginPath(); g.arc(-2.6, -1, 2, 0, 7); g.arc(2.6, -1, 2, 0, 7); g.fill(); break; }
@@ -651,6 +748,7 @@
       for (const c of (world.crates || [])) this._drawCrate(ctx, c);
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
+      if (this.map && this.map.village) for (const n of this.map.village.npcs) { if (!n.shop) this._drawVillager(ctx, n); }  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
       if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
       for (const z of (world.zones || [])) { const cc = z.c || '#ff3b3b'; const gr = ctx.createRadialGradient(z.x, z.y, 2, z.x, z.y, z.r); gr.addColorStop(0, 'rgba(255,60,60,' + (0.10 + z.p * 0.28) + ')'); gr.addColorStop(0.75, 'rgba(255,60,60,' + (0.06 + z.p * 0.18) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.fill(); ctx.strokeStyle = cc; ctx.globalAlpha = 0.4 + z.p * 0.55; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(z.x, z.y, z.r * z.p, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -742,6 +840,36 @@
       ctx.fillStyle = '#ffe0a8'; ctx.fillText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
       ctx.restore(); ctx.textAlign = 'left';
     },
+    // v1.56 — abitante del villaggio. Per ora solo scenografia: le botteghe diverse dalla fucina sono chiuse,
+    // e lo dicono, cosi' nessuno resta li' a premere tasti aspettando che si apra un pannello.
+    _drawVillager(ctx, n) {
+      const t = this.time, x = n.x, y = n.y;
+      const PAL = {
+        herbalist: { robe: '#3c5a34', hood: '#27401f', accent: '#9fe06a' },
+        innkeeper: { robe: '#5a4326', hood: '#3d2c17', accent: '#ffd97a' },
+        seer:      { robe: '#41305c', hood: '#2b1f3f', accent: '#c9a0ff' },
+        crier:     { robe: '#5a2f2f', hood: '#3d1e1e', accent: '#ff9a8a' },
+      };
+      const c = PAL[n.kind] || PAL.innkeeper;
+      const bob = Math.sin(t * 1.6 + x * 0.05) * 1.6;
+      ctx.save(); ctx.translate(x, y + bob);
+      ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(0, 17 - bob, 13, 5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = c.robe; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-11, 16); ctx.quadraticCurveTo(-9, -14, 0, -19); ctx.quadraticCurveTo(9, -14, 11, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = c.hood; ctx.beginPath(); ctx.arc(0, -21, 7.5, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#0d0a10'; ctx.beginPath(); ctx.arc(0, -19, 5.5, 0, 7); ctx.fill();
+      ctx.fillStyle = c.accent; ctx.beginPath(); ctx.arc(-2, -19, 1.3, 0, 7); ctx.arc(2, -19, 1.3, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+      ctx.strokeText(n.name || '', x, y - 36); ctx.fillStyle = '#efe0c0'; ctx.fillText(n.name || '', x, y - 36);
+      if (n.soon) {
+        ctx.font = 'bold 10px Segoe UI'; ctx.lineWidth = 3;
+        ctx.strokeText('\u2014 chiuso \u2014', x, y - 24);
+        ctx.fillStyle = 'rgba(200,190,170,.75)'; ctx.fillText('\u2014 chiuso \u2014', x, y - 24);
+      }
+      ctx.restore(); ctx.textAlign = 'left';
+    },
     _drawDarkMerchant(ctx, mrc, me) {
       const t = this.time; const x = mrc.x, y = mrc.y; const bob = Math.sin(t * 1.6) * 1.4; const flick = 0.6 + 0.4 * Math.sin(t * 9 + x);
       // v1.32 — beacon SEMPRE visibile (parità col Mercante Errante): colonna di luce viola/cremisi + anello pulsante
@@ -800,6 +928,7 @@
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {
       if (!this.torch || !this.darkCv || !this.map) return;
+      if (this.map.lit) return;   // v1.56 — il villaggio del MERCATO e' illuminato: un rifugio al buio non avrebbe senso
       const s = this.darkScale, dg = this.darkCtx, W = this.darkCv.width, H = this.darkCv.height;
       dg.setTransform(1, 0, 0, 1, 0, 0); dg.globalCompositeOperation = 'source-over'; dg.clearRect(0, 0, W, H);
       dg.fillStyle = 'rgba(2,3,8,' + this.darkness + ')'; dg.fillRect(0, 0, W, H);

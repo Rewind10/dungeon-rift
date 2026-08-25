@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.55.0`
+**Versione attuale:** `1.56.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🏘️ Il mercato e' un VILLAGGIO *(novita v1.56)*
+- La sosta ha una **mappa sua**, disegnata a mano: **32x24 tile** contro le 46x34 del combattimento (circa la
+  **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
+- **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della
+  Gilda**, ognuna con tetto, finestre illuminate, insegna sopra la porta, lanterna e targa col nome.
+- **Cinque abitanti**: il **Fabbro** e' l'unico che vende (i 3 slot dell'equipaggiamento). **Erborista,
+  Locandiere, Cartomante e Banditore** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
+  le prossime destinazioni.
+- Il villaggio e' **illuminato**: niente torcia, niente buio. La piazza e' ripulita dai detriti da caverna;
+  restano pozzo, lampioni, banchi, casse, barili, alberi, staccionate e il cartello MERCATO.
+- Si arriva da sud: il fabbro e' a 7 tile, il portale **EXIT** a 13, con la via centrale sgombra.
 
 ## ✦ Costi XP a tabella: primi sei x3, ultimi due x2 *(novita v1.55)*
 - Scaletta dei costi con base 10: **90 · 144 · 198 · 555 · 1551 · 4347 · 4926 · 8374**. Il primo livello costa

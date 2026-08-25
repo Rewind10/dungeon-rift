@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.55.0',
+    VERSION: '1.56.0',
     // v1.51 — level up fra le ondate
     BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
     SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
@@ -25,9 +25,9 @@
     BULLET_RADIUS: 5, XP_MAGNET: 120, FINAL_WAVE: 20,
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
     // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).
-    // SMITH_DIST / EXIT_DIST sono in TILE dal centro della mappa: fabbro e portale devono stare entrambi
-    // vicino al punto in cui atterri, altrimenti l'uscita non si vede (era la cella piu' lontana dal centro).
-    MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84, MARKET_SMITH_DIST: 4, MARKET_EXIT_DIST: 9,
+    // v1.56 — le distanze di fabbro e portale non si calcolano piu' a runtime: il villaggio e' disegnato
+    // a mano in mapgen (VILLAGE), quindi restano solo i raggi di interazione.
+    MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84,
     COMBO_TIME: 3.6, COMBO_STEP: 0.05, COMBO_CAP: 1.5, COMBO_MIN: 3,
     COIN_MAGNET: 130,
     COINS: [

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.55.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.56.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.56 (il mercato e' un VILLAGGIO)
+- **🏘️ Mappa dedicata**: 32x24 tile invece di 46x34 (**meta' area**), **senza muri interni** — gli unici blocchi
+  solidi sono i 5 edifici. Generatore separato da quello delle ondate.
+- **🏠 Cinque costruzioni**: Fucina, Locanda, Magazzino, Cappella e Torre della Gilda attorno a una piazza col
+  pozzo, con insegne, finestre illuminate e targhe.
+- **🧑‍🌾 Cinque abitanti**: il **Fabbro** vende l'equipaggiamento, gli altri quattro sono botteghe **chiuse** —
+  i posti gia' pronti per le prossime destinazioni.
+- **💡 Villaggio illuminato**: niente maschera della torcia, e la piazza e' ripulita da massi, buche e crepe del
+  generatore da caverna.
+- Test: **334 passati, 0 falliti**.
 
 ## 🆕 Novita v1.55 (costi XP a tabella: primi sei x3, ultimi due x2)
 - **✦ Nuova scaletta** (base 10): **90 · 144 · 198 · 555 · 1551 · 4347 · 4926 · 8374**. Massimizzare UNA

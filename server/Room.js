@@ -37,14 +37,15 @@ class Room {
   sendTo(pid, o) { const p = this.players.get(pid); if (p && p.conn) try { p.conn.send(JSON.stringify(o)); } catch (_) {} }
 
   newMap(seed, level, market) {
-    this.map = MapGen.generate(seed >>> 0, level); this.flow = null;
+    // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
+    this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); }
     this.merchant = null; this.darkMerchant = null; this.gearMerchant = null;
     if (market) {
-      // v1.52 — MAPPA MERCATO: sosta senza nemici. Niente casse (il 30% sarebbe un mimic, cioe' un nemico
-      // in una stanza che promette sicurezza) e niente Mercante Errante: quello resta un incontro delle
-      // ondate normali. Qui c'e' solo il MERCANTE DELL'EQUIPAGGIAMENTO, al centro della mappa.
+      // v1.52 — sosta senza nemici: niente casse (il 30% sarebbe un mimic, cioe' un nemico in una stanza che
+      // promette sicurezza) e niente Mercante Errante, che resta un incontro delle ondate normali.
+      // v1.56 — posizioni di fabbro, portale e botteghe arrivano dal villaggio, non piu' calcolate a runtime.
       this._layoutMarket();
       this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, market: 1 });
       return;
@@ -157,31 +158,12 @@ class Room {
   // di combattimento ha senso, in una sosta no — atterri al centro e il portale e' fuori schermo.
   // Qui riposizioniamo entrambi: fabbro a ~SMITH_DIST tile dallo spawn, portale a ~EXIT_DIST dalla parte
   // opposta. Cosi' appena arrivi vedi il fabbro, e girandoti vedi la via d'uscita.
+  // v1.56 — il villaggio arriva gia' disposto dal generatore: qui si aggancia solo il fabbro.
+  // (Il calcolo a runtime delle distanze della v1.53 non serve piu': le posizioni sono scelte a mano.)
   _layoutMarket() {
-    const m = this.map, T = C.TILE, W = m.w, H = m.h;
-    const cx = (m.spawn.x / T) | 0, cy = (m.spawn.y / T) | 0;
-    const cells = [];
-    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
-      const t = m.grid[y * W + x];
-      if (t !== C.T_FLOOR && t !== C.T_EXIT) continue;
-      cells.push({ x, y, d: Math.hypot(x - cx, y - cy), a: Math.atan2(y - cy, x - cx) });
-    }
-    if (!cells.length) { this.gearMerchant = { x: m.spawn.x, y: m.spawn.y, r: 18 }; return; }
-    const nearest = (want, filter) => {
-      let best = null, bd = Infinity;
-      for (const c of cells) { if (filter && !filter(c)) continue; const d = Math.abs(c.d - want); if (d < bd) { bd = d; best = c; } }
-      return best;
-    };
-    const smith = nearest(C.MARKET_SMITH_DIST) || cells[0];
-    const back = Math.atan2(smith.y - cy, smith.x - cx) + Math.PI;   // direzione opposta al fabbro
-    const away = (c) => (c !== smith) && Math.cos(c.a - back) > 0.3;
-    const exitC = nearest(C.MARKET_EXIT_DIST, away) || nearest(C.MARKET_EXIT_DIST, c => c !== smith) || cells[cells.length - 1];
-    // sposta la casella EXIT: va spostata NELLA GRIGLIA, non solo in map.exit, perche' il client
-    // disegna il portale scandendo le tile T_EXIT quando riceve la mappa.
-    for (let i = 0; i < m.grid.length; i++) if (m.grid[i] === C.T_EXIT) m.grid[i] = C.T_FLOOR;
-    m.grid[exitC.y * W + exitC.x] = C.T_EXIT;
-    m.exit = { x: exitC.x, y: exitC.y };
-    this.gearMerchant = { x: smith.x * T + T / 2, y: smith.y * T + T / 2, r: 18 };
+    const v = this.map && this.map.village;
+    const pos = (v && v.smith) || { x: this.map.spawn.x, y: this.map.spawn.y };
+    this.gearMerchant = { x: pos.x, y: pos.y, r: 18 };
     for (const p of this.players.values()) p._nearGear = false;
   }
   updateGearMerchant() {

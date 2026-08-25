@@ -2,6 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.56.0] — 2026-08-25 · "Il mercato è un villaggio"
+
+La sosta smette di essere una caverna riciclata: mappa dedicata, disegnata a mano.
+
+#### 🏘️ Mappa dedicata, metà misura, senza muri
+- Nuovo generatore `MapGen.generateMarket()`, separato da quello delle ondate. **32×24 tile contro 46×34**
+  (il **49%** dell'area): una sosta va letta a colpo d'occhio, non esplorata.
+- **Nessun muro interno.** Gli unici blocchi solidi sono i **5 edifici** — e sono solidi *nella griglia*, così la
+  collisione arriva gratis dal sistema di tile invece di richiedere una collisione per-oggetto.
+- **Villaggio illuminato** (`map.lit`): la maschera della torcia viene saltata. Un rifugio al buio pesto,
+  con la lanterna che scopre un metro alla volta, contraddiceva l'idea stessa di posto sicuro.
+- **Tema dedicato** (`village`), caldo, e piazza ripulita: nel mercato spariscono massi, buche e le crepe
+  profonde del generatore da caverna, che facevano sembrare la piazza un crollo. Restano i ciottoli.
+
+#### 🏠 Cinque costruzioni, cinque abitanti
+- **Fucina · Locanda · Magazzino · Cappella · Torre della Gilda**, disposte attorno a una piazza col pozzo.
+  Ognuna con tetto spiovente, finestre illuminate, insegna sopra la porta, lanterna accesa e targa col nome.
+  La Fucina ha il comignolo che fuma.
+- **5 NPC**: il **Fabbro** è l'unico che vende (i 3 slot dell'equipaggiamento); **Erborista, Locandiere,
+  Cartomante e Banditore** sono botteghe **ancora chiuse** e lo dicono, così nessuno resta lì a premere tasti
+  aspettando un pannello che non esiste. Sono i posti già pronti per le prossime destinazioni.
+- Arredo: pozzo centrale, lampioni che illuminano davvero, banchi del mercato, casse, barili, alberi,
+  staccionate, stendardi e il cartello **MERCATO**.
+- Il percorso è leggibile: si arriva da sud, il fabbro è a **7 tile**, il portale **EXIT** a **13**, con la
+  colonna centrale sgombra.
+
+#### 🧪 Test
+- Nuovo **testV156**: proporzione dell'area, assenza di muri interni oltre agli edifici, 5 costruzioni tutte
+  diverse e solide nella griglia, 5 abitanti di cui uno solo attivo, **nessun abitante o arredo dentro un
+  edificio**, corridoio centrale sgombro, mappa dichiarata illuminata e priva di spawn nemici e casse, e
+  40 rigenerazioni di fila senza che un giocatore compaia dentro un muro. **334 passati, 0 falliti.**
+- Verifica visiva: la mappa è stata renderizzata fuori dal gioco con Chromium per controllare il disegno di
+  edifici, arredo e abitanti prima della consegna.
+
+---
+
 ### [1.55.0] — 2026-08-25 · "Costi XP a tabella: primi sei ×3, ultimi due ×2"
 
 #### 📏 Prima di tutto: il modello di reddito era sbagliato
