@@ -30,16 +30,20 @@
     return MODES.assault;
   }
 
+  // v1.50 — CURVA DI INTRODUZIONE ripristinata. Un archetipo nuovo ogni 1-2 ondate, secondo i tre pilastri
+  // del roster (sciame -> blob -> caster -> tank -> debuffer). Le comparse "dal primo stage" introdotte in
+  // v1.44 (slime, cave_brute) e v1.49 (occhio) erano TEMPORANEE, servivano a valutare i nuovi sprite: erano
+  // rimaste nel codice appiattendo la rampa di difficolta'.
   function poolForWave(w) {
-    // v1.39 — pool PUPPET: Zombie Putrido base + Negromante dall'ondata 3 (evoca zombi minori e spara sfere debilitanti).
     const p = []; const add = (id, x) => { if (MONSTERS[id]) p.push({ id, weight: x }); };
-    add('skeleton', 40);
-    // v1.44 — Melma Corrosiva e Bruto delle Caverne compaiono già dal PRIMO STAGE (per valutazione).
-    add('slime', 16);
-    add('cave_brute', 8); add('occhio', 9); // v1.49 Beholder (valutazione)
-    if (w >= 3) add('darkmage', 12);
+    add('skeleton', 40);                // sciame mischia — sempre presente
+    if (w >= 2) add('slime', 16);       // blob acido, minaccia ravvicinata
+    if (w >= 3) add('darkmage', 12);    // caster / evocatore
+    if (w >= 4) add('cave_brute', 8);   // tank con slam ad area
+    if (w >= 6) add('occhio', 9);       // debuffer tier 3, dopo il primo boss
     return p;
   }
+
   function scaling(w, players) { const p = Math.max(1, players); return { hp: 1 + w * 0.15 + (p - 1) * 0.14, dmg: 1 + w * 0.055, speed: 1 + Math.min(0.30, w * 0.015), count: Math.round((5 + w * 1.8) * (0.78 + p * 0.22)), eliteChance: Math.min(0.26, 0.03 + w * 0.019) }; }
   function isBossWave(w) { return w > 0 && w % BOSS_EVERY === 0; }
   function bossForWave(w, players) {
@@ -59,8 +63,13 @@
     for (let i = 0; i < count; i++) { const pick = MU.weighted(pool); const elite = MU.chance(eliteChance) && !MONSTERS[pick.id].boss; list.push({ type: pick.id, elite }); }
     return { list, scaling: s, mode };
   }
+  // v1.50 — moltiplicatore PV degli elite reso PER-NEMICO (def.eliteHp, default ELITE_HP). Il 2.4x fisso
+  // era tarato sui nemici da ~80-100 PV: applicato ai tank produceva mostri fuori scala nelle prime ondate
+  // (Troll elite ~845 PV all'ondata 4, contro l'arma iniziale).
+  const ELITE_HP = 2.4;
   function applyScaling(mon, s, elite) {
-    mon.maxHp = Math.round(mon.def.hp * s.hp * (elite ? 2.4 : 1)); mon.hp = mon.maxHp;
+    const eh = (mon.def.eliteHp != null) ? mon.def.eliteHp : ELITE_HP;
+    mon.maxHp = Math.round(mon.def.hp * s.hp * (elite ? eh : 1)); mon.hp = mon.maxHp;
     mon.dmg = Math.round(mon.def.dmg * s.dmg * (elite ? 1.5 : 1));
     mon.radius = mon.def.radius * (elite ? 1.28 : 1);
     const sizeFactor = MU.clamp(16 / mon.radius, 0.6, 1.45);

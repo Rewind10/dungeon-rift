@@ -22,7 +22,7 @@
     // v1.47 — Troll delle Caverne: reso con SPRITE SHEET animato (idle/walk/attack, griglia 5x5 @256px, disegnati
     // a mano dall'artista → camminata naturale, niente rig). Mirror L/R per direzione. L'attacco (martellata) è
     // pilotato dall'evento slam (mAtk): la fase 0..1 mappa i 25 frame; il danno scatta all'impatto (slamHit).
-    cave_brute: { id: 'cave_brute', name: 'Troll delle Caverne', tier: 2, hp: 220, speed: 60, radius: 26, dmg: 28, atkRange: 72, atkCd: 2.1, ai: 'brute', atk: 'melee', xp: 26, weight: 6, color: '#3b3d39', color2: '#171815', eye: '#ffb14a', shape: 'brute', sheet: 'troll', slamRadius: 108, slamWind: 0.78, slamHit: 0.72, slamKnock: 4.2, sightRange: 400, memory: 4 },
+    cave_brute: { id: 'cave_brute', name: 'Troll delle Caverne', tier: 2, hp: 220, speed: 60, radius: 26, dmg: 28, atkRange: 72, atkCd: 2.1, ai: 'brute', atk: 'melee', xp: 26, weight: 6, color: '#3b3d39', color2: '#171815', eye: '#ffb14a', shape: 'brute', sheet: 'troll', slamRadius: 108, slamWind: 0.78, slamHit: 0.72, slamKnock: 4.2, sightRange: 400, memory: 4, eliteHp: 1.5 },
     // v1.44 — Melma Corrosiva: blob acido reso col RENDER PUPPET (1 pezzo) animato in SQUASH & STRETCH.
     // Lento, coriaceo; overlay: nucleo verde pulsante + occhi che avvampano + AURA VERDE (def.aura) + bolle acide.
     // v1.45 — la Melma STRISCIA lenta; quando è VICINA SALTA e SPUTA bolle d'acido ad ALTO danno (attacco ravvicinato).
@@ -31,7 +31,7 @@
     // v1.49 — BEHOLDER (id 'occhio'): reintrodotto. Bulbo oculare fluttuante con eye-stalks e tentacoli
     // tutt'intorno (render _eyeF). NON spara: il suo attacco e' lo SGUARDO (debuff nel campo visivo, gazer).
     // Le EYESTALKS RUOTANO -> alterna ciclicamente i 3 tipi di sguardo (weaken/slow/sunder); fascio ricolorato.
-    occhio: { id: 'occhio', name: 'Beholder', tier: 3, hp: 130, speed: 92, radius: 22, dmg: 16, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 24, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff5ad0', shape: 'beholder', puppet: true, beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 340, strafeDist: 240, gazeCycle: 4 },  // v1.49 — reso col RENDER PUPPET raster (illustrazione ritagliata) + iris che segue
+    occhio: { id: 'occhio', name: 'Beholder', tier: 3, hp: 130, speed: 92, radius: 22, dmg: 16, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 24, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff5ad0', shape: 'beholder', puppet: true, beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 340, strafeDist: 240, gazeCycle: 4, eliteHp: 1.9 },  // v1.49 — reso col RENDER PUPPET raster (illustrazione ritagliata) + iris che segue
     // v1.30 — Mimic MANTENUTO solo come CASSA: non entra nel pool delle ondate (weight 0),
     // compare esclusivamente dalle casse-mima e dalla modalità TESORO. Sprite top-down a forziere.
     mimic: { id: 'mimic', name: 'Bestia Mimica', tier: 2, hp: 150, speed: 150, radius: 19, dmg: 26, atkRange: 40, atkCd: 1.0, ai: 'ambush', atk: 'melee', xp: 14, weight: 0, color: '#8a5a2b', color2: '#4a2f16', eye: '#ff3b3b', shape: 'mimic', chestOnly: true },

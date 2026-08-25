@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.48.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.50.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -408,23 +408,36 @@ toccare il gioco.
 
 ## 12. Checklist di RELEASE (ad ogni versione)
 
-Aggiornare **sempre** tutti questi punti (vedi anche memoria di progetto):
+> **Regola fissa del progetto.** I `.md` si aggiornano **nella stessa sessione** in cui si tocca il codice, mai
+> "dopo". Servono a riprendere il lavoro dal punto in cui lo si è interrotto: se restano indietro, alla ripresa
+> successiva si riparte da una descrizione **falsa** del gioco. Lo scivolone 1.47→1.49 nasce esattamente da qui —
+> `ROSTER.md`, la scheda che si rilegge per prima, non era in questa lista.
+
+Aggiornare **sempre** tutti questi punti:
 
 1. `shared/constants.js` → `VERSION: 'X.Y.Z'`
 2. `package.json` → `"version": "X.Y.Z"`
 3. `public/index.html` → `<title>` **e** badge `#verBadge` (`vX.Y.Z`)
 4. `CHANGELOG.md` → nuova sezione in cima
-5. `README.md` → blocco "Novita vX.Y"
+5. `README.md` → **titolo** `# ⚔️ DUNGEON RIFT vX.Y.Z` **e** blocco "Novita vX.Y"
 6. `CARATTERISTICHE.md` → "Versione attuale" + blocco novità
-7. `test/simulate.js` → test aggiornati/aggiunti → **eseguire `node test/simulate.js` (deve dare 0 falliti)**
-8. **Ripacchettizzare** come `.txt` (zip mascherato) e **verificare** ri-estraendo e rilanciando i test.
+7. `ROSTER.md` → scheda del nemico toccato, **tabella comparativa** e **ondata di comparsa**
+8. `ENEMIES.md` → "Versione di riferimento" + nuova sezione tecnica se cambia il metodo di render
+9. `test/simulate.js` → test aggiornati/aggiunti → **eseguire `node test/simulate.js` (deve dare 0 falliti)**
+10. **Commit git** — sostituisce il vecchio "ripacchettizza come `.txt`", che era il workflow di quando il
+    progetto non era ancora su repository.
 
 Comandi tipici:
 ```bash
-node test/simulate.js                 # deve dire "RISULTATO: N passati, 0 falliti"
-zip -rq /out/dungeon-rift-vX.Y.Z.txt . -x '*.DS_Store'
-# verifica: estrai in cartella pulita e rilancia i test
+node test/simulate.js                          # deve dire "RISULTATO: N passati, 0 falliti"
+git add -A && git commit -m "vX.Y.Z — <titolo>"
+git tag vX.Y.Z
 ```
+
+> **Trappola nota — gli id nel codice non corrispondono ai nomi visibili.**
+> `skeleton` = **Zombie Putrido** · `cave_brute` = **Troll delle Caverne** · `occhio` = **Beholder** ·
+> `darkmage` = Negromante · `slime` = Melma Corrosiva. Cercare "Troll" nel codice non trova nulla: cercare
+> `cave_brute`. Gli id sono storici (compatibilità con boss/`summon`) e **non vanno rinominati** alla leggera.
 
 ---
 

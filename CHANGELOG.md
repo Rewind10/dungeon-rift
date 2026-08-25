@@ -2,7 +2,52 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
-#### [1.49.0] — 2026-08-11 · "Beholder: l'Occhio Tiranno torna nel roster (Sguardo multi-raggio)"
+### [1.50.0] — 2026-08-25 · "Consolidamento: curva di difficoltà ripristinata, elite tarati, documentazione riallineata"
+
+Versione di **consolidamento**: nessun mostro nuovo. Dalla 1.37 alla 1.49 — tredici versioni — il lavoro è stato
+quasi interamente sul **rendering** dei nemici; nel frattempo si era accumulato debito su **bilanciamento** e
+**documentazione**. Questa versione lo salda prima di rimettere mano al gameplay.
+
+#### 🌊 Curva di introduzione dei nemici ripristinata (`shared/waves.js`)
+- Le comparse **"dal primo stage"** aggiunte in v1.44 (Melma, Bruto) e v1.49 (Beholder) erano **temporanee**:
+  servivano a valutare i nuovi sprite, ma sono rimaste nel codice. Risultato: all'ondata 1 il pool conteneva già
+  **4 archetipi su 5**, tank tier 2 e debuffer tier 3 compresi, e la rampa di difficoltà era di fatto sparita.
+- Nuova rampa — un archetipo nuovo ogni 1-2 ondate, coerente coi **tre pilastri** descritti in `ROSTER.md`:
+
+  | Ondata | Entra nel pool | Archetipo |
+  |---:|---|---|
+  | 1 | 🟢 Zombie Putrido | sciame mischia |
+  | 2 | 🟢 Melma Corrosiva | blob acido ravvicinato |
+  | 3 | 🟣 Negromante | caster / evocatore |
+  | 4 | 🟠 Troll delle Caverne | tank con slam ad area |
+  | 6 | 👁️ Beholder | debuffer, dopo il primo boss |
+
+#### ⚔️ Moltiplicatore PV degli elite reso PER-NEMICO (`def.eliteHp`)
+- Il `2.4x` fisso sugli elite era tarato sui nemici da ~80-100 PV. Applicato ai più robusti produceva mostri
+  fuori scala: un **Troll elite** all'ondata 4 arrivava a **~845 PV** contro l'arma iniziale.
+- Ora ogni def può dichiarare `eliteHp` (default invariato `2.4`): **Troll `1.5`** (~528 PV all'ondata 4),
+  **Beholder `1.9`**. Tutti gli altri nemici mantengono esattamente il comportamento precedente.
+
+#### 📚 Documentazione riallineata
+- **`ROSTER.md`** era il più arretrato (fermo alla 1.47): mancavano **Melma Corrosiva** e **Beholder** dalla tabella
+  comparativa, il Troll era ancora chiamato "Bruto delle Caverne" e descritto come puppet (dalla 1.47 è uno
+  **sprite sheet**), e l'intestazione dichiarava "tutti i nemici d'ondata usano il RENDER PUPPET". **Riscritto.**
+- **`README.md`**: il titolo diceva ancora `v1.28.1`; sezione **Architettura** aggiornata (mancavano `public/assets`
+  e `tools/`, cioè proprio le cartelle nate col metodo puppet).
+- **`ENEMIES.md`** §12: la **checklist di release** conteneva ancora il punto *"ripacchettizzare come `.txt`
+  (zip mascherato)"* — il workflow precedente al repository git. Sostituito col **commit**; aggiunti `ROSTER.md`
+  ed `ENEMIES.md` fra i documenti da aggiornare (ROSTER **non era in lista**: è la causa del suo arretramento).
+- Aggiunta alla checklist la **trappola degli id**: `skeleton` = Zombie Putrido · `cave_brute` = Troll ·
+  `occhio` = Beholder.
+
+#### 🧪 Test
+- Nuovo **testV150**: verifica la rampa ondata per ondata, la sua **monotonia** (nessun archetipo che sparisce
+  crescendo di ondata) e il tetto PV degli elite tank. Aggiornati testV142 / testV145 / testV149, che asserivano
+  la vecchia comparsa "dal primo stage". **256 passati, 0 falliti.**
+
+---
+
+### [1.49.0] — 2026-08-11 · "Beholder: l'Occhio Tiranno torna nel roster (Sguardo multi-raggio)"
 
 ##### 👁️ Ritorna il BEHOLDER (id `occhio`)
 - Reintrodotto l'**Occhio Vagante** come **BEHOLDER**: bulbo oculare fluttuante con **eye-stalks** e **tentacoli

@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.49.0',
+    VERSION: '1.50.0',
     VIS_SCALE: 1.45, COL_SCALE: 1.08,  // v1.13 — ridimensionamento LEGGERO: occhi grandi, hitbox quasi invariata (fluidita preservata)
     TICK_RATE: 30, SNAPSHOT_RATE: 20, MAX_PLAYERS: 6,
     TILE: 48, MAP_W: 46, MAP_H: 34,

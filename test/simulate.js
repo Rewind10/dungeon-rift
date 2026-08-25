@@ -425,8 +425,8 @@ function testV142() {
   assert(br && br.hp >= 180 && br.speed <= 80 && br.dmg >= 20, 'Bruto e un TANK: molti PV, lento, danno alto');
   assert(br && br.slamRadius > 0, 'Bruto ha un raggio di SLAM ad area');
   assert(Mon.ORDER.includes('cave_brute'), 'cave_brute e presente nell\'ORDER del bestiario');
-  // v1.44 — il Bruto è nel pool fin dal primo stage (per valutazione)
-  assert(Waves.poolForWave(1).some(x => x.id === 'cave_brute'), 'Bruto nel pool dal primo stage');
+  // v1.50 — il Troll entra nel pool dall'ondata 4 (la comparsa dal primo stage era temporanea)
+  assert(Waves.poolForWave(4).some(x => x.id === 'cave_brute'), 'Troll nel pool dall ondata 4');
   // si genera e lo slam colpisce ad area emettendo l'evento con eid (per l'animazione client)
   const room = new Room('v142'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
   const m = room.spawnMonster('cave_brute', pl.x + 40, pl.y, { scaling: Waves.scaling(4, 1) });
@@ -482,8 +482,8 @@ function testV145() {
   assert(sl && sl.speed <= 60, 'la Melma è LENTA (' + sl.speed + ')');
   assert(sl && sl.acidMult > 1 && sl.acidCount >= 2 && sl.projSpeed > 0, 'la Melma sputa bolle d\'acido ad ALTO danno (mult ' + sl.acidMult + ' x' + sl.acidCount + ')');
   assert(Mon.ORDER.includes('slime'), 'slime presente nell\'ORDER del bestiario');
-  const p1 = Waves.poolForWave(1).map(x => x.id);
-  assert(p1.includes('slime') && p1.includes('cave_brute') && p1.includes('skeleton'), 'primo stage: skeleton + slime + bruto');
+  const p2 = Waves.poolForWave(2).map(x => x.id);
+  assert(p2.includes('slime') && p2.includes('skeleton'), 'Melma nel pool dall ondata 2, insieme allo sciame base');
   // simulazione: a distanza ravvicinata deve SPUTARE proiettili d'acido OSTILI (danno elevato) ed emettere 'acid'
   const room = new Room('v145'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
   const m = room.spawnMonster('slime', pl.x + 90, pl.y, { scaling: Waves.scaling(1, 1) });
@@ -510,7 +510,7 @@ function testV149() {
   assert(oc && oc.gazeFov > 0 && oc.gazeRange > 0, 'ha un campo visivo (gazeFov + gazeRange)');
   assert(oc && oc.gazeCycle > 0, 'le eyestalks RUOTANO: alterna il tipo di sguardo (gazeCycle)');
   assert(Mon.ORDER.indexOf('occhio') >= 0, 'occhio presente nell ORDER del bestiario');
-  assert(Waves.poolForWave(1).some(x => x.id === 'occhio'), 'Beholder nel pool dal primo stage');
+  assert(Waves.poolForWave(6).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 6, dopo il primo boss');
   const dt = 1 / C.TICK_RATE;
   const room = new Room('v149'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
   room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
@@ -529,6 +529,34 @@ function testV149() {
   for (let i = 0; i < C.TICK_RATE * 5; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
   assert(hasNaN(room) === null, 'nessun NaN col Beholder in campo');
   ok('novita v1.49 verificate');
+}
+function testV150() {
+  console.log('\n[TEST 24] Novita v1.50 — curva di introduzione dei nemici + elite tarati sui tank');
+  const Mon = require('../shared/monsters.js');
+  const at = w => Waves.poolForWave(w).map(x => x.id);
+  // 1) la RAMPA: un archetipo nuovo ogni 1-2 ondate, non tutti dal primo stage
+  const p1 = at(1);
+  assert(p1.length === 1 && p1[0] === 'skeleton', 'ondata 1: solo lo sciame base (Zombie Putrido)');
+  assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
+  assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
+  assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
+  assert(!at(5).includes('occhio') && at(6).includes('occhio'), 'Beholder introdotto all ondata 6');
+  let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
+  assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
+  // 2) ELITE: i nemici gia robusti non devono esplodere di PV
+  const brute = Mon.MONSTERS.cave_brute;
+  assert(brute.eliteHp && brute.eliteHp < 2.4, 'il Troll ha un moltiplicatore elite ridotto (def.eliteHp)');
+  const mk = (id, w, elite) => { const m = { def: Mon.MONSTERS[id] }; Waves.applyScaling(m, Waves.scaling(w, 1), elite); return m; };
+  const trollE = mk('cave_brute', 4, true);
+  assert(trollE.maxHp < 600, 'Troll elite all ondata 4 sotto i 600 PV (prima ~845): maxHp=' + trollE.maxHp);
+  const zomE = mk('skeleton', 4, true), zom = mk('skeleton', 4, false);
+  assert(Math.abs(zomE.maxHp / zom.maxHp - 2.4) < 0.05, 'gli altri nemici mantengono il 2.4x degli elite');
+  // 3) nessuna regressione a runtime con la nuova curva
+  const dt = 1 / C.TICK_RATE;
+  const room = new Room('v150'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  for (let i = 0; i < C.TICK_RATE * 20; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
+  assert(hasNaN(room) === null, 'nessun NaN con la nuova curva del pool');
+  ok('novita v1.50 verificate');
 }
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
@@ -552,8 +580,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.49)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.50)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

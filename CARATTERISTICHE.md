@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.49.0`
+**Versione attuale:** `1.50.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🧭 Consolidamento: curva di difficolta, elite tarati, documentazione *(novita v1.50)*
+- **Curva di introduzione dei nemici ripristinata.** Gli archetipi tornano a entrare **scaglionati**: 🟢 Zombie
+  Putrido (ondata 1) → 🟢 Melma Corrosiva (2) → 🟣 Negromante (3) → 🟠 Troll delle Caverne (4) → 👁️ Beholder (6,
+  dopo il primo boss). Le comparse "dal primo stage" introdotte in v1.44 e v1.49 erano **temporanee**, servivano a
+  valutare i nuovi sprite: erano rimaste nel codice e appiattivano la rampa di difficolta.
+- **Elite tarati sui nemici robusti.** Il moltiplicatore PV degli elite e ora dichiarato **per nemico**
+  (`def.eliteHp`, default 2.4 invariato). Il **Troll** usa 1.5 e il **Beholder** 1.9: un Troll elite all'ondata 4
+  scende da ~845 a ~528 PV, cifra sostenibile con l'equipaggiamento di quel punto della run.
+- **Documentazione riallineata** e **checklist di release** aggiornata: il commit git sostituisce il vecchio
+  "ripacchettizza come .txt", e `ROSTER.md` entra finalmente nella lista dei file da aggiornare a ogni versione.
+- Test: **256 passati, 0 falliti**.
 
 ## 👁️ Beholder: l'Occhio Tiranno torna nel roster *(novita v1.49)*
 - Reintrodotto l'**Occhio Vagante** come **BEHOLDER**: bulbo oculare fluttuante con **eye-stalks** e **tentacoli

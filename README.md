@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.28.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.50.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.50 (consolidamento: curva di difficolta, elite tarati, documentazione riallineata)
+- **🌊 Curva di introduzione ripristinata**: i nemici tornano a entrare **scaglionati** — Zombie (1) → Melma (2) →
+  Negromante (3) → Troll (4) → Beholder (6). Le comparse "dal primo stage" di v1.44/v1.49 erano temporanee (servivano
+  a valutare i nuovi sprite) ed erano rimaste: all'ondata 1 uscivano gia 4 archetipi su 5, tank compreso.
+- **⚔️ Elite tarati sui tank**: il moltiplicatore PV degli elite e ora **per-nemico** (`def.eliteHp`, default 2.4).
+  Un **Troll elite** all'ondata 4 passa da **~845** a **~528 PV**; gli altri nemici restano invariati.
+- **📚 Documentazione riallineata**: `ROSTER.md` riscritto (mancavano Melma e Beholder, il Troll era ancora
+  "Bruto"), titolo del README corretto, **checklist di release** aggiornata (commit git al posto dello zip `.txt`,
+  con `ROSTER.md` finalmente in lista).
+- Test: **256 passati, 0 falliti**.
 
 ## 🆕 Novita v1.49 (Beholder: l'Occhio Tiranno torna con lo Sguardo multi-raggio)
 - **👁️ Beholder** (ex Occhio Vagante) reintrodotto nel roster: **non spara**, ti **DEBILITA con lo Sguardo** se
@@ -312,11 +323,15 @@ dash che attraversa i nemici, 3 armi raccoglibili, musica tetra da dungeon, cass
 
 ## 🗂️ Architettura (file dedicati)
 ```
-shared/  constants, mathutils, loot (BOON + EVO + item + XP), monsters, heroes,
-         mapgen (temi), pathfinding, ai, waves (MODALITÀ)
-server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP)
-public/  index.html (scelta boon), style.css
-public/js/ net, input, audio, renderer (boon-fx, tesoro, MINIMAPPA), hud (boon+modalita+COMBO), main (hit-stop, combo)
+shared/  constants (VERSION), mathutils, loot (BOON + EVO + item + XP + equipaggiamento), monsters (roster + boss),
+         heroes, mapgen (temi), pathfinding, ai (swarm/necromancer/brute/blob/gazer), waves (MODALITÀ + pool + scaling)
+server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP, combo, evocazioni, anti-incastro)
+public/  index.html (scelta boon + badge versione), style.css
+public/js/ net, input, audio, renderer (puppet + sprite-sheet + boon-fx + MINIMAPPA), hud, main
+public/assets/enemies/  pezzi raster + manifest dei mostri (ghoul, mage, brute, slime, beholder, troll_sheet)
+public/assets/art/      artwork del bestiario · public/assets/gear/ icone emporio (3 slot x 3 eroi)
+tools/   slicer e anteprime rig — Python offline, NON servono a runtime
+test/    simulate.js — suite headless (256 test)
 ```
 
 Buon divertimento nel Rift! 🗡️
