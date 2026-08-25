@@ -1,10 +1,23 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.56.0`
+**Versione attuale:** `1.57.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## ⛏️ Il mercato e' una SALA SCAVATA *(novita v1.57)*
+- Siamo **sottoterra**, e ora si vede: niente case, alberi o staccionate. Il mercato e' una **camera scavata
+  nella roccia**, con pareti quasi nere. Fuori dalla sala non c'e' mappa: c'e' pietra piena.
+- **Un solo varco**, a sud, largo tre tile, su un corridoio corto con il **portale EXIT** in fondo.
+- **Buio, e la luce nasce dal falo'** al centro: un unico grande alone circolare scopre i cinque banchetti e
+  si spegne contro le pareti. Le lanterne appese ai pali dei banchi fanno da luci di appoggio.
+- **Cinque banchetti** a ferro di cavallo attorno al fuoco — bancone, tendone a strisce, lanterna e merce
+  diversa per mestiere — **piu' grandi dei mercanti**. Il **Fabbro** e' l'unico che vende; **Rigattiere,
+  Ostessa, Cartomante ed Erborista** sono ancora chiusi.
+- I **mercanti** sono al doppio della taglia e piu' dettagliati (mantellina, cintura, pieghe, mani, occhi
+  accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
+- Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
 
 ## 🏘️ Il mercato e' un VILLAGGIO *(novita v1.56)*
 - La sosta ha una **mappa sua**, disegnata a mano: **32x24 tile** contro le 46x34 del combattimento (circa la

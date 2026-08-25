@@ -2,6 +2,56 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.57.0] — 2026-08-25 · "Il mercato è una sala scavata, non un villaggio"
+
+La v1.56 aveva un errore di ambientazione: case col tetto spiovente, alberi e staccionate **sottoterra**.
+Rifatto da capo come camera scavata nella roccia.
+
+#### ⛏️ Generatore ribaltato: si scava, non si costruisce
+- `generateMarket()` parte da **roccia piena** e *scava* la sala, invece di partire da uno spiazzo e murarlo.
+  Fuori dalla sala non c'è mappa: c'è pietra. Pareti **quasi nere** (`wall #050607`).
+- **Un solo varco**, a sud, largo 3 tile, su un corridoio corto col **portale EXIT** in fondo. Nord, est e
+  ovest sono chiusi — verificato dal test, non a occhio.
+- Niente lastricato: il pavimento è la roccia nuda, come nel resto del dungeon.
+
+#### 🔥 Buio, con la luce che nasce dal falò
+- La maschera dell'oscurità **torna attiva** anche qui (in v1.56 era disattivata). La sala è illuminata da
+  **un'unica grande sorgente circolare centrata sul falò** (`bigLight`, raggio 430px): scopre i cinque
+  banchetti e si spegne contro le pareti. Le lanterne appese ai pali fanno da luci di appoggio.
+- Il falò entra anche nel passaggio di luce colorata, così la sala è calda e non grigia.
+
+#### 🛖 Banchetti e mercanti
+- **Cinque banchetti** a ferro di cavallo attorno al fuoco, aperti verso il varco sud: bancone di pietra e
+  legno, tendone a strisce, lanterna accesa sul palo, merce diversa per mestiere. Scalati **1.7×**: il banco
+  è più grande del mercante, non viceversa.
+- I **mercanti** sono al doppio della taglia della v1.56 e più dettagliati — mantellina, cintura con fibbia,
+  pieghe della veste, due braccia con le mani, occhi accesi, l'attrezzo del mestiere in mano — mantenendo la
+  silhouette incappucciata di prima.
+- Stanno a **2.1 tile** dal proprio banco. A 1.75 finivano *dentro* il tendone: in vista dall'alto "stare
+  dietro" vuol dire stare più in alto sullo schermo, ed è lì che sta la tenda.
+- Targa del **Fabbro** corretta: era "🔨 Fabbro — Emporio" su una riga e sforava sul banco; ora è "Fabbro"
+  con "— emporio —" sotto, come il "— chiuso —" degli altri quattro.
+
+#### 🎛️ Menu di pausa
+- Il pulsante diventa **"🏕️ VAI AL VILLAGGIO"** e i due pulsanti stanno **affiancati**: `button.primary` e
+  `button.ghost` hanno `width:100%`, che li impilava — annullato dentro `#shopActions`.
+
+#### 🧹 Pulizia
+- Rimossi `_bakeBuilding` e i prop di superficie della v1.56 (`house`, `tree`, `fence`, `lamp_post`,
+  `market_stall`): non li usava più nessuno.
+
+#### 🧪 Test
+- `testV157` sostituisce `testV156`: verifica che la sala sia scavata (niente pavimento fuori, niente muri
+  dentro), che il varco sia **uno solo** e a sud, che dallo spawn si **raggiunga il portale a piedi**
+  (flood fill), che i banchetti siano 5, tutti diversi e più grandi dei mercanti, che ogni mercante stia
+  **dietro** il suo banco, che nessuno finisca dentro la roccia e che la mappa resti **buia**.
+  **333 passati, 0 falliti.**
+- La sala è stata renderizzata con Chromium e **approvata su anteprima prima** di toccare il codice del
+  progetto: due giri di correzioni (mercanti dentro il tendone, targa che copriva la faccia) sono avvenuti
+  in sandbox, non sul repository.
+
+---
+
 ### [1.56.0] — 2026-08-25 · "Il mercato è un villaggio"
 
 La sosta smette di essere una caverna riciclata: mappa dedicata, disegnata a mano.

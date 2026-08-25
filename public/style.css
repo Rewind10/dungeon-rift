@@ -184,8 +184,9 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .mc .cost{font-weight:800;font-size:14px;margin-top:2px}
 .merch-hint{margin-top:8px;font-size:11px;color:#b9a884;text-align:center}
 /* v1.53 — destinazioni del menu di pausa (facile aggiungerne altre: basta un altro <button> qui dentro) */
-#shopActions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px}
-#shopActions button{min-width:230px}
+#shopActions{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap;margin-top:16px}
+/* v1.57 — i due pulsanti stanno AFFIANCATI: button.primary/.ghost hanno width:100%, qui va annullato */
+#shopActions button{width:auto;min-width:0;flex:0 1 auto;margin-top:0;padding:12px 22px;font-size:14px}
 #shopMarketBtn{border-color:#a9772e;color:#ffcf4a}
 #shopMarketBtn:hover{background:rgba(169,119,46,.18)}
 /* v1.52 — MERCATO: pannello del fabbro (stessa cornice del Mercante Errante, carte .gc dell'emporio) */

@@ -130,70 +130,68 @@
   // non esplorabile. Mappa costruita a mano, circa META' di quella di combattimento (32x24 contro 46x34),
   // SENZA muri interni: solo il bordo e i cinque edifici, che sono blocchi solidi cosi' la collisione arriva
   // gratis dalla griglia. Illuminata (`lit`): un rifugio al buio della torcia sarebbe assurdo.
+  // v1.57 — SIAMO SOTTOTERRA. Niente case, niente alberi, niente piazza lastricata: una SALA scavata
+  // nella roccia, pareti quasi nere, un FALO' al centro che e' l'unica sorgente di luce, i mercanti
+  // disposti attorno col loro banchetto. Un solo varco, a sud, dove sta il portale d'uscita.
   const VILLAGE = {
-    w: 32, h: 24,
-    spawn: { x: 16, y: 18 },      // si arriva da sud
-    exit: { x: 16, y: 5 },        // si esce a nord, in vista dallo spawn (12 tile)
-    // edifici: blocchi solidi (x, y = angolo alto-sinistro in tile; bw, bh = dimensioni in tile)
-    buildings: [
-      { x: 6,  y: 7,  bw: 5, bh: 3, kind: 'forge',  name: 'Fucina' },
-      { x: 21, y: 7,  bw: 5, bh: 3, kind: 'inn',    name: 'Locanda' },
-      { x: 6,  y: 15, bw: 5, bh: 3, kind: 'shop',   name: 'Magazzino' },
-      { x: 21, y: 15, bw: 5, bh: 3, kind: 'temple', name: 'Cappella' },
-      { x: 3,  y: 11, bw: 3, bh: 3, kind: 'tower',  name: 'Torre della Gilda' },
+    w: 26, h: 22,
+    room: { x0: 4, y0: 2, x1: 20, y1: 13 },   // interno della sala (inclusivo, in tile)
+    gap: { x0: 11, x1: 13, y1: 17 },          // varco a sud + corridoio fino all'uscita
+    spawn: { x: 12, y: 12 },
+    exit: { x: 12, y: 16 },
+    fire: { x: 12, y: 9 },
+    // banchetti a ferro di cavallo attorno al fuoco, aperti verso il varco sud
+    stalls: [
+      { x: 12, y: 5,  kind: 'seer',      name: 'Cartomante', soon: 1 },
+      { x: 8,  y: 6,  kind: 'crier',     name: 'Rigattiere', soon: 1 },
+      { x: 16, y: 6,  kind: 'innkeeper', name: 'Ostessa',    soon: 1 },
+      { x: 8,  y: 10, kind: 'smith',     name: 'Fabbro',     shop: 1 },
+      { x: 16, y: 10, kind: 'herbalist', name: 'Erborista',  soon: 1 },
     ],
-    // NPC: il fabbro e' l'unico funzionante, gli altri sono botteghe ancora chiuse
-    npcs: [
-      { x: 12, y: 12, kind: 'smith',    name: 'Fabbro',      shop: 1 },
-      { x: 20, y: 12, kind: 'herbalist', name: 'Erborista',  soon: 1 },
-      { x: 23, y: 11, kind: 'innkeeper', name: 'Locandiere', soon: 1 },
-      { x: 9,  y: 11, kind: 'seer',      name: 'Cartomante', soon: 1 },
-      { x: 16, y: 15, kind: 'crier',     name: 'Banditore',  soon: 1 },
-    ],
+    stallScale: 1.7,   // il banchetto deve essere piu' grande del mercante
   };
   const VILLAGE_THEME = {
-    id: 'village', name: 'Rifugio dei Mercanti',
-    floorA: '#2b2419', floorB: '#342c1f', wall: '#3a2f22', wallTop: '#5c4b34',
-    hazard: '#ffb020', accent: '#ffcf4a', blobMul: 0, hazMul: 0, propMix: [], tint: 'rgba(95,72,36,.16)',
+    id: 'village', name: 'Sala dei Mercanti',
+    floorA: '#1c1813', floorB: '#221d17', wall: '#050607', wallTop: '#0d1013',
+    hazard: '#ffb020', accent: '#ffb14a', blobMul: 0, hazMul: 0, propMix: [], tint: 'rgba(60,40,20,.10)',
   };
   function generateMarket(seed) {
-    const w = VILLAGE.w, h = VILLAGE.h, TILE = C.TILE;
-    const rng = MU.mulberry32 ? MU.mulberry32(seed >>> 0) : Math.random;
-    const g = new Uint8Array(w * h).fill(C.T_FLOOR);
+    const w = VILLAGE.w, h = VILLAGE.h, TILE = C.TILE, R = VILLAGE.room, G = VILLAGE.gap;
+    const g = new Uint8Array(w * h).fill(C.T_WALL);   // si parte da roccia piena e si SCAVA
     const at = (x, y) => y * w + x;
-    // bordo spesso 2 tile (stessa convenzione del generatore delle ondate)
-    for (let x = 0; x < w; x++) for (const y of [0, 1, h - 2, h - 1]) g[at(x, y)] = C.T_WALL;
-    for (let y = 0; y < h; y++) for (const x of [0, 1, w - 2, w - 1]) g[at(x, y)] = C.T_WALL;
-    // edifici = blocchi solidi
-    const props = [];
-    for (const b of VILLAGE.buildings) {
-      for (let y = b.y; y < b.y + b.bh; y++) for (let x = b.x; x < b.x + b.bw; x++) g[at(x, y)] = C.T_WALL;
-      props.push({ type: 'building', kind: b.kind, name: b.name,
-        x: (b.x + b.bw / 2) * TILE, y: (b.y + b.bh / 2) * TILE,
-        bw: b.bw * TILE, bh: b.bh * TILE, r: (b.x * 7 + b.y * 13) % 100 / 100 });
-    }
+    for (let y = R.y0; y <= R.y1; y++) for (let x = R.x0; x <= R.x1; x++) g[at(x, y)] = C.T_FLOOR;
+    for (let y = R.y1 + 1; y <= G.y1; y++) for (let x = G.x0; x <= G.x1; x++) g[at(x, y)] = C.T_FLOOR;
     g[at(VILLAGE.exit.x, VILLAGE.exit.y)] = C.T_EXIT;
-    // arredo: al centro il pozzo, lampioni lungo il percorso, banchi e casse davanti alle botteghe
+
+    const props = [];
     const P = (type, tx, ty, s, extra) => props.push(Object.assign({ type, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, s: s || 1, r: ((tx * 31 + ty * 17) % 100) / 100 }, extra || {}));
-    P('well', 16, 11, 1.2);
-    for (const [x, y] of [[12, 8], [20, 8], [12, 16], [20, 16], [16, 20], [16, 4]]) P('lamp_post', x, y, 1);
-    for (const [x, y] of [[13, 12], [19, 12], [10, 10], [22, 10]]) P('market_stall', x, y, 1);
-    for (const [x, y] of [[8, 11], [24, 12], [14, 19], [18, 19]]) P('cratebox', x, y, 1);
-    for (const [x, y] of [[9, 13], [23, 14], [11, 6]]) P('barrel', x, y, 1);
-    for (const [x, y] of [[27, 16], [7, 19], [26, 6]]) P('tree', x, y, 1.1);
-    for (const [x, y] of [[15, 6], [17, 6]]) P('flag', x, y, 1);
-    P('signpost', 16, 17, 1);
-    for (const [x, y] of [[4, 6], [27, 6], [4, 19], [27, 19]]) P('fence', x, y, 1);
+    P('bonfire', VILLAGE.fire.x, VILLAGE.fire.y, 1.45);
+    for (const s of VILLAGE.stalls) {
+      const dx = VILLAGE.fire.x - s.x, dy = VILLAGE.fire.y - s.y;
+      props.push({ type: 'stall', kind: s.kind, x: s.x * TILE + TILE / 2, y: s.y * TILE + TILE / 2,
+        s: VILLAGE.stallScale, r: ((s.x * 31 + s.y * 17) % 100) / 100, face: Math.atan2(dy, dx) });
+    }
+    // arredo della sala, tenuto ai bordi: la luce del falo' lo sfiora appena
+    for (const [x, y] of [[5, 13], [19, 12], [5, 3], [19, 4]]) P('cratebox', x, y, 1);
+    for (const [x, y] of [[6, 12], [18, 13], [9, 13], [15, 12]]) P('barrel', x, y, 1);
+    for (const [x, y] of [[4, 8], [20, 8], [11, 2], [14, 2]]) P('stalagmite', x, y, 1.1);
+    P('signpost', 12, 14, 1);
+
     return {
-      w, h, tile: TILE, seed, level: 0, theme: VILLAGE_THEME, market: 1, lit: 1,
+      w, h, tile: TILE, seed, level: 0, theme: VILLAGE_THEME, market: 1,
       grid: Array.from(g),
       spawn: { x: VILLAGE.spawn.x * TILE + TILE / 2, y: VILLAGE.spawn.y * TILE + TILE / 2 },
       exit: { x: VILLAGE.exit.x, y: VILLAGE.exit.y },
       enemySpawns: [], crateSpawns: [], props, microAreas: [],
-      village: {
-        smith: { x: VILLAGE.npcs[0].x * TILE + TILE / 2, y: VILLAGE.npcs[0].y * TILE + TILE / 2 },
-        npcs: VILLAGE.npcs.map(n => ({ x: n.x * TILE + TILE / 2, y: n.y * TILE + TILE / 2, kind: n.kind, name: n.name, shop: n.shop || 0, soon: n.soon || 0 })),
-      },
+      village: (() => {
+        // il mercante sta DIETRO il suo banco (piu' lontano dal fuoco), non sopra
+        const mk = (s) => { const dx = s.x - VILLAGE.fire.x, dy = s.y - VILLAGE.fire.y, d = Math.hypot(dx, dy) || 1;
+          return { x: (s.x + dx / d * 2.1) * TILE + TILE / 2, y: (s.y + dy / d * 2.1) * TILE + TILE / 2,
+                   kind: s.kind, name: s.name, shop: s.shop || 0, soon: s.soon || 0, face: Math.atan2(-dy, -dx) }; };
+        const npcs = VILLAGE.stalls.map(mk);
+        const sm = npcs.find(n => n.shop) || npcs[0];
+        return { smith: { x: sm.x, y: sm.y }, npcs, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
+      })(),
     };
   }
 

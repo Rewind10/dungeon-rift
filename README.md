@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.56.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.57.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.57 (il mercato e' una SALA SCAVATA)
+- **⛏️ Siamo sottoterra**: via case, alberi e staccionate della v1.56. Il generatore parte da **roccia piena**
+  e scava la sala; fuori non c'e' mappa, c'e' pietra. Pareti quasi nere.
+- **🚪 Un solo varco**, a sud, con il corridoio e il **portale EXIT** in fondo. Gli altri lati sono chiusi.
+- **🔥 Buio con la luce dal falo'**: un unico grande alone circolare centrato sul fuoco scopre i banchetti e
+  si spegne contro le pareti; le lanterne dei banchi fanno da luci di appoggio.
+- **🛖 Cinque banchetti** attorno al fuoco, **piu' grandi dei mercanti**; i mercanti sono al doppio della
+  taglia e piu' dettagliati, e stanno dietro al proprio banco.
+- **🎛️ Menu di pausa**: il pulsante e' "VAI AL VILLAGGIO" e i due pulsanti stanno affiancati.
+- Test: **333 passati, 0 falliti**.
 
 ## 🆕 Novita v1.56 (il mercato e' un VILLAGGIO)
 - **🏘️ Mappa dedicata**: 32x24 tile invece di 46x34 (**meta' area**), **senza muri interni** — gli unici blocchi

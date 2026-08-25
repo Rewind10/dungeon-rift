@@ -352,10 +352,10 @@
       for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_EXIT) continue; const cx = x * T + T / 2, cy = y * T + T / 2; const gr = g.createRadialGradient(cx, cy, 3, cx, cy, T * .7); gr.addColorStop(0, th.accent || '#8be9ff'); gr.addColorStop(1, 'rgba(60,160,255,0)'); g.fillStyle = gr; g.fillRect(cx - T, cy - T, T * 2, T * 2); }
 
       this.runes = [];
-      this.torches = []; this.campfires = []; this.glows = [];
+      this.torches = []; this.campfires = []; this.glows = []; this.bigLight = null;
       for (const p of (m.props || [])) {
-        if (p.type === 'building') { this._bakeBuilding(g, p); this.torches.push({ x: p.x - p.bw / 2 + 16, y: p.y + p.bh / 2 - 6 }); continue; }  // v1.56 — edificio del villaggio (+ lanterna sulla porta)
-        if (p.type === 'lamp_post') { this._bakeProp(g, p); const V = window.GAME.Constants.VIS_SCALE || 1; this.torches.push({ x: p.x, y: p.y - 26 * (p.s || 1) * V }); continue; }  // v1.56
+        if (p.type === 'stall') { this._bakeStall(g, p); continue; }     // v1.57 — banchetto del mercante
+        if (p.type === 'bonfire') { this.campfires.push({ x: p.x, y: p.y - 4 }); this.bigLight = { x: p.x, y: p.y - 4, r: 430 }; this._bakeBonfire(g, p); continue; }  // v1.57 — falo': unica sorgente della sala
         if (p.type === 'torch') { this.torches.push(p); continue; }
         if (p.type === 'camp') { this.campfires.push(p); this._bakeCamp(g, p); continue; }
         if (p.type === 'brazier') { this._bakeProp(g, p); this.torches.push({ x: p.x, y: p.y - 6 }); continue; }
@@ -406,95 +406,68 @@
       for (const p of world.players) { if (p.d) continue; const h = HERO[p.h] || HERO.enforcer; const q = w2m(p.x, p.y); const me = world.me && p.i === world.me.i; ctx.fillStyle = me ? '#ffffff' : (h.accent || '#8bd6ff'); ctx.beginPath(); ctx.arc(q.x, q.y, me ? 3 : 2.4, 0, 7); ctx.fill(); if (me) { ctx.strokeStyle = h.accent || '#8bd6ff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.6, 0, 7); ctx.stroke(); } }
       ctx.restore();
     },
-    // v1.56 — edificio del villaggio. Disegnato in px di MONDO (niente VIS_SCALE): deve coprire esattamente
-    // il blocco di tile solide che gli fa da collisione, altrimenti si vedrebbe la roccia sotto.
-    _bakeBuilding(g, p) {
-      const w = p.bw, h = p.bh, x0 = -w / 2, y0 = -h / 2;
-      const PAL = {
-        forge:  { wall: '#4a3a2a', wall2: '#33271b', roof: '#5b2f22', roof2: '#3a1d14', trim: '#ffb14a' },
-        inn:    { wall: '#4b3f2b', wall2: '#33291b', roof: '#3f5230', roof2: '#26331d', trim: '#ffd97a' },
-        shop:   { wall: '#443a30', wall2: '#2e2620', roof: '#4a4433', roof2: '#2f2b20', trim: '#9fe0ff' },
-        temple: { wall: '#4a4a52', wall2: '#31313a', roof: '#3b3f5c', roof2: '#252840', trim: '#c9b0ff' },
-        tower:  { wall: '#464049', wall2: '#2e2a31', roof: '#4a2f3f', roof2: '#2c1a26', trim: '#ff9ad0' },
-      };
-      const c = PAL[p.kind] || PAL.shop;
-      g.save(); g.translate(p.x, p.y);
-      // ombra proiettata
-      g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, x0 + 8, y0 + 12, w, h, 10); g.fill();
-      // corpo
-      const bg = g.createLinearGradient(0, y0, 0, y0 + h); bg.addColorStop(0, c.wall); bg.addColorStop(1, c.wall2);
-      g.fillStyle = bg; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3;
-      this._rr(g, x0, y0, w, h, 8); g.fill(); g.stroke();
-      // travi verticali
-      g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2;
-      for (let i = 1; i < 5; i++) { const xx = x0 + (w * i / 5); g.beginPath(); g.moveTo(xx, y0 + h * 0.42); g.lineTo(xx, y0 + h); g.stroke(); }
-      // tetto: copre il 55% alto, con spiovente e tegole
-      const rh = h * 0.55;
-      const rg = g.createLinearGradient(0, y0 - 6, 0, y0 + rh); rg.addColorStop(0, c.roof); rg.addColorStop(1, c.roof2);
-      g.fillStyle = rg; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
-      g.beginPath(); g.moveTo(x0 - 10, y0 + rh); g.lineTo(x0 + w * 0.18, y0 - 8); g.lineTo(x0 + w * 0.82, y0 - 8); g.lineTo(x0 + w + 10, y0 + rh); g.closePath(); g.fill(); g.stroke();
-      g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5;
-      for (let i = 1; i < 6; i++) { const yy = y0 - 6 + (rh + 4) * i / 6; g.beginPath(); g.moveTo(x0 - 10 + (10 + w * 0.18) * (i / 6), yy); g.lineTo(x0 + w + 10 - (10 + w * 0.18) * (i / 6), yy); g.stroke(); }
-      // porta + finestre illuminate
-      const dw = Math.min(30, w * 0.20), dh = h * 0.34;
-      g.fillStyle = '#241a12'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2;
-      this._rr(g, -dw / 2, y0 + h - dh, dw, dh, 3); g.fill(); g.stroke();
-      g.fillStyle = c.trim; g.beginPath(); g.arc(dw / 2 - 6, y0 + h - dh / 2, 2, 0, 7); g.fill();
-      const wy = y0 + rh + (h - rh) * 0.28, ww = Math.min(20, w * 0.14), wh = Math.min(16, h * 0.2);
-      for (const sx of [-w * 0.30, w * 0.30]) {
-        g.fillStyle = 'rgba(255,190,90,.85)'; this._rr(g, sx - ww / 2, wy - wh / 2, ww, wh, 2); g.fill();
-        g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; this._rr(g, sx - ww / 2, wy - wh / 2, ww, wh, 2); g.stroke();
-        g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(sx, wy - wh / 2); g.lineTo(sx, wy + wh / 2); g.stroke();
-      }
-      // insegna per tipo, sopra la porta
-      const ICON = { forge: '\u2692', inn: '\uD83C\uDF7A', shop: '\uD83D\uDCE6', temple: '\u26EA', tower: '\uD83D\uDD2E' };
-      g.save(); g.translate(0, y0 + rh + 4);
-      g.fillStyle = 'rgba(20,14,8,.9)'; g.strokeStyle = c.trim; g.lineWidth = 2; this._rr(g, -17, -11, 34, 22, 5); g.fill(); g.stroke();
-      g.font = '15px Segoe UI'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = c.trim; g.fillText(ICON[p.kind] || '\uD83C\uDFE0', 0, 1);
-      g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.restore();
-      // comignolo fumante per la fucina
-      if (p.kind === 'forge') {
-        g.fillStyle = c.wall2; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 2;
-        this._rr(g, x0 + w * 0.62, y0 - 26, 16, 24, 2); g.fill(); g.stroke();
-        g.fillStyle = 'rgba(255,140,60,.5)'; g.beginPath(); g.ellipse(x0 + w * 0.62 + 8, y0 - 24, 7, 3, 0, 0, 7); g.fill();
-      }
-      // nome della bottega, su targa: senza sfondo il tetto se lo mangiava
-      { const ny = y0 - 30; g.font = 'bold 13px Segoe UI'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        const tw = g.measureText(p.name || '').width;
-        g.fillStyle = 'rgba(14,10,6,.85)'; g.strokeStyle = c.trim; g.lineWidth = 2;
-        this._rr(g, -tw / 2 - 10, ny - 11, tw + 20, 22, 6); g.fill(); g.stroke();
-        g.fillStyle = '#f4e3b8'; g.fillText(p.name || '', 0, ny + 1);
-        g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
+    // v1.57 — FALO' della sala: cerchio di pietre, cenere, legna. La fiamma la mette _flame() a runtime.
+    _bakeBonfire(g, p) {
+      g.save(); g.translate(p.x, p.y); g.scale(p.s || 1, p.s || 1);
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(0, 8, 44, 17, 0, 0, 7); g.fill();
+      for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, rx = Math.cos(a) * 38, ry = Math.sin(a) * 20 + 4;
+        const ss = 7 + ((i * 37) % 5); const gr = g.createLinearGradient(rx, ry - ss, rx, ry + ss);
+        gr.addColorStop(0, '#5a5348'); gr.addColorStop(1, '#2d2822');
+        g.fillStyle = gr; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2;
+        g.beginPath(); g.ellipse(rx, ry, ss, ss * 0.75, a, 0, 7); g.fill(); g.stroke(); }
+      const ash = g.createRadialGradient(0, 2, 2, 0, 2, 30); ash.addColorStop(0, '#3a2a1c'); ash.addColorStop(1, 'rgba(40,30,20,0)');
+      g.fillStyle = ash; g.beginPath(); g.ellipse(0, 2, 30, 16, 0, 0, 7); g.fill();
+      g.strokeStyle = '#4a3520'; g.lineWidth = 7; g.lineCap = 'round';
+      for (const a of [-0.5, 0.4, 1.4, 2.4]) { g.save(); g.rotate(a); g.beginPath(); g.moveTo(-22, 6); g.lineTo(20, -6); g.stroke(); g.restore(); }
+      g.lineCap = 'butt';
+      const em = g.createRadialGradient(0, -2, 1, 0, -2, 26); em.addColorStop(0, 'rgba(255,190,80,.95)'); em.addColorStop(.45, 'rgba(255,110,30,.55)'); em.addColorStop(1, 'rgba(255,70,10,0)');
+      g.fillStyle = em; g.beginPath(); g.arc(0, -2, 26, 0, 7); g.fill();
       g.restore();
+    },
+    // v1.57 — BANCHETTO: deve essere piu' GRANDE del mercante che ci sta dietro (scala dal manifest).
+    _bakeStall(g, p) {
+      const PAL = {
+        smith:     { cloth: '#8a3b2a', cloth2: '#e8d9b0', accent: '#ffb14a' },
+        herbalist: { cloth: '#3f6b34', cloth2: '#dfe8b0', accent: '#9fe06a' },
+        innkeeper: { cloth: '#8a6a2a', cloth2: '#e8dcb0', accent: '#ffd97a' },
+        seer:      { cloth: '#553a7a', cloth2: '#ddd0f0', accent: '#c9a0ff' },
+        crier:     { cloth: '#6b3a3a', cloth2: '#e8c9b0', accent: '#ff9a8a' },
+      };
+      const c = PAL[p.kind] || PAL.crier;
+      g.save(); g.translate(p.x, p.y); g.scale(p.s || 1, p.s || 1);
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(0, 20, 40, 12, 0, 0, 7); g.fill();
+      g.strokeStyle = '#3a2a18'; g.lineWidth = 5; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(-32, 18); g.lineTo(-32, -40); g.moveTo(32, 18); g.lineTo(32, -40); g.stroke(); g.lineCap = 'butt';
+      for (let i = 0; i < 8; i++) { g.fillStyle = (i % 2) ? c.cloth : c.cloth2;
+        g.beginPath(); g.moveTo(-34 + i * 8.5, -40); g.lineTo(-34 + (i + 1) * 8.5, -40); g.lineTo(-34 + i * 8.5 + 4.2, -26); g.closePath(); g.fill(); }
+      g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-34, -40); g.lineTo(34, -40); g.stroke();
+      g.fillStyle = '#3b352e'; g.strokeStyle = '#1c1815'; g.lineWidth = 2; this._rr(g, -30, 2, 60, 18, 3); g.fill(); g.stroke();
+      const wg = g.createLinearGradient(0, -6, 0, 4); wg.addColorStop(0, '#6b4d2c'); wg.addColorStop(1, '#43301b');
+      g.fillStyle = wg; g.strokeStyle = '#241a10'; g.lineWidth = 2; this._rr(g, -34, -8, 68, 12, 3); g.fill(); g.stroke();
+      g.save(); g.translate(0, -12);
+      if (p.kind === 'smith') { g.fillStyle = '#8f959f'; for (const dx of [-16, -8, 0]) { g.beginPath(); g.moveTo(dx, 4); g.lineTo(dx + 3, -10); g.lineTo(dx + 6, 4); g.closePath(); g.fill(); }
+        g.fillStyle = '#5b616b'; this._rr(g, 8, -6, 16, 10, 2); g.fill(); g.strokeStyle = '#2a2e35'; g.lineWidth = 1.5; this._rr(g, 8, -6, 16, 10, 2); g.stroke(); }
+      else if (p.kind === 'herbalist') { for (const [dx, col] of [[-18, '#7fd06a'], [-8, '#b06ad0'], [2, '#6ad0c8'], [12, '#d0b86a']]) {
+          g.fillStyle = col; this._rr(g, dx, -8, 7, 12, 2); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(dx + 1, -6, 2, 6); }
+        g.strokeStyle = '#4e7a3c'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(22, 2); g.lineTo(20 + i * 4, -10); g.stroke(); } }
+      else if (p.kind === 'innkeeper') { for (const dx of [-16, -4, 8]) { g.fillStyle = '#c9a35a'; this._rr(g, dx, -8, 9, 12, 2); g.fill(); g.fillStyle = '#f0e2b8'; g.fillRect(dx + 1, -8, 7, 3); }
+        g.fillStyle = '#6b4d2c'; this._rr(g, 20, -10, 12, 14, 3); g.fill(); }
+      else if (p.kind === 'seer') { g.fillStyle = '#1a1428'; g.beginPath(); g.arc(0, -2, 11, 0, 7); g.fill();
+        const og = g.createRadialGradient(-3, -6, 1, 0, -2, 12); og.addColorStop(0, '#e6d0ff'); og.addColorStop(1, 'rgba(150,90,220,.15)');
+        g.fillStyle = og; g.beginPath(); g.arc(0, -2, 10, 0, 7); g.fill();
+        g.fillStyle = '#d9c8a0'; for (const [dx, rr] of [[-22, -0.3], [-15, 0.25]]) { g.save(); g.translate(dx, 0); g.rotate(rr); this._rr(g, -4, -7, 8, 12, 1); g.fill(); g.restore(); } }
+      else { g.fillStyle = '#d9c8a0'; g.strokeStyle = '#8a7a55'; g.lineWidth = 1.5; this._rr(g, -20, -8, 14, 11, 1); g.fill(); g.stroke();
+        g.fillStyle = '#b8862a'; g.beginPath(); g.arc(2, -2, 5, 0, 7); g.fill(); g.fillStyle = '#8f959f'; g.beginPath(); g.arc(14, -1, 4, 0, 7); g.fill(); }
+      g.restore();
+      const lg = g.createRadialGradient(-32, -34, 1, -32, -34, 14); lg.addColorStop(0, 'rgba(255,205,120,.9)'); lg.addColorStop(1, 'rgba(255,150,40,0)');
+      g.fillStyle = lg; g.beginPath(); g.arc(-32, -34, 14, 0, 7); g.fill();
+      g.fillStyle = '#2a2018'; this._rr(g, -35.5, -39, 7, 10, 2); g.fill(); g.fillStyle = c.accent; this._rr(g, -34, -37, 4, 6, 1); g.fill();
+      g.restore();
+      const S = p.s || 1;
+      this.torches.push({ x: p.x - 32 * S, y: p.y - 34 * S });
     },
     _bakeProp(g, p) { const VIS = (window.GAME.Constants.VIS_SCALE || 1); g.save(); g.translate(p.x, p.y); g.scale((p.s || 1) * VIS, (p.s || 1) * VIS); const rot = (p.r || 0) * Math.PI * 2;
       switch (p.type) {
-        case 'lamp_post': { // v1.56 — lampione del villaggio
-          g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(0, 16, 9, 4, 0, 0, 7); g.fill();
-          g.strokeStyle = '#2a2118'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 14); g.lineTo(0, -22); g.stroke();
-          g.fillStyle = '#3a2e20'; g.strokeStyle = '#1a140d'; g.lineWidth = 2; this._rr(g, -7, -34, 14, 14, 3); g.fill(); g.stroke();
-          const lg = g.createRadialGradient(0, -27, 1, 0, -27, 12); lg.addColorStop(0, 'rgba(255,215,120,.95)'); lg.addColorStop(1, 'rgba(255,160,40,0)');
-          g.fillStyle = lg; g.beginPath(); g.arc(0, -27, 12, 0, 7); g.fill(); g.lineCap = 'butt'; break; }
-        case 'market_stall': { // v1.56 — banco del mercato con tendone a strisce
-          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(0, 15, 22, 6, 0, 0, 7); g.fill();
-          g.strokeStyle = '#3a2a18'; g.lineWidth = 3; g.beginPath(); g.moveTo(-18, 14); g.lineTo(-18, -10); g.moveTo(18, 14); g.lineTo(18, -10); g.stroke();
-          g.fillStyle = '#4a3524'; g.strokeStyle = '#241a10'; g.lineWidth = 2; this._rr(g, -20, 0, 40, 14, 2); g.fill(); g.stroke();
-          for (let i = 0; i < 5; i++) { g.fillStyle = (i % 2) ? '#a9302e' : '#e8d9b0'; g.beginPath(); g.moveTo(-20 + i * 8, -10); g.lineTo(-20 + (i + 1) * 8, -10); g.lineTo(-20 + i * 8 + 4, -2); g.closePath(); g.fill(); }
-          g.strokeStyle = '#241a10'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-20, -10); g.lineTo(20, -10); g.stroke();
-          g.fillStyle = '#c98a3a'; g.beginPath(); g.arc(-8, 2, 3, 0, 7); g.arc(0, 3, 3, 0, 7); g.fill();
-          g.fillStyle = '#7dbf5a'; g.beginPath(); g.arc(9, 2, 3, 0, 7); g.fill(); break; }
-        case 'fence': { // v1.56 — staccionata
-          g.strokeStyle = '#4a3524'; g.lineWidth = 3; g.lineCap = 'round';
-          for (const xx of [-16, 0, 16]) { g.beginPath(); g.moveTo(xx, 10); g.lineTo(xx, -12); g.stroke(); }
-          g.lineWidth = 2.5; for (const yy of [-6, 2]) { g.beginPath(); g.moveTo(-20, yy); g.lineTo(20, yy); g.stroke(); }
-          g.lineCap = 'butt'; break; }
-        case 'tree': { // v1.56 — alberello del villaggio
-          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(0, 16, 14, 5, 0, 0, 7); g.fill();
-          g.fillStyle = '#3d2b1a'; g.strokeStyle = '#211609'; g.lineWidth = 2; this._rr(g, -4, -6, 8, 22, 2); g.fill(); g.stroke();
-          const cg = g.createRadialGradient(-4, -20, 3, 0, -16, 22); cg.addColorStop(0, '#4e7a3c'); cg.addColorStop(1, '#22361d');
-          g.fillStyle = cg; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2;
-          g.beginPath(); g.arc(-8, -18, 12, 0, 7); g.arc(8, -20, 11, 0, 7); g.arc(0, -28, 12, 0, 7); g.fill(); g.stroke(); break; }
         case 'signpost': { // v1.56 — cartello del villaggio
           g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 14, 8, 4, 0, 0, 7); g.fill();
           g.strokeStyle = '#3a2a18'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 13); g.lineTo(0, -14); g.stroke();
@@ -748,7 +721,7 @@
       for (const c of (world.crates || [])) this._drawCrate(ctx, c);
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
-      if (this.map && this.map.village) for (const n of this.map.village.npcs) { if (!n.shop) this._drawVillager(ctx, n); }  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
+      if (this.map && this.map.village) for (const n of this.map.village.npcs) { if (!n.shop) this._drawVendor(ctx, n); }  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
       if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
       for (const z of (world.zones || [])) { const cc = z.c || '#ff3b3b'; const gr = ctx.createRadialGradient(z.x, z.y, 2, z.x, z.y, z.r); gr.addColorStop(0, 'rgba(255,60,60,' + (0.10 + z.p * 0.28) + ')'); gr.addColorStop(0.75, 'rgba(255,60,60,' + (0.06 + z.p * 0.18) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.fill(); ctx.strokeStyle = cc; ctx.globalAlpha = 0.4 + z.p * 0.55; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(z.x, z.y, z.r * z.p, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -840,35 +813,122 @@
       ctx.fillStyle = '#ffe0a8'; ctx.fillText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
       ctx.restore(); ctx.textAlign = 'left';
     },
-    // v1.56 — abitante del villaggio. Per ora solo scenografia: le botteghe diverse dalla fucina sono chiuse,
-    // e lo dicono, cosi' nessuno resta li' a premere tasti aspettando che si apra un pannello.
-    _drawVillager(ctx, n) {
-      const t = this.time, x = n.x, y = n.y;
+    // v1.57 — MERCANTE. Taglia DOPPIA rispetto alla v1.56 e piu' dettagliato, ma stesso stile:
+    // figura incappucciata, volto in ombra, occhi accesi. Ognuno tiene in mano l'oggetto del suo mestiere.
+    // Il fuoco della piazza li illumina da un lato (rimlight caldo) cosi' non sembrano incollati sul fondo.
+    _drawVendor(ctx, n, opts) {
+      const o = opts || {}, t = this.time, x = n.x, y = n.y, S = 2;
       const PAL = {
-        herbalist: { robe: '#3c5a34', hood: '#27401f', accent: '#9fe06a' },
-        innkeeper: { robe: '#5a4326', hood: '#3d2c17', accent: '#ffd97a' },
-        seer:      { robe: '#41305c', hood: '#2b1f3f', accent: '#c9a0ff' },
-        crier:     { robe: '#5a2f2f', hood: '#3d1e1e', accent: '#ff9a8a' },
+        smith:     { robe: '#5a3a24', robe2: '#38230f', hood: '#3d2612', trim: '#ffb14a', skin: '#c79b6a' },
+        herbalist: { robe: '#375a30', robe2: '#1f3a1b', hood: '#25401f', trim: '#9fe06a', skin: '#c9a97e' },
+        innkeeper: { robe: '#6b4a24', robe2: '#432c12', hood: '#4a3116', trim: '#ffd97a', skin: '#d5ab7c' },
+        seer:      { robe: '#41305c', robe2: '#241a38', hood: '#2b1f3f', trim: '#c9a0ff', skin: '#bda3c9' },
+        crier:     { robe: '#5c3230', robe2: '#371c1b', hood: '#3d1e1e', trim: '#ff9a8a', skin: '#c99b7e' },
       };
-      const c = PAL[n.kind] || PAL.innkeeper;
-      const bob = Math.sin(t * 1.6 + x * 0.05) * 1.6;
-      ctx.save(); ctx.translate(x, y + bob);
-      ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(0, 17 - bob, 13, 5, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = c.robe; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-11, 16); ctx.quadraticCurveTo(-9, -14, 0, -19); ctx.quadraticCurveTo(9, -14, 11, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = c.hood; ctx.beginPath(); ctx.arc(0, -21, 7.5, Math.PI, 0); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#0d0a10'; ctx.beginPath(); ctx.arc(0, -19, 5.5, 0, 7); ctx.fill();
-      ctx.fillStyle = c.accent; ctx.beginPath(); ctx.arc(-2, -19, 1.3, 0, 7); ctx.arc(2, -19, 1.3, 0, 7); ctx.fill();
+      const c = PAL[n.kind] || PAL.crier;
+      const ph = t * 1.1 + x * 0.03;
+      const bob = Math.sin(ph) * 1.4 * S, breathe = 1 + Math.sin(ph * 1.3) * 0.012;
+      const lean = Math.sin(ph * 0.7) * 0.02;
+
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(0, 17 * S, 15 * S, 5.5 * S, 0, 0, 7); ctx.fill();
+      ctx.translate(0, bob); ctx.rotate(lean); ctx.scale(S, S * breathe);
+
+      // --- silhouette: la stessa della v1.56 (leggibile), solo il doppio e con qualche dettaglio in piu' ---
+      // veste
+      const rg = ctx.createLinearGradient(0, -19, 0, 17); rg.addColorStop(0, c.robe); rg.addColorStop(1, c.robe2);
+      ctx.fillStyle = rg; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(-11, 16); ctx.quadraticCurveTo(-9, -8, 0, -19);
+      ctx.quadraticCurveTo(9, -8, 11, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // pieghe
+      ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.1;
+      for (const dx of [-4.5, 0.5, 5]) { ctx.beginPath(); ctx.moveTo(dx * 0.55, -6); ctx.quadraticCurveTo(dx * 0.9, 5, dx, 15); ctx.stroke(); }
+      // orlo chiaro
+      ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(-10.4, 14.6); ctx.quadraticCurveTo(0, 17.4, 10.4, 14.6); ctx.stroke();
+      // braccia lungo i fianchi + oggetto del mestiere
+      const sw = Math.sin(ph * 1.6) * 0.09;
+      ctx.strokeStyle = c.robe2; ctx.lineCap = 'round'; ctx.lineWidth = 4.4;
+      ctx.beginPath(); ctx.moveTo(-7.6, -8); ctx.quadraticCurveTo(-10.5, -1, -8.6, 5.5); ctx.stroke();
+      ctx.fillStyle = c.skin; ctx.beginPath(); ctx.arc(-8.7, 6.6, 2.3, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(7.6, -8); ctx.rotate(sw);
+      ctx.strokeStyle = c.robe2; ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(3.6, -3, 4.4, -8.5); ctx.stroke();
+      ctx.fillStyle = c.skin; ctx.beginPath(); ctx.arc(4.6, -9.6, 2.3, 0, 7); ctx.fill();
+      if (n.kind === 'smith') { ctx.strokeStyle = '#4a3520'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(4.6, -9.6); ctx.lineTo(8.2, -19); ctx.stroke();
+        ctx.fillStyle = '#767c88'; ctx.strokeStyle = '#2a2e35'; ctx.lineWidth = 1.2; this._rr(ctx, 5.6, -24.5, 7.4, 6, 1.2); ctx.fill(); ctx.stroke(); }
+      else if (n.kind === 'innkeeper') { ctx.fillStyle = '#c9a35a'; ctx.strokeStyle = '#7a6330'; ctx.lineWidth = 1.2; this._rr(ctx, 2.4, -16.5, 6.2, 7, 1.4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f6eeda'; this._rr(ctx, 2.7, -17.4, 5.6, 2.4, 1); ctx.fill();
+        ctx.strokeStyle = '#7a6330'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(9.6, -13, 2.2, -1.2, 1.2); ctx.stroke(); }
+      else if (n.kind === 'herbalist') { ctx.strokeStyle = '#4e7a3c'; ctx.lineWidth = 1.4;
+        for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(4.6, -9.6); ctx.quadraticCurveTo(6.4 + i, -14, 6.6 + i * 2.6, -17.5); ctx.stroke(); }
+        ctx.fillStyle = '#9fe06a'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.ellipse(6.6 + i * 2.6, -18.2, 1.6, 2.6, i * 0.45, 0, 7); ctx.fill(); } }
+      else if (n.kind === 'seer') { const og = ctx.createRadialGradient(5.6, -14, 0.5, 5.6, -13.4, 5.4);
+        og.addColorStop(0, '#f0e4ff'); og.addColorStop(1, 'rgba(150,90,220,.12)');
+        ctx.fillStyle = og; ctx.beginPath(); ctx.arc(5.6, -13.4, 5, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(201,160,255,.65)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5.6, -13.4, 5, 0, 7); ctx.stroke(); }
+      else { ctx.fillStyle = '#2a2018'; ctx.strokeStyle = '#15100a'; ctx.lineWidth = 1.2; this._rr(ctx, 2.6, -16, 5.4, 7, 1.4); ctx.fill(); ctx.stroke();
+        const lg2 = ctx.createRadialGradient(5.3, -12.5, 0.5, 5.3, -12.5, 7); lg2.addColorStop(0, 'rgba(255,205,120,.95)'); lg2.addColorStop(1, 'rgba(255,150,40,0)');
+        ctx.fillStyle = lg2; ctx.beginPath(); ctx.arc(5.3, -12.5, 7, 0, 7); ctx.fill(); }
+      ctx.restore(); ctx.lineCap = 'butt';
+      // mantellina sulle spalle
+      ctx.fillStyle = c.hood; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(-11.5, -7.5); ctx.quadraticCurveTo(-9, -15.5, 0, -17.5);
+      ctx.quadraticCurveTo(9, -15.5, 11.5, -7.5); ctx.quadraticCurveTo(0, -11.5, -11.5, -7.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // cintura + fibbia
+      ctx.fillStyle = '#2a1d12'; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.1;
+      this._rr(ctx, -9.2, -3.5, 18.4, 4.2, 1.6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = c.trim; this._rr(ctx, -2.1, -3, 4.2, 3.2, 1); ctx.fill();
+      // cappuccio (arco pieno, come la v1.56 che si leggeva bene) + bordo chiaro
+      ctx.fillStyle = c.hood; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(0, -20.5, 8.4, Math.PI, 0); ctx.lineTo(7.4, -17); ctx.quadraticCurveTo(0, -14.6, -7.4, -17); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, -20.5, 8.4, Math.PI * 1.08, Math.PI * 1.55); ctx.stroke();
+      // volto in ombra + occhi accesi
+      ctx.fillStyle = '#0b0810'; ctx.beginPath(); ctx.arc(0, -19.2, 6.1, 0, 7); ctx.fill();
+      const pulse = 0.72 + 0.28 * Math.sin(t * 2.6 + x * 0.02);
+      const eg = ctx.createRadialGradient(0, -19.4, 0.5, 0, -19.4, 5.6);
+      eg.addColorStop(0, 'rgba(255,255,255,' + (0.22 * pulse).toFixed(2) + ')'); eg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, -19.4, 5.6, 0, 7); ctx.fill();
+      ctx.fillStyle = c.trim; ctx.globalAlpha = 0.55 + 0.45 * pulse;
+      ctx.beginPath(); ctx.arc(-2.5, -19.4, 2.1, 0, 7); ctx.arc(2.5, -19.4, 2.1, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fffdf4'; ctx.beginPath(); ctx.arc(-2.5, -19.4, 0.9, 0, 7); ctx.arc(2.5, -19.4, 0.9, 0, 7); ctx.fill();
+      ctx.globalAlpha = 1;
+      // luce calda del falo' sul lato interno
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.16;
+      const side = Math.cos(n.face != null ? n.face : 0) >= 0 ? 1 : -1;
+      const rl = ctx.createLinearGradient(side * 12, 0, side * 2, 0);
+      rl.addColorStop(0, 'rgba(255,175,85,.9)'); rl.addColorStop(1, 'rgba(255,140,50,0)');
+      ctx.fillStyle = rl; ctx.beginPath(); ctx.moveTo(-12, -30); ctx.lineTo(12, -30); ctx.lineTo(12, 17); ctx.lineTo(-12, 17); ctx.closePath(); ctx.fill();
       ctx.restore();
-      ctx.save(); ctx.textAlign = 'center';
-      ctx.font = 'bold 12px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-      ctx.strokeText(n.name || '', x, y - 36); ctx.fillStyle = '#efe0c0'; ctx.fillText(n.name || '', x, y - 36);
-      if (n.soon) {
-        ctx.font = 'bold 10px Segoe UI'; ctx.lineWidth = 3;
-        ctx.strokeText('\u2014 chiuso \u2014', x, y - 24);
-        ctx.fillStyle = 'rgba(200,190,170,.75)'; ctx.fillText('\u2014 chiuso \u2014', x, y - 24);
+      ctx.restore();
+
+      // targhetta col nome
+      if (!o.noLabel) {
+        const ny = y - 34 * S - 24;   // sopra il cappuccio: la targa non deve mai coprire la faccia
+        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = 'bold 13px Segoe UI';
+        const label = (o.label || n.name || '');
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(12,9,6,.85)'; ctx.strokeStyle = c.trim; ctx.lineWidth = 2;
+        this._rr(ctx, x - tw / 2 - 10, ny - 11, tw + 20, 22, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f4e3b8'; ctx.fillText(label, x, ny + 1);
+        const sub = n.soon ? '\u2014 chiuso \u2014' : (n.sub ? '\u2014 ' + n.sub + ' \u2014' : '');
+        if (sub) { ctx.font = 'bold 10px Segoe UI'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+          ctx.strokeText(sub, x, ny + 20); ctx.fillStyle = n.soon ? 'rgba(205,195,175,.8)' : 'rgba(255,205,130,.9)'; ctx.fillText(sub, x, ny + 20); }
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.restore();
       }
-      ctx.restore(); ctx.textAlign = 'left';
+    },
+    // v1.57 — il fabbro e' l'unico mercante attivo: stessa figura degli altri, piu' l'anello-beacon che
+    // segnala "qui si compra". Fucina e incudine sono diventate il suo banchetto, disegnato nella mappa.
+    _drawGearMerchant(ctx, mrc, me) {
+      const t = this.time, x = mrc.x, y = mrc.y, bt = 0.5 + 0.5 * Math.sin(t * 2.4);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const bmg = ctx.createLinearGradient(x, y - 110, x, y - 8);
+      bmg.addColorStop(0, 'rgba(255,150,60,0)'); bmg.addColorStop(1, 'rgba(255,150,60,' + (0.10 + bt * 0.12).toFixed(3) + ')');
+      ctx.fillStyle = bmg; ctx.fillRect(x - 10, y - 110, 20, 96); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,170,60,' + (0.30 + bt * 0.45).toFixed(3) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(x, y + 30, 46 + bt * 6, 18 + bt * 3, 0, 0, 7); ctx.stroke();
+      this._drawVendor(ctx, { x, y, kind: 'smith', name: 'Fabbro', face: 0, sub: 'emporio' });
     },
     _drawDarkMerchant(ctx, mrc, me) {
       const t = this.time; const x = mrc.x, y = mrc.y; const bob = Math.sin(t * 1.6) * 1.4; const flick = 0.6 + 0.4 * Math.sin(t * 9 + x);
@@ -924,11 +984,11 @@
     _drawCrate(ctx, c) { const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; },
     _drawWeapon(ctx, wd) { const W = window.GAME.Loot.WEAPONS[wd.wt] || {}; const col = W.color || '#ffd24a'; const t = this.time; const x = wd.x, y = wd.y + Math.sin(t * 2.5 + wd.e) * 1.6; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(wd.x, wd.y + 14, 13, 5, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + wd.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.globalAlpha = 1; ctx.save(); ctx.translate(x, y); ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; if (wd.wt === 'scatter') { ctx.fillStyle = col; this._rr(ctx, -10, -4, 20, 8, 2); ctx.fill(); ctx.stroke(); } else if (wd.wt === 'burst') { ctx.fillStyle = col; this._rr(ctx, -9, -3, 16, 6, 2); ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -7); ctx.lineTo(11, 0); ctx.lineTo(0, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.restore(); for (let i = 0; i < 3; i++) { ctx.fillStyle = i < (wd.lv || 1) ? col : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x - 8 + i * 8, y - 15, 2.4, 0, 7); ctx.fill(); } },
     _drawChains(ctx) { for (const c of this.chains) { const a = c.t / 0.18; ctx.strokeStyle = 'rgba(140,220,255,' + a + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); const seg = 4; ctx.moveTo(c.x1, c.y1); for (let i = 1; i < seg; i++) { const t = i / seg; ctx.lineTo(MU.lerp(c.x1, c.x2, t) + MU.rand(-6, 6), MU.lerp(c.y1, c.y2, t) + MU.rand(-6, 6)); } ctx.lineTo(c.x2, c.y2); ctx.stroke(); } },
-    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.enforcer; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
+    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.enforcer; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {
       if (!this.torch || !this.darkCv || !this.map) return;
-      if (this.map.lit) return;   // v1.56 — il villaggio del MERCATO e' illuminato: un rifugio al buio non avrebbe senso
+      // v1.57 — la sala del mercato resta BUIA: la luce la fa il FALO' (vedi this.bigLight piu' sotto).
       const s = this.darkScale, dg = this.darkCtx, W = this.darkCv.width, H = this.darkCv.height;
       dg.setTransform(1, 0, 0, 1, 0, 0); dg.globalCompositeOperation = 'source-over'; dg.clearRect(0, 0, W, H);
       dg.fillStyle = 'rgba(2,3,8,' + this.darkness + ')'; dg.fillRect(0, 0, W, H);
@@ -939,6 +999,9 @@
       // sorgenti che restano visibili nel buio
       for (const tc of this.torches) halo(tc.x, tc.y, 82, 0.9);
       for (const cf of this.campfires) halo(cf.fx || cf.x, cf.fy || cf.y, 135, 0.92);
+      // v1.57 — il FALO' della sala mercato: un unico grande alone circolare che scopre i mercanti
+      // e si spegne contro le pareti nere. E' l'unica sorgente della stanza.
+      if (this.bigLight) halo(this.bigLight.x, this.bigLight.y, this.bigLight.r, 0.99);
       for (const hz of (this.hazards || [])) halo(hz.x, hz.y, (hz.r || 40) * 0.75, 0.5); // v1.18 — le pozze si intravedono nel buio
       for (const gl of (this.glows || [])) halo(gl.x, gl.y, (gl.rad || 40) * 0.7, 0.55); // v1.20 — funghi bioluminescenti
       if (this.map.exit) { const ex = this.map.exit.x * this.map.tile + this.map.tile / 2, ey = this.map.exit.y * this.map.tile + this.map.tile / 2; halo(ex, ey, 74, 0.85); }
