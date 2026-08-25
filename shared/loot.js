@@ -63,7 +63,13 @@
     { id: 'st_speed', name: 'Agilità', icon: '💨', color: '#8bd6ff', base: 8, desc: '+5% velocità' },
     { id: 'st_crit', name: 'Precisione', icon: '🎯', color: '#4bd66b', base: 12, desc: '+4% critico' },
   ];
-  function statCost(base, bought) { return Math.round(base * Math.pow(1.55, bought)); }
+  // v1.51 — La curva era 1.55^n con livelli ILLIMITATI: con ~7.500 XP raccolti in una run intera e 3.526 XP
+  // per portare TUTTE e sei le statistiche a Lv.8, il negozio non era una scelta ma un rubinetto (compravi
+  // tutto, l'ordine non contava). Ora 2.05^n con TETTO a 8: maxare l'intero albero costa ~17.700 XP, cioe'
+  // molto piu' di quanto se ne raccolga. Si specializza, e la COMBO (moltiplicatore XP fino a x2.5) e i boon
+  // di raccolta diventano finalmente una leva reale su quanto puoi permetterti.
+  const STAT_COST_MULT = 2.05, STAT_MAX_LEVEL = 8;
+  function statCost(base, bought) { return Math.round(base * Math.pow(STAT_COST_MULT, bought)); }
 
   // ===== BOON a scelta (stile Hades): effetti UNICI impilabili =====
   // apply(p): imposta flag/valori letti in Room.js. maxStacks per limitarli.
@@ -93,6 +99,17 @@
     { id: 'juggernaut', name: 'Colosso', icon: '🧍', rarity: 'epic', max: 2, desc: '+45 PV massimi e +6% velocita', apply: p => { p.stats.maxHpFlat += 45; p.hp += 45; p.stats.speedMult += 0.06; } },
     { id: 'executioner', name: 'Giustiziere', icon: '🪓', rarity: 'epic', max: 2, desc: '+35% danno critico e +5% critico', apply: p => { p.stats.critMult += 0.35; p.stats.critChance += 0.05; } },
     { id: 'artillery', name: 'Bombardiere', icon: '🚩', rarity: 'rare', max: 2, desc: '+1 proiettile e +10% danno', apply: p => { p.stats.extraProjectiles += 1; p.stats.dmgMult += 0.10; } },
+    // ===== NOVITA v1.51 — dieci poteri nuovi, ispirati ad altri roguelike =====
+    { id: 'crowbar', name: 'Piede di Porco', icon: '⛏️', rarity: 'uncommon', max: 3, desc: '+40% danno sui nemici ancora integri (sopra il 90% dei PV)', apply: p => p.boon.crowbar += 1 },
+    { id: 'longshot', name: 'Tiro Lungo', icon: '🔭', rarity: 'uncommon', max: 3, desc: 'Piu\' lontano e\' il bersaglio, piu\' fai male (+22% a piena gittata)', apply: p => p.boon.longshot += 1 },
+    { id: 'killstep', name: 'Passo di Danza', icon: '💃', rarity: 'uncommon', max: 3, desc: 'Ogni uccisione ti da\' +25% velocita\' per 2s', apply: p => p.boon.killStep += 1 },
+    { id: 'gluttony', name: 'Fame Vorace', icon: '🧲', rarity: 'uncommon', max: 3, desc: 'Raggio di raccolta molto piu\' ampio e +15% XP', apply: p => { p.boon.magnet += 1; p.stats.xpMult += 0.15; } },
+    { id: 'retaliate', name: 'Rappresaglia', icon: '💢', rarity: 'rare', max: 3, desc: 'Quando vieni colpito emetti un\'onda che danneggia e respinge', apply: p => p.boon.retaliate += 1 },
+    { id: 'aegis', name: 'Egida Ostinata', icon: '🧿', rarity: 'rare', max: 2, desc: 'Assorbe completamente un colpo ogni 8s (6s con 2 cariche)', apply: p => p.boon.aegis += 1 },
+    { id: 'corpseblast', name: 'Deflagrazione Cadaverica', icon: '☄️', rarity: 'rare', max: 3, desc: 'I nemici uccisi esplodono e danneggiano chi e\' vicino', apply: p => p.boon.corpseBlast += 1 },
+    { id: 'execute', name: 'Colpo di Grazia', icon: '🗡️', rarity: 'epic', max: 2, desc: 'I nemici sotto il 12% dei PV muoiono all\'istante (boss esclusi)', apply: p => p.boon.execute += 1 },
+    { id: 'echo', name: 'Eco Arcana', icon: '🔊', rarity: 'epic', max: 2, desc: 'Il 20% dei colpi viene sparato una seconda volta, gratis', apply: p => p.boon.echo += 1 },
+    { id: 'defiance', name: 'Ultima Occasione', icon: '⏳', rarity: 'epic', max: 2, desc: 'Invece di cadere risorgi al 50% dei PV. Una carica, si consuma', apply: p => { p.boon.defiance += 1; p.defianceLeft = (p.defianceLeft || 0) + 1; } },
   ];
   const BOON_BY_ID = {}; for (const b of BOONS) BOON_BY_ID[b.id] = b;
 
@@ -102,6 +119,9 @@
     { id: 'frost_chain', name: 'Catena Gelida', icon: '🧊', need: ['chain', 'freeze'], desc: 'Le catene di fulmini rallentano i nemici', apply: p => p.boon.frostChain = 1 },
     { id: 'seeker', name: 'Cercatore', icon: '🔮', need: ['homing', 'pierce'], desc: 'I proiettili guidati perforano +1 nemico', apply: p => p.boon.pierce += 1 },
     { id: 'bloodlust', name: 'Sete di Sangue', icon: '🩸', need: ['vampire', 'adrenaline'], desc: '+6% cura dal danno inflitto', apply: p => p.stats.lifesteal += 0.06 },
+    // v1.51 — legano i poteri nuovi a quelli storici
+    { id: 'headhunter', name: 'Cacciatore di Teste', icon: '🎯', need: ['execute', 'crowbar'], desc: 'La soglia del Colpo di Grazia sale di 6 punti', apply: p => p.boon.executeBonus = 0.06 },
+    { id: 'shockwave', name: 'Onda d\'Urto', icon: '🌊', need: ['retaliate', 'thorns'], desc: 'L\'onda di Rappresaglia e\' molto piu\' ampia', apply: p => p.boon.retaliateWide = 1 },
   ];
   // Ritorna le sinergie appena attivate (need tutti posseduti) non ancora presenti in activeIds.
   function detectSynergies(ownedCounts, activeIds) {
@@ -111,13 +131,14 @@
   }
   const SYNERGY_BY_ID = {}; for (const sy of SYNERGIES) SYNERGY_BY_ID[sy.id] = sy;
 
+  const BOON_CHOICES = 3;  // v1.51 — carte offerte a fine ondata
   function pickWeighted(list, rng) { let tot = 0; for (const it of list) tot += (it.weight || 0); let r = (rng ? rng() : Math.random()) * tot; for (const it of list) { r -= (it.weight || 0); if (r <= 0) return it; } return list[list.length - 1]; }
   // Offre fino a 3 boon casuali (esclude quelli al max), pesati per rarità.
   function offerBoons(rarityTable, ownedCounts) {
     const weighted = BOONS.filter(b => (ownedCounts[b.id] || 0) < b.max)
       .map(b => ({ b, weight: (rarityTable[b.rarity] || { weight: 1 }).weight }));
     const out = [];
-    for (let i = 0; i < 2 && weighted.length; i++) {  // v1.10: si sceglie tra 2 poteri
+    for (let i = 0; i < BOON_CHOICES && weighted.length; i++) {  // v1.51: si sceglie 1 di 3 (era 1 di 2 dalla v1.10)
       const w = pickWeighted(weighted);
       out.push(w.b);
       weighted.splice(weighted.indexOf(w), 1);
@@ -150,5 +171,5 @@
     return out;
   }
 
-  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, GEAR, GEAR_BY_SLOT, GEAR_RANK, GEAR_RARITY, gearCost, coinsFor };
+  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_COST_MULT, STAT_MAX_LEVEL, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, GEAR, GEAR_BY_SLOT, GEAR_RANK, GEAR_RARITY, gearCost, coinsFor };
 });

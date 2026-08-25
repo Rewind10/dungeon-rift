@@ -423,13 +423,14 @@ Aggiornare **sempre** tutti questi punti:
 6. `CARATTERISTICHE.md` → "Versione attuale" + blocco novità
 7. `ROSTER.md` → scheda del nemico toccato, **tabella comparativa** e **ondata di comparsa**
 8. `ENEMIES.md` → "Versione di riferimento" + nuova sezione tecnica se cambia il metodo di render
-9. `test/simulate.js` → test aggiornati/aggiunti → **eseguire `node test/simulate.js` (deve dare 0 falliti)**
+9. `test/simulate.js` (server) e `test/client.js` (interfaccia) → test aggiornati/aggiunti → **eseguire `npm test`
+   (lancia entrambe le suite; devono dare 0 falliti)**
 10. **Commit git** — sostituisce il vecchio "ripacchettizza come `.txt`", che era il workflow di quando il
     progetto non era ancora su repository.
 
 Comandi tipici:
 ```bash
-node test/simulate.js                          # deve dire "RISULTATO: N passati, 0 falliti"
+npm test                                       # simulate.js (server) + client.js (interfaccia)
 git add -A && git commit -m "vX.Y.Z — <titolo>"
 git tag vX.Y.Z
 ```

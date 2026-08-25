@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>DUNGEON RIFT v1.50.0 — Roguelike Co-op</title>
+<title>DUNGEON RIFT v1.51.0 — Roguelike Co-op</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -17,6 +17,7 @@
   <div id="modeBanner" class="hidden"></div>
   <div id="comboMeter" class="hidden"><div class="cm-num"><b id="comboN">0</b><span>COMBO</span></div><div class="cm-bar"><i id="comboBar"></i></div><div id="comboMult">x1.0</div></div>
   <div id="abilityBar"></div>
+  <div id="boonBar" class="hidden"></div>
   <div id="vitals">
     <div id="hpFlask" title="Punti salute">
       <svg viewBox="0 0 120 150" preserveAspectRatio="xMidYMid meet">
@@ -49,7 +50,7 @@
 </div>
 <div id="menu">
   <div class="menu-card">
-    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.50.0</small></h1>
+    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.51.0</small></h1>
     <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori</p>
     <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
     <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
@@ -65,7 +66,7 @@
         <li><b>Tasto destro / Shift</b> — scatto (attraversa i nemici)</li>
         <li><b>Q / E</b> — abilità · <b>M</b> — musica</li>
         <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ e <b>oggetti</b> 🎁.</li>
-        <li>A fine ondata scegli un <b>Potere</b> 🎴 e spendi la XP nel negozio.</li>
+        <li>A fine ondata scegli <b>1 Potere su 3</b> 🎴 e spendi la XP nel negozio (statistiche a costo crescente, con tetto).</li>
         <li>Porta un'arma a <b>Lv.3</b> con la statistica giusta per <b>evolverla</b>! ✦</li>
         <li>Modalità ondata: <b>Orda</b>, <b>Caccia</b>, <b>Sopravvivenza</b>, <b>Tesoro</b> 👑. <b>20 livelli</b> → MEGA BOSS.</li>
       </ul>
@@ -88,7 +89,7 @@
       <h2>🎴 SCEGLI UN POTERE</h2>
       <div id="boonCards"></div>
     </div>
-    <div id="gearSection">
+    <div id="gearSection" class="hidden">
       <h2>🪙 EMPORIO — equipaggiamento (monete)</h2>
       <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
       <div id="gearCards"></div>
@@ -96,7 +97,7 @@
     <h2>NEGOZIO — spendi la tua esperienza</h2>
     <div class="shop-xp">Hai <b id="shopXp">0</b> ✦ XP disponibile</div>
     <div id="upgradeCards"></div>
-    <p class="shop-hint">Scegli 1 potere e acquista più volte le statistiche. Premi <b>Spazio</b> (o il pulsante) quando sei pronto.</p>
+    <p class="shop-hint">Scegli <b>1 potere fra 3</b>, poi investi la XP: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Premi <b>Spazio</b> (o il pulsante) quando sei pronto.</p>
     <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady(); window.HUD.hideShop();">✔  PRONTO — Prossima ondata</button>
   </div>
 </div>

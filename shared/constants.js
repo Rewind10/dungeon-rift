@@ -6,7 +6,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.50.0',
+    VERSION: '1.51.0',
+    // v1.51 — level up fra le ondate
+    BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
+    SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
+
     VIS_SCALE: 1.45, COL_SCALE: 1.08,  // v1.13 — ridimensionamento LEGGERO: occhi grandi, hitbox quasi invariata (fluidita preservata)
     TICK_RATE: 30, SNAPSHOT_RATE: 20, MAX_PLAYERS: 6,
     TILE: 48, MAP_W: 46, MAP_H: 34,
@@ -40,6 +44,7 @@
       BUY_GEAR: 'buy_gear', OFFER_GEAR: 'offer_gear',
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
+      BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)
     },
     PHASE_LOBBY: 'lobby', PHASE_COMBAT: 'combat', PHASE_SHOP: 'shop',
     PHASE_BOSS: 'boss', PHASE_GAMEOVER: 'gameover', PHASE_VICTORY: 'victory',

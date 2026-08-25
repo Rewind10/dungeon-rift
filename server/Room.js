@@ -11,7 +11,15 @@ const AI = require('../shared/ai.js');
 const Waves = require('../shared/waves.js');
 let NEXT = 1;
 
-function newBoon() { return { bounce: 0, pierce: 0, chain: 0, poison: 0, explodeEvery: 0, killNova: 0, bulletSize: 0, slow: 0, thorns: 0, killHaste: 0, homing: 0, toxicBurst: 0, frostChain: 0 }; }
+function newBoon() {
+  return {
+    bounce: 0, pierce: 0, chain: 0, poison: 0, explodeEvery: 0, killNova: 0, bulletSize: 0, slow: 0, thorns: 0,
+    killHaste: 0, homing: 0, toxicBurst: 0, frostChain: 0,
+    // v1.51 — nuovi poteri
+    crowbar: 0, longshot: 0, killStep: 0, magnet: 0, retaliate: 0, aegis: 0, corpseBlast: 0, execute: 0, echo: 0, defiance: 0,
+    executeBonus: 0, retaliateWide: 0,
+  };
+}
 
 class Room {
   constructor(id) {
@@ -50,7 +58,7 @@ class Room {
       hp: hero.hp, maxHp: hero.hp, dead: false, down: false, downT: 0, fireCd: 0, facing: 0,
       input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
       lives: C.START_LIVES, xpPool: 0, buys: {}, weapon2: null, coins: 0, gear: { armor: 0, boots: 0, weapon: 0 },
-      boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0,
+      boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
       stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: hero.id === 'glitch' ? 0.05 : 0.03, critMult: 2.0, pierce: hero.weapon.pierce || 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0 },
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
@@ -62,7 +70,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = { armor: 0, boots: 0, weapon: 0 }; }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = { armor: 0, boots: 0, weapon: 0 }; this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -238,6 +246,12 @@ class Room {
 
   damagePlayer(p, dmg, sx, sy, kn = 1) {
     if (p.dead || p.down || p.buffs.iframe || p.buffs.i_invuln) return;
+    // v1.51 — EGIDA OSTINATA: annulla per intero un colpo, poi va in ricarica.
+    if (p.boon && p.boon.aegis > 0 && (p.aegisT || 0) <= 0) {
+      p.aegisT = p.boon.aegis >= 2 ? 6 : 8;
+      this.events.push({ t: 'aegis', x: p.x, y: p.y, who: p.id });
+      return;
+    }
     let d = dmg;
     if (p.heroId === 'enforcer') d *= 0.82;
     if (p.buffs.phase) d *= 0.7;
@@ -247,7 +261,15 @@ class Room {
     if (p.buffs.gz_sunder > 0) d *= (C.GAZE_SUNDER_MULT || 1.32); // v1.34 — "meno difesa": danni subiti aumentati dallo sguardo
     if (p.buffs.barrier > 0) { const ang = Math.atan2(sy - p.y, sx - p.x); let diff = Math.abs(((ang - p.facing + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff < 1.2) { this.events.push({ t: 'block', x: p.x, y: p.y }); return; } }
     d = Math.max(1, Math.round(d)); p.hp -= d; const n = MU.norm(p.x - sx, p.y - sy); p.vx += n.x * 40 * kn; p.vy += n.y * 40 * kn; p.hitFlash = 0.15;
-    this.events.push({ t: 'phit', x: p.x, y: p.y, d }); if (p.hp <= 0) this.downPlayer(p);
+    this.events.push({ t: 'phit', x: p.x, y: p.y, d });
+    // v1.51 — RAPPRESAGLIA: farsi colpire diventa una risposta, non solo una perdita. Scatta anche sul colpo fatale.
+    if (p.boon && p.boon.retaliate > 0) {
+      const rad = (p.boon.retaliateWide ? 150 : 100) + 20 * p.boon.retaliate;
+      const rd = Math.max(1, Math.round(this.effDamage(p) * 0.8 * p.boon.retaliate));
+      for (const o of this.monsters) { if (o.dead) continue; if (MU.dist2(p.x, p.y, o.x, o.y) <= rad * rad) this.damageMonster(o, rd, p.x, p.y, 26, p); }
+      this.events.push({ t: 'retaliate', x: p.x, y: p.y, r: rad });
+    }
+    if (p.hp <= 0) this.downPlayer(p);
   }
   cursePlayer(p) { // v1.28 — maledizione: indebolisce (danno/velocità ridotti) per alcuni secondi + notifica
     if (p.dead || p.down) return;
@@ -262,12 +284,20 @@ class Room {
     p.buffs[key] = Math.max(was, dur);
     if (was <= 0.1) this.events.push({ t: 'gazed', who: p.id, x: p.x, y: p.y, kind, dur: Math.round(dur) });
   }
-  downPlayer(p) { p.hp = 0; p.down = true; p.downT = C.DOWN_BLEED_TIME; this.events.push({ t: 'down', x: p.x, y: p.y, name: p.name, lives: p.lives }); if (!this.anyRevivable) this.gameOver(); }
+  downPlayer(p) {
+    // v1.51 — ULTIMA OCCASIONE: consuma una carica e rimette in piedi invece di far cadere.
+    if ((p.defianceLeft || 0) > 0) {
+      p.defianceLeft--; p.hp = Math.round(this.effMaxHp(p) * 0.5); p.buffs.iframe = 2;
+      this.events.push({ t: 'defiance', x: p.x, y: p.y, who: p.id, name: p.name, left: p.defianceLeft });
+      return;
+    }
+    p.hp = 0; p.down = true; p.downT = C.DOWN_BLEED_TIME; this.events.push({ t: 'down', x: p.x, y: p.y, name: p.name, lives: p.lives }); if (!this.anyRevivable) this.gameOver();
+  }
   gameOver() { this.phase = C.PHASE_GAMEOVER; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'gameover', wave: this.wave, stats: this.buildRunStats(), dur: Math.round(this.time - (this.runStart || 0)) } }); }
   victory() { this.phase = C.PHASE_VICTORY; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'victory', wave: this.wave, stats: this.buildRunStats(), dur: Math.round(this.time - (this.runStart || 0)) } }); }
 
   effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat; }
-  effSpeed(p) { let s = p.hero.speed * p.stats.speedMult * 1.05; if (p.heroId === 'recon' && p.hp / this.effMaxHp(p) < 0.5) s *= 1.2; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * p.stats.speedMult * 1.05; if (p.heroId === 'recon' && p.hp / this.effMaxHp(p) < 0.5) s *= 1.2; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
   effFireDelay(p) { let base = p.hero.weapon.fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult; if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (p.hero.weapon.dmg + p.stats.dmgFlat) * p.stats.dmgMult; if (p.heroId === 'recon' && p.hp / this.effMaxHp(p) < 0.5) d *= 1.15; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
@@ -302,6 +332,7 @@ class Room {
     // colpo esplosivo periodico (boon)
     let explosive = false; if (p.boon.explodeEvery > 0) { p.boonShot++; if (p.boonShot % p.boon.explodeEvery === 0) explosive = true; }
     const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed), vy: Math.sin(a) * (ov.speed || w.bulletSpeed), r: (ov.r || C.BULLET_RADIUS) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: p.heroId === 'recon' ? 1 : 0, explosive, chain: p.boon.chain, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing }, {}));
+    const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
       const speed = tr.speed || w.bulletSpeed, range = tr.range || w.range;
@@ -314,6 +345,10 @@ class Room {
     } else {
       for (let i = 0; i < pc; i++) { const sb = w.spread + (pc > 1 ? 0.09 * (i - (pc - 1) / 2) : 0); let a = base + sb + MU.rand(-w.spread, w.spread); if (p.heroId === 'enforcer') { const near = this._coneNear(p.x, p.y, base, 0.5, w.range); if (near) { const ta = Math.atan2(near.y - p.y, near.x - p.x); a = MU.turnToward(a, ta, 0.06); } } mkBullet(a); }
     }
+    };
+    volley();
+    // v1.51 — ECO ARCANA: una quota dei colpi parte una seconda volta, gratis (stesso danno, stessa mira).
+    if (p.boon.echo > 0 && MU.chance(0.20 * p.boon.echo)) { volley(); this.events.push({ t: 'echo', x: p.x, y: p.y, a: base }); }
     this.events.push({ t: 'shot', x: p.x, y: p.y, a: base, hero: p.heroId, wt: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null });
   }
   _coneNear(x, y, ang, ha, range) { let best = null, bd = Infinity; for (const m of this.monsters) { const d = MU.dist(x, y, m.x, m.y); if (d > range) continue; const a = Math.atan2(m.y - y, m.x - x); let diff = Math.abs(((a - ang + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff <= ha && d < bd) { bd = d; best = m; } } return best; }
@@ -338,7 +373,18 @@ class Room {
   damageMonster(m, dmg, sx, sy, kn, src, opts = {}) {
     if (m.dead) return; if (m.shielded > 0) { this.events.push({ t: 'block', x: m.x, y: m.y }); return; }
     let d = dmg; if (m.def.blockFront && sx !== undefined) { const ang = Math.atan2(sy - m.y, sx - m.x); let diff = Math.abs(((ang - m.facing + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff < 1.0) d *= (1 - m.def.blockFront); }
+    // v1.51 — PIEDE DI PORCO: bonus contro i bersagli ancora integri (apre bene i tank).
+    if (src && src.boon) {
+      if (src.boon.crowbar > 0 && m.hp >= m.maxHp * 0.9) d *= (1 + 0.40 * src.boon.crowbar);
+      // v1.51 — TIRO LUNGO: premia il combattimento a distanza (fino a +22% per carica a piena gittata).
+      if (src.boon.longshot > 0) d *= 1 + Math.min(1, MU.dist(src.x, src.y, m.x, m.y) / 700) * 0.22 * src.boon.longshot;
+    }
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
+    // v1.51 — COLPO DI GRAZIA: esecuzione sotto soglia. Mai sui boss, altrimenti banalizza le ondate 5/10/15/20.
+    if (m.hp > 0 && !m.boss && src && src.boon && src.boon.execute > 0) {
+      const thr = 0.08 + 0.04 * src.boon.execute + (src.boon.executeBonus || 0);
+      if (m.hp <= m.maxHp * thr) { m.hp = 0; this.events.push({ t: 'execute', x: m.x, y: m.y }); }
+    }
     if (kn && !m.boss) { const n = MU.norm(m.x - sx, m.y - sy); this.moveCircle(m, n.x * kn * 0.2, n.y * kn * 0.2); }
     if (opts.stun) m.stun = Math.max(m.stun || 0, opts.stun);
     if (opts.slow) m.slowT = Math.max(m.slowT || 0, 0.7);
@@ -366,6 +412,17 @@ class Room {
       if (src.combo >= C.COMBO_MIN && src.combo % 5 === 0) this.events.push({ t: 'combo', x: m.x, y: m.y, n: src.combo, mult: +this.comboMult(src).toFixed(2), who: src.id });
       this._comboReward(src, m);
       if (src.boon.killHaste) { src.killHasteStacks = Math.min(6, (src.killHasteStacks || 0) + 1); src.buffs.killHaste = 3; }
+      // v1.51 — PASSO DI DANZA: scatto di velocita' a ogni uccisione (premia chi non si ferma).
+      if (src.boon.killStep > 0) src.buffs.killStep = 2;
+      // v1.51 — DEFLAGRAZIONE CADAVERICA: il cadavere esplode. Il flag _inCorpse impedisce la catena infinita
+      // (esplosione -> uccide -> esplode -> ...): solo il primo cadavere della catena deflagra.
+      if (src.boon.corpseBlast > 0 && !this._inCorpse) {
+        this._inCorpse = true;
+        const rad = 90 + 20 * src.boon.corpseBlast, dmgB = Math.round(this.effDamage(src) * (0.5 + 0.2 * src.boon.corpseBlast));
+        for (const o of this.monsters) { if (o === m || o.dead) continue; if (MU.dist2(m.x, m.y, o.x, o.y) <= rad * rad) this.damageMonster(o, dmgB, m.x, m.y, 12, src); }
+        this.events.push({ t: 'corpse_blast', x: m.x, y: m.y, r: rad });
+        this._inCorpse = false;
+      }
       if (src.boon.killNova > 0 && MU.chance(0.25 * src.boon.killNova)) { for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; this.bullets.push({ eid: NEXT++, hostile: false, owner: src.id, x: m.x, y: m.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, r: 6, dmg: Math.round(this.effDamage(src) * 0.7), color: '#ffd24a', life: 0.45, pierce: 2, knock: 30 }); } this.events.push({ t: 'nova', x: m.x, y: m.y }); }
     }
     const comboMul = src ? this.comboMult(src) : 1; const xpMul = src ? (src.stats.xpMult || 1) : 1;
@@ -391,7 +448,13 @@ class Room {
   _giveWeapon(p, wt) { if (p.weapon2 && p.weapon2.type === wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, p.weapon2.level + 1); else if (!p.weapon2 || p.weapon2.type !== wt) p.weapon2 = { type: wt, level: 1, evolved: null }; this._checkEvo(p); }
   _checkEvo(p) { if (!p.weapon2 || p.weapon2.evolved) return; const w = Loot.WEAPONS[p.weapon2.type]; if (!w || !w.evo) return; if (p.weapon2.level >= 3 && (p.buys[w.evo.stat] || 0) >= w.evo.need) { p.weapon2.evolved = w.evo.id; this.events.push({ t: 'weapon_evo', x: p.x, y: p.y, name: w.evo.name, color: w.evo.color, who: p.id, name2: p.name }); } }
 
-  offerShop(p) { const stats = Loot.XP_STATS.map(s => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: Loot.statCost(s.base, p.buys[s.id] || 0), lvl: p.buys[s.id] || 0 })); this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, xp: p.xpPool, stats, wave: this.wave }); }
+  offerShop(p) {
+    const stats = Loot.XP_STATS.map(s => {
+      const lvl = p.buys[s.id] || 0, maxed = lvl >= Loot.STAT_MAX_LEVEL;
+      return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : Loot.statCost(s.base, lvl), lvl, max: Loot.STAT_MAX_LEVEL, maxed };
+    });
+    this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, xp: p.xpPool, stats, wave: this.wave });
+  }
   offerGear(p) {
     const slots = Loot.GEAR.map(g => { const owned = p.gear[g.slot] || 0; const maxed = owned >= g.max; return { slot: g.slot, name: g.name, icon: 'assets/gear/' + p.heroId + '_' + g.slot + '.png', color: g.color, tier: owned, max: g.max, rank: owned > 0 ? Loot.GEAR_RANK[owned - 1] : '', nextRank: maxed ? '' : Loot.GEAR_RANK[owned], rarity: maxed ? Loot.GEAR_RARITY[owned - 1] : Loot.GEAR_RARITY[owned], cost: maxed ? 0 : Loot.gearCost(g, owned), desc: g.desc(owned + (maxed ? 0 : 1)), maxed }; });
     this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots });
@@ -414,6 +477,7 @@ class Room {
   buyStat(pid, statId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;
     const s = Loot.XP_STATS.find(x => x.id === statId); if (!s) return;
+    if ((p.buys[statId] || 0) >= Loot.STAT_MAX_LEVEL) return;  // v1.51 — tetto di livello per statistica
     const cost = Loot.statCost(s.base, p.buys[statId] || 0); if (p.xpPool < cost) return;
     p.xpPool -= cost; p.buys[statId] = (p.buys[statId] || 0) + 1;
     if (statId === 'st_hp') { p.stats.maxHpFlat += 22; p.hp += 22; }
@@ -435,6 +499,15 @@ class Room {
     // SINERGIE (v1.7): se il boon appena preso completa una coppia, attivala una sola volta.
     const newSyn = Loot.detectSynergies(p.boonsOwned, p.synActive);
     for (const sy of newSyn) { sy.apply(p); p.synActive[sy.id] = 1; this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'synergy', id: sy.id, name: sy.name, icon: sy.icon, desc: sy.desc } }); }
+    this.sendBoons(p);  // v1.51 — aggiorna la barra dei poteri attivi
+  }
+  // v1.51 — elenco dei poteri attivi, per la barra in basso nell'HUD. Inviato solo quando cambia qualcosa
+  // (scelta di un boon, sinergia, inizio partita): non entra nello snapshot, che gira 20 volte al secondo.
+  sendBoons(p) {
+    const list = [];
+    for (const id in p.boonsOwned) { const b = Loot.BOON_BY_ID[id]; if (b && p.boonsOwned[id] > 0) list.push({ id, icon: b.icon, name: b.name, rarity: b.rarity, n: p.boonsOwned[id], desc: b.desc.replace('{v}', b.v ? b.v(p) : '') }); }
+    for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) list.push({ id, icon: sy.icon, name: sy.name, n: 1, syn: 1, desc: sy.desc }); }
+    this.sendTo(p.id, { t: C.MSG.BOONS, boons: list });
   }
   shopReady(pid) { const p = this.players.get(pid); if (p) p.ready = true; }
 
@@ -484,16 +557,17 @@ class Room {
     for (const p of this.players.values()) { if (!p.connected) continue;
       if (p.down || p.dead) { p.down = false; p.dead = false; p.hp = Math.round(this.effMaxHp(p) * 0.6); if (p.lives < 1) p.lives = 1; }
       else p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * 0.25));
-      p.ready = false; p.killHasteStacks = 0; this.offerBoon(p); this.offerShop(p); this.offerGear(p);
+      p.ready = false; p.killHasteStacks = 0; this.offerBoon(p); this.offerShop(p); this.sendBoons(p);
+      if (C.SHOP_GEAR_ENABLED) this.offerGear(p);  // v1.51 — Emporio a monete nascosto in attesa di ridisegno
     }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'shop', next: this.wave + 1 } });
   }
 
   updatePickups(dt) {
-    for (const o of this.groundXp) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = C.XP_MAGNET * C.XP_MAGNET; for (const p of this.alivePlayers) { const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < bd) { bd = d; target = p; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / C.XP_MAGNET) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.xpPool += o.v; o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
+    for (const o of this.groundXp) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.xpPool += o.v; o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
     if (this.groundXp.some(o => o.dead)) this.groundXp = this.groundXp.filter(o => !o.dead);
     // Raccolta MONETE (calamita come l'XP)
-    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = C.COIN_MAGNET * C.COIN_MAGNET; for (const p of this.alivePlayers) { const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < bd) { bd = d; target = p; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / C.COIN_MAGNET) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
+    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.alivePlayers) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
     for (const it of this.items) { if (it.dead) continue; it.t -= dt; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.alivePlayers) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
@@ -510,6 +584,7 @@ class Room {
       if (p.comboT > 0) { p.comboT -= dt; if (p.comboT <= 0) { p.comboT = 0; p.combo = 0; } }
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
       for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; } }
+      if (p.aegisT > 0) p.aegisT -= dt;  // v1.51 — ricarica dell'Egida Ostinata
       if (p.stats.regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + p.stats.regen * dt);
       if (p.buffs.b_regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + 8 * dt);
       if (p.down) {

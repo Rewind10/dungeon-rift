@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.50.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.51.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,32 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.51 (level up rivisto: 1 di 3 carte, dieci poteri nuovi, negozio XP severo)
+- **🎴 Si sceglie 1 potere su 3** (erano 2 dalla v1.10): il catalogo era cresciuto mentre le pescate calavano.
+- **✨ Dieci poteri nuovi** (catalogo 23 → **33**), ispirati ad altri roguelike:
+
+  | Potere | Rarità | Effetto | Ispirazione |
+  |---|---|---|---|
+  | ⛏️ **Piede di Porco** | non comune | +40% danno sui nemici sopra il 90% dei PV | *Risk of Rain* — Crowbar |
+  | 🔭 **Tiro Lungo** | non comune | più lontano è il bersaglio, più fai male | *Risk of Rain* — Laser Scope |
+  | 💃 **Passo di Danza** | non comune | +25% velocità per 2s a ogni uccisione | *Hades* |
+  | 🧲 **Fame Vorace** | non comune | raggio di raccolta molto più ampio, +15% XP | *Vampire Survivors* |
+  | 💢 **Rappresaglia** | raro | farsi colpire emette un'onda che danneggia e respinge | *Dead Cells* |
+  | 🧿 **Egida Ostinata** | raro | annulla per intero un colpo ogni 8s | *Hades* — Stubborn Defiance |
+  | ☄️ **Deflagrazione Cadaverica** | raro | i nemici uccisi esplodono | *Risk of Rain* — Gasoline |
+  | 🗡️ **Colpo di Grazia** | epico | esegue i nemici sotto il 12% dei PV (mai i boss) | *Dead Cells* |
+  | 🔊 **Eco Arcana** | epico | il 20% dei colpi parte una seconda volta, gratis | *Binding of Isaac* |
+  | ⏳ **Ultima Occasione** | epico | invece di cadere risorgi al 50% dei PV | *Hades* — Death Defiance |
+
+- **🔗 Due nuove sinergie**: 🎯 Cacciatore di Teste (Grazia + Piede di Porco) e 🌊 Onda d'Urto (Rappresaglia + Spine).
+- **✦ Negozio XP che obbliga a scegliere**: curva da `1.55^n` a `2.05^n` e **tetto di 8 livelli**. Massimizzare
+  tutto passa da **3.526** a **17.768 XP**, contro le ~7.528 raccolte in una run: ci si specializza, e la **combo**
+  (moltiplicatore XP fino a ×2.5) diventa la leva vera su quanto puoi permetterti.
+- **🪙 Emporio a monete nascosto** per ora (`C.SHOP_GEAR_ENABLED = false`): niente è stato rimosso, le monete
+  continuano a cadere e i **mercanti** in mappa restano attivi.
+- **🎒 Barra dei poteri attivi** sopra la barra abilita: icone, rarita, moltiplicatore e sinergie, con descrizione al passaggio del mouse.
+- Test: **273 passati, 0 falliti** + nuova suite `test/client.js` per l'interfaccia (`npm test` lancia entrambe).
 
 ## 🆕 Novita v1.50 (consolidamento: curva di difficolta, elite tarati, documentazione riallineata)
 - **🌊 Curva di introduzione ripristinata**: i nemici tornano a entrare **scaglionati** — Zombie (1) → Melma (2) →
@@ -331,7 +357,7 @@ public/js/ net, input, audio, renderer (puppet + sprite-sheet + boon-fx + MINIMA
 public/assets/enemies/  pezzi raster + manifest dei mostri (ghoul, mage, brute, slime, beholder, troll_sheet)
 public/assets/art/      artwork del bestiario · public/assets/gear/ icone emporio (3 slot x 3 eroi)
 tools/   slicer e anteprime rig — Python offline, NON servono a runtime
-test/    simulate.js — suite headless (256 test)
+test/    simulate.js — suite headless server (273 test) · client.js — smoke test interfaccia (DOM finto)
 ```
 
 Buon divertimento nel Rift! 🗡️

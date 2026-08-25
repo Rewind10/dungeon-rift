@@ -26,6 +26,7 @@
       case C.MSG.OFFER_SHOP: if (this.onOfferShop) this.onOfferShop(m); break;
       case C.MSG.OFFER_BOON: if (this.onOfferBoon) this.onOfferBoon(m); break;
       case C.MSG.OFFER_GEAR: if (this.onOfferGear) this.onOfferGear(m); break;
+      case C.MSG.BOONS: if (this.onBoons) this.onBoons(m); break;  // v1.51 — poteri attivi
       case C.MSG.OFFER_MERCHANT: if (this.onOfferMerchant) this.onOfferMerchant(m); break;
       case C.MSG.CHAT: if (this.onChat) this.onChat(m); break;
       case C.MSG.PONG: this.ping = Math.round(performance.now() - m.ts); break;

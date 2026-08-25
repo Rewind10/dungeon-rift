@@ -1,10 +1,44 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.50.0`
+**Versione attuale:** `1.51.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🎴 Level up fra le ondate, rivisto *(novita v1.51)*
+
+Il momento fra un'ondata e l'altra chiedeva **tre** decisioni (potere, statistiche a XP, equipaggiamento a monete),
+ma una sola era davvero una scelta. Ora il potere torna protagonista e il negozio XP costringe a specializzarsi.
+
+- **Si sceglie 1 potere su 3.** Erano 2 dalla v1.10, mentre il catalogo cresceva: piu poteri e meno pescate
+  significa vedere una frazione sempre piu piccola del gioco. Le carte tornano tre, la scelta resta una.
+- **Dieci poteri nuovi** (catalogo 23 → **33**), ognuno pensato per cambiare *come* giochi, non solo di quanto:
+
+  | Potere | Rarità | Effetto | Ispirazione |
+  |---|---|---|---|
+  | ⛏️ **Piede di Porco** | non comune | +40% danno sui nemici sopra il 90% dei PV | *Risk of Rain* — Crowbar |
+  | 🔭 **Tiro Lungo** | non comune | più lontano è il bersaglio, più fai male | *Risk of Rain* — Laser Scope |
+  | 💃 **Passo di Danza** | non comune | +25% velocità per 2s a ogni uccisione | *Hades* |
+  | 🧲 **Fame Vorace** | non comune | raggio di raccolta molto più ampio, +15% XP | *Vampire Survivors* |
+  | 💢 **Rappresaglia** | raro | farsi colpire emette un'onda che danneggia e respinge | *Dead Cells* |
+  | 🧿 **Egida Ostinata** | raro | annulla per intero un colpo ogni 8s | *Hades* — Stubborn Defiance |
+  | ☄️ **Deflagrazione Cadaverica** | raro | i nemici uccisi esplodono | *Risk of Rain* — Gasoline |
+  | 🗡️ **Colpo di Grazia** | epico | esegue i nemici sotto il 12% dei PV (mai i boss) | *Dead Cells* |
+  | 🔊 **Eco Arcana** | epico | il 20% dei colpi parte una seconda volta, gratis | *Binding of Isaac* |
+  | ⏳ **Ultima Occasione** | epico | invece di cadere risorgi al 50% dei PV | *Hades* — Death Defiance |
+
+- **Due nuove sinergie:** 🎯 **Cacciatore di Teste** (Colpo di Grazia + Piede di Porco → soglia di esecuzione piu
+  alta) e 🌊 **Onda d'Urto** (Rappresaglia + Aura di Spine → onda molto piu ampia).
+- **Negozio XP molto piu severo.** Costi da `1.55^n` a `2.05^n` e **tetto di 8 livelli** per statistica.
+  Massimizzare l'intero albero passa da 3.526 a **17.768 XP**, contro le ~7.528 raccolte in una run intera: ne
+  massimizzi al piu una parte, e la **combo** (che moltiplica l'XP fino a x2.5) decide quanta. Le carte mostrano
+  `Lv.3/8` e diventano **MAX ★** quando la statistica e esaurita.
+- **Emporio a monete nascosto** in attesa di ridisegno. Non e stato rimosso nulla: le monete cadono ancora e i
+  **mercanti** in mappa restano il modo per spenderle.
+- **Barra dei poteri attivi** sopra la barra abilita: ogni potere posseduto con icona, colore della rarita e
+  moltiplicatore, sinergie evidenziate, descrizione al passaggio del mouse.
+- Test: **273 passati, 0 falliti**, piu la nuova suite `test/client.js` che verifica l'interfaccia con un DOM finto.
 
 ## 🧭 Consolidamento: curva di difficolta, elite tarati, documentazione *(novita v1.50)*
 - **Curva di introduzione dei nemici ripristinata.** Gli archetipi tornano a entrare **scaglionati**: 🟢 Zombie

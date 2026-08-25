@@ -19,6 +19,7 @@
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
   Net.onOfferGear = (m) => { HUD.setGear(m, (slot) => Net.buyGear(slot)); };
+  Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
   Net.onChat = (m) => { const log = $('chatLog'); const el = document.createElement('div'); el.className = 'cm'; el.innerHTML = `<b>${esc(m.from)}:</b> ${esc(m.text)}`; log.appendChild(el); setTimeout(() => el.remove(), 8000); while (log.children.length > 6) log.removeChild(log.firstChild); };
@@ -52,6 +53,13 @@
       case 'merchant_buy': A.buy(); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 60, 0.5); R.burst(ev.x, ev.y, ev.color || '#ffd24a', 16, 160, 0.5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> acquistato dal mercante!`); break;
       case 'dark_buy': A.evo(); R.ring(ev.x, ev.y, ev.color || '#7b2cbf', 10, 90, 0.6); R.burst(ev.x, ev.y, ev.color || '#a4133c', 22, 200, 0.6); R.addShake(5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 ${esc(ev.note || 'patto siglato')}`); break;
       case 'nova': R.ring(ev.x, ev.y, '#7dffea', 6, 110, 0.45); break;
+      // ===== v1.51 — feedback dei nuovi poteri =====
+      case 'execute': A.kill(false); R.floater(ev.x, ev.y - 16, 'GRAZIA', '#ff5a7a', true); R.ring(ev.x, ev.y, '#ff5a7a', 5, 34, 0.28); R.burst(ev.x, ev.y, '#ff9ab0', 10, 150, 0.35); break;
+      case 'corpse_blast': A.explosion(); R.ring(ev.x, ev.y, '#c48cff', 6, ev.r || 100, 0.4); R.burst(ev.x, ev.y, '#a06bff', 18, 200, 0.5); R.addShake(4); break;
+      case 'retaliate': R.ring(ev.x, ev.y, '#ffb020', 6, ev.r || 120, 0.35); R.burst(ev.x, ev.y, '#ffd24a', 14, 190, 0.4); break;
+      case 'aegis': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 20, 'PARATO', '#7dffea', true); } R.ring(ev.x, ev.y, '#7dffea', 6, 44, 0.35); break;
+      case 'defiance': if (ev.who === Net.id) { A.evo(); R.addShake(10); HUD.modeBanner('\u23F3 ULTIMA OCCASIONE', '#ffd24a', 'Sei tornato in piedi' + (ev.left > 0 ? ' \u00b7 ' + ev.left + ' carica/he rimasta/e' : ' \u00b7 era l\'ultima')); } R.ring(ev.x, ev.y, '#ffd24a', 10, 120, 0.7); R.burst(ev.x, ev.y, '#ffe89a', 26, 240, 0.7); break;
+      case 'echo': R.burst(ev.x, ev.y, '#b061ff', 3, 70, 0.18); break;
       case 'combo': if (ev.who === Net.id) { A.xp(); R.floater(ev.x, ev.y - 20, ev.n + 'x COMBO! x' + (ev.mult || 1).toFixed(1), '#ffcf5a', true); R.addShake(2); if (ev.n >= 20) HUD.killfeed('\uD83D\uDD25 <b style=\"color:#ff8a3b\">COMBO ' + ev.n + '!</b> (moltiplicatore XP x' + (ev.mult || 1).toFixed(1) + ')'); } break;
       case 'combo_reward': { const RW = { 1: { c: '#ffd24a', t: '\u26a1 COMBO 15 \u2014 Frenesia!' }, 2: { c: '#ffd24a', t: '\uD83D\uDCA5 COMBO 25 \u2014 Nova!' }, 3: { c: '#4bd66b', t: '\uD83D\uDC9A COMBO 40 \u2014 Cura + Egida!' } }; const rw = RW[ev.tier] || RW[1]; R.ring(ev.x, ev.y, rw.c, 8, ev.tier === 2 ? 130 : 70, 0.6); R.burst(ev.x, ev.y, rw.c, 18, 200, 0.6); if (ev.tier >= 2) R.addShake(ev.tier === 3 ? 8 : 5); if (ev.who === Net.id) { A.boon(); HUD.killfeed('<b style="color:' + rw.c + '">' + rw.t + '</b>'); } break; }
       case 'synergy': A.evo(); HUD.killfeed(`\uD83D\uDD17 <b style="color:#7dffea">SINERGIA: ${esc(ev.name)}</b> \u2014 ${esc(ev.desc)}`); break;

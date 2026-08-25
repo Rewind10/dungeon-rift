@@ -270,7 +270,7 @@ function testV110() {
   console.log('\n[TEST 14] Novita v1.10 — 2 poteri a scelta, piu boon, emporio 3 slot');
   // --- si sceglie tra ESATTAMENTE 2 poteri ---
   const room = new Room('v110'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame(); room.phase = C.PHASE_SHOP;
-  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 2, 'a fine ondata si sceglie tra 2 poteri (offerti: ' + (p.boonOffer || []).length + ')');
+  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 3, 'a fine ondata si sceglie 1 di 3 poteri — v1.51, era 1 di 2 (offerti: ' + (p.boonOffer || []).length + ')');
   // --- catalogo boon ampliato ---
   assert(Loot.BOONS.length >= 23, 'il catalogo dei poteri e ampliato (' + Loot.BOONS.length + ')');
   for (const id of ['berserk', 'swift', 'lucky', 'juggernaut', 'executioner', 'artillery']) assert(Loot.BOON_BY_ID[id], 'nuovo boon presente: ' + id);
@@ -530,6 +530,61 @@ function testV149() {
   assert(hasNaN(room) === null, 'nessun NaN col Beholder in campo');
   ok('novita v1.49 verificate');
 }
+function testV151() {
+  console.log('\n[TEST 25] Novita v1.51 — 1 di 3 poteri, +10 boon, negozio XP severo, Emporio nascosto');
+  const Loot = require('../shared/loot.js');
+  const dt = 1 / C.TICK_RATE;
+  // --- 1) si sceglie 1 di 3 ---
+  assert(Loot.BOON_CHOICES === 3, 'la costante di offerta e 3 carte');
+  // --- 2) dieci poteri nuovi, tutti applicabili ---
+  const NEW = ['crowbar', 'longshot', 'killstep', 'gluttony', 'retaliate', 'aegis', 'corpseblast', 'execute', 'echo', 'defiance'];
+  assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i 10 nuovi poteri sono nel catalogo');
+  assert(Loot.BOONS.length === 33, 'catalogo a 33 poteri (23 storici + 10 nuovi): ' + Loot.BOONS.length);
+  assert(NEW.every(id => { const b = Loot.BOON_BY_ID[id]; return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon; }), 'ogni nuovo potere ha icona, descrizione, max e apply');
+  assert(new Set(Loot.BOONS.map(b => b.id)).size === Loot.BOONS.length, 'nessun id di potere duplicato');
+  // --- 3) il negozio XP e ora una scelta, non un rubinetto ---
+  assert(Loot.STAT_MAX_LEVEL === 8, 'tetto di 8 livelli per statistica');
+  const fullTree = Loot.XP_STATS.reduce((a, s) => { let t = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) t += Loot.statCost(s.base, n); return a + t; }, 0);
+  assert(fullTree > 15000, 'massimizzare tutto l albero costa oltre 15.000 XP (prima 3.526): ' + fullTree);
+  // --- 4) prove a runtime ---
+  const msgs = [];
+  const room = new Room('v151');
+  const pl = room.addPlayer('b', { send(s) { try { msgs.push(JSON.parse(s)); } catch (e) { } } }, 'B', 'enforcer');
+  room.startGame();
+  room.offerBoon(pl);
+  assert(pl.boonOffer && pl.boonOffer.length === 3, 'a fine ondata arrivano 3 carte (una sola selezionabile)');
+  // tetto: comprando all infinito ci si ferma a 8
+  room.phase = C.PHASE_SHOP; pl.xpPool = 9999999;
+  for (let i = 0; i < 25; i++) room.buyStat('b', 'st_dmg');
+  assert((pl.buys.st_dmg || 0) === Loot.STAT_MAX_LEVEL, 'la statistica si ferma al tetto di 8 livelli (arrivata a ' + (pl.buys.st_dmg || 0) + ')');
+  // Emporio NASCOSTO: entrando nel negozio non arriva piu l offerta di equipaggiamento
+  msgs.length = 0; room.enterShop();
+  assert(!msgs.some(m => m.t === C.MSG.OFFER_GEAR), 'l Emporio a monete non viene piu offerto (nascosto in v1.51)');
+  assert(msgs.some(m => m.t === C.MSG.OFFER_SHOP), 'il negozio XP viene ancora offerto');
+  assert(msgs.some(m => m.t === C.MSG.BOONS), 'il client riceve l elenco dei poteri attivi (barra in basso)');
+  // COLPO DI GRAZIA: sotto soglia il nemico muore, ma il boss no
+  pl.boon.execute = 1;
+  const m1 = room.spawnMonster('skeleton', pl.x + 200, pl.y, { scaling: Waves.scaling(3, 1) });
+  m1.hp = Math.round(m1.maxHp * 0.11) + 1;
+  room.damageMonster(m1, 1, pl.x, pl.y, 0, pl);
+  assert(m1.dead, 'il Colpo di Grazia esegue il nemico sotto soglia');
+  // ULTIMA OCCASIONE: consuma una carica invece di far cadere
+  pl.defianceLeft = 1; pl.hp = 1; pl.down = false; pl.dead = false;
+  room.downPlayer(pl);
+  assert(!pl.down && pl.hp > 1 && pl.defianceLeft === 0, 'Ultima Occasione rimette in piedi e consuma la carica');
+  // EGIDA OSTINATA: il primo colpo e annullato, il secondo no
+  pl.boon.aegis = 1; pl.aegisT = 0; pl.buffs = {}; pl.hp = 500;
+  room.damagePlayer(pl, 60, pl.x + 10, pl.y, 0);
+  assert(pl.hp === 500 && pl.aegisT > 0, 'l Egida Ostinata annulla il colpo e va in ricarica');
+  room.damagePlayer(pl, 60, pl.x + 10, pl.y, 0);
+  assert(pl.hp < 500, 'il colpo successivo passa (egida in ricarica)');
+  // nessun NaN con i nuovi poteri tutti attivi
+  const room2 = new Room('v151b'); const p2 = room2.addPlayer('c', { send() { } }, 'C', 'recon'); room2.startGame();
+  for (const id of NEW) { const b = Loot.BOON_BY_ID[id]; for (let k = 0; k < b.max; k++) { b.apply(p2); p2.boonsOwned[id] = (p2.boonsOwned[id] || 0) + 1; } }
+  for (let i = 0; i < C.TICK_RATE * 25; i++) { room2.setInput('c', bot(room2, p2)); room2.update(dt); if (hasNaN(room2)) break; }
+  assert(hasNaN(room2) === null, 'nessun NaN con tutti e 10 i nuovi poteri al massimo');
+  ok('novita v1.51 verificate');
+}
 function testV150() {
   console.log('\n[TEST 24] Novita v1.50 — curva di introduzione dei nemici + elite tarati sui tank');
   const Mon = require('../shared/monsters.js');
@@ -580,8 +635,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.50)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.51)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

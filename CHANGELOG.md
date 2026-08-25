@@ -2,6 +2,71 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.51.0] — 2026-08-25 · "Level up rivisto: 1 di 3 carte, dieci poteri nuovi, negozio XP che obbliga a scegliere"
+
+Il momento fra un'ondata e l'altra chiedeva **tre** decisioni al giocatore, ma una sola era davvero una decisione.
+Questa versione rimette al centro le **carte potere** e trasforma il negozio XP da rubinetto a scelta.
+
+#### 🎴 Si sceglie 1 potere su 3 (erano 2 dalla v1.10)
+- Il catalogo era stato ampliato a 23 poteri **riducendo** contemporaneamente le carte offerte da 3 a 2: catalogo più
+  grande e meno pescate significa vedere una frazione sempre più piccola del design. Ora si torna a **3 carte**,
+  sempre con **una sola selezionabile**.
+- Con la composizione attuale del catalogo, un'estrazione è al 63% *non comune*, 28% *rara*, 9% *epica*: la terza
+  carta è ciò che rende probabile vedere almeno qualcosa di raro quando conta.
+
+#### ✨ Dieci poteri nuovi (catalogo da 23 → 33)
+
+  | Potere | Rarità | Effetto | Ispirazione |
+  |---|---|---|---|
+  | ⛏️ **Piede di Porco** | non comune | +40% danno sui nemici sopra il 90% dei PV | *Risk of Rain* — Crowbar |
+  | 🔭 **Tiro Lungo** | non comune | più lontano è il bersaglio, più fai male | *Risk of Rain* — Laser Scope |
+  | 💃 **Passo di Danza** | non comune | +25% velocità per 2s a ogni uccisione | *Hades* |
+  | 🧲 **Fame Vorace** | non comune | raggio di raccolta molto più ampio, +15% XP | *Vampire Survivors* |
+  | 💢 **Rappresaglia** | raro | farsi colpire emette un'onda che danneggia e respinge | *Dead Cells* |
+  | 🧿 **Egida Ostinata** | raro | annulla per intero un colpo ogni 8s | *Hades* — Stubborn Defiance |
+  | ☄️ **Deflagrazione Cadaverica** | raro | i nemici uccisi esplodono | *Risk of Rain* — Gasoline |
+  | 🗡️ **Colpo di Grazia** | epico | esegue i nemici sotto il 12% dei PV (mai i boss) | *Dead Cells* |
+  | 🔊 **Eco Arcana** | epico | il 20% dei colpi parte una seconda volta, gratis | *Binding of Isaac* |
+  | ⏳ **Ultima Occasione** | epico | invece di cadere risorgi al 50% dei PV | *Hades* — Death Defiance |
+
+- Nessuno è un semplice "+X%": ognuno cambia **come** giochi — apri i tank, tieni la distanza, non ti fermi mai,
+  ti fai colpire di proposito, chiudi le esecuzioni.
+- **Due nuove sinergie** legano il nuovo al vecchio: 🎯 **Cacciatore di Teste** (Colpo di Grazia + Piede di Porco →
+  soglia di esecuzione +6 punti) e 🌊 **Onda d'Urto** (Rappresaglia + Aura di Spine → onda molto più ampia).
+
+#### ✦ Negozio XP: da rubinetto a scelta
+- **Il problema, in numeri.** La curva era `base × 1.55^n` con livelli **illimitati**. Portare tutte e sei le
+  statistiche a Lv.8 costava **3.526 XP**, contro le **~7.528 XP** raccolte in una run intera: si comprava tutto,
+  e l'ordine degli acquisti non aveva conseguenze.
+- **La correzione.** Curva a `2.05^n` e **tetto di 8 livelli** per statistica. L'albero completo costa ora
+  **17.768 XP**: circa il **42%** è alla portata di una run normale, fino a **~84%** giocando la combo (che
+  moltiplica l'XP fino a ×2.5). Specializzarsi diventa obbligatorio, e la **combo** smette di essere decorativa.
+- Le carte del negozio mostrano ora `Lv.3/8` e diventano **MAX ★** quando la statistica è esaurita.
+
+#### 🪙 Emporio a monete temporaneamente nascosto
+- L'Emporio (Armatura / Stivali / Arma) **non compare più** a fine ondata: flag `C.SHOP_GEAR_ENABLED = false`.
+  Nulla è stato cancellato — `offerGear`, `buyGear`, le icone e la UI restano al loro posto e si riaccendono
+  rimettendo il flag a `true`. Le **monete continuano a cadere** e restano spendibili dai due **mercanti** in mappa.
+- Motivo tecnico che rendeva l'Emporio ridondante: comprava quasi le stesse statistiche del negozio XP con una valuta
+  diversa (Stivali +5% velocità ≡ Agilità +5% velocità; Arma +8% danno ≈ Potenza +9%).
+
+#### 🎒 Barra dei poteri attivi (HUD)
+- Nuova riga di gettoni sopra la barra abilità: mostra ogni potere posseduto con **icona, colore della rarità e
+  moltiplicatore** (×2, ×3), più le **sinergie** attive evidenziate. Passandoci sopra compare nome e descrizione.
+- Non passa dallo snapshot (che gira 20 volte al secondo): il server invia l'elenco solo **quando cambia**
+  (scelta di un potere, sinergia sbloccata, inizio partita) con il nuovo messaggio `C.MSG.BOONS`.
+
+#### 🧪 Test
+- Nuovo **testV151**: le 3 carte, la presenza e applicabilità dei 10 poteri, l'assenza di id duplicati, il tetto di
+  livello davvero invalicabile, il costo dell'albero completo, l'Emporio che non viene più offerto, il Colpo di
+  Grazia che esegue, l'Ultima Occasione che consuma una carica, l'Egida che para una volta sola, e una run con
+  **tutti e dieci** i poteri al massimo senza NaN. Aggiornato testV110 (2 → 3 carte). **273 passati, 0 falliti.**
+- Nuova suite **`test/client.js`**: smoke test dell'interfaccia con un DOM finto (niente browser). `hud.js` non era
+  coperto da nulla, e questa versione lo tocca parecchio. `npm test` ora lancia entrambe le suite.
+- `ROSTER.md` ed `ENEMIES.md` non sono stati toccati: questa versione non modifica alcun nemico.
+
+---
+
 ### [1.50.0] — 2026-08-25 · "Consolidamento: curva di difficoltà ripristinata, elite tarati, documentazione riallineata"
 
 Versione di **consolidamento**: nessun mostro nuovo. Dalla 1.37 alla 1.49 — tredici versioni — il lavoro è stato

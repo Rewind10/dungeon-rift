@@ -6,7 +6,7 @@
   const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { enforcer: '🤖', recon: '🎖️', glitch: '🕶️' };
   const EVO_NAME = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; if (w.evo) EVO_NAME[w.evo.id] = { name: w.evo.name, icon: w.icon, color: w.evo.color }; }
   const HUD = {
-    selectedHero: 'enforcer', _boons: null, _stats: null, _gear: null,
+    selectedHero: 'enforcer', _boons: null, _stats: null, _gear: null, _active: [],
     buildHeroSelect(cb) { const w = $('heroSelect'); w.innerHTML = ''; HORDER.forEach(id => { const h = HERO[id]; const el = document.createElement('div'); el.className = 'hero-chip' + (id === this.selectedHero ? ' sel' : ''); el.style.setProperty('--pick', h.color); el.innerHTML = `<div class="avatar" style="background:${h.color2};color:${h.accent}">${HeroIcon[id]}</div><div class="hname">${h.name}</div><div class="hrole">${h.title}</div>`; el.onclick = () => { this.selectedHero = id; this.buildHeroSelect(cb); this.showHeroDetail(id); if (cb) cb(id); }; w.appendChild(el); }); this.showHeroDetail(this.selectedHero); },
     showHeroDetail(id) { const h = HERO[id]; $('heroDetail').innerHTML = `<h3 style="color:${h.accent}">${h.name} — <span style="color:#c9d2e6;font-weight:600">${h.title}</span></h3><div class="ab"><span class="k">Q</span><b>${h.abilities.q.name}</b> — ${h.abilities.q.desc}</div><div class="ab"><span class="k">E</span><b>${h.abilities.e.name}</b> — ${h.abilities.e.desc}</div><div class="ab"><span class="k">🖱▸</span><b>Scatto</b> — tasto destro: attraversa i nemici.</div><div class="ab pas">🛡️ ${h.passives.map(p => '<b>' + p.name + '</b>').join(' · ')}</div><div class="sw"><span class="s">▲ ${h.strengths}</span><br><span class="w">▼ ${h.weakness}</span></div>`; },
     buildAbilityBar(id) { const h = HERO[id]; const bar = $('abilityBar'); bar.innerHTML = ''; const qi = (h.abilities.q && h.abilities.q.icon) || '🅠'; const ei = (h.abilities.e && h.abilities.e.icon) || '🅔'; [{ k: 'Q', ic: qi, t: h.abilities.q ? h.abilities.q.name : 'Abilita 1' }, { k: 'E', ic: ei, t: h.abilities.e ? h.abilities.e.name : 'Abilita 2' }, { k: 'DX', ic: '💨', t: 'Scatto' }, { k: 'SX', ic: '🔫', t: 'Fuoco' }].forEach((s, i) => { const el = document.createElement('div'); el.className = 'ab-slot'; el.id = 'ab' + i; el.title = s.t || ''; el.innerHTML = `<span class="key">${s.k}</span><span class="ic">${s.ic}</span><span class="lbl">${s.t || ''}</span><div class="cd hidden"></div>`; bar.appendChild(el); }); },
@@ -75,6 +75,8 @@
       } else { $('boonSection').classList.add('hidden'); }
       // STAT shop
       // EMPORIO (equipaggiamento con monete)
+      const gsec = $('gearSection');
+      if (gsec) gsec.classList.toggle('hidden', !(this._gear && this._gear.slots && this._gear.slots.length));
       if (this._gear && this._gear.slots) {
         $('shopCoins').textContent = this._gear.coins;
         const gc = $('gearCards'); gc.innerHTML = '';
@@ -89,7 +91,38 @@
           gc.appendChild(el);
         });
       }
-      if (this._stats) { $('shopXp').textContent = this._stats.xp; const cont = $('upgradeCards'); cont.innerHTML = ''; this._stats.stats.forEach(s => { const el = document.createElement('div'); el.className = 'uc' + (this._stats.xp < s.cost ? ' disabled' : ''); el.style.borderColor = s.color; el.innerHTML = `<span class="rar" style="color:${s.color}">Lv.${s.lvl}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div><div class="cost" style="color:${s.color}">✦ ${s.cost} XP</div>`; el.onclick = () => { if (this._stats.xp >= s.cost && this._buy) this._buy(s.id); }; cont.appendChild(el); }); }
+      // v1.51 — le statistiche hanno un TETTO di livello e costi molto piu' ripidi: la carta mostra Lv.x/max
+      // e diventa MAX quando e' esaurita, cosi' si vede a colpo d'occhio dove hai gia' investito.
+      if (this._stats) {
+        $('shopXp').textContent = this._stats.xp;
+        const cont = $('upgradeCards'); cont.innerHTML = '';
+        this._stats.stats.forEach(s => {
+          const maxed = !!s.maxed, afford = !maxed && this._stats.xp >= s.cost;
+          const el = document.createElement('div');
+          el.className = 'uc' + (maxed ? ' maxed' : (afford ? '' : ' disabled'));
+          el.style.borderColor = s.color;
+          const lvlTxt = s.max ? 'Lv.' + s.lvl + '/' + s.max : 'Lv.' + s.lvl;
+          const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">✦ ${s.cost} XP</div>`;
+          el.innerHTML = `<span class="rar" style="color:${s.color}">${lvlTxt}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div>${foot}`;
+          el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
+          cont.appendChild(el);
+        });
+      }
+    },
+    // v1.51 — barra dei POTERI ATTIVI, sopra la barra abilita'. Aggiornata solo quando il server manda
+    // l'elenco (scelta di un potere / sinergia / inizio partita), non a ogni frame.
+    setActiveBoons(list) { this._active = list || []; this._renderBoonBar(); },
+    _renderBoonBar() {
+      const bar = $('boonBar'); if (!bar) return;
+      const list = this._active || [];
+      if (!list.length) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
+      bar.classList.remove('hidden');
+      bar.innerHTML = list.map(b => {
+        const col = b.syn ? '#7dffea' : ((RAR[b.rarity] || RAR.common).color);
+        const n = (b.n || 1) > 1 ? `<i>×${b.n}</i>` : '';
+        const title = esc(b.name) + (b.desc ? ' — ' + esc(b.desc) : '');
+        return `<span class="bchip${b.syn ? ' syn' : ''}" style="border-color:${col};color:${col}" title="${title}">${b.icon}${n}</span>`;
+      }).join('');
     },
     onBoonPicked() { if (this._boons) { this._boons.picked = true; this._render(); } },
     hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; },
