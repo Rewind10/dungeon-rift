@@ -10,7 +10,15 @@ const Waves = require('../shared/waves.js');
 let PASS = 0, FAIL = 0;
 function assert(c, m) { if (c) PASS++; else { FAIL++; console.log('  ❌ FAIL:', m); } }
 function ok(m) { console.log('  ✅', m); }
-function bot(room, p) { let n = null, bd = Infinity; for (const m of room.monsters) { const d = MU.dist2(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; n = m; } } const i = { mx: 0, my: 0, aim: p.aim, shoot: false, q: false, e: false, dash: false }; if (n) { const d = Math.sqrt(bd); i.aim = Math.atan2(n.y - p.y, n.x - p.x); i.shoot = true; const dir = d < 160 ? -1 : (d > 320 ? 1 : 0); i.mx = Math.cos(i.aim) * dir + (Math.random() - 0.5) * 0.6; i.my = Math.sin(i.aim) * dir + (Math.random() - 0.5) * 0.6; if (p.cdQ <= 0 && Math.random() < 0.05) i.q = true; if (p.cdE <= 0 && Math.random() < 0.04) i.e = true; if (p.cdDash <= 0 && d < 140 && Math.random() < 0.06) i.dash = true; } else { i.mx = Math.random() - 0.5; i.my = Math.random() - 0.5; } return i; }
+function bot(room, p) {
+  // v1.52 — nella mappa MERCATO non ci sono nemici: il bot punta al portale EXIT (con un po' di
+  // jitter, altrimenti si incastra sui muri andando in linea retta).
+  if (room.phase === C.PHASE_MARKET && room.map && room.map.exit) {
+    const ex = room.map.exit.x * C.TILE + C.TILE / 2, ey = room.map.exit.y * C.TILE + C.TILE / 2;
+    const a = Math.atan2(ey - p.y, ex - p.x);
+    return { mx: Math.cos(a) + (Math.random() - 0.5) * 0.7, my: Math.sin(a) + (Math.random() - 0.5) * 0.7, aim: a, shoot: false, q: false, e: false, dash: false };
+  }
+  let n = null, bd = Infinity; for (const m of room.monsters) { const d = MU.dist2(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; n = m; } } const i = { mx: 0, my: 0, aim: p.aim, shoot: false, q: false, e: false, dash: false }; if (n) { const d = Math.sqrt(bd); i.aim = Math.atan2(n.y - p.y, n.x - p.x); i.shoot = true; const dir = d < 160 ? -1 : (d > 320 ? 1 : 0); i.mx = Math.cos(i.aim) * dir + (Math.random() - 0.5) * 0.6; i.my = Math.sin(i.aim) * dir + (Math.random() - 0.5) * 0.6; if (p.cdQ <= 0 && Math.random() < 0.05) i.q = true; if (p.cdE <= 0 && Math.random() < 0.04) i.e = true; if (p.cdDash <= 0 && d < 140 && Math.random() < 0.06) i.dash = true; } else { i.mx = Math.random() - 0.5; i.my = Math.random() - 0.5; } return i; }
 function hasNaN(room) { for (const p of room.players.values()) if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.hp)) return 'player'; for (const m of room.monsters) if (!isFinite(m.x) || !isFinite(m.y) || !isFinite(m.hp)) return 'mon ' + m.type; for (const b of room.bullets) if (!isFinite(b.x) || !isFinite(b.y)) return 'bullet'; return null; }
 
 function testMapThemes() {
@@ -192,7 +200,9 @@ function testV18() {
   // --- raccolta monete (calamita) ---
   const dt = 1 / C.TICK_RATE; const c0 = p.coins; for (let i = 0; i < 60; i++) room.update(dt); assert(p.coins > c0, 'le monete vengono raccolte avvicinandosi');
   // --- acquisto equipaggiamento ---
-  room.phase = C.PHASE_SHOP; p.coins = 100000;
+  // v1.52 — l'acquisto avviene nella mappa MERCATO, stando vicino al fabbro (non piu' dal pannello di fine ondata).
+  room.wave = 3; room.phase = C.PHASE_SHOP; room._afterShop();
+  p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
   const dr0 = p.stats.dmgReduce, hp0 = room.effMaxHp(p);
   const armorDef = Loot.GEAR_BY_SLOT.armor; const cost1 = Loot.gearCost(armorDef, 0);
   room.buyGear('b', 'armor');
@@ -613,6 +623,50 @@ function testV150() {
   assert(hasNaN(room) === null, 'nessun NaN con la nuova curva del pool');
   ok('novita v1.50 verificate');
 }
+function testV152() {
+  console.log('\n[TEST 26] Novita v1.52 — mappa MERCATO ogni 3 ondate + fabbro dell\'equipaggiamento');
+  const dt = 1 / C.TICK_RATE, T = C.TILE;
+  const room = new Room('v152'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  assert(C.MARKET_EVERY === 3, 'il mercato compare ogni 3 ondate');
+  room.wave = 3; room.phase = C.PHASE_SHOP; room._afterShop();
+  assert(room.phase === C.PHASE_MARKET, 'dopo l\'ondata 3 si entra nel MERCATO');
+  assert(room.wave === 3, 'il mercato e\' INTERSTIZIALE: non consuma un numero d\'ondata');
+  assert(room.monsters.length === 0 && room.pending === 0, 'nel mercato non ci sono nemici');
+  assert(!room.merchant && !room.darkMerchant, 'niente Mercante Errante nel mercato: resta un incontro delle ondate');
+  assert(room.crates.length === 0, 'niente casse nel mercato (il 30% sarebbe una cassa-mima, cioe\' un nemico)');
+  assert(!!room.gearMerchant, 'il fabbro dell\'equipaggiamento e\' presente');
+  assert(!!room.map.exit, 'la mappa del mercato ha un portale EXIT');
+  const cxw = (room.map.w / 2) * T, cyw = (room.map.h / 2) * T;
+  assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, cxw, cyw) < T * 8, 'il fabbro sta al centro della mappa');
+  // acquisto: serve essere vicini al fabbro
+  p.coins = 100000; p.x = room.map.spawn.x; p.y = room.map.spawn.y;
+  if (MU.dist(p.x, p.y, room.gearMerchant.x, room.gearMerchant.y) > C.MARKET_MERCH_RANGE + 12) {
+    room.buyGear('b', 'armor'); assert(p.gear.armor === 0, 'lontano dal fabbro non si compra');
+  }
+  p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
+  room.buyGear('b', 'armor'); assert(p.gear.armor === 1, 'vicino al fabbro l\'acquisto va a buon fine');
+  p._nearGear = false; room.updateGearMerchant(); assert(p._nearGear === true, 'avvicinandosi si apre il pannello del fabbro');
+  p.x = room.gearMerchant.x + 400; room.updateGearMerchant(); assert(p._nearGear === false, 'allontanandosi il pannello si chiude');
+  // uscita: CO-OP, il primo che entra nel portale porta tutti avanti
+  p.x = room.map.exit.x * T + T / 2; p.y = room.map.exit.y * T + T / 2;
+  const mapBefore = room.map;
+  room._checkMarketExit();
+  assert(room.wave === 4, 'il portale EXIT porta all\'ondata successiva');
+  assert(room.phase !== C.PHASE_MARKET, 'si esce dalla fase mercato');
+  assert(room.map !== mapBefore, 'uscendo dal mercato la mappa viene rigenerata: non si combatte nella stanza del fabbro');
+  assert(!room.gearMerchant, 'il fabbro sparisce fuori dal mercato');
+  // ondate non multiple di 3: si tira dritto
+  room.wave = 4; room.phase = C.PHASE_SHOP; room._afterShop();
+  assert(room.phase !== C.PHASE_MARKET && room.wave === 5, 'dopo l\'ondata 4 si passa direttamente alla 5');
+  // la 15 e' boss E multiplo di 3: essendo interstiziale il mercato la SEGUE, non la sostituisce
+  assert(Waves.isBossWave(15) && (15 % C.MARKET_EVERY === 0), 'il mercato non mangia l\'ondata boss 15');
+  // nessun NaN girando nel mercato
+  const r2 = new Room('v152b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
+  r2.wave = 3; r2.phase = C.PHASE_SHOP; r2._afterShop();
+  for (let i = 0; i < C.TICK_RATE * 5; i++) { r2.setInput('b', bot(r2, p2)); r2.update(dt); if (hasNaN(r2)) break; }
+  assert(hasNaN(r2) === null, 'nessun NaN nel mercato');
+  ok('novita v1.52 verificate');
+}
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
   const Mon = require('../shared/monsters.js');
@@ -635,8 +689,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.51)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.52)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

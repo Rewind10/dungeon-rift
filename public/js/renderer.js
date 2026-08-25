@@ -394,6 +394,7 @@
       // v1.23 — mercanti sulla minimappa (sempre visibili quando presenti)
       if (world.merch) { const q = w2m(world.merch.x, world.merch.y); ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.4, 0, 7); ctx.fill(); }
       if (world.merchD) { const q = w2m(world.merchD.x, world.merchD.y); ctx.strokeStyle = '#c77dff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ff2d6b'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); }
+      if (world.gmerch) { const q = w2m(world.gmerch.x, world.gmerch.y); ctx.strokeStyle = '#ffa63c'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffcf4a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.8, 0, 7); ctx.fill(); }  // v1.52 — fabbro del MERCATO
       // monsters
       for (const mo of world.mon) { const q = w2m(mo.x, mo.y); if (mo.tr) { ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); } else if (mo.b) { ctx.fillStyle = mo.mg ? '#ff2d55' : '#ff5a5a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill(); } else { ctx.fillStyle = mo.el ? '#ffb020' : 'rgba(255,90,90,.85)'; ctx.fillRect(q.x - 1, q.y - 1, 2, 2); } }
       // players
@@ -615,13 +616,42 @@
       if (this.mapCanvas) ctx.drawImage(this.mapCanvas, 0, 0);
       for (const tc of this.torches) this._flame(ctx, tc.x, tc.y, 0.8);
       for (const cf of this.campfires) this._flame(ctx, cf.fx || cf.x, cf.fy || cf.y, 1.5);
-      if (this.map.exit) { const ex = this.map.exit.x * this.map.tile + this.map.tile / 2, ey = this.map.exit.y * this.map.tile + this.map.tile / 2; const pr = 22 + Math.sin(this.time * 3) * 5; const gr = ctx.createRadialGradient(ex, ey, 2, ex, ey, pr); gr.addColorStop(0, 'rgba(140,233,255,.9)'); gr.addColorStop(1, 'rgba(60,160,255,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(ex, ey, pr, 0, 7); ctx.fill(); }
+      if (this.map.exit) {
+        const ex = this.map.exit.x * this.map.tile + this.map.tile / 2, ey = this.map.exit.y * this.map.tile + this.map.tile / 2;
+        // v1.52 — nel MERCATO il portale e' l'unica via d'uscita: piu' grande, verde, con etichetta EXIT.
+        const market = world.phase === 'market';
+        const pr = (market ? 46 : 22) + Math.sin(this.time * 3) * (market ? 9 : 5);
+        const gr = ctx.createRadialGradient(ex, ey, 2, ex, ey, pr);
+        gr.addColorStop(0, market ? 'rgba(180,255,190,.95)' : 'rgba(140,233,255,.9)');
+        gr.addColorStop(1, market ? 'rgba(60,220,120,0)' : 'rgba(60,160,255,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(ex, ey, pr, 0, 7); ctx.fill();
+        if (market) {
+          const pu = 0.55 + 0.45 * Math.sin(this.time * 3);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(120,255,170,' + (0.45 + pu * 0.45).toFixed(3) + ')'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(ex, ey, 34 + pu * 4, 0, 7); ctx.stroke();
+          ctx.globalCompositeOperation = 'lighter';
+          const cg = ctx.createLinearGradient(ex, ey - 130, ex, ey);
+          cg.addColorStop(0, 'rgba(120,255,170,0)'); cg.addColorStop(1, 'rgba(120,255,170,' + (0.10 + pu * 0.12).toFixed(3) + ')');
+          ctx.fillStyle = cg; ctx.fillRect(ex - 17, ey - 130, 34, 130);
+          ctx.restore();
+          ctx.save(); ctx.textAlign = 'center';
+          ctx.font = 'bold 26px Segoe UI'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+          ctx.strokeText('EXIT', ex, ey - 54);
+          ctx.fillStyle = 'rgba(170,255,205,' + (0.75 + pu * 0.25).toFixed(3) + ')'; ctx.fillText('EXIT', ex, ey - 54);
+          ctx.font = 'bold 11px Segoe UI'; ctx.lineWidth = 4;
+          ctx.strokeText('entra per proseguire', ex, ey - 38);
+          ctx.fillStyle = 'rgba(205,255,225,.9)'; ctx.fillText('entra per proseguire', ex, ey - 38);
+          ctx.restore(); ctx.textAlign = 'left';
+        }
+      }
       for (const o of (world.xp || [])) this._drawXp(ctx, o);
       for (const o of (world.coins || [])) this._drawCoin(ctx, o);
       for (const it of (world.items || [])) this._drawItem(ctx, it);
       for (const c of (world.crates || [])) this._drawCrate(ctx, c);
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
+      if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
       for (const z of (world.zones || [])) { const cc = z.c || '#ff3b3b'; const gr = ctx.createRadialGradient(z.x, z.y, 2, z.x, z.y, z.r); gr.addColorStop(0, 'rgba(255,60,60,' + (0.10 + z.p * 0.28) + ')'); gr.addColorStop(0.75, 'rgba(255,60,60,' + (0.06 + z.p * 0.18) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.fill(); ctx.strokeStyle = cc; ctx.globalAlpha = 0.4 + z.p * 0.55; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(z.x, z.y, z.r * z.p, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
       for (const mt of world.met) { ctx.strokeStyle = 'rgba(255,120,40,' + (0.4 + mt.p * 0.5) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r, 0, 7); ctx.stroke(); ctx.fillStyle = 'rgba(255,80,20,' + (mt.p * 0.35) + ')'; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r * mt.p, 0, 7); ctx.fill(); }
@@ -666,6 +696,51 @@
       ctx.restore();
       ctx.fillStyle = 'rgba(255,207,74,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('🪙', x, y - 44 + bob); ctx.textAlign = 'left';
       ctx.fillStyle = '#ffe9b0'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83E\uDE99 Mercante', x, y - 60 + bob); ctx.textAlign = 'left';
+    },
+    // v1.52 — MERCATO: il fabbro dell'equipaggiamento. Forgia + incudine + martello, accento ambra,
+    // beacon sempre acceso (sta al centro della mappa, deve leggersi anche col buio della torcia).
+    _drawGearMerchant(ctx, mrc, me) {
+      const t = this.time, x = mrc.x, y = mrc.y;
+      const bt = 0.5 + 0.5 * Math.sin(t * 2.4), flick = 0.65 + 0.35 * Math.sin(t * 11 + x * 0.3);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const bmg = ctx.createLinearGradient(x, y - 96, x, y - 8);
+      bmg.addColorStop(0, 'rgba(255,150,60,0)'); bmg.addColorStop(1, 'rgba(255,150,60,' + (0.12 + bt * 0.14).toFixed(3) + ')');
+      ctx.fillStyle = bmg; ctx.fillRect(x - 9, y - 96, 18, 84); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,170,60,' + (0.30 + bt * 0.45).toFixed(3) + ')'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y + 6, 40 + bt * 6, 0, 7); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(x, y + 20, 34, 10, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(x, y);
+      // forgia: braciere con carboni ardenti
+      ctx.fillStyle = '#2b2119'; ctx.strokeStyle = '#15100a'; ctx.lineWidth = 2;
+      this._rr(ctx, -46, -6, 26, 24, 4); ctx.fill(); ctx.stroke();
+      const fg = ctx.createRadialGradient(-33, -6, 1, -33, -6, 20 * flick);
+      fg.addColorStop(0, 'rgba(255,220,120,.95)'); fg.addColorStop(0.5, 'rgba(255,130,40,.6)'); fg.addColorStop(1, 'rgba(255,80,20,0)');
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(-33, -6, 20 * flick, 0, 7); ctx.fill();
+      // incudine
+      ctx.fillStyle = '#3d4048'; ctx.strokeStyle = '#191b20'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-16, 18); ctx.lineTo(-9, 6); ctx.lineTo(-13, 2); ctx.lineTo(-20, 2);
+      ctx.lineTo(-22, -4); ctx.lineTo(14, -4); ctx.lineTo(18, 0); ctx.lineTo(12, 4); ctx.lineTo(9, 6);
+      ctx.lineTo(16, 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (let i = 0; i < 4; i++) { const a = t * 6 + i * 1.7, sx = -4 + Math.cos(a) * 12, sy = -8 - Math.abs(Math.sin(a)) * 12;
+        ctx.fillStyle = 'rgba(255,210,90,' + (0.5 + 0.5 * Math.sin(a * 2)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(sx, sy, 1.6, 0, 7); ctx.fill(); }
+      // fabbro dietro l'incudine, martello che batte
+      const sw = Math.sin(t * 3.2);
+      ctx.translate(24, 0);
+      ctx.fillStyle = '#4a3524'; ctx.strokeStyle = '#241a10'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-12, 6); ctx.quadraticCurveTo(-10, -18, 0, -23); ctx.quadraticCurveTo(10, -18, 12, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#6b4c30'; ctx.beginPath(); ctx.arc(0, -26, 8, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#0d0a07'; ctx.beginPath(); ctx.arc(0, -23, 6, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffb14a'; ctx.beginPath(); ctx.arc(-2.2, -23, 1.5, 0, 7); ctx.arc(2.2, -23, 1.5, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(-10, -10); ctx.rotate(-0.7 + sw * 0.55);
+      ctx.strokeStyle = '#5a3d20'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-16, -6); ctx.stroke();
+      ctx.fillStyle = '#585c66'; this._rr(ctx, -24, -12, 11, 11, 2); ctx.fill();
+      ctx.restore();
+      ctx.restore();
+      ctx.save(); ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)';
+      ctx.strokeText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
+      ctx.fillStyle = '#ffe0a8'; ctx.fillText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
+      ctx.restore(); ctx.textAlign = 'left';
     },
     _drawDarkMerchant(ctx, mrc, me) {
       const t = this.time; const x = mrc.x, y = mrc.y; const bob = Math.sin(t * 1.6) * 1.4; const flick = 0.6 + 0.4 * Math.sin(t * 9 + x);

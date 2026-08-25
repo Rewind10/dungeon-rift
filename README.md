@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.51.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.52.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.52 (MERCATO: l'Emporio diventa un luogo, non un pannello)
+- **🏪 Mappa MERCATO ogni 3 ondate**: nessun nemico, il **fabbro dell'equipaggiamento** al centro, si prosegue
+  entrando nel **portale EXIT**. E' **interstiziale** (non consuma un'ondata), quindi la cadenza dei boss resta
+  intatta e la sosta cade dopo il boss — cioe' quando hai appena incassato.
+- **🔨 I 3 slot si comprano solo dal fabbro**, avvicinandosi: niente piu' acquisto dal pannello di fine ondata.
+- **🧙 Il Mercante Errante resta dov'era**: e' l'incontro nascosto delle ondate normali, con le sue offerte uniche.
+- **🐛 FIX grosso: i mercanti erano invisibili.** `merch`/`merchD` non venivano mai copiati dallo snapshot, quindi
+  Mercante Errante e Mercante Nero non venivano **mai disegnati** (beacon e marker minimappa compresi): li si
+  trovava solo camminandoci addosso.
+- Test: **292 passati, 0 falliti**.
 
 ## 🆕 Novita v1.51 (level up rivisto: 1 di 3 carte, dieci poteri nuovi, negozio XP severo)
 - **🎴 Si sceglie 1 potere su 3** (erano 2 dalla v1.10): il catalogo era cresciuto mentre le pescate calavano.

@@ -183,6 +183,13 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .mc .ds{font-size:11px;color:#d8cbb4;line-height:1.25}
 .mc .cost{font-weight:800;font-size:14px;margin-top:2px}
 .merch-hint{margin-top:8px;font-size:11px;color:#b9a884;text-align:center}
+/* v1.52 — MERCATO: pannello del fabbro (stessa cornice del Mercante Errante, carte .gc dell'emporio) */
+#gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.96),rgba(14,10,8,.96));border:2px solid #a9772e;border-radius:16px;padding:12px 14px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(620px,94vw)}
+#gearPanel.hidden{display:none}
+#gearNpcCards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#gearNpcCards .gc{min-height:150px;padding:12px 10px;pointer-events:auto;background:linear-gradient(180deg,#2a2018,#160f0a)}
+#gearNpcCards .gc .icon{min-height:46px}
+#gearNpcCards .gc .icon img.gicon{width:46px;height:46px}
 
 /* v1.12 — Mercante Nero: pannello sinistro + rischio/ricompensa */
 #merchantPanel.dark{top:0!important;left:0!important;right:0!important;bottom:0!important;margin:auto!important;width:fit-content;height:fit-content;max-width:min(560px,92vw);max-height:88vh;overflow:auto;transform:scale(1.06);transform-origin:center center;background:linear-gradient(180deg,rgba(20,8,24,.97),rgba(10,4,12,.97));border-color:#7b2cbf;box-shadow:0 14px 44px rgba(123,44,191,.35),0 0 0 1px rgba(164,19,60,.4) inset,0 0 0 100vmax rgba(4,2,8,.55);animation:darkMerchIn .5s cubic-bezier(.2,1.25,.3,1) both,darkMerchAura 2.6s ease-in-out .5s infinite}

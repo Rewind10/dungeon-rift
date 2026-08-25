@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.51.0`
+**Versione attuale:** `1.52.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🏪 Il MERCATO: l'Emporio diventa un luogo *(novita v1.52)*
+- Ogni **3 ondate** si entra in una **mappa di sosta senza nemici**. Al centro c'e' il **fabbro
+  dell'equipaggiamento**: i 3 slot (Armatura, Stivali, Arma) si potenziano avvicinandosi a lui, non piu' da un
+  pannello a fine ondata. Si prosegue entrando nel **portale EXIT**, evidenziato con colonna di luce ed etichetta.
+- La sosta e' **interstiziale**: non consuma un numero d'ondata, quindi i boss restano ogni 5 e il mercato li
+  **segue**. E' anche il momento in cui hai piu' monete: il grosso del bottino di una run arriva dai boss.
+- Nel mercato **non** ci sono casse (una cassa-mima sarebbe un nemico in una stanza che promette sicurezza) ne'
+  il **Mercante Errante**, che resta l'incontro nascosto delle ondate normali con le sue offerte uniche.
+- **Co-op:** il **primo** che entra nel portale porta avanti tutti; in multiplayer c'e' un timeout anti-AFK.
+- **Fix:** Mercante Errante e Mercante Nero erano **invisibili in mappa** (non venivano mai disegnati); ora si
+  vedono, col beacon e il marker sulla minimappa.
 
 ## 🎴 Level up fra le ondate, rivisto *(novita v1.51)*
 

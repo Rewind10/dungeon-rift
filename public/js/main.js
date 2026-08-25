@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'enforcer', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, mode: 'assault', survive: 0 }, lastInput: 0 };
+  const G = { started: false, meHero: 'enforcer', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, mode: 'assault', survive: 0 }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -18,7 +18,13 @@
 
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
-  Net.onOfferGear = (m) => { HUD.setGear(m, (slot) => Net.buyGear(slot)); };
+  // v1.52 — l'offerta arriva sia dal pannello di fine ondata (se riabilitato) sia dal mercante del MERCATO:
+  // 'near' distingue i due casi.
+  Net.onOfferGear = (m) => {
+    G.gearData = m;
+    if (m.near) HUD.showGear(m, (slot) => Net.buyGear(slot));
+    else if (C.SHOP_GEAR_ENABLED) HUD.setGear(m, (slot) => Net.buyGear(slot));
+  };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
@@ -49,6 +55,9 @@
       case 'melee': R.hitAttack(ev.e, 0.32); break; // v1.26 — swing d'attacco
       case 'cast': R.hitAttack(ev.e, 0.5); break; // v1.26 — negromante evoca (orbe divampa)
       case 'acid': if (ev.e != null) R.hitAttack(ev.e, 0.55); R.burst(ev.x, ev.y - 6, '#a6ff3a', 14, 150, 0.5); R.ring(ev.x, ev.y, '#a6ff3a', 4, 26, 0.3); break; // v1.45 — la Melma salta e sputa acido
+      case 'market': HUD.modeBanner('\uD83C\uDFEA MERCATO', '#ffcf4a', 'Nessun nemico \u00b7 potenzia l\'equipaggiamento e prosegui dal portale EXIT'); HUD.killfeed('\uD83C\uDFEA <b style="color:#ffcf4a">MERCATO</b> \u2014 il portale <b>EXIT</b> porta all\'ondata ' + ev.next); break;
+      case 'market_exit': HUD.killfeed('\uD83D\uDEAA <b>' + esc(ev.name || 'Qualcuno') + '</b> ha varcato il portale EXIT'); break;
+      case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
       case 'merchant_leave': if (ev.dark) { G._darkOpen = false; HUD.hideMerchant(true); } else { G._merchOpen = false; HUD.hideMerchant(false); } break;
       case 'merchant_buy': A.buy(); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 60, 0.5); R.burst(ev.x, ev.y, ev.color || '#ffd24a', 16, 160, 0.5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> acquistato dal mercante!`); break;
       case 'dark_buy': A.evo(); R.ring(ev.x, ev.y, ev.color || '#7b2cbf', 10, 90, 0.6); R.burst(ev.x, ev.y, ev.color || '#a4133c', 22, 200, 0.6); R.addShake(5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 ${esc(ev.note || 'patto siglato')}`); break;
@@ -104,6 +113,7 @@
     if (w.me) {
       if (w.me.nm && !G._merchOpen && G.merchWares) { G._merchOpen = true; HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), null, false); } else if (!w.me.nm && G._merchOpen) { G._merchOpen = false; HUD.hideMerchant(false); }
       if (w.me.nmd && !G._darkOpen && G.darkWares) { G._darkOpen = true; HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), null, true); } else if (!w.me.nmd && G._darkOpen) { G._darkOpen = false; HUD.hideMerchant(true); }
+      if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (slot) => Net.buyGear(slot)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
     w.mon = next.mon.map(nm => { const p = mm[nm.e] || nm; return Object.assign({}, nm, { x: lerp(p.x, nm.x, a), y: lerp(p.y, nm.y, a), f: lerpA(p.f, nm.f, a) }); });
@@ -111,6 +121,9 @@
     w.bul = next.bul.map(nb => { const pb = bm[nb.e]; const o = Object.assign({}, nb); if (pb) { o.vx = (nb.x - pb.x) * C.SNAPSHOT_RATE; o.vy = (nb.y - pb.y) * C.SNAPSHOT_RATE; o.x = lerp(pb.x, nb.x, a); o.y = lerp(pb.y, nb.y, a); } return o; });
     w.orbs = next.orbs; w.met = next.met; w.crates = next.crates || []; w.wdrops = next.wdrops || [];
     w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || [];
+    // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
+    // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
+    w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;
     w.bt = next.bt; w.wave = next.wave; w.phase = next.phase; w.mcount = next.mcount; w.pend = next.pend; w.mode = next.mode; w.survive = next.survive;
   }
   function lerp(a, b, t) { return a + (b - a) * t; }

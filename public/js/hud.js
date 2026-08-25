@@ -156,6 +156,35 @@
       Array.prototype.forEach.call(cont.children, function (el) { el.classList.toggle('disabled', c < (+el.dataset.cost || 0)); });
     },
     hideMerchant(dark) { const panel = $('merchantPanel'); if (panel) { panel.classList.add('hidden'); panel.classList.remove('dark'); } this._merchSig = null; },
+    // ===== v1.52 — MERCATO: pannello del mercante dell'equipaggiamento =====
+    // Riusa le carte .gc dell'Emporio. Come per il Mercante Nero (fix v1.34) le carte si ricostruiscono
+    // SOLO quando cambia qualcosa: ricrearle a ogni snapshot riavvierebbe le animazioni e le renderebbe invisibili.
+    showGear(data, onBuy) {
+      if (data) this._gearNpc = data; if (onBuy) this._buyGearNpc = onBuy;
+      const panel = $('gearPanel'); if (!panel || !this._gearNpc) return;
+      panel.classList.remove('hidden'); this._renderGearNpc();
+    },
+    hideGear() { const panel = $('gearPanel'); if (panel) panel.classList.add('hidden'); this._gearNpcSig = null; },
+    _renderGearNpc() {
+      const d = this._gearNpc; if (!d) return;
+      const hd = $('gearHead');
+      if (hd) hd.innerHTML = '\uD83D\uDD28 <b>Fabbro dell\'Emporio</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
+      const sig = JSON.stringify((d.slots || []).map(g => [g.slot, g.tier, g.cost, g.maxed])) + '|' + (d.coins || 0);
+      if (sig === this._gearNpcSig) return; this._gearNpcSig = sig;
+      const wrap = $('gearNpcCards'); if (!wrap) return; wrap.innerHTML = '';
+      (d.slots || []).forEach(g => {
+        const rar = RAR[g.rarity] || RAR.common;
+        const afford = !g.maxed && (d.coins || 0) >= g.cost;
+        const el = document.createElement('div');
+        el.className = 'gc' + (g.maxed ? ' maxed' : (afford ? '' : ' disabled'));
+        el.style.borderColor = g.color;
+        const pips = []; for (let i = 0; i < g.max; i++) pips.push('<span class="' + (i < g.tier ? 'on' : '') + '" style="' + (i < g.tier ? 'background:' + g.color : '') + '"></span>');
+        const foot = g.maxed ? '<div class="cost maxed" style="color:' + g.color + '">MAX \u2605</div>' : '<div class="cost" style="color:' + (afford ? g.color : '#ff8a8a') + '">\uD83E\uDE99 ' + g.cost + '</div>';
+        el.innerHTML = '<span class="rar" style="color:' + rar.color + '">' + (g.tier > 0 ? 'Lv.' + g.tier + '/' + g.max : 'Nuovo') + '</span><div class="icon">' + iconHTML(g.icon, 'gicon') + '</div><div class="nm">' + esc(g.name) + ' ' + esc(g.maxed ? g.rank : (g.nextRank ? '\u2192 ' + g.nextRank : '')) + '</div><div class="ds">' + esc(g.desc) + '</div><div class="pips">' + pips.join('') + '</div>' + foot;
+        el.onclick = () => { if (afford && this._buyGearNpc) this._buyGearNpc(g.slot); };
+        wrap.appendChild(el);
+      });
+    },
     lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.enforcer; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
     hideLobby() { $('lobby').classList.add('hidden'); },
     end(victory, snap, me, runStats, dur) {

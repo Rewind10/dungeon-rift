@@ -24,7 +24,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.merchant = null; this.darkMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
     this.bossAlive = false; this.dt = 1 / C.TICK_RATE; this.mode = Waves.MODES.assault; this.surviveT = 0;
@@ -36,14 +36,22 @@ class Room {
   broadcast(o) { const s = JSON.stringify(o); for (const p of this.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} }
   sendTo(pid, o) { const p = this.players.get(pid); if (p && p.conn) try { p.conn.send(JSON.stringify(o)); } catch (_) {} }
 
-  newMap(seed, level) {
+  newMap(seed, level, market) {
     this.map = MapGen.generate(seed >>> 0, level); this.flow = null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); }
+    this.merchant = null; this.darkMerchant = null; this.gearMerchant = null;
+    if (market) {
+      // v1.52 — MAPPA MERCATO: sosta senza nemici. Niente casse (il 30% sarebbe un mimic, cioe' un nemico
+      // in una stanza che promette sicurezza) e niente Mercante Errante: quello resta un incontro delle
+      // ondate normali. Qui c'e' solo il MERCANTE DELL'EQUIPAGGIAMENTO, al centro della mappa.
+      this.spawnGearMerchant();
+      this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, market: 1 });
+      return;
+    }
     this.spawnCrates(); this.spawnWeapons();
     this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave });
     // v1.13 — UN SOLO mercante per round: il Nero SOSTITUISCE casualmente l'ufficiale (mai entrambi).
-    this.merchant = null; this.darkMerchant = null;
     if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
     else this.spawnMerchant();
   }
@@ -77,7 +85,7 @@ class Room {
     this.wave++;
     this.mode = Waves.modeForWave(this.wave); this.surviveT = this.mode.survive || 0; this.treasure = null;
     this.phase = Waves.isBossWave(this.wave) ? C.PHASE_BOSS : C.PHASE_COMBAT;
-    if (this.wave > 1 && this.wave % 2 === 1) this.newMap((Math.random() * 1e9) | 0, this.wave);
+    if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }  // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella stanza del mercante
     else { if (!this.crates.length) this.spawnCrates(); if (!this.weaponDrops.length) this.spawnWeapons(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
@@ -142,6 +150,53 @@ class Room {
     };
   }
   _nearestPlayer(x, y) { let best = null, bd = Infinity; for (const p of this.alivePlayers) { const d = MU.dist2(x, y, p.x, p.y); if (d < bd) { bd = d; best = p; } } return best; }
+
+  // ===== MERCATO (v1.52) — mappa di sosta ogni MARKET_EVERY ondate =====
+  // Sostituisce l'acquisto diretto dell'equipaggiamento a fine ondata: ora l'Emporio e' un LUOGO.
+  spawnGearMerchant() {
+    const m = this.map, T = C.TILE, cx = (m.w / 2) | 0, cy = (m.h / 2) | 0;
+    let best = null, bd = Infinity;
+    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      if (m.grid[y * m.w + x] !== C.T_FLOOR) continue;
+      const d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+      if (d < bd) { bd = d; best = { x, y }; }
+    }
+    const pos = best ? { x: best.x * T + T / 2, y: best.y * T + T / 2 } : { x: m.spawn.x, y: m.spawn.y };
+    this.gearMerchant = { x: pos.x, y: pos.y, r: 18 };
+    for (const p of this.players.values()) p._nearGear = false;
+  }
+  updateGearMerchant() {
+    if (!this.gearMerchant) return; const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= RANGE;
+      if (near && !p._nearGear) { p._nearGear = true; this.offerGear(p, 1); }
+      else if (!near && p._nearGear) { p._nearGear = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'gear_leave' } }); }
+    }
+  }
+  enterMarket() {
+    this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
+    this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
+    this.newMap((Math.random() * 1e9) | 0, this.wave, true);
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; this.offerGear(p, 0); }
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
+  }
+  // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
+  _checkMarketExit() {
+    if (!this.map || !this.map.exit) return;
+    const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
+    for (const p of this.alivePlayers) {
+      if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
+      this.gearMerchant = null;
+      for (const q of this.players.values()) q._nearGear = false;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
+      this._forceNewMap = true; this.nextWave(); return;
+    }
+  }
+  // Dopo il pannello di fine ondata: mercato o ondata successiva.
+  _afterShop() {
+    if (this.wave > 0 && this.wave % C.MARKET_EVERY === 0 && this.wave < Waves.FINAL_WAVE) this.enterMarket();
+    else this.nextWave();
+  }
 
   // ===== NPC MERCANTE (v1.11) — neutrale, vende 3 offerte casuali per MONETE =====
   merchantWaresPool() {
@@ -455,19 +510,24 @@ class Room {
     });
     this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, xp: p.xpPool, stats, wave: this.wave });
   }
-  offerGear(p) {
+  offerGear(p, near) {
     const slots = Loot.GEAR.map(g => { const owned = p.gear[g.slot] || 0; const maxed = owned >= g.max; return { slot: g.slot, name: g.name, icon: 'assets/gear/' + p.heroId + '_' + g.slot + '.png', color: g.color, tier: owned, max: g.max, rank: owned > 0 ? Loot.GEAR_RANK[owned - 1] : '', nextRank: maxed ? '' : Loot.GEAR_RANK[owned], rarity: maxed ? Loot.GEAR_RARITY[owned - 1] : Loot.GEAR_RARITY[owned], cost: maxed ? 0 : Loot.gearCost(g, owned), desc: g.desc(owned + (maxed ? 0 : 1)), maxed }; });
-    this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots });
+    this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0 });
   }
   buyGear(pid, slot) {
-    const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    // v1.52 — l'equipaggiamento si compra SOLO dal mercante, nella mappa MERCATO (il pannello di fine
+    // ondata resta disponibile solo se SHOP_GEAR_ENABLED viene riacceso).
+    const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant && MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
+    const atPanel = this.phase === C.PHASE_SHOP && C.SHOP_GEAR_ENABLED;
+    if (!atMarket && !atPanel) return;
     const def = Loot.GEAR_BY_SLOT[slot]; if (!def) return;
     const owned = p.gear[slot] || 0; if (owned >= def.max) return;
     const cost = Loot.gearCost(def, owned); if (p.coins < cost) return;
     p.coins -= cost; p.gear[slot] = owned + 1;
     // applica il delta del tier alle statistiche (campi additivi gia esistenti in p.stats)
     for (const k of Object.keys(def.per)) { if (k === 'maxHpFlat') { p.stats.maxHpFlat += def.per[k]; p.hp += def.per[k]; } else p.stats[k] = (p.stats[k] || 0) + def.per[k]; }
-    this.offerGear(p); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', slot, tier: p.gear[slot], name: def.name, icon: 'assets/gear/' + p.heroId + '_' + slot + '.png', color: def.color, rank: Loot.GEAR_RANK[p.gear[slot] - 1] } });
+    this.offerGear(p, atMarket ? 1 : 0); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', slot, tier: p.gear[slot], name: def.name, icon: 'assets/gear/' + p.heroId + '_' + slot + '.png', color: def.color, rank: Loot.GEAR_RANK[p.gear[slot] - 1] } });
   }
   offerBoon(p) {
     const choices = Loot.offerBoons(C.RARITY, p.boonsOwned);
@@ -523,17 +583,22 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt);
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
     if (inCombat && this.pending <= 0 && this.mode.survive === 0 && this.monsters.length > 0 && !this.mode.treasure) { if (this.monsters.length !== this._lastMon) { this._lastMon = this.monsters.length; this._stallT = 0; } else { this._stallT = (this._stallT || 0) + dt; } if (this._stallT > 6) { const ap = this.alivePlayers; if (ap.length) { for (const m of this.monsters) { const p = ap[(Math.random() * ap.length) | 0]; const a = Math.random() * Math.PI * 2; const nx = p.x + Math.cos(a) * 240, ny = p.y + Math.sin(a) * 240; if (!this.isWallAt(nx, ny)) { m.x = nx; m.y = ny; } } this._stallT = 0; } } } else { this._lastMon = undefined; this._stallT = 0; }
     // condizioni di fine ondata per modalità
     if (inCombat) this._checkWaveClear();
+    if (this.phase === C.PHASE_MARKET) {
+      this._checkMarketExit();
+      if (this.phase === C.PHASE_MARKET) { this.marketTimer -= dt; let conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) conn++;
+        if (conn > 1 && this.marketTimer <= 0) { this.gearMerchant = null; this._forceNewMap = true; this.nextWave(); } }
+    }
     if (this.phase === C.PHASE_SHOP) { this.shopTimer -= dt; let all = true, conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) { conn++; if (!p.ready) all = false; }
       // v1.9 — pausa: in singolo si attende il click su "Continua" (nessun timeout forzato); in multiplayer resta un timeout anti-AFK.
       const timedOut = conn > 1 && this.shopTimer <= 0;
-      if (all || timedOut) this.nextWave(); }
+      if (all || timedOut) this._afterShop(); }
   }
   _checkWaveClear() {
     if (Waves.isBossWave(this.wave)) { if (this.pending <= 0 && this.monsters.length === 0) return this._waveDone(); return; }
@@ -661,7 +726,7 @@ class Room {
     const players = [];
     for (const p of this.players.values()) {
       const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln']) if (p.buffs[k] > 0) tb.push(k);
-      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
+      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
     }
     const mon = []; for (const m of this.monsters) { const o = { e: m.eid, t: m.type, x: Math.round(m.x), y: Math.round(m.y), f: +m.facing.toFixed(2), hp: Math.round(m.hp), mhp: m.maxHp, el: m.elite ? 1 : 0, b: m.boss ? 1 : 0, mg: m.mega ? 1 : 0, tr: m.treasure ? 1 : 0, fl: m.hitFlash > 0 ? 1 : 0, sh: m.shielded > 0 ? 1 : 0, ps: m.poison > 0 && m.poisonT > 0 ? 1 : 0 }; if (m.type === 'occhio') { o.gk = m.gazeKind; if (m.gazeActive) { o.gz = 1; o.gtx = Math.round(m.gazeTx); o.gty = Math.round(m.gazeTy); } } if (m.type === 'darkmage') { o.al = m.alert ? 1 : 0; } mon.push(o); }
     const bul = []; for (const b of this.bullets) bul.push({ e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 });
@@ -673,7 +738,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

@@ -2,6 +2,47 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.52.0] — 2026-08-25 · "MERCATO: l'Emporio smette di essere un pannello e diventa un luogo"
+
+L'acquisto diretto dell'equipaggiamento a fine ondata — nascosto in v1.51 — è sostituito da una **mappa di sosta**
+in cui il mercante è un NPC a cui ci si avvicina, come il Mercante Errante.
+
+#### 🏪 La mappa MERCATO
+- Ogni **3 ondate** (`C.MARKET_EVERY`) si entra in una mappa **senza nemici**, col **fabbro dell'equipaggiamento**
+  piazzato al **centro**.
+- È **INTERSTIZIALE**: non consuma un numero d'ondata. Così la cadenza dei boss (ogni 5) resta intatta e sparisce
+  la collisione all'ondata 15 — il mercato la **segue** invece di sostituirla. Ed è il momento giusto: **il 58%
+  delle monete di una run arriva dai boss**, quindi la sosta cade quando sei appena diventato ricco.
+- Niente **casse** (il 30% è una cassa-mima, cioè un nemico in una stanza che promette sicurezza) e niente
+  **Mercante Errante**: quello resta un incontro delle ondate normali, con le sue offerte uniche.
+- Si prosegue entrando nel **portale EXIT**: nel mercato è disegnato più grande, verde, con colonna di luce ed
+  etichetta leggibile anche col buio della torcia. **Co-op: il primo che entra porta avanti tutti**; timeout
+  anti-AFK a 120s solo in multiplayer, come già fa il negozio.
+- Uscendo, la mappa viene **rigenerata a forza** (`_forceNewMap`): senza, l'ondata successiva si sarebbe
+  combattuta dentro la stanza del fabbro, perché la rigenerazione avviene solo alle ondate dispari.
+
+#### 🔨 Il fabbro dell'equipaggiamento
+- I 3 slot (Armatura, Stivali, Arma) si comprano **solo** stando vicino a lui: `buyGear` verifica **fase e
+  distanza**, non più solo la fase.
+- Render dedicato `_drawGearMerchant`: forgia con carboni che tremolano, incudine con scintille, martello che
+  batte. Beacon ambra sempre acceso e marker sulla minimappa.
+- Il pannello riusa le carte `.gc` dell'Emporio e si ricostruisce **solo al cambio di offerta o monete** — la
+  stessa precauzione del fix v1.34 sul Mercante Nero, che ricreando le card a ogni frame le rendeva invisibili.
+
+#### 🐛 FIX — i mercanti erano invisibili sulla mappa
+- `merch` e `merchD` non venivano **mai** copiati dallo snapshot dentro `buildWorld()`: `world.merch` restava
+  `null` per sempre, quindi `_drawMerchant` e `_drawDarkMerchant` non venivano **mai** chiamati. Mercante
+  Errante e Mercante Nero erano **invisibili** — beacon "sempre visibile" e marker sulla minimappa compresi —
+  e li si trovava solo per caso, camminandoci addosso. Ora vengono aggiornati insieme al resto del mondo.
+
+#### 🧪 Test
+- Nuovo **testV152**: cadenza interstiziale, assenza di nemici/casse/mercante errante nel mercato, fabbro al
+  centro, acquisto negato da lontano e concesso da vicino, apertura/chiusura del pannello per prossimità,
+  uscita dal portale con rigenerazione della mappa. `testV18` aggiornato (l'equipaggiamento ora si compra dal
+  fabbro) e i bot dei test sanno raggiungere il portale EXIT. **292 passati, 0 falliti.**
+
+---
+
 ### [1.51.0] — 2026-08-25 · "Level up rivisto: 1 di 3 carte, dieci poteri nuovi, negozio XP che obbliga a scegliere"
 
 Il momento fra un'ondata e l'altra chiedeva **tre** decisioni al giocatore, ma una sola era davvero una decisione.
