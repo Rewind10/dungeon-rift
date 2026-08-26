@@ -881,6 +881,32 @@ function testV158() {
   assert(hasNaN(r5) === null, 'nessun NaN con i nemici nuovi in campo');
   ok('novita v1.58 verificate');
 }
+function testV159() {
+  console.log('\n[TEST 30] Novita v1.59 — Beholder meno statico: telegrafo del cambio sguardo esposto al client');
+  const dt = 1 / C.TICK_RATE, Mon = require('../shared/monsters.js');
+  const room = new Room('v159'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
+  const sp = room.map.spawn;
+  const m = room.spawnMonster('occhio', sp.x + 80, sp.y, { scaling: Waves.scaling(15, 1) });
+  pl.x = sp.x; pl.y = sp.y; m.facing = 0;
+  room.update(dt);
+  let snap = room.snapshot(); let mo = snap.mon.find(x => x.t === 'occhio');
+  assert(mo && typeof mo.gt === 'number', 'lo snapshot espone gt (quanto manca al cambio di sguardo)');
+  assert(mo.gt >= 0 && mo.gt <= 1, 'gt e normalizzato fra 0 e 1 (' + mo.gt + ')');
+  const g0 = mo.gt;
+  for (let i = 0; i < C.TICK_RATE; i++) room.update(dt);       // un secondo
+  snap = room.snapshot(); mo = snap.mon.find(x => x.t === 'occhio');
+  assert(mo.gt < g0, 'gt cala col passare del tempo: il client puo anticipare il cambio (' + g0 + ' -> ' + mo.gt + ')');
+  // arrivato a zero il tipo di sguardo cambia e gt riparte
+  const k0 = m.gazeKind; let changed = false, reset = false;
+  for (let i = 0; i < C.TICK_RATE * (Mon.MONSTERS.occhio.gazeCycle + 1); i++) { room.update(dt);
+    if (m.gazeKind !== k0) { changed = true; const s2 = room.snapshot().mon.find(x => x.t === 'occhio'); if (s2 && s2.gt > 0.5) reset = true; break; } }
+  assert(changed, 'il tipo di sguardo cambia a fine ciclo');
+  assert(reset, 'e gt riparte da capo dopo il cambio');
+  for (let i = 0; i < C.TICK_RATE * 4; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
+  assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
+  ok('novita v1.59 verificate');
+}
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
   const Mon = require('../shared/monsters.js');
@@ -903,8 +929,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.58)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.59)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

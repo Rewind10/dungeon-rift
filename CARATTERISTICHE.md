@@ -1,10 +1,20 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.58.0`
+**Versione attuale:** `1.59.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 👁️ Il Beholder smette di essere una boa *(novita v1.59)*
+- Gli **eyestalks** non sono piu' sette aloni fissi: sono **steli curvi** che ondeggiano ognuno con la sua
+  frequenza, spuntano da dietro il bulbo e hanno un occhietto con pupilla in punta.
+- **Ammicca** a intervalli irregolari, e l'iride **scatta** verso il bersaglio invece di inseguirlo in modo
+  continuo: e' lo scatto a farlo sembrare vivo.
+- **Si inclina** nella direzione in cui si muove, invece di ondeggiare sempre uguale.
+- Poco prima di cambiare tipo di sguardo **si contrae e drizza gli steli**: il cambio ora si vede sul corpo,
+  non solo dal colore del fascio.
+- Tutto questo senza nessuno sprite nuovo.
 
 ## 👾 Tre aggiunte al bestiario, nessuna con le gambe *(novita v1.58)*
 - **🍄 Fungo Sporifero** (dall'ondata 5): **non si muove mai**. Se ti vede semina zone di spore telegrafate

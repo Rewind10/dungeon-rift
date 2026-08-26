@@ -1474,50 +1474,108 @@
         ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, r * 1.3, 0, 7); ctx.fill(); ctx.restore(); return;
       }
       const base = (2.6 * r) / Math.max(img.width, img.height);   // il corpo ~2.6*raggio
+      // v1.59 — stato per-entita': serve per le cose che non sono funzioni pure del tempo
+      // (l'inclinazione va smorzata, le saccadi devono TENERE la posizione fra uno scatto e l'altro).
+      const ST = this._behS = this._behS || {};
+      const S = ST[m.e] = ST[m.e] || { lean: 0, sx: 1, sy: 0, sacT: 0, gk: m.gk, flare: 0, lt: t };
+      const dt = Math.max(0.001, Math.min(0.05, t - S.lt)); S.lt = t;
+
+      // (1) INCLINAZIONE nella direzione del moto: prima ondeggiava identico fermo o in corsa.
+      const leanT = moving ? Math.cos(dir || 0) * 0.17 : 0;
+      S.lean += (leanT - S.lean) * Math.min(1, dt * 6);
+
+      // (4) TELEGRAFO del cambio sguardo. gt arriva dal server: 0 = sta per cambiare.
+      // Il corpo si contrae PRIMA (anticipo leggibile), poi lampeggia quando e' cambiato.
+      const gt = (m.gt != null) ? m.gt : 1;
+      const tell = gt < 0.16 ? (1 - gt / 0.16) : 0;
+      if (S.gk !== m.gk) { S.gk = m.gk; S.flare = 1; }
+      S.flare = Math.max(0, S.flare - dt * 2.4);
+      const squash = tell * 0.11 + S.flare * 0.07;
+
       const breath = 0.03 * Math.sin(t * 1.7 + m.e);              // respiro gelatinoso
-      let sx = base * (1 + breath), sy = base * (1 - breath);
-      const rot = 0.05 * Math.sin(t * 0.8 + m.e);                 // ondeggio lento
+      let sx = base * (1 + breath - squash * 0.55), sy = base * (1 - breath + squash);
+      const rot = 0.05 * Math.sin(t * 0.8 + m.e) + S.lean;
+      const bob = -3 * Math.sin(t * 1.7 + m.e) - swing * r * 0.06;
+      const act = 0.5 + 0.4 * Math.sin(t * 3.4 + m.e) + (moving ? 0.15 : 0) + swing * 0.45 + tell * 0.55 + S.flare * 0.55;
+
       // ombra morbida sotto (fluttua)
       ctx.save(); ctx.filter = 'blur(' + Math.max(1, r * 0.12).toFixed(1) + 'px)'; ctx.fillStyle = 'rgba(0,0,0,0.34)';
       ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.72, r * 0.2, 0, 0, 7); ctx.fill(); ctx.restore();
+
+      // (2) EYESTALKS come APPENDICI, disegnate DIETRO il corpo cosi' spuntano da dietro il bulbo.
+      // Prima erano 7 aloni fissi: tutto si muoveva in blocco. Ora ogni stelo ha frequenza e fase sue,
+      // quindi non tornano mai in sincrono; nel telegrafo si drizzano e si allungano.
+      const NST = 7;
+      for (let i = 0; i < NST; i++) {
+        const a0 = -Math.PI * 0.5 + (i - (NST - 1) / 2) * 0.40;
+        const rate = 1.55 + (i % 4) * 0.47, ph = i * 1.93 + m.e * 0.31;
+        const sway = Math.sin(t * rate + ph) * (0.22 - tell * 0.18);
+        const len = r * (0.70 + 0.15 * Math.sin(t * rate * 0.7 + ph)) * (1 + tell * 0.25);
+        const a = a0 + sway;
+        const bx0 = Math.cos(a0) * r * 0.50, by0 = Math.sin(a0) * r * 0.50 - r * 0.16 + bob;
+        const ex = Math.cos(a) * (r * 0.50 + len), ey = Math.sin(a) * (r * 0.50 + len) - r * 0.16 + bob;
+        const bend = Math.sin(t * rate + ph) * len * 0.30;
+        const mxc = (bx0 + ex) / 2 + Math.cos(a + 1.5708) * bend, myc = (by0 + ey) / 2 + Math.sin(a + 1.5708) * bend;
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(34,10,30,.95)'; ctx.lineWidth = Math.max(2, r * 0.115);
+        ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.quadraticCurveTo(mxc, myc, ex, ey); ctx.stroke();
+        ctx.strokeStyle = this._rgba(gcolHex, 0.22 + 0.28 * Math.min(1, act)); ctx.lineWidth = Math.max(1, r * 0.045);
+        ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.quadraticCurveTo(mxc, myc, ex, ey); ctx.stroke();
+        ctx.restore();
+        const R0 = r * 0.145 * (0.85 + 0.35 * Math.sin(t * 5 + i));
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const gr0 = ctx.createRadialGradient(ex, ey, 0, ex, ey, R0 * 2.6);
+        gr0.addColorStop(0, this._rgba(gcolHex, Math.min(1, 0.85 * act))); gr0.addColorStop(0.5, this._rgba(gcolHex, 0.38 * Math.min(1, act))); gr0.addColorStop(1, this._rgba(gcolHex, 0));
+        ctx.fillStyle = gr0; ctx.beginPath(); ctx.arc(ex, ey, R0 * 2.6, 0, 7); ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#fff0fb'; ctx.beginPath(); ctx.arc(ex, ey, R0 * 0.5, 0, 7); ctx.fill();
+        ctx.fillStyle = '#120612'; ctx.beginPath(); ctx.arc(ex + Math.cos(m.f) * R0 * 0.26, ey + Math.sin(m.f) * R0 * 0.26, R0 * 0.22, 0, 7); ctx.fill();
+      }
+
       // corpo raster
       ctx.save(); ctx.rotate(rot);
-      const bob = -3 * Math.sin(t * 1.7 + m.e) - swing * r * 0.06;
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(img, -img.width * sx / 2, -img.height * sy / 2 + bob, img.width * sx, img.height * sy);
       ctx.restore();
-      // ---- overlay: IRIDE centrale che SEGUE il bersaglio + pupilla che si dilata ----
+
+      // ---- IRIDE: (3) MICROSACCADI invece dell'inseguimento fluido. L'occhio scatta e poi TIENE:
+      // e' lo scatto a farlo sembrare vivo, il moto continuo lo faceva sembrare una torretta.
       const cx = man.core ? (man.core[0] - man.centerX) * base : 0;
       const cy = man.core ? (man.core[1] - man.centerY) * base + bob : bob + r * 0.15;
-      const look = 0.16 * r; const fx = Math.cos(m.f) * look, fy2 = Math.sin(m.f) * look; // iride segue lo sguardo
+      S.sacT -= dt;
+      if (S.sacT <= 0) {
+        S.sacT = 0.28 + ((m.e * 37) % 7) * 0.09 + Math.random() * 0.26;
+        const j = 0.24; S.sx = Math.cos(m.f) + (Math.random() - 0.5) * j; S.sy = Math.sin(m.f) + (Math.random() - 0.5) * j;
+      }
+      const look = 0.16 * r, fx = S.sx * look, fy2 = S.sy * look;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const irisR = r * (0.42 + swing * 0.06);
       const ig = ctx.createRadialGradient(cx + fx * 0.4, cy + fy2 * 0.4, 1, cx + fx * 0.4, cy + fy2 * 0.4, irisR);
       ig.addColorStop(0, this._rgba(gcolHex, 0.55)); ig.addColorStop(0.55, this._rgba(gcolHex, 0.30)); ig.addColorStop(1, this._rgba(gcolHex, 0));
       ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(cx + fx * 0.4, cy + fy2 * 0.4, irisR, 0, 7); ctx.fill();
       ctx.restore();
-      // pupilla nera dilatata (source-over) spostata verso lo sguardo
       const pupR = r * (0.14 + swing * 0.16);
       ctx.fillStyle = '#080308'; ctx.beginPath(); ctx.arc(cx + fx, cy + fy2, pupR, 0, 7); ctx.fill();
       ctx.fillStyle = this._rgba(gcolHex, 0.9); ctx.beginPath(); ctx.arc(cx + fx - pupR * 0.3, cy + fy2 - pupR * 0.3, pupR * 0.28, 0, 7); ctx.fill();
-      // ---- overlay: EYESTALKS che avvampano (corona di piccoli occhi) nel colore dello sguardo ----
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const NST = 7, act = 0.55 + 0.45 * Math.sin(t * 4 + m.e) + (moving ? 0.2 : 0) + swing * 0.5;
-      for (let i = 0; i < NST; i++) {
-        const a = -Math.PI * 0.5 + (i - (NST - 1) / 2) * 0.42;     // arco superiore (corona)
-        const rr = r * 1.02, ex = Math.cos(a) * rr, ey = Math.sin(a) * rr * 1.02 - r * 0.28 + bob;
-        const R0 = r * 0.16 * (0.8 + 0.5 * Math.sin(t * 5 + i));
-        const gr = ctx.createRadialGradient(ex, ey, 0, ex, ey, R0 * 2.4);
-        gr.addColorStop(0, this._rgba(gcolHex, Math.min(1, 0.85 * act))); gr.addColorStop(0.5, this._rgba(gcolHex, 0.4 * act)); gr.addColorStop(1, this._rgba(gcolHex, 0));
-        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(ex, ey, R0 * 2.4, 0, 7); ctx.fill();
-        ctx.fillStyle = '#fff0fb'; ctx.beginPath(); ctx.arc(ex, ey, R0 * 0.42, 0, 7); ctx.fill();
+
+      // ---- (3b) PALPEBRA: un occhio che non ammicca mai e' un occhio finto. Periodo irregolare per entita'.
+      const per = 4.2 + ((m.e * 13) % 9) * 0.42;
+      const bt2 = (t + m.e * 0.7) % per;
+      const blink = bt2 < 0.17 ? Math.sin((bt2 / 0.17) * Math.PI) : 0;
+      if (blink > 0.02) {
+        const R3 = irisR * 1.4, k = R3 * blink;
+        ctx.save(); ctx.fillStyle = '#1b0c18';
+        ctx.beginPath(); ctx.moveTo(cx - R3, cy - R3); ctx.lineTo(cx + R3, cy - R3); ctx.lineTo(cx + R3, cy - R3 + k);
+        ctx.quadraticCurveTo(cx, cy - R3 + k * 1.3, cx - R3, cy - R3 + k); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(cx - R3, cy + R3); ctx.lineTo(cx + R3, cy + R3); ctx.lineTo(cx + R3, cy + R3 - k);
+        ctx.quadraticCurveTo(cx, cy + R3 - k * 1.3, cx - R3, cy + R3 - k); ctx.closePath(); ctx.fill();
+        ctx.restore();
       }
-      ctx.restore();
-      // ---- edge-glow magenta pulsante (avvampa se colpito/attacca) ----
+
+      // ---- edge-glow pulsante (avvampa se colpito/attacca/cambia sguardo) ----
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const pr = 0.10 + 0.06 * Math.sin(t * 3 + m.e) + swing * 0.18 + (m.fl > 0 ? 0.35 : 0);
+      const pr = 0.10 + 0.06 * Math.sin(t * 3 + m.e) + swing * 0.18 + tell * 0.22 + S.flare * 0.26 + (m.fl > 0 ? 0.35 : 0);
       const R2 = r * 1.32; const eg = ctx.createRadialGradient(0, bob, r * 0.6, 0, bob, R2);
-      eg.addColorStop(0, this._rgba(gcolHex, 0)); eg.addColorStop(0.84, this._rgba(gcolHex, Math.min(0.55, pr))); eg.addColorStop(1, this._rgba(gcolHex, 0));
+      eg.addColorStop(0, this._rgba(gcolHex, 0)); eg.addColorStop(0.84, this._rgba(gcolHex, Math.min(0.6, pr))); eg.addColorStop(1, this._rgba(gcolHex, 0));
       ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, bob, R2, 0, 7); ctx.fill(); ctx.restore();
     },
     _hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 }; },

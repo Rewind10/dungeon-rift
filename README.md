@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.58.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.59.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,15 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.59 (il Beholder smette di essere una boa)
+- **🦑 Eyestalks come appendici**: steli curvi con frequenza e fase proprie, non piu' 7 aloni fissi. Spuntano
+  da dietro il bulbo e hanno un occhietto con pupilla in punta.
+- **👁️ Ammicca** con periodo irregolare, e l'iride **scatta** verso il bersaglio invece di inseguirlo fluida.
+- **🪁 Si inclina** nella direzione in cui si sposta.
+- **⏳ Il cambio di sguardo si telegrafa sul corpo**: si contrae e drizza gli steli poco prima di cambiare.
+  Il server manda `gt` (quanto manca) cosi' il client anticipa invece di reagire.
+- Nessuno sprite nuovo: tutta matematica sullo stesso PNG. Test: **367 passati, 0 falliti**.
 
 ## 🆕 Novita v1.58 (due nemici senza gambe, Melma che si divide, Beholder col tetto)
 - **🍄 Fungo Sporifero** (ondata 5+): **immobile**, semina zone di spore dove sei. Il primo nemico che

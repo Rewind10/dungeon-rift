@@ -2,6 +2,46 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.59.0] — 2026-08-26 · "Il Beholder smette di essere una boa"
+
+Nella 1.58 del Beholder erano cambiati solo i numeri (ondata 15, tetto di 8). Qui cambia come si muove.
+**Nessuno sprite nuovo**: è tutta matematica sullo stesso PNG. Lo spritesheet è stato valutato e scartato —
+il §1 di `ENEMIES.md` spiega perché il frame-by-frame perde contro il rig, e il Troll fu l'eccezione solo
+perché una camminata bipede è difficile da fingere. Il Beholder non ha gambe.
+
+Il difetto non era la mancanza di animazione: era che **si muoveva tutto insieme**. Quattro interventi:
+
+#### 🦑 Gli eyestalks diventano appendici
+- Erano **7 aloni fissi** disposti ad arco. Ora sono **steli curvi** che partono da dietro il bulbo, ognuno
+  con **frequenza e fase proprie** (`rate 1.55 + (i%4)*0.47`), quindi non tornano mai in sincrono. In punta
+  un occhietto con la sua pupilla, che guarda il bersaglio.
+- Disegnati **prima** del corpo: spuntano da dietro invece di stare appiccicati sopra.
+
+#### 👁️ Palpebra e microsaccadi
+- **Ammicca** con periodo irregolare per entità (4.2s + un offset ricavato dall'eid): due palpebre che si
+  chiudono e riaprono in 0.17s. Un occhio che non ammicca mai è un occhio finto.
+- L'iride non insegue più il bersaglio in modo continuo: **scatta** ogni 0.3-0.6s e poi **tiene** la
+  posizione, con un filo di jitter. È lo scatto a farlo sembrare vivo; il moto fluido lo faceva sembrare
+  una torretta.
+
+#### 🪁 Inclinazione nel movimento
+- Si **inclina** nella direzione in cui si sposta, con smorzamento (`lean` interpolato, non istantaneo).
+  Prima ondeggiava identico fermo o in corsa.
+
+#### ⏳ Il cambio di sguardo si telegrafa sul corpo
+- Il server espone `gt` nello snapshot: quanto manca al prossimo cambio, normalizzato 0-1. Serve per
+  **anticipare**, non per reagire dopo.
+- Nell'ultimo 16% del ciclo il corpo si **contrae** e gli steli si **drizzano e allungano**; al cambio parte
+  un lampo (`flare`) che decade. Prima il cambio lo diceva solo il colore del fascio.
+
+#### 🧪 Test
+- Nuovo **testV159**: lo snapshot espone `gt` normalizzato, `gt` **cala** col tempo (il client può
+  anticipare) e **riparte** dopo il cambio di sguardo. **367 passati, 0 falliti.**
+- Reso e verificato con Chromium nei quattro stati (riposo, ammiccamento, movimento, telegrafo) prima di
+  toccare il progetto.
+
+---
+
 ### [1.58.0] — 2026-08-26 · "Due nemici senza gambe, la Melma che si divide, il Beholder col guinzaglio"
 
 Tre aggiunte al bestiario scelte per **non richiedere cicli di camminata**: il vincolo tecnico diventa il

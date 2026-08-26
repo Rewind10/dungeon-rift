@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.58.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.59.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -115,6 +115,8 @@ Bulbo oculare fluttuante con eye-stalks e tentacoli. **Non spara**: ti **debilit
   - **Eyestalks che ruotano:** alterna i tre sguardi ogni `gazeCycle 4`s — 🟠 **weaken** (attacco indebolito) ·
     🔵 **slow** (velocità ridotta) · 🟣 **sunder** (meno difesa). Il **fascio cambia colore** col tipo attivo.
   - Iride centrale che **segue** il bersaglio, pupilla che si **dilata** in attacco, edge-glow magenta (`aura 2.4`).
+  - *(v1.59)* **Steli animati** uno per uno, **ammiccamento** irregolare, **microsaccadi** dell'iride,
+    **inclinazione** nel movimento e **telegrafo sul corpo** del cambio di sguardo (`gt` nello snapshot).
 
 ---
 
