@@ -673,6 +673,19 @@
     },
     _bakeCamp(g, p) { g.save(); g.translate(p.x, p.y); g.fillStyle = '#4a4030'; g.strokeStyle = '#2a2418'; g.lineWidth = 2; g.beginPath(); g.moveTo(-30, 14); g.lineTo(-14, -14); g.lineTo(2, 14); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = '#1a160e'; g.beginPath(); g.moveTo(-14, -14); g.lineTo(-14, 14); g.stroke(); g.fillStyle = '#3a4152'; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.beginPath(); g.arc(18 + Math.cos(a) * 12, 4 + Math.sin(a) * 8, 3.5, 0, 7); g.fill(); } g.strokeStyle = '#3a2a18'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(12, 6); g.lineTo(24, 2); g.moveTo(13, 2); g.lineTo(23, 8); g.stroke(); g.restore(); p.fx = p.x + 18; p.fy = p.y + 4; },
     burst(x, y, c, n, spd, life) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = MU.rand(spd * 0.3, spd); this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life || 0.5, t: life || 0.5, color: c, r: MU.rand(1.5, 3.5) }); } },
+    // v1.61 — DRENAGGIO del Fuoco Fatuo: scintille che RISALGONO dal giocatore verso il fatuo (direzione
+    // = chi sta rubando a chi). Riusa il sistema particellare esistente: nessuna passata di disegno nuova.
+    drain(fx, fy, tx, ty, c) {
+      const col = c || '#7dffea'; const dx = tx - fx, dy = ty - fy; const d = Math.hypot(dx, dy) || 1;
+      const nx = dx / d, ny = dy / d;
+      for (let i = 0; i < 9; i++) {
+        const k = i / 9, sp = MU.rand(150, 260);
+        const jx = -ny * MU.rand(-9, 9), jy = nx * MU.rand(-9, 9);
+        this.particles.push({ x: fx + nx * d * k * 0.35 + jx, y: fy + ny * d * k * 0.35 + jy,
+          vx: nx * sp + jx * 2, vy: ny * sp + jy * 2, life: 0.34, t: 0.34, color: col, r: MU.rand(1.4, 2.8), over: true });
+      }
+      this.ring(fx, fy, col, 3, 22, 0.3);
+    },
     ring(x, y, c, r0, r1, life) { this.flashes.push({ x, y, color: c, r0, r1, life, t: life }); },
     floater(x, y, text, c, big) { this.floaters.push({ x, y, text, color: c, life: big ? 1.0 : 0.7, t: big ? 1.0 : 0.7, big }); },
     chain(x1, y1, x2, y2) { this.chains.push({ x1, y1, x2, y2, t: 0.18 }); },
@@ -1018,6 +1031,139 @@
           ctx.beginPath(); ctx.arc(-Math.cos(dir) * r * i * 0.7, -Math.sin(dir) * r * i * 0.7 + r * 0.4, r * (0.3 - i * 0.06), 0, 7); ctx.fill(); }
         ctx.restore(); }
     },
+    // v1.61 — NUGOLO DI PIPISTRELLI. Una sola entita', 9 sagome che ORBITANO attorno al centro con fasi
+    // diverse (angolo aureo: mai allineate). Ogni pipistrello e' corpo + due ali, e le ali sono UNA SOLA
+    // sinusoide di battito: zero cicli di camminata, zero asset. In attacco il nugolo si STRINGE e scatta.
+    // NOTA CONTRASTO: su pavimento quasi nero un pipistrello nero sparisce. Il corpo e' quindi GRIGIO-VIOLA
+    // con bordo piu' chiaro, e sotto il nugolo c'e' un alone viola tenue che lo fa leggere a colpo d'occhio.
+    _batsF(ctx, m, r, def, atk) {
+      const t = this.time, eye = def.eye || '#c9a0ff', N = def.swarmN || 9;
+      const a = atk || 0;
+      const agg = a > 0 ? Math.sin(Math.min(1, a) * Math.PI) : 0;
+      ctx.save();
+      // ombra: una macchia sola, non 9 — il nugolo legge come UN nemico
+      ctx.fillStyle = 'rgba(0,0,0,.30)';
+      ctx.beginPath(); ctx.ellipse(0, r * 0.98, r * 0.66 * (1 - agg * 0.25), r * 0.22, 0, 0, 7); ctx.fill();
+      // alone di massa: senza, su roccia nera lo sciame e' invisibile
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const hg = ctx.createRadialGradient(0, -r * 0.15, r * 0.2, 0, -r * 0.15, r * 1.45);
+      hg.addColorStop(0, this._rgba(eye, 0.13 + agg * 0.10)); hg.addColorStop(1, this._rgba(eye, 0));
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, -r * 0.15, r * 1.45, 0, 7); ctx.fill();
+      ctx.restore();
+      // ordinamento per profondita': i pipistrelli "dietro" prima, cosi' si sovrappongono giusti
+      const list = [];
+      for (let i = 0; i < N; i++) {
+        const ph = i * 2.399963;
+        const rad = r * (0.34 + 0.60 * ((i * 0.37) % 1)) * (1 - agg * 0.38);
+        const sp = 1.5 + ((i * 0.53) % 1) * 1.6;
+        const an = t * sp + ph;
+        list.push({
+          x: Math.cos(an) * rad * 1.42,
+          y: Math.sin(an * 0.9 + ph) * rad * 0.54 - r * 0.26 + Math.sin(t * 3.1 + i) * r * 0.12,
+          s: r * 0.225 * (0.80 + 0.40 * ((i * 0.71) % 1)),
+          up: 0.30 + 0.70 * Math.sin(t * (11 + (i % 4) * 2.3) + i * 1.7),
+          fp: Math.cos(an) < 0 ? -1 : 1,
+        });
+      }
+      list.sort((p, q) => p.y - q.y);
+      for (const b of list) this._bat1(ctx, b.x, b.y, b.s, b.up, eye, b.fp);
+      ctx.restore();
+    },
+    // singolo pipistrello: ali = due archi che si aprono/chiudono con `up`, corpo = ellisse, orecchie, occhietti
+    _bat1(ctx, x, y, s, up, eye, flip) {
+      ctx.save(); ctx.translate(x, y); if (flip < 0) ctx.scale(-1, 1);
+      // membrana alare: grigio-viola con bordo chiaro (leggibile su nero) + venature
+      const wg = ctx.createLinearGradient(0, -s * 1.1, 0, s * 0.5);
+      wg.addColorStop(0, '#6a5c86'); wg.addColorStop(0.55, '#453a5c'); wg.addColorStop(1, '#2b2340');
+      ctx.fillStyle = wg; ctx.strokeStyle = '#8e7fb0'; ctx.lineWidth = Math.max(0.7, s * 0.09); ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.1);
+      ctx.quadraticCurveTo(-s * 1.35, -s * 1.45 * up, -s * 2.15, -s * 0.22 * up - s * 0.06);
+      ctx.quadraticCurveTo(-s * 1.45, s * 0.26, 0, s * 0.34);
+      ctx.quadraticCurveTo(s * 1.45, s * 0.26, s * 2.15, -s * 0.22 * up - s * 0.06);
+      ctx.quadraticCurveTo(s * 1.35, -s * 1.45 * up, 0, -s * 0.1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // venature delle ali: due segmenti per lato, danno la lettura di "ala" e non di "macchia"
+      ctx.strokeStyle = 'rgba(155,138,190,.55)'; ctx.lineWidth = Math.max(0.5, s * 0.06);
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.15, -s * 0.02); ctx.lineTo(-s * 1.55, -s * 0.62 * up);
+      ctx.moveTo(-s * 0.15, s * 0.06); ctx.lineTo(-s * 1.45, s * 0.12);
+      ctx.moveTo(s * 0.15, -s * 0.02); ctx.lineTo(s * 1.55, -s * 0.62 * up);
+      ctx.moveTo(s * 0.15, s * 0.06); ctx.lineTo(s * 1.45, s * 0.12);
+      ctx.stroke();
+      // corpo
+      const bg = ctx.createLinearGradient(0, -s * 0.7, 0, s * 0.7);
+      bg.addColorStop(0, '#5b4f74'); bg.addColorStop(1, '#241d33');
+      ctx.fillStyle = bg; ctx.strokeStyle = '#0f0b18'; ctx.lineWidth = Math.max(0.6, s * 0.07);
+      ctx.beginPath(); ctx.ellipse(0, s * 0.06, s * 0.42, s * 0.64, 0, 0, 7); ctx.fill(); ctx.stroke();
+      // orecchie
+      ctx.fillStyle = '#3d3355';
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.32, -s * 0.34); ctx.lineTo(-s * 0.20, -s * 0.98); ctx.lineTo(-s * 0.02, -s * 0.40); ctx.closePath();
+      ctx.moveTo(s * 0.32, -s * 0.34); ctx.lineTo(s * 0.20, -s * 0.98); ctx.lineTo(s * 0.02, -s * 0.40); ctx.closePath();
+      ctx.fill();
+      // occhietti accesi
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = eye;
+      ctx.beginPath(); ctx.arc(-s * 0.18, -s * 0.14, s * 0.13, 0, 7); ctx.arc(s * 0.18, -s * 0.14, s * 0.13, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.restore();
+    },
+    // v1.61 — FUOCO FATUO. Fiamma fredda sospesa: nucleo additivo, lingua di fuoco che sfarfalla (nessun
+    // frame: 3 sinusoidi sfasate), 3 scintille in orbita e ondeggio verticale lento. In drenaggio avvampa.
+    _wispF(ctx, m, r, def, atk) {
+      const t = this.time, eye = def.eye || '#7dffea';
+      const a = atk || 0;
+      const fl = a > 0 ? Math.sin(Math.min(1, a) * Math.PI) : 0;             // avvampata del drenaggio
+      const bob = Math.sin(t * 1.5 + (m.e || 0)) * (def.bobAmp || 6);
+      const flick = 0.82 + 0.18 * Math.sin(t * 9.3 + (m.e || 0)) + 0.10 * Math.sin(t * 21.7);
+      ctx.save();
+      // riflesso a terra: non e' un'ombra, e' luce proiettata (fluttua, non poggia)
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const fg = ctx.createRadialGradient(0, r * 1.5, 1, 0, r * 1.5, r * 1.9);
+      fg.addColorStop(0, this._rgba(eye, 0.14 + fl * 0.10)); fg.addColorStop(1, this._rgba(eye, 0));
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(0, r * 1.5, r * 1.9, r * 0.6, 0, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.translate(0, bob);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      // alone
+      const hg = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * (2.5 + fl * 0.7));
+      hg.addColorStop(0, this._rgba(eye, (0.34 + fl * 0.30) * flick)); hg.addColorStop(0.45, this._rgba(eye, 0.10 * flick)); hg.addColorStop(1, this._rgba(eye, 0));
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, r * (2.5 + fl * 0.7), 0, 7); ctx.fill();
+      // lingua di fiamma: larghezza e punta modulate da tre sinusoidi sfasate
+      const hgt = r * (1.55 + 0.22 * Math.sin(t * 6.1) + fl * 0.5);
+      const wid = r * (0.62 + 0.08 * Math.sin(t * 7.7 + 1.1));
+      const sway = r * 0.16 * Math.sin(t * 4.3 + 0.7);
+      ctx.fillStyle = this._rgba(eye, 0.55 * flick);
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.55);
+      ctx.quadraticCurveTo(-wid, r * 0.1, -wid * 0.55 + sway * 0.5, -hgt * 0.45);
+      ctx.quadraticCurveTo(-wid * 0.18 + sway, -hgt * 0.82, sway, -hgt);
+      ctx.quadraticCurveTo(wid * 0.18 + sway, -hgt * 0.82, wid * 0.55 + sway * 0.5, -hgt * 0.45);
+      ctx.quadraticCurveTo(wid, r * 0.1, 0, r * 0.55);
+      ctx.closePath(); ctx.fill();
+      // nucleo bianco
+      const cg = ctx.createRadialGradient(0, -r * 0.12, 1, 0, -r * 0.12, r * 0.72);
+      cg.addColorStop(0, 'rgba(255,255,255,' + (0.92 * flick) + ')'); cg.addColorStop(0.5, this._rgba(eye, 0.7 * flick)); cg.addColorStop(1, this._rgba(eye, 0));
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -r * 0.12, r * 0.6, r * 0.74, 0, 0, 7); ctx.fill();
+      // due occhietti vuoti dentro il nucleo: da lontano e' una fiamma, da vicino ti guarda
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(4,18,20,' + (0.55 + 0.25 * Math.sin(t * 2.6)) + ')';
+      ctx.beginPath(); ctx.ellipse(-r * 0.22, -r * 0.2, r * 0.11, r * 0.16, -0.15, 0, 7);
+      ctx.ellipse(r * 0.22, -r * 0.2, r * 0.11, r * 0.16, 0.15, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      // scintille in orbita
+      for (let i = 0; i < 3; i++) {
+        const an = t * (1.9 + i * 0.6) + i * 2.1, rr2 = r * (1.0 + 0.25 * Math.sin(t * 2 + i));
+        ctx.fillStyle = this._rgba(eye, 0.55 + 0.35 * Math.sin(t * 5 + i * 2));
+        ctx.beginPath(); ctx.arc(Math.cos(an) * rr2, Math.sin(an) * rr2 * 0.55 - r * 0.1, r * 0.12, 0, 7); ctx.fill();
+      }
+      ctx.restore();
+      ctx.restore();
+      // brace che sale, rada (una ogni ~5 frame): la scia che lo rende "vivo" senza costare
+      if (Math.random() < 0.22) this.particles.push({ x: m.x + MU.rand(-r * 0.5, r * 0.5), y: m.y + bob - r * 0.3,
+        vx: MU.rand(-8, 8), vy: -MU.rand(14, 34), life: 0.6, t: 0.6, color: eye, r: MU.rand(1, 2.2), over: true });
+    },
     _drawDarkMerchant(ctx, mrc, me) {
       const t = this.time; const x = mrc.x, y = mrc.y; const bob = Math.sin(t * 1.6) * 1.4; const flick = 0.6 + 0.4 * Math.sin(t * 9 + x);
       // v1.32 — beacon SEMPRE visibile (parità col Mercante Errante): colonna di luce viola/cremisi + anello pulsante
@@ -1275,6 +1421,8 @@
       if (def.topdown) { const pv = moveInfo(m.e); this._slimePuddle(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.46 — MELMA top-down (pozza fluo)
       else if (def.fungus) { this._fungusF(ctx, m, rr, def, atk); }   // v1.58 — immobile: nessuna camminata da animare
       else if (def.roller) { this._rollerF(ctx, m, rr, def, atk); }   // v1.58 — rotola: l'animazione e una rotazione
+      else if (def.bats) { this._batsF(ctx, m, rr, def, atk); }       // v1.61 — sciame: 11 sagome in orbita, nessuna camminata
+      else if (def.wisp) { this._wispF(ctx, m, rr, def, atk); }       // v1.61 — fiamma sospesa: sinusoidi, nessun frame
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
         if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0, pv)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }
@@ -1311,6 +1459,26 @@
             ctx.globalAlpha = Math.max(0, 1 - p); ctx.drawImage(img, -img.width * sx / 2, -img.height * sy / 2, img.width * sx, img.height * sy); ctx.globalAlpha = 1; }
           ctx.globalCompositeOperation = 'lighter'; const gr = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, rr * 1.3 * (1 - p * 0.4)); gr.addColorStop(0, this._rgba(gc, 0.5 * (1 - p))); gr.addColorStop(1, this._rgba(gc, 0)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr * 1.3, 0, 7); ctx.fill();
           if (Math.random() < 0.5) this.particles.push({ x: d.x + MU.rand(-rr, rr), y: d.y + MU.rand(-rr, rr), vx: MU.rand(-14, 14), vy: -MU.rand(8, 30), life: 0.5, t: 0.5, color: gc, r: MU.rand(1.5, 3), over: true });
+        }
+        else if (def.bats) {   // v1.61 — morte NUGOLO: si sparpaglia (le sagome fuggono verso l'esterno) e svanisce
+          ctx.globalAlpha = Math.max(0, 1 - p);
+          const N = def.swarmN || 9;
+          for (let i = 0; i < N; i++) {
+            const ph = i * 2.399963, an = this.time * (1.5 + ((i * 0.53) % 1) * 1.6) + ph;
+            const rad = rr * (0.30 + 0.66 * ((i * 0.37) % 1)) * (1 + p * 2.6);
+            this._bat1(ctx, Math.cos(an) * rad * 1.18, Math.sin(an * 0.9 + ph) * rad * 0.6 - rr * 0.22 - p * rr,
+              rr * 0.155 * (0.78 + 0.44 * ((i * 0.71) % 1)), 0.9, def.eye || '#c9a0ff', Math.cos(an) < 0 ? -1 : 1);
+          }
+          ctx.globalAlpha = 1;
+        }
+        else if (def.wisp) {   // v1.61 — morte FUOCO FATUO: la fiamma implode nel nucleo e si spegne
+          const gc = def.eye || '#7dffea';
+          ctx.globalCompositeOperation = 'lighter';
+          const gr = ctx.createRadialGradient(0, 0, 1, 0, 0, rr * (1.8 * (1 - p) + 0.2));
+          gr.addColorStop(0, this._rgba(gc, 0.85 * (1 - p))); gr.addColorStop(1, this._rgba(gc, 0));
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr * (1.8 * (1 - p) + 0.2), 0, 7); ctx.fill();
+          if (Math.random() < 0.6) this.particles.push({ x: d.x + MU.rand(-rr, rr), y: d.y + MU.rand(-rr, rr),
+            vx: MU.rand(-30, 30), vy: -MU.rand(10, 50), life: 0.5, t: 0.5, color: gc, r: MU.rand(1.2, 2.6), over: true });
         }
         else if (def.puppet && PUPPETS[def.shape] && PUPPETS[def.shape].ready) { // v1.39 — morte PUPPET dedicata (crollo pezzi)
           const flip = Math.cos(d.f) < 0 ? -1 : 1; this._puppetDeath(def.shape, ctx, rr, def.eye || '#fff', this.time, flip, p);

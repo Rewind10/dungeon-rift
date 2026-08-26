@@ -226,6 +226,42 @@
       m.rollLeft -= ctx.dt;
       if (m.rollLeft <= 0) { m.rolling = 0; m.rollCd = m.def.rollCd || 1.5; }
     },
+    // v1.61 — NUGOLO (Nugolo di Pipistrelli): insegue ONDEGGIANDO. Al vettore di inseguimento somma una
+    // componente PERPENDICOLARE sinusoidale, poi rinormalizza: la velocita' resta quella, ma la traiettoria
+    // e' una serpentina — difficile da colpire in linea retta senza guidare il tiro.
+    flock(m, ctx) {
+      const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 620);
+      if (!sees) { if (!investigate(m, ctx)) wander(m, ctx, 0.8); return; }
+      seek(m, ctx, 1);
+      if (m.wv == null) m.wv = Math.random() * 6.283;      // fase iniziale casuale: due nugoli non ondeggiano uguale
+      m.wv += ctx.dt * (m.def.weave || 2.7);
+      const s = Math.sin(m.wv) * (m.def.weaveAmp || 0.62) * (d < 90 ? 0.35 : 1);   // a contatto smette di ballare
+      const n = MU.norm(m.mx - m.my * s, m.my + m.mx * s);
+      m.mx = n.x * m.speed; m.my = n.y * m.speed;
+      if (n.x || n.y) m.facing = Math.atan2(n.y, n.x);
+      melee(m, ctx, p, 1, 0.35);
+    },
+    // v1.61 — FUOCO FATUO: rotta diretta sul giocatore SENZA pathfinding e senza linea di vista — attraversa
+    // i muri (il movimento senza collisione e' in Room.updateMonsters, def.phasing). Si ferma a distanza di
+    // drenaggio e succhia vita; dentro la roccia accelera e non attacca.
+    drifter(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+      const range = m.def.atkRange || 96;
+      const inWall = ctx.isWallAt(m.x, m.y);
+      const n = MU.norm(p.x - m.x, p.y - m.y);
+      m.facing = Math.atan2(n.y, n.x);
+      m.phased = inWall ? 1 : 0;
+      const sp = m.speed * (inWall ? 1.7 : 1);
+      if (inWall || d > range * 0.72) { m.mx = n.x * sp; m.my = n.y * sp; } else { m.mx = m.my = 0; }
+      if (inWall) return;
+      if (d <= range + p.radius && m.atkT <= 0) {
+        m.atkT = m.def.atkCd;
+        ctx.melee(m, p, m.dmg, 0.2);
+        m.hp = Math.min(m.maxHp, m.hp + Math.round(m.dmg * (m.def.leech || 0.9)));
+        ctx.emit({ t: 'drain', e: m.eid, x: m.x, y: m.y, tx: p.x, ty: p.y, c: m.def.eye });
+      }
+    },
     summoner(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < m.def.atkRange * 0.5) flee(m, ctx, 0.85); else if (d > m.def.atkRange) seek(m, ctx, 0.85); else stop(m, p); m.summonT = (m.summonT || 0) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 6.5; for (let i = 0; i < (m.def.summonCount || 3); i++) { const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 40; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 0) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 8; m.shielded = m.def.shieldTime || 3; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.zoneT = (m.zoneT || MU.rand(3, 5)) - ctx.dt; if (m.zoneT <= 0 && d <= m.def.atkRange) { ctx.zone(p.x, p.y, 66, 1.0, m.dmg * 1.3, m.def.projColor); m.zoneT = MU.rand(4.5, 7); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },
     boss_warlord(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const e = m.hp / m.maxHp <= (m.def.enrageAtHp || 0.5); m.summonT = (m.summonT || 3) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 7; for (let i = 0; i < (m.def.summonCount || 4); i++) { const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } seek(m, ctx, e ? (m.def.enrageSpeed || 1.7) : 1.1); const d = MU.dist(m.x, m.y, p.x, p.y); if (d <= m.def.atkRange && m.atkT <= 0) { ctx.areaDamage(m.x, m.y, m.def.slamRadius || 90, m.dmg * (e ? 1.5 : 1), '#ff5252', 2.6); m.atkT = m.def.atkCd; ctx.emit({ t: 'slam', x: m.x, y: m.y, r: m.def.slamRadius || 90 }); } },
     boss_lich(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < 260) flee(m, ctx, 0.9); else if (d > m.def.atkRange) seek(m, ctx, 0.9); else stop(m, p); m.summonT = (m.summonT || 2) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 5; for (let i = 0; i < (m.def.summonCount || 5); i++) { const a = Math.random() * Math.PI * 2, r = 50 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 4) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 7; m.shielded = m.def.shieldTime || 3.5; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.novaT = (m.novaT || 3) - ctx.dt; if (m.novaT <= 0) { m.novaT = 5.5; for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; ctx.shoot(m, Math.cos(a), Math.sin(a), m.def.projSpeed * 0.8, m.dmg * 0.7, m.def.projColor); } ctx.emit({ t: 'nova', x: m.x, y: m.y }); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },

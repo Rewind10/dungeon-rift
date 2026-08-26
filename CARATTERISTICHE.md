@@ -1,10 +1,23 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.60.0`
+**Versione attuale:** `1.61.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🦇 Lo sciame e il fuoco fatuo *(novita v1.61)*
+- **Nugolo di Pipistrelli**: non e' un nemico, e' **nove pipistrelli** che si muovono insieme. Poca vita, ma
+  arriva prima di quanto tu possa allontanarti, e **non vola dritto**: serpeggia, quindi sparare dove si trova
+  non basta — bisogna sparare dove sara'.
+- **Fuoco Fatuo**: **passa attraverso la roccia**. E' l'unico nemico contro cui mettersi al riparo non serve a
+  niente; in compenso e' lento, e la risposta giusta e' continuare a muoversi. Quando ti raggiunge ti **succhia
+  vita e si cura** con quella che ti ha tolto.
+- Nessuno dei due ha un'immagine: sono matematica, come il Fungo e la Sfera d'Ossa. Il vincolo tecnico
+  (niente animazioni di camminata complesse) e' di nuovo il criterio con cui sono stati scelti.
+- **Per ora compaiono gia' dall'ondata 1**, per poterli provare: da che punto entreranno davvero e' ancora da
+  decidere.
+- Il **Fungo Sporifero** non si sposta piu' se lo urti: e' piantato per davvero.
 
 ## 🪓 Il Troll smette di essere legnoso *(novita v1.60)*
 - Con le lastre nuove, tre difetti che sembravano di disegno erano in realta' **di numeri**, trovati misurando

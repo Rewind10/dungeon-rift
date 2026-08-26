@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.60.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.61.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -435,6 +435,13 @@ git add -A && git commit -m "vX.Y.Z — <titolo>"
 git tag vX.Y.Z
 ```
 
+> **Trappola nota — un commento in coda a una riga lunga NE UCCIDE LA FINE.**
+> In `server/Room.js` (e in `renderer.js`) molte "righe" sono **un'unica istruzione lunghissima**: la riga
+> dello snapshot, `_separate`, `_pushOff`, `updateMonsters`. Un `// commento` messo **in coda** commenta via
+> tutto quello che segue sulla stessa riga — `}` di chiusura compresi — e il file non compila più, con un
+> `SyntaxError` che punta a **una funzione più in basso** e non alla riga colpevole. È successo in v1.59
+> (riga dello snapshot) e di nuovo in v1.61 (`_pushOff`). **I commenti vanno SOPRA la riga, mai in coda.**
+
 > **Trappola nota — gli id nel codice non corrispondono ai nomi visibili.**
 > `skeleton` = **Zombie Putrido** · `cave_brute` = **Troll delle Caverne** · `occhio` = **Beholder** ·
 > `darkmage` = Negromante · `slime` = Melma Corrosiva. Cercare "Troll" nel codice non trova nulla: cercare
@@ -682,6 +689,35 @@ il bounding box dell'alpha dice tre cose che a occhio non si vedono.
   curva (`^0.72`) invece di occupare un quinto del tempo utile.
 Il passo va poi agganciato alla **distanza percorsa** (`cyclePx`), mai a fps fisso: e' l'unico modo perche' i
 piedi non slittino quando la velocita' cambia.
+
+### C-ter) v1.61 — nemici SENZA asset: quando il vincolo è il criterio
+
+Il motore non ha budget per nuovi cicli di camminata disegnati a mano. Invece di subirlo, dalla v1.58 il
+vincolo **sceglie** i nemici: le famiglie che non hanno gambe da animare. Tre schemi già in uso, tutti
+vettoriali puri (`_fungusF`, `_rollerF`, `_batsF`, `_wispF`) e tutti agganciati in `_drawMonster` con un
+flag nella def (`def.fungus`, `def.roller`, `def.bats`, `def.wisp`):
+
+- **Immobile** (Fungo) — l'animazione è il respiro e lo sbuffo. `def.immobile` lo esclude da anti-incastro,
+  `_separate` e `_pushOff`: è piantato, e nessuno lo sposta.
+- **Rotolante** (Sfera d'Ossa) — l'animazione è una rotazione ricavata dallo **spostamento reale**: se sta
+  ferma non gira.
+- **Sciame** (Nugolo) — **una entità, N sagome**. Le fasi si distribuiscono con l'**angolo aureo**
+  (`i * 2.399963`) così non si allineano mai, e le sagome si **ordinano per y** prima di disegnarle, altrimenti
+  la sovrapposizione è casuale e lo sciame "sfarfalla". Le ali sono **una sinusoide**, non fotogrammi.
+- **Fluttuante** (Fuoco Fatuo) — nessun contatto col terreno da giustificare: bob verticale + **tre sinusoidi
+  sfasate** per la fiamma. Al posto dell'ombra, un **riflesso di luce** a terra: un'ombra lo farebbe poggiare.
+
+**Regola di contrasto.** Il pavimento è quasi nero: un nemico scuro senza bordo chiaro e senza alone **sparisce**.
+La prima resa del Nugolo (corpo `#171320`) era illeggibile in anteprima; corpo grigio-viola con bordo, venature
+sulle ali e alone tenue sotto la massa hanno risolto. **Vale la pena renderizzare l'anteprima prima di dire
+che è fatto.**
+
+**Nemici che ATTRAVERSANO i muri (`def.phasing`).** Il movimento normale passa da `moveCircle` + `_unstuck` +
+rilevamento incastro: tre meccanismi che esistono per **rimettere fuori** dai muri, quindi vanno saltati tutti
+e tre, insieme a `_separate`. Restano due obblighi: **clamp ai bordi** della griglia (altrimenti esce dalla
+mappa) e **accelerazione + divieto di attacco mentre è dentro la roccia** — un nemico che colpisce da dentro un
+muro è ingiocabile, perché i proiettili del giocatore muoiono sul muro. Ricordarsi anche di **escluderli dal
+test** "nessun mostro resta dentro un muro": lì ci stanno per design.
 
 ### D) Aggiungere un altro sprite-sheet (ricetta)
 1. PNG (una griglia per animazione, celle uniformi) + `nome.json` (`cols/rows/cell/charH` e per anim `frames/fps/ax/ay`).

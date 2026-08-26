@@ -2,6 +2,53 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.61.0] — 2026-08-26 · "Due nemici che non camminano: lo sciame e il fuoco fatuo"
+
+Continuazione della linea aperta con la v1.58: nemici scelti **perché** il motore non ha cicli di camminata
+disegnati a mano da spendere. Nessuno dei due ha gambe, nessuno dei due ha un asset.
+
+> ⚠️ **Sono in PROVA dall'ondata 1.** Serve a vederli subito in partita per decidere da che tier farli
+> comparire davvero. Quando la soglia è decisa, in `shared/waves.js` vanno riportati dietro un `if (w >= N)`
+> e l'assertion `INPROVA` in `testV150` torna a pretendere il solo scheletro nell'ondata 1.
+
+#### 🦇 Nugolo di Pipistrelli (`bat_swarm`)
+- **Una sola entità** disegnata come **9 sagome** che orbitano attorno al centro, ognuna con fase e velocità
+  proprie (angolo aureo: non si allineano mai). Le ali sono **una sinusoide di battito**, non fotogrammi.
+- **Fragile e velocissimo** (76 PV, vel. 175): il primo nemico da cui non ti allontani camminando.
+- **Ondeggia mentre insegue** (IA `flock`): al vettore d'inseguimento somma una componente perpendicolare
+  sinusoidale e poi rinormalizza — la velocità resta quella, la traiettoria diventa una **serpentina**.
+  Colpirlo in linea retta senza guidare il tiro non funziona. A contatto smette di ballare.
+- In attacco il nugolo **si stringe** e scatta; alla morte **si sparpaglia**.
+- Contrasto: su roccia quasi nera un pipistrello nero sparisce. Corpo **grigio-viola** con bordo chiaro,
+  venature sulle ali e un **alone viola tenue** sotto la massa, così lo sciame si legge a colpo d'occhio.
+
+#### 🔵 Fuoco Fatuo (`wisp`)
+- **Il primo nemico che ignora i muri** (`def.phasing`): non lo semini rompendo la linea di vista, ti trova
+  sempre. È **lento** (vel. 74), quindi la risposta è muoversi, non nascondersi.
+- Quando ti raggiunge **drena**: danno più cura di sé (`leech 0.9`). Evento `drain` → il client disegna le
+  scintille che risalgono **dal giocatore verso il fatuo**, così si vede chi sta rubando a chi.
+- **Dentro la roccia accelera (×1.7) e non può drenare**: non ci resta mai dentro, e non può spararti da un
+  punto dove non puoi rispondere.
+- Reso come **fiamma fredda sospesa**: nucleo additivo, lingua di fuoco modulata da tre sinusoidi sfasate,
+  tre scintille in orbita, ondeggio verticale lento e due occhietti vuoti dentro il nucleo.
+
+#### 🔧 Server
+- `Room.updateMonsters`: i mostri `phasing` si muovono **senza collisione** — niente `moveCircle`, niente
+  `_unstuck`, niente anti-incastro (esistono tutti e tre per *rimettere fuori* dai muri). Resta il vincolo
+  dei bordi mappa, altrimenti uscirebbero dalla griglia.
+- `_separate` salta i `phasing`, così il fatuo non spinge in giro chi attraversa.
+- **I nemici `immobile` non vengono più spinti** né dai giocatori (`_pushOff`) né dagli altri mostri
+  (`_separate`): il Fungo Sporifero era piantato per design ma scivolava se lo urtavi, e un presidio del
+  terreno che si sposta non presidia niente.
+
+#### 🧪 Test
+- Nuovo `testV161`: il fatuo **non viene espulso** dal muro (si sposta di meno di mezza tessera contro il
+  salto secco di `_unstuck`) ed **esce da solo**; controprova con uno scheletro nella stessa tessera; il
+  drenaggio fa danno **e** cura; il nugolo devia lateralmente **oltre 0.30** normalizzato (il solo jitter
+  arriverebbe a ~0.08) **cambiando lato**; morso a contatto; niente NaN e nessuno fuori griglia.
+- Il conteggio "nessun mostro dentro un muro" esclude ora i `phasing`.
+- **408 passati, 0 falliti.**
+
 ### [1.60.0] — 2026-08-26 · "Il Troll smette di essere legnoso"
 
 Lastre nuove fornite dall'artista (stessa griglia 5×5 @256px). Prima di toccare il codice le ho **misurate

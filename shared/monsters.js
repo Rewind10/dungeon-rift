@@ -41,6 +41,14 @@
     // v1.58 — MELMA MINORE: nasce dalla divisione della Melma Corrosiva. Riusa lo stesso sprite a raggio
     // ridotto (come lo Zombie Minore col ghoul): zero asset nuovi. NON si divide a sua volta.
     slime_mini: { id: 'slime_mini', name: 'Melma Minore', tier: 0, hp: 34, speed: 66, radius: 13, dmg: 7, atkRange: 110, atkCd: 1.6, ai: 'blob', atk: 'ranged', xp: 4, weight: 0, color: '#2f3a1c', color2: '#141a0c', eye: '#a6ff3a', shape: 'slime', topdown: true, puppet: true, bubbles: true, minion: true, sightRange: 420, projSpeed: 190, projColor: '#a6ff3a', acidMult: 1.4, acidCount: 2 },
+    // v1.61 — NUGOLO DI PIPISTRELLI: una sola entita' disegnata come 11 sagome che orbitano attorno al
+    // centro con fasi diverse. Nessun ciclo di camminata: le ali sono due rotazioni contrapposte. Fragile
+    // e velocissimo, ondeggia mentre insegue (weave): copre lo spazio come nessun altro nemico del roster.
+    bat_swarm: { id: 'bat_swarm', name: 'Nugolo di Pipistrelli', tier: 1, hp: 76, speed: 175, radius: 24, dmg: 6, atkRange: 30, atkCd: 0.5, ai: 'flock', atk: 'melee', xp: 13, weight: 0, color: '#2a2136', color2: '#0f0c16', eye: '#c9a0ff', shape: 'bats', bats: true, puppet: true, aura: 1.1, swarmN: 9, sightRange: 620, memory: 4, weave: 2.7, weaveAmp: 0.62, eliteHp: 1.4 },
+    // v1.61 — FUOCO FATUO: primo nemico che IGNORA I MURI (def.phasing). Non lo semini spezzando la linea
+    // di vista: ti trova sempre, ma e' lento, quindi la risposta e' muoversi. Quando ti raggiunge DRENA
+    // (danno + si cura di leech). Dentro la roccia accelera e non puo' drenare: non ci resta mai dentro.
+    wisp: { id: 'wisp', name: 'Fuoco Fatuo', tier: 2, hp: 68, speed: 74, radius: 15, dmg: 9, atkRange: 96, atkCd: 0.9, ai: 'drifter', atk: 'melee', xp: 15, weight: 0, color: '#123a3a', color2: '#06181a', eye: '#7dffea', shape: 'wisp', wisp: true, puppet: true, aura: 2.6, phasing: true, leech: 0.9, bobAmp: 6, eliteHp: 1.7 },
     // v1.30 — Mimic MANTENUTO solo come CASSA: non entra nel pool delle ondate (weight 0),
     // compare esclusivamente dalle casse-mima e dalla modalità TESORO. Sprite top-down a forziere.
     mimic: { id: 'mimic', name: 'Bestia Mimica', tier: 2, hp: 150, speed: 150, radius: 19, dmg: 26, atkRange: 40, atkCd: 1.0, ai: 'ambush', atk: 'melee', xp: 14, weight: 0, color: '#8a5a2b', color2: '#4a2f16', eye: '#ff3b3b', shape: 'mimic', chestOnly: true },
@@ -50,6 +58,6 @@
     lich_king: { id: 'lich_king', name: 'Re Lich', tier: 4, boss: true, hp: 2200, speed: 116, radius: 30, dmg: 26, atkRange: 420, atkCd: 1.1, ai: 'boss_lich', atk: 'ranged', xp: 200, weight: 0, color: '#2f4a6a', color2: '#12233a', eye: '#7dffea', shape: 'lich', projSpeed: 280, projColor: '#7dffea', summon: 'skeleton', summonCd: 5, summonCount: 5, shieldCd: 7, shieldTime: 3.5 },
     mega_dragon: { id: 'mega_dragon', name: 'AZ\'GAROTH, il Divoratore di Mondi', tier: 6, boss: true, mega: true, hp: 9000, speed: 104, radius: 52, dmg: 52, atkRange: 520, atkCd: 0.9, ai: 'boss_dragon', atk: 'special', xp: 800, weight: 0, color: '#5a0d2a', color2: '#2a0512', eye: '#ff2d55', shape: 'dragon', projSpeed: 340, projColor: '#ff2d55', enrageAtHp: 0.4 },
   };
-  const ORDER = ['skeleton', 'slime', 'slime_mini', 'darkmage', 'cave_brute', 'spore_fungus', 'bone_roller', 'occhio'];
+  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'cave_brute', 'spore_fungus', 'bone_roller', 'wisp', 'occhio'];
   return { MONSTERS, BOSSES, ORDER };
 });

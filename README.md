@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.60.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.61.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.61 (lo sciame e il fuoco fatuo)
+- **🦇 Nugolo di Pipistrelli**: una sola entita' disegnata come **9 sagome in orbita**, ali = una sinusoide di
+  battito. Fragile ma velocissimo, e **ondeggia** mentre insegue: non lo colpisci sparando dritto.
+- **🔵 Fuoco Fatuo**: **attraversa i muri**. Non lo semini rompendo la linea di vista — e' lento, quindi la
+  risposta e' muoversi. Quando ti raggiunge **drena vita** e si cura.
+- Nessuno dei due ha asset o cicli di camminata: tutto vettoriale, come Fungo e Sfera d'Ossa.
+- **⚠️ Per ora compaiono dall'ondata 1**, in prova: la soglia definitiva va ancora scelta.
+- **🍄 Il Fungo ora e' davvero piantato**: non lo spingono piu' ne i giocatori ne gli altri mostri.
+- Test: **408 passati, 0 falliti**.
 
 ## 🆕 Novita v1.60 (il Troll smette di essere legnoso)
 - **📏 Ancora dell'attacco corretta**: era sbagliata di 11px e il troll *saltava* ogni volta che colpiva.

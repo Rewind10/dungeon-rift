@@ -42,6 +42,10 @@
     if (w >= 4) add('cave_brute', 8);     // tank con slam ad area
     if (w >= 5) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
     if (w >= 7) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
+    // v1.61 — TEMPORANEO: i due nuovi nemici entrano dall'ondata 1 per poterli provare subito.
+    // Vanno riportati alla soglia definitiva (add sotto if (w >= N)) appena scelto il tier di comparsa.
+    add('bat_swarm', 12);                 // sciame volante: ondeggia, non si colpisce in linea retta
+    add('wisp', 10);                      // attraversa i muri: non si semina rompendo la linea di vista
     if (w >= 10) add('occhio', 9);        // debuffer tier 3, dal secondo boss, col tetto di 8 vivi (def.maxAlive)
     return p;
   }

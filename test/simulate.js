@@ -477,7 +477,8 @@ function testV143() {
   for (const id of ['skeleton', 'darkmage', 'cave_brute', 'orc_warlord', 'lich_king', 'mega_dragon']) { const pos = r2.randomSpawnPos(); r2.spawnMonster(id, pos.x, pos.y, { scaling: Waves.scaling(5, 3) }); }
   for (let i = 0; i < C.TICK_RATE * 20; i++) { for (const p of r2.players.values()) r2.setInput(p.id, bot(r2, p)); r2.update(dt); if (hasNaN(r2)) break; }
   assert(hasNaN(r2) === null, 'nessun NaN nello stress con boss in campo');
-  const stuck = r2.monsters.filter(m => !m.dead && r2.isWallAt(m.x, m.y)).length;
+  // v1.61 — i nemici con def.phasing (Fuoco Fatuo) stanno DENTRO i muri per design: esclusi dal conteggio.
+  const stuck = r2.monsters.filter(m => !m.dead && !m.def.phasing && r2.isWallAt(m.x, m.y)).length;
   assert(stuck === 0, 'nessun mostro/boss resta dentro un muro (incastrati: ' + stuck + ')');
   ok('novita v1.43 verificate');
 }
@@ -601,7 +602,11 @@ function testV150() {
   const at = w => Waves.poolForWave(w).map(x => x.id);
   // 1) la RAMPA: un archetipo nuovo ogni 1-2 ondate, non tutti dal primo stage
   const p1 = at(1);
-  assert(p1.length === 1 && p1[0] === 'skeleton', 'ondata 1: solo lo sciame base (Zombie Putrido)');
+  // v1.61 — in ondata 1 ci sono anche i due nemici IN PROVA (Nugolo, Fuoco Fatuo): Paolo li deve vedere
+  // subito per decidere il tier di comparsa. Quando lo decide, tornano dietro una soglia e questa
+  // assertion torna a pretendere il solo scheletro.
+  const INPROVA = ['bat_swarm', 'wisp'];
+  assert(p1.filter(x => INPROVA.indexOf(x) < 0).join(',') === 'skeleton', 'ondata 1: sciame base + solo i nemici in prova');
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
   assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
@@ -907,6 +912,99 @@ function testV159() {
   assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
   ok('novita v1.59 verificate');
 }
+function testV161() {
+  console.log('\n[TEST 32] Novita v1.61 — Nugolo di Pipistrelli (sciame ondeggiante) e Fuoco Fatuo (attraversa i muri)');
+  const Mon = require('../shared/monsters.js');
+  const bs = Mon.MONSTERS.bat_swarm, wp = Mon.MONSTERS.wisp;
+  const dt = 1 / C.TICK_RATE;
+
+  // --- definizioni ---
+  assert(bs && bs.ai === 'flock' && bs.bats && bs.swarmN >= 6, 'Nugolo: IA flock, reso come sciame di ' + (bs ? bs.swarmN : 0) + ' sagome');
+  assert(wp && wp.ai === 'drifter' && wp.phasing === true, 'Fuoco Fatuo: IA drifter e attraversa i muri (phasing)');
+  assert(!bs.sheet && !bs.front && !wp.sheet, 'nessuno dei due usa spritesheet o billboard: solo vettoriale');
+  assert(bs.hp < 100 && bs.speed > 150, 'il Nugolo e fragile ma veloce (' + bs.hp + ' PV, ' + bs.speed + ' vel)');
+  assert(wp.speed < 90 && wp.leech > 0, 'il Fatuo e lento ma drena vita (leech ' + wp.leech + ')');
+  assert(Mon.ORDER.indexOf('bat_swarm') >= 0 && Mon.ORDER.indexOf('wisp') >= 0, 'entrambi presenti nel ROSTER (ORDER)');
+
+  // --- comparsa: per ora dall ondata 1 (temporaneo, in attesa del tier definitivo) ---
+  const p1 = Waves.poolForWave(1).map(x => x.id);
+  assert(p1.indexOf('bat_swarm') >= 0 && p1.indexOf('wisp') >= 0, 'entrambi nel pool dell ondata 1 (prova)');
+  assert(bs.weight === 0 && wp.weight === 0, 'peso 0 nella def: la comparsa la decide solo poolForWave');
+
+  // --- IL FATUO ATTRAVERSA DAVVERO I MURI ---
+  // Un mostro normale messo dentro un muro viene ESPULSO da _unstuck (salto secco).
+  // Il fatuo invece deve proseguire di suo, passo dopo passo, e uscire da solo.
+  const room = new Room('v161'); const pl = room.addPlayer('a', { send() {} }, 'A', 'enforcer'); room.startGame();
+  let wx = -1, wy = -1;
+  for (let gy = 2; gy < room.map.h - 2 && wx < 0; gy++) for (let gx = 2; gx < room.map.w - 2; gx++)
+    if (room.map.grid[gy * room.map.w + gx] === C.T_WALL) { wx = gx; wy = gy; break; }
+  assert(wx >= 0, 'trovata una tessera di muro per la prova');
+  const wcx = wx * C.TILE + C.TILE / 2, wcy = wy * C.TILE + C.TILE / 2;
+
+  const w = room.spawnMonster('wisp', pl.x + 60, pl.y, { scaling: Waves.scaling(1, 1) });
+  w.x = wcx; w.y = wcy;
+  const bx0 = w.x, by0 = w.y;
+  room.update(dt);
+  const jump = Math.hypot(w.x - bx0, w.y - by0);
+  // _unstuck riporta il mostro sul CENTRO della tessera libera piu vicina: uno scatto dell ordine della
+  // tessera. Il fatuo invece avanza di suo, quindi qui deve muoversi di ben meno di mezza tessera.
+  assert(jump < C.TILE * 0.5, 'il fatuo NON viene espulso dal muro (spostamento ' + jump.toFixed(2) + 'px, meno di mezza tessera)');
+  assert(room.isWallAt(w.x, w.y), 'dopo un tick e ancora DENTRO la roccia: la sta attraversando, non e stato teletrasportato fuori');
+  let out = false;
+  for (let i = 0; i < C.TICK_RATE * 8 && !out; i++) { room.update(dt); if (!room.isWallAt(w.x, w.y)) out = true; }
+  assert(out, 'il fatuo esce dalla roccia da solo (non ci resta intrappolato)');
+
+  // confronto: uno scheletro nella stessa tessera viene rimesso fuori dal recupero anti-incastro
+  const sk = room.spawnMonster('skeleton', pl.x + 60, pl.y, { scaling: Waves.scaling(1, 1) });
+  sk.x = wcx; sk.y = wcy;
+  let skOut = false;
+  for (let i = 0; i < C.TICK_RATE * 3 && !skOut; i++) { room.update(dt); if (!room.isWallAt(sk.x, sk.y)) skOut = true; }
+  assert(skOut, 'controprova: un nemico normale nel muro viene comunque rimesso fuori');
+
+  // --- IL FATUO DRENA: danneggia e si cura ---
+  const room2 = new Room('v161b'); const p2 = room2.addPlayer('b', { send() {} }, 'B', 'enforcer'); room2.startGame();
+  const w2 = room2.spawnMonster('wisp', p2.x + 40, p2.y, { scaling: Waves.scaling(1, 1) });
+  w2.hp = Math.max(1, Math.round(w2.maxHp * 0.4)); const wh0 = w2.hp;
+  p2.hp = 500; const ph0 = p2.hp; w2.atkT = 0; room2.events.length = 0;
+  let drained = null;
+  for (let i = 0; i < C.TICK_RATE * 3 && !drained; i++) { room2.update(dt); drained = room2.events.find(e => e.t === 'drain'); }
+  assert(drained && drained.e === w2.eid, 'il fatuo emette l evento drain (il client disegna le scintille)');
+  assert(p2.hp < ph0, 'il drenaggio fa danno al giocatore');
+  assert(w2.hp > wh0, 'e il fatuo si cura drenando (' + wh0 + ' -> ' + w2.hp + ' PV)');
+  assert(w2.hp <= w2.maxHp, 'la cura non supera i PV massimi');
+
+  // --- IL NUGOLO ONDEGGIA: la traiettoria non e una retta verso il giocatore ---
+  const room3 = new Room('v161c'); const p3 = room3.addPlayer('c', { send() {} }, 'C', 'enforcer'); room3.startGame();
+  const b = room3.spawnMonster('bat_swarm', p3.x + 300, p3.y, { scaling: Waves.scaling(1, 1) });
+  let maxLat = 0, sgnPos = false, sgnNeg = false;
+  for (let i = 0; i < C.TICK_RATE * 4; i++) {
+    room3.update(dt);
+    const len = Math.hypot(b.mx, b.my); if (len < 1) continue;
+    const dx = p3.x - b.x, dy = p3.y - b.y, dl = Math.hypot(dx, dy) || 1;
+    const cross = ((dx / dl) * (b.my / len) - (dy / dl) * (b.mx / len));   // deviazione laterale normalizzata
+    if (cross > 0.12) sgnPos = true; if (cross < -0.12) sgnNeg = true;
+    maxLat = Math.max(maxLat, Math.abs(cross));
+  }
+  assert(maxLat > 0.30, 'il nugolo devia lateralmente in modo netto (max ' + maxLat.toFixed(2) + ', il solo jitter arriverebbe a ~0.08)');
+  assert(sgnPos && sgnNeg, 'e la deviazione cambia lato: serpentina, non una curva sola');
+
+  // --- il nugolo fa danno a contatto ---
+  const room4 = new Room('v161d'); const p4 = room4.addPlayer('d', { send() {} }, 'D', 'enforcer'); room4.startGame();
+  const b4 = room4.spawnMonster('bat_swarm', p4.x + 30, p4.y, { scaling: Waves.scaling(1, 1) });
+  p4.hp = 400; const h4 = p4.hp; b4.atkT = 0;
+  for (let i = 0; i < C.TICK_RATE * 3 && p4.hp >= h4; i++) room4.update(dt);
+  assert(p4.hp < h4, 'il nugolo morde a contatto');
+
+  // --- tenuta: una manciata di entrambi in campo senza NaN ---
+  const room5 = new Room('v161e'); const p5 = room5.addPlayer('e', { send() {} }, 'E', 'ranger'); room5.startGame();
+  for (let i = 0; i < 6; i++) room5.spawnMonster(i % 2 ? 'bat_swarm' : 'wisp', p5.x + 120 + i * 30, p5.y + i * 20, { scaling: Waves.scaling(3, 1) });
+  for (let i = 0; i < C.TICK_RATE * 10; i++) { room5.setInput('e', bot(room5, p5)); room5.update(dt); if (hasNaN(room5)) break; }
+  assert(hasNaN(room5) === null, 'nessun NaN con nugoli e fatui in campo');
+  let inside = 0; for (const m of room5.monsters) if (m.x < 0 || m.y < 0 || m.x > room5.map.w * C.TILE || m.y > room5.map.h * C.TILE) inside++;
+  assert(inside === 0, 'nessun fatuo e uscito dalla griglia attraversando il bordo');
+
+  ok('novita v1.61 verificate');
+}
 function testV160() {
   console.log('\n[TEST 31] Novita v1.60 — Troll: ancora, impatto e passo allineati; Beholder dall ondata 10');
   const Mon = require('../shared/monsters.js');
@@ -973,8 +1071,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.60)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.61)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

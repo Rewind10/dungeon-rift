@@ -716,15 +716,27 @@ class Room {
       }
       const ld = dt * tf; const pd = ctx.dt; ctx.dt = ld; AI.update(m, ctx); ctx.dt = pd; let cu = 1; const np = this._nearestPlayer(m.x, m.y); if (np) { const nd = MU.dist(m.x, m.y, np.x, np.y); if (nd > 340) cu = 1 + Math.min(1.1, (nd - 340) / 420); }
       const px0 = m.x, py0 = m.y; const wantMove = (Math.abs(m.mx) + Math.abs(m.my)) > 4; // v1.43 — misura intento vs spostamento reale
+      // v1.61 — ATTRAVERSA I MURI (def.phasing, Fuoco Fatuo): niente moveCircle, niente _unstuck, niente
+      // anti-incastro — quelle tre cose esistono per RIMETTERE FUORI dai muri, qui il muro non conta.
+      // Resta il solo vincolo dei bordi mappa, altrimenti uscirebbe dalla griglia.
+      if (m.def.phasing) {
+        const T = C.TILE;
+        m.x = MU.clamp(m.x + (m.mx || 0) * ld * cu * slow, T * 0.5, (this.map.w - 0.5) * T);
+        m.y = MU.clamp(m.y + (m.my || 0) * ld * cu * slow, T * 0.5, (this.map.h - 0.5) * T);
+        m._stuckT = 0;
+      } else {
       this.moveCircle(m, (m.mx || 0) * ld * cu * slow, (m.my || 0) * ld * cu * slow); if (this.isWallAt(m.x, m.y)) this._unstuck(m);
       // v1.43 — RILEVA INCASTRO (per TUTTI, boss compresi): se voleva muoversi ma non ha avanzato, accumula; poi recupera.
       if (wantMove) { const moved = MU.dist(m.x, m.y, px0, py0); const want = MU.len(m.mx, m.my) * ld * cu * slow; if (moved < want * 0.3) { m._stuckT = (m._stuckT || 0) + dt; if (m._stuckT > 0.35) { this._recoverStuck(m, Math.atan2(m.my, m.mx)); if (m._stuckT > 1.4) { m._stuckT = 0; } } } else m._stuckT = 0; } else m._stuckT = 0;
+      }
       const t = this.tileAtWorld(m.x, m.y); if (t === C.T_HAZARD) { m.hazT = (m.hazT || 0) + dt; if (m.hazT > 0.3) { m.hp -= 8; m.hazT = 0; if (m.hp <= 0) this.killMonster(m, null); } } }
     this._separate(); this._pushOff();
     if (this.monsters.some(m => m.dead)) this.monsters = this.monsters.filter(m => !m.dead);
   }
-  _separate() { const a = this.monsters; for (let i = 0; i < a.length; i++) { const x = a[i]; for (let j = i + 1; j < Math.min(a.length, i + 8); j++) { const y = a[j]; const dx = y.x - x.x, dy = y.y - x.y, rr = x.radius + y.radius, d2 = dx * dx + dy * dy; if (d2 < rr * rr && d2 > 0.0001) { const d = Math.sqrt(d2), ov = (rr - d) * 0.5, nx = dx / d, ny = dy / d; if (!this.isWallAt(x.x - nx * ov, x.y - ny * ov)) { x.x -= nx * ov; x.y -= ny * ov; } if (!this.isWallAt(y.x + nx * ov, y.y + ny * ov)) { y.x += nx * ov; y.y += ny * ov; } } } } }
-  _pushOff() { for (const p of this.alivePlayers) { if (p.buffs.dash > 0) continue; const clear = p.radius + 4; for (const m of this.monsters) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y; const minD = clear + m.radius * 0.6; const d2 = dx * dx + dy * dy; if (d2 < minD * minD && d2 > 0.0001) { const d = Math.sqrt(d2), ov = minD - d, nx = dx / d, ny = dy / d; let tx = m.x + nx * ov, ty = m.y + ny * ov; if (!this.isWallAt(tx, ty)) { m.x = tx; m.y = ty; continue; } const tanx = -ny, tany = nx; for (const s of [1, -1]) { const sx = m.x + tanx * s * ov, sy = m.y + tany * s * ov; if (!this.isWallAt(sx, sy)) { m.x = sx; m.y = sy; break; } } } } } }
+  _separate() { const a = this.monsters; for (let i = 0; i < a.length; i++) { const x = a[i]; if (x.def.phasing) continue; for (let j = i + 1; j < Math.min(a.length, i + 8); j++) { const y = a[j]; if (y.def.phasing) continue; const dx = y.x - x.x, dy = y.y - x.y, rr = x.radius + y.radius, d2 = dx * dx + dy * dy; if (d2 < rr * rr && d2 > 0.0001) { const d = Math.sqrt(d2), ov = (rr - d) * 0.5, nx = dx / d, ny = dy / d; if (!x.def.immobile && !this.isWallAt(x.x - nx * ov, x.y - ny * ov)) { x.x -= nx * ov; x.y -= ny * ov; } if (!y.def.immobile && !this.isWallAt(y.x + nx * ov, y.y + ny * ov)) { y.x += nx * ov; y.y += ny * ov; } } } } }
+  // v1.61 — i nemici IMMOBILI (Fungo) non vengono spinti ne dai giocatori ne dagli altri mostri:
+  // sono piantati per design, e se scivolano il loro presidio del terreno perde senso.
+  _pushOff() { for (const p of this.alivePlayers) { if (p.buffs.dash > 0) continue; const clear = p.radius + 4; for (const m of this.monsters) { if (m.dead || m.def.immobile) continue; const dx = m.x - p.x, dy = m.y - p.y; const minD = clear + m.radius * 0.6; const d2 = dx * dx + dy * dy; if (d2 < minD * minD && d2 > 0.0001) { const d = Math.sqrt(d2), ov = minD - d, nx = dx / d, ny = dy / d; let tx = m.x + nx * ov, ty = m.y + ny * ov; if (!this.isWallAt(tx, ty)) { m.x = tx; m.y = ty; continue; } const tanx = -ny, tany = nx; for (const s of [1, -1]) { const sx = m.x + tanx * s * ov, sy = m.y + tany * s * ov; if (!this.isWallAt(sx, sy)) { m.x = sx; m.y = sy; break; } } } } } }
   updateBullets(dt) {
     const tf = this.bulletTime ? this.bulletTime.factor : 1;
     for (const b of this.bullets) { if (b.dead) continue; const bdt = b.hostile ? dt * tf : dt; if (b.grenade) { b.vx *= 0.96; b.vy *= 0.96; b.fuse -= dt; }
