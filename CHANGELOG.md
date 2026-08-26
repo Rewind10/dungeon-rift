@@ -2,12 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.61.1] — 2026-08-26 · "I due nuovi prendono posto nella rampa"
+
+I nemici della 1.61 escono dalla prova e vanno alla loro soglia. Niente altro cambia: stesse def, stessa IA,
+stesso render.
+
+#### 🌊 Dove entrano, e perché lì
+- **🦇 Nugolo di Pipistrelli → ondata 6** (peso 10). Sta **prima** della Sfera d'Ossa perché insegna la stessa
+  lezione dal lato del tiro: il Nugolo chiede di **guidare il colpo** (serpeggia), la Sfera di **schivare di
+  lato**. Prima si impara a mirare dove il nemico sarà, poi a togliersi dalla linea. Alla 6 il giocatore ha
+  già l'arma evoluta e qualche potere: un nemico veloce e fragile lì è pressione, non muro.
+- **🔵 Fuoco Fatuo → ondata 8** (peso 8). Arriva **dopo** perché il suo effetto è *togliere una risposta* —
+  mettersi al riparo — e una regola si toglie solo dopo averla insegnata. Fino alla 7 spezzare la linea di
+  vista funziona contro Negromante, Fungo e Sfera; dall'8 c'è una cosa a cui il muro non serve.
+- Pesi **sotto** lo sciame base (40): sono nemici che cambiano il ritmo, non che riempiono il campo.
+
+#### 📈 La rampa non ha più buchi
+Un archetipo nuovo **per ogni ondata dalla 1 alla 8**, poi il Beholder alla 10:
+`1 Zombie · 2 Melma · 3 Negromante · 4 Troll · 5 Fungo · 6 Nugolo · 7 Sfera d'Ossa · 8 Fuoco Fatuo · 10 Beholder`.
+Prima la 6 e la 8 erano vuote.
+
+#### 🧪 Test
+- `testV150` torna a pretendere il **solo** scheletro nell'ondata 1 (l'eccezione `INPROVA` è stata rimossa) e
+  verifica le due nuove soglie; aggiunto il controllo che il pool dell'ondata *w* contenga esattamente *w*
+  archetipi da 1 a 8 — così un buco nella rampa fa fallire il test invece di passare inosservato.
+- `testV161` verifica soglie e pesi al posto della comparsa in prova.
+- Reso deterministico un test del Fungo (v1.58) che era **intermittente**: piantava il fungo a offset fisso
+  dal giocatore, e se quel punto cadeva dentro un muro il server lo spostava — giustamente — con `_unstuck`,
+  facendo fallire l'assertion "non si sposta di un pixel". Ora il punto libero viene cercato.
+- **422 passati, 0 falliti.**
+
 ### [1.61.0] — 2026-08-26 · "Due nemici che non camminano: lo sciame e il fuoco fatuo"
 
 Continuazione della linea aperta con la v1.58: nemici scelti **perché** il motore non ha cicli di camminata
 disegnati a mano da spendere. Nessuno dei due ha gambe, nessuno dei due ha un asset.
 
-> ⚠️ **Sono in PROVA dall'ondata 1.** Serve a vederli subito in partita per decidere da che tier farli
+> ⚠️ **(Superato dalla 1.61.1: Nugolo dall'ondata 6, Fuoco Fatuo dall'ondata 8.)** Sono in PROVA dall'ondata 1. Serve a vederli subito in partita per decidere da che tier farli
 > comparire davvero. Quando la soglia è decisa, in `shared/waves.js` vanno riportati dietro un `if (w >= N)`
 > e l'assertion `INPROVA` in `testV150` torna a pretendere il solo scheletro nell'ondata 1.
 

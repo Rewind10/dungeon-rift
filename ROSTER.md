@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.61.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.61.1` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -41,17 +41,21 @@ per i nemici d'ondata).
 | 3 | 🟣 Negromante | 12 |
 | 4 | 🟠 Troll delle Caverne | 8 |
 | 5 | 🍄 Fungo Sporifero | 10 |
+| 6 | 🦇 Nugolo di Pipistrelli | 10 |
 | 7 | 💀 Sfera d'Ossa | 9 |
+| 8 | 🔵 Fuoco Fatuo | 8 |
 | 10 | 👁️ Beholder *(max 8 vivi)* | 9 |
-| **1 ⚠️** | **🦇 Nugolo di Pipistrelli** *(in prova)* | **12** |
-| **1 ⚠️** | **🔵 Fuoco Fatuo** *(in prova)* | **10** |
 
-> ⚠️ **Le due righe in grassetto sono TEMPORANEE (v1.61).** I due nemici nuovi sono stati messi
-> nell'ondata 1 solo per poterli vedere subito in partita e decidere da che tier farli comparire. Quando
-> la soglia è scelta, in `shared/waves.js` vanno riportati dietro un `if (w >= N)` e l'assertion
-> `INPROVA` in `testV150` torna a pretendere il **solo** scheletro nell'ondata 1.
+**Perché in quest'ordine** *(v1.61.1)*. Il **Nugolo** sta prima della **Sfera d'Ossa**: insegnano la stessa
+cosa da due lati opposti — mirare dove il nemico *sarà*. Il Nugolo lo chiede col **tiro** (serpeggia: bisogna
+guidare il colpo), la Sfera coi **piedi** (carica dritta: bisogna togliersi di lato). Il **Fuoco Fatuo** arriva
+dopo entrambi perché non aggiunge una risposta, ne **toglie una**: fino alla 7 spezzare la linea di vista
+funziona contro Negromante, Fungo e Sfera; dall'8 c'è qualcosa a cui il muro non serve. Una regola si toglie
+solo dopo averla insegnata.
 
-La rampa è **monotona**: una volta entrato, un archetipo non esce più dal pool (verificato da `testV150`).
+La rampa è **monotona** (una volta entrato, un archetipo non esce più dal pool) e **senza buchi**: dalla 1 alla
+8 entra un archetipo nuovo per ondata, quindi il pool dell'ondata *w* ne contiene esattamente *w*. Entrambe le
+proprietà sono verificate da `testV150`.
 
 ---
 
@@ -155,7 +159,7 @@ Non è un nemico: sono nove, e si muovono insieme.
 
 - **Tier:** 1 · **PV:** 76 · **Velocità:** 175 · **Raggio:** 24 · **Danno:** 6
 - **IA:** `flock` · **Vista:** 620 · **Gittata att.:** 30 · **Cooldown:** 0.5s · **XP:** 13
-- **Accento:** `#c9a0ff` · **Render:** vettoriale `bats` (nessun asset) · **Comparsa:** ondata 1 *(in prova)*
+- **Accento:** `#c9a0ff` · **Render:** vettoriale `bats` (nessun asset) · **Comparsa:** ondata 6
 - **Meccaniche:** insegue **ondeggiando** — al vettore d'inseguimento somma una componente perpendicolare
   sinusoidale (`weave 2.7`, `weaveAmp 0.62`) e rinormalizza: stessa velocità, traiettoria a **serpentina**.
   Sotto i 90px smette di ballare e morde. Morso frequente e debole, respinta minima: ti **logora**.
@@ -169,7 +173,7 @@ L'unico nemico contro cui mettersi al riparo non serve a niente.
 
 - **Tier:** 2 · **PV:** 68 · **Velocità:** 74 · **Raggio:** 15 · **Danno:** 9
 - **IA:** `drifter` · **Gittata att.:** 96 · **Cooldown:** 0.9s · **XP:** 15 · **Leech:** 0.9
-- **Accento:** `#7dffea` · **Render:** vettoriale `wisp` (nessun asset) · **Comparsa:** ondata 1 *(in prova)*
+- **Accento:** `#7dffea` · **Render:** vettoriale `wisp` (nessun asset) · **Comparsa:** ondata 8
 - **Meccaniche:** `def.phasing` → **attraversa i muri**. Rotta diretta sul giocatore, senza pathfinding e
   senza linea di vista. Quando arriva **drena**: danno + cura di sé pari a `dmg × leech`.
 - **Dentro la roccia** accelera (×1.7) e **non può attaccare**: non ci resta intrappolato e non può colpirti
@@ -193,8 +197,8 @@ L'unico nemico contro cui mettersi al riparo non serve a niente.
 | 🍄 Fungo Sporifero | `spore_fungus` | 1 | 110 | 0 | 20 | 11 | 340 | sentry | zona / immobile | 5+ |
 | 💀 Sfera d'Ossa | `bone_roller` | 2 | 120 | 96 | 19 | 20 | 30 | roller | carica rotolante | 7+ |
 | 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 10+ (max 8) |
-| 🦇 Nugolo di Pipistrelli | `bat_swarm` | 1 | 76 | 175 | 24 | 6 | 30 | flock | sciame volante | 1+ ⚠️ |
-| 🔵 Fuoco Fatuo | `wisp` | 2 | 68 | 74 | 15 | 9 | 96 | drifter | inseguitore / attraversa muri | 1+ ⚠️ |
+| 🦇 Nugolo di Pipistrelli | `bat_swarm` | 1 | 76 | 175 | 24 | 6 | 30 | flock | sciame volante | 6+ |
+| 🔵 Fuoco Fatuo | `wisp` | 2 | 68 | 74 | 15 | 9 | 96 | drifter | inseguitore / attraversa muri | 8+ |
 | 🟢 Melma Minore *(divisione)* | `slime_mini` | 0 | 34 | 66 | 13 | 7 | 110 | blob | evocato | — |
 | 🟢 Zombie Minore | `zombie_mini` | 0 | 26 | 120 | 12 | 8 | 34 | swarm | evocato | — |
 

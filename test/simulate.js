@@ -602,15 +602,15 @@ function testV150() {
   const at = w => Waves.poolForWave(w).map(x => x.id);
   // 1) la RAMPA: un archetipo nuovo ogni 1-2 ondate, non tutti dal primo stage
   const p1 = at(1);
-  // v1.61 — in ondata 1 ci sono anche i due nemici IN PROVA (Nugolo, Fuoco Fatuo): Paolo li deve vedere
-  // subito per decidere il tier di comparsa. Quando lo decide, tornano dietro una soglia e questa
-  // assertion torna a pretendere il solo scheletro.
-  const INPROVA = ['bat_swarm', 'wisp'];
-  assert(p1.filter(x => INPROVA.indexOf(x) < 0).join(',') === 'skeleton', 'ondata 1: sciame base + solo i nemici in prova');
+  assert(p1.length === 1 && p1[0] === 'skeleton', 'ondata 1: solo lo sciame base (Zombie Putrido)');
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
   assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
+  assert(!at(5).includes('bat_swarm') && at(6).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 6');
+  assert(!at(7).includes('wisp') && at(8).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 8');
   assert(!at(9).includes('occhio') && at(10).includes('occhio'), 'Beholder introdotto all ondata 10');
+  // v1.61.1 — la rampa non salta piu' nessuna ondata da 1 a 8: un archetipo nuovo per ondata.
+  for (let w = 1; w <= 8; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -817,7 +817,15 @@ function testV158() {
   assert(fg.speed === 0, 'velocita zero: niente camminata da animare');
   const r1 = new Room('v158a'); const p1 = r1.addPlayer('b', { send() {} }, 'B', 'enforcer'); r1.startGame();
   r1.pending = 0; r1.waveList = []; p1.hp = 9999; p1.maxHp = 9999;
-  const f = r1.spawnMonster('spore_fungus', p1.x + 200, p1.y, { scaling: Waves.scaling(6, 1) });
+  // v1.61.1 — la posizione va cercata LIBERA: a offset fisso il fungo puo nascere dentro un muro, e li
+  // il server lo sposta con _unstuck (giustamente). Il test diventava intermittente per colpa della mappa.
+  let fpos = { x: p1.x + 200, y: p1.y };
+  for (let a = 0; a < 32 && r1.isWallAt(fpos.x, fpos.y); a++) {
+    const an = a * 0.7, rr = 140 + (a % 4) * 40;
+    fpos = { x: p1.x + Math.cos(an) * rr, y: p1.y + Math.sin(an) * rr };
+  }
+  assert(!r1.isWallAt(fpos.x, fpos.y), 'trovato un punto libero dove piantare il Fungo');
+  const f = r1.spawnMonster('spore_fungus', fpos.x, fpos.y, { scaling: Waves.scaling(6, 1) });
   const fx = f.x, fy = f.y;
   r1.zones.length = 0;
   for (let i = 0; i < C.TICK_RATE * 5 && !r1.zones.length; i++) r1.update(dt);
@@ -926,9 +934,18 @@ function testV161() {
   assert(wp.speed < 90 && wp.leech > 0, 'il Fatuo e lento ma drena vita (leech ' + wp.leech + ')');
   assert(Mon.ORDER.indexOf('bat_swarm') >= 0 && Mon.ORDER.indexOf('wisp') >= 0, 'entrambi presenti nel ROSTER (ORDER)');
 
-  // --- comparsa: per ora dall ondata 1 (temporaneo, in attesa del tier definitivo) ---
-  const p1 = Waves.poolForWave(1).map(x => x.id);
-  assert(p1.indexOf('bat_swarm') >= 0 && p1.indexOf('wisp') >= 0, 'entrambi nel pool dell ondata 1 (prova)');
+  // --- comparsa (v1.61.1): il Nugolo dalla 6, il Fuoco Fatuo dalla 8 ---
+  // Il Nugolo sta prima della Sfera d'Ossa: entrambi insegnano a mirare dove il nemico SARA, ma il
+  // Nugolo lo chiede col tiro (guidare) e la Sfera coi piedi (schivare di lato).
+  // Il Fuoco Fatuo sta dopo, perche' toglie una risposta che a quel punto il giocatore ha gia imparato:
+  // mettersi al riparo. Arrivare prima sarebbe una regola tolta prima di averla insegnata.
+  const at = w => Waves.poolForWave(w).map(x => x.id);
+  assert(!at(5).includes('bat_swarm') && at(6).includes('bat_swarm'), 'il Nugolo entra dall ondata 6');
+  assert(!at(7).includes('wisp') && at(8).includes('wisp'), 'il Fuoco Fatuo entra dall ondata 8');
+  assert(!at(1).includes('bat_swarm') && !at(1).includes('wisp'), 'nessuno dei due e piu nell ondata 1');
+  const wBat = Waves.poolForWave(6).find(x => x.id === 'bat_swarm').weight;
+  const wWisp = Waves.poolForWave(8).find(x => x.id === 'wisp').weight;
+  assert(wBat === 10 && wWisp === 8, 'pesi nel pool: Nugolo 10, Fuoco Fatuo 8 (sotto lo sciame base a 40)');
   assert(bs.weight === 0 && wp.weight === 0, 'peso 0 nella def: la comparsa la decide solo poolForWave');
 
   // --- IL FATUO ATTRAVERSA DAVVERO I MURI ---

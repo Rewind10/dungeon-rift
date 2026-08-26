@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.61.0`
+**Versione attuale:** `1.61.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -15,8 +15,9 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   vita e si cura** con quella che ti ha tolto.
 - Nessuno dei due ha un'immagine: sono matematica, come il Fungo e la Sfera d'Ossa. Il vincolo tecnico
   (niente animazioni di camminata complesse) e' di nuovo il criterio con cui sono stati scelti.
-- **Per ora compaiono gia' dall'ondata 1**, per poterli provare: da che punto entreranno davvero e' ancora da
-  decidere.
+- Il **Nugolo entra dall'ondata 6**, il **Fuoco Fatuo dall'ondata 8** *(v1.61.1)*. In quest'ordine perche' il
+  Nugolo insegna a **guidare il tiro** e il Fatuo **toglie il riparo**: prima si impara una risposta, poi si
+  scopre che contro qualcosa non basta. Ora c'e' un archetipo nuovo per ogni ondata dalla 1 alla 8.
 - Il **Fungo Sporifero** non si sposta piu' se lo urti: e' piantato per davvero.
 
 ## 🪓 Il Troll smette di essere legnoso *(novita v1.60)*
