@@ -2,6 +2,48 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.60.0] — 2026-08-26 · "Il Troll smette di essere legnoso"
+
+Lastre nuove fornite dall'artista (stessa griglia 5×5 @256px). Prima di toccare il codice le ho **misurate
+frame per frame** con Pillow: l'alpha di ogni cella dice dove sono i piedi, la testa e il centro. Tre difetti
+venivano dai numeri, non dal disegno.
+
+#### 📏 L'ancora dell'attacco era sbagliata di 11px
+- Misurato sui PNG: piedi a y **196-199** (idle), **196-202** (walk), **215-221** (attack). Il manifest
+  dichiarava `ay 205` per l'attacco: il troll **saltava di 11px** ogni volta che colpiva, e ne rientrava
+  finita l'animazione. È il classico difetto che si legge come "legnoso" senza che si capisca perché.
+- Corretto a **216**. Ora le tre animazioni poggiano sulla stessa linea del terreno.
+
+#### 🔨 La martellata arrivava tre fotogrammi prima del danno
+- L'impatto visivo è al **fotogramma 15** (misurato: piedi a 221, il punto più basso; testa che crolla da 5 a
+  88). Il server infligge il danno a `slamHit 0.72`, che con la mappatura lineare mostrava il **fotogramma
+  18** — la posa di recupero. Vedevi colpire e incassavi un attimo dopo.
+- Nuova mappatura a **due tratti** ancorata a `hitFrame`: 0→15 su 0→slamHit, 15→24 su slamHit→1. L'impatto
+  cade esattamente sul danno **qualunque** valore abbia `slamHit`.
+- I primi **7 fotogrammi sono una posa ferma** (area e posizione identiche): la curva `^0.72` li brucia in
+  fretta e indugia sul caricamento, dove l'anticipo serve davvero.
+
+#### 👣 Il passo è agganciato al terreno
+- La camminata non va più a fps fisso ma a **distanza percorsa** (`cyclePx`, come per la Sfera d'Ossa). I
+  piedi non slittano più, e se la velocità cambia — elite, rallentamenti, scaling d'ondata — la cadenza si
+  adegua da sola invece di restare inchiodata a 13 fps.
+
+#### 🎞️ Dissolvenza fra animazioni e giro del verso
+- I cambi idle↔walk↔attack erano **tagli netti**. Ora c'è una dissolvenza di **0.14s** (`blend` nel manifest).
+- Il verso non si ribalta di scatto: passa per lo zero, quindi il troll si **gira** schiacciandosi invece di
+  specchiarsi in un fotogramma.
+
+#### 👁️ Beholder dall'ondata 10
+- Era alla 15, ora entra dalla **10** (secondo boss). Il tetto di 8 presenze resta.
+
+#### 🧪 Test
+- Nuovo **testV160**: verifica che il manifest descriva davvero le lastre, che le tre ancore stiano sulla
+  linea dei piedi **misurata**, che la mappatura a due tratti mandi `hitFrame` esattamente su `slamHit` e
+  non torni mai indietro, e che la cadenza del passo a velocità nominale sia plausibile.
+  **384 passati, 0 falliti.**
+
+---
+
 ### [1.59.0] — 2026-08-26 · "Il Beholder smette di essere una boa"
 
 Nella 1.58 del Beholder erano cambiati solo i numeri (ondata 15, tetto di 8). Qui cambia come si muove.

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.59.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.60.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.60 (il Troll smette di essere legnoso)
+- **📏 Ancora dell'attacco corretta**: era sbagliata di 11px e il troll *saltava* ogni volta che colpiva.
+  Misurata sui PNG nuovi frame per frame.
+- **🔨 Impatto allineato al danno**: la martellata si vedeva 3 fotogrammi prima di quando il server fa danno.
+  Nuova mappatura a due tratti ancorata al fotogramma d'impatto.
+- **👣 Passo agganciato al terreno**: la camminata va a distanza percorsa, non a fps fisso. Niente slittamento,
+  e la cadenza si adegua se la velocita' cambia.
+- **🎞️ Dissolvenza di 0.14s** fra le animazioni (prima tagli netti) e giro del verso smorzato.
+- **👁️ Beholder dall'ondata 10** invece che dalla 15.
+- Test: **384 passati, 0 falliti**.
 
 ## 🆕 Novita v1.59 (il Beholder smette di essere una boa)
 - **🦑 Eyestalks come appendici**: steli curvi con frequenza e fase proprie, non piu' 7 aloni fissi. Spuntano

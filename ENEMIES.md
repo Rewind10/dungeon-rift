@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.59.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.60.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -669,6 +669,19 @@ naturale, niente rig, niente frame-consistency da combattere perché i frame son
   del danno = frame d'impatto a schermo), `slamRadius 108`. IA invariata (`brute`: FOV-slam, vagabondaggio, anti-incastro).
 - L'attacco è pilotato dal `slam_wind` (con eid): `R.hitAttack(e, dur)` avvia i 25 frame; l'evento `slam` (senza eid)
   aggiunge la scossa/onda d'urto all'impatto.
+
+### C-bis) v1.60 — quello che va MISURATO, non stimato
+Con lastre nuove, prima di toccare il codice conviene misurarle: uno script Pillow che per ogni cella calcola
+il bounding box dell'alpha dice tre cose che a occhio non si vedono.
+- **`ay` per animazione** = la riga dei piedi (y massimo del contenuto). Se le animazioni hanno `ay` diversi
+  dalla loro riga dei piedi reale, il mostro **salta** passando da una all'altra. Nella v1.60 l'attacco era
+  ancorato a 205 con i piedi a 216: 11px di scarto.
+- **Fotogramma d'impatto** = quello col contenuto piu' basso (i piedi affondano) e la testa piu' bassa. Va
+  dichiarato come `hitFrame` e agganciato a `slamHit`, altrimenti il colpo si vede prima del danno.
+- **Fotogrammi morti** = celle con area e posizione identiche in testa all'animazione. Vanno bruciati con una
+  curva (`^0.72`) invece di occupare un quinto del tempo utile.
+Il passo va poi agganciato alla **distanza percorsa** (`cyclePx`), mai a fps fisso: e' l'unico modo perche' i
+piedi non slittino quando la velocita' cambia.
 
 ### D) Aggiungere un altro sprite-sheet (ricetta)
 1. PNG (una griglia per animazione, celle uniformi) + `nome.json` (`cols/rows/cell/charH` e per anim `frames/fps/ax/ay`).

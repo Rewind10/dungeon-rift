@@ -1277,7 +1277,7 @@
       else if (def.roller) { this._rollerF(ctx, m, rr, def, atk); }   // v1.58 — rotola: l'animazione e una rotazione
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
-        if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }
+        if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0, pv)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }
       else if (def.front) { const flip = Math.cos(m.f) < 0 ? -1 : 1; const back = Math.sin(m.f) < -0.35; let moving = false; if (def.puppet) { moving = !!moveInfo(m.e).on; } this._front(ctx, def.shape, rr, bodyc, dk, def.eye || '#fff', this.time, atk, back, flip, moving, m.fl > 0, m.el); } // v1.30 billboard · v1.36 movimento · v1.38 hit · v1.39 elite (tint)
       else { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); }
       ctx.restore();
@@ -1604,33 +1604,72 @@
     // v1.47 — RENDER SPRITE-SHEET: sceglie l'animazione (idle/walk/attack), il frame (dal tempo o dalla fase
     // d'attacco), ritaglia la cella dalla griglia e la disegna ancorata ai PIEDI. Mirror orizzontale per direzione.
     // Il contesto è già traslato su (m.x, m.y). Ritorna false se gli asset non sono pronti (fallback al chiamante).
-    _drawSheet(key, ctx, m, r, def, atk, moving, flip, hit) {
+    _drawSheet(key, ctx, m, r, def, atk, moving, flip, hit, pv) {
       const reg = SHEETS[key]; reg.load(); if (!reg.ready) return false;
-      const man = reg.man, cell = man.cell, cols = man.cols;
-      // stato → animazione
-      let animName = (atk && atk > 0.001) ? 'attack' : (moving ? 'walk' : 'idle');
-      let A = man.anims[animName] || man.anims.idle; let img = reg.imgs[animName] || reg.imgs.idle;
-      if (!img) { animName = 'idle'; A = man.anims.idle; img = reg.imgs.idle; if (!img) return false; }
-      // frame: one-shot (attacco) mappa la fase atk 0..1; altrimenti loop temporale a fps
-      let fi;
-      if (A.oneShot) fi = Math.max(0, Math.min(A.frames - 1, Math.floor((atk || 0) * A.frames)));
-      else fi = Math.floor(this.time * A.fps + (m.e || 0) * 0.7) % A.frames; // sfasa i cloni
-      const col = fi % cols, row = (fi / cols) | 0, sxp = col * cell, syp = row * cell;
-      const s = (2.9 * r) / man.charH;         // scala: altezza personaggio ≈ 2.9·raggio (tank imponente)
-      const dw = cell * s, dh = cell * s;
-      // v1.48 — OMBRA propria ai PIEDI: il contesto è già su (m.x,m.y) e l'anchor (ax,ay) cade qui → piedi all'origine.
-      // Piccola ellisse sfocata proprio sotto i piedi (niente più ombra generica staccata/troppo bassa).
+      const man = reg.man, cell = man.cell, cols = man.cols, t = this.time;
+      // v1.60 — stato per-entita'. Serve per tre cose che una funzione pura del tempo non puo' fare:
+      // la DISTANZA percorsa (per agganciare il passo al terreno), la DISSOLVENZA fra due animazioni
+      // e il VERSO smorzato. Senza, i piedi slittano e ogni cambio di stato e' uno scatto.
+      const ST = this._shS = this._shS || {};
+      const S = ST[m.e] = ST[m.e] || { x: m.x, y: m.y, d: 0, anim: null, prev: null, prevFi: 0, fi: 0, fade: 1, flip: flip, lt: t };
+      const dt = Math.max(0.001, Math.min(0.05, t - S.lt)); S.lt = t;
+      S.d += Math.hypot(m.x - S.x, m.y - S.y); S.x = m.x; S.y = m.y;
+
+      const animName = (atk && atk > 0.001) ? 'attack' : (moving ? 'walk' : 'idle');
+      if (S.anim !== animName) { S.prev = S.anim; S.prevFi = S.fi; S.anim = animName; S.fade = 0; }
+      S.fade = Math.min(1, S.fade + dt / (man.blend || 0.14));
+
+      const frameOf = (A) => {
+        if (A.oneShot) {
+          // v1.60 — mappatura a DUE TRATTI ancorata al fotogramma d'impatto. Prima era lineare:
+          // con 25 fotogrammi la martellata si vedeva al 15 (0.60) ma il danno arriva a slamHit (0.72),
+          // cioe' tre fotogrammi dopo. Si vedeva colpire e si subiva un attimo dopo.
+          // In piu' i primi 7 fotogrammi sono una posa ferma: la curva (^0.72) li brucia in fretta e
+          // indugia sul caricamento, che e' dove serve l'anticipo.
+          const hf = (A.hitFrame != null) ? A.hitFrame : Math.round(A.frames * 0.6);
+          const hp = def.slamHit || 0.72;
+          const a = Math.max(0, Math.min(1, atk || 0));
+          const f = (a <= hp) ? Math.pow(a / (hp || 1), 0.72) * hf
+                              : hf + ((a - hp) / (1 - hp)) * (A.frames - 1 - hf);
+          return Math.max(0, Math.min(A.frames - 1, Math.round(f)));
+        }
+        if (A.cyclePx) {
+          // v1.60 — PASSO AGGANCIATO AL TERRENO: la fase viene dalla distanza percorsa, non dall'orologio.
+          // Cosi' i piedi non slittano mai, e se la velocita' cambia (elite, rallentamenti, scaling)
+          // la cadenza si adegua da sola invece di restare a fps fisso.
+          return Math.floor((S.d / A.cyclePx) * A.frames + (m.e || 0) * 0.7) % A.frames;
+        }
+        return Math.floor(t * A.fps + (m.e || 0) * 0.7) % A.frames;
+      };
+
+      // v1.60 — il verso non si ribalta di scatto: passa per lo zero, quindi il troll si "gira" schiacciandosi
+      S.flip += (flip - S.flip) * Math.min(1, dt * 13);
+      const fx = Math.abs(S.flip) < 0.05 ? (S.flip < 0 ? -0.05 : 0.05) : S.flip;
+
+      // ombra propria ai piedi (l'anchor cade sull'origine): non ruota col verso
       ctx.save(); ctx.filter = 'blur(' + Math.max(1, r * 0.10).toFixed(1) + 'px)'; ctx.fillStyle = 'rgba(0,0,0,0.42)';
       ctx.beginPath(); ctx.ellipse(0, -r * 0.04, r * 0.72, r * 0.24, 0, 0, 7); ctx.fill(); ctx.restore();
-      ctx.save();
-      if (flip < 0) ctx.scale(-1, 1);
-      const ox = -A.ax * s, oy = -A.ay * s;    // sposta la cella così che l'anchor (ax,ay) sia sul punto-terra
-      if (hit) ctx.filter = 'brightness(1.7) saturate(1.2)'; // hit-flash
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(img, sxp, syp, cell, cell, ox, oy, dw, dh);
-      ctx.restore();
+
+      const s = (2.9 * r) / man.charH, dw = cell * s, dh = cell * s;
+      const drawOne = (nm, fi, alpha) => {
+        const A = man.anims[nm]; const img = reg.imgs[nm]; if (!A || !img) return;
+        const c0 = fi % cols, r0 = (fi / cols) | 0;
+        ctx.save(); ctx.globalAlpha = ctx.globalAlpha * alpha; ctx.scale(fx, 1);
+        if (hit) ctx.filter = 'brightness(1.7) saturate(1.2)';
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(img, c0 * cell, r0 * cell, cell, cell, -A.ax * s, -A.ay * s, dw, dh);
+        ctx.restore();
+      };
+
+      const A = man.anims[animName] || man.anims.idle;
+      if (!reg.imgs[animName] && !reg.imgs.idle) return false;
+      const fi = frameOf(A); S.fi = fi;
+      // dissolvenza: l'animazione uscente sfuma mentre entra la nuova (prima era un taglio netto)
+      if (S.prev && S.prev !== animName && S.fade < 1) drawOne(S.prev, S.prevFi, 1 - S.fade);
+      drawOne(animName, fi, S.fade);
       return true;
     },
+
     _zombieF(ctx, r, col, dk, eye, t, atk, back) {
       const D = '#0a0c12'; const phase = t * 7; const walk = Math.sin(phase); const bob = Math.sin(phase * 2) * r * 0.05;
       const swing = Math.sin((atk || 0) * Math.PI); const lp = (a, b) => a + (b - a) * swing;

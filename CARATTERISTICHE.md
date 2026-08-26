@@ -1,10 +1,21 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.59.0`
+**Versione attuale:** `1.60.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🪓 Il Troll smette di essere legnoso *(novita v1.60)*
+- Con le lastre nuove, tre difetti che sembravano di disegno erano in realta' **di numeri**, trovati misurando
+  i fotogrammi uno per uno: l'attacco era ancorato 11px troppo in alto (il troll *saltava* colpendo), la
+  martellata si vedeva **tre fotogrammi prima** del momento in cui il danno arriva davvero, e il passo andava
+  a cadenza fissa mentre il corpo si muoveva a un'altra velocita' (i piedi slittavano).
+- Ora le tre animazioni poggiano sulla stessa linea, l'impatto coincide con il danno, e il **passo e'
+  agganciato alla distanza percorsa**: se il troll rallenta o accelera, la camminata lo segue.
+- I passaggi fra fermo, cammino e attacco hanno una **dissolvenza**, e il cambio di direzione e' un giro
+  invece di uno specchiamento istantaneo.
+- Il **Beholder** compare dall'ondata 10 invece che dalla 15.
 
 ## 👁️ Il Beholder smette di essere una boa *(novita v1.59)*
 - Gli **eyestalks** non sono piu' sette aloni fissi: sono **steli curvi** che ondeggiano ognuno con la sua

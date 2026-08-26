@@ -520,7 +520,7 @@ function testV149() {
   assert(oc && oc.gazeFov > 0 && oc.gazeRange > 0, 'ha un campo visivo (gazeFov + gazeRange)');
   assert(oc && oc.gazeCycle > 0, 'le eyestalks RUOTANO: alterna il tipo di sguardo (gazeCycle)');
   assert(Mon.ORDER.indexOf('occhio') >= 0, 'occhio presente nell ORDER del bestiario');
-  assert(Waves.poolForWave(15).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 15 (v1.58: tardi e col tetto di presenze)');
+  assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 10 (col tetto di presenze)');
   const dt = 1 / C.TICK_RATE;
   const room = new Room('v149'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
   room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
@@ -605,7 +605,7 @@ function testV150() {
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
   assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
-  assert(!at(14).includes('occhio') && at(15).includes('occhio'), 'Beholder introdotto all ondata 15');
+  assert(!at(9).includes('occhio') && at(10).includes('occhio'), 'Beholder introdotto all ondata 10');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -857,8 +857,8 @@ function testV158() {
   // ---------- BEHOLDER: tardi e col tetto ----------
   const oc = Mon.MONSTERS.occhio;
   assert(oc.maxAlive === 8, 'il Beholder ha un tetto di 8 presenze contemporanee');
-  assert(!Waves.poolForWave(14).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 15');
-  assert(Waves.poolForWave(15).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 15');
+  assert(!Waves.poolForWave(9).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 10');
+  assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 10');
   const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'enforcer'); r4.startGame();
   r4.pending = 0; r4.waveList = []; r4.monsters.length = 0;
   for (let i = 0; i < 12; i++) { const t = r4._capType('occhio'); const pos = r4.randomSpawnPos();
@@ -907,6 +907,50 @@ function testV159() {
   assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
   ok('novita v1.59 verificate');
 }
+function testV160() {
+  console.log('\n[TEST 31] Novita v1.60 — Troll: ancora, impatto e passo allineati; Beholder dall ondata 10');
+  const Mon = require('../shared/monsters.js');
+  const man = JSON.parse(require('fs').readFileSync(__dirname + '/../public/assets/enemies/troll_sheet/troll.json', 'utf8'));
+  const br = Mon.MONSTERS.cave_brute;
+
+  // il manifest descrive davvero le lastre: 5x5 celle da 256 = 1280x1280
+  assert(man.cols * man.cell === 1280 && man.rows * man.cell === 1280, 'la griglia del manifest copre la lastra (1280x1280)');
+  assert(man.anims.idle.frames <= man.cols * man.rows && man.anims.walk.frames <= 25 && man.anims.attack.frames <= 25, 'i conteggi dei fotogrammi stanno nella griglia');
+
+  // ANCORA: le tre animazioni devono poggiare sulla stessa linea del terreno.
+  // Misurate sui PNG nuovi: piedi a y 196-199 (idle), 196-202 (walk), 215-221 (attack).
+  // Prima l'attacco era ancorato a 205 e il troll "saltava" di 11px ogni volta che colpiva.
+  const feet = { idle: 198, walk: 199, attack: 216 };
+  for (const k of ['idle', 'walk', 'attack']) {
+    assert(Math.abs(man.anims[k].ay - feet[k]) <= 3, 'ancora ' + k + ' sulla linea dei piedi (ay ' + man.anims[k].ay + ', atteso ~' + feet[k] + ')');
+  }
+
+  // IMPATTO: il fotogramma della martellata deve coincidere con l'istante in cui il server fa danno.
+  assert(man.anims.attack.hitFrame != null, 'il manifest dichiara il fotogramma d impatto');
+  assert(man.anims.attack.hitFrame === 15, 'l impatto e al fotogramma 15 (misurato: piedi a 221, testa a 88)');
+  assert(br.slamHit > 0 && br.slamHit < 1, 'il server ha un istante di danno normalizzato (slamHit ' + br.slamHit + ')');
+  // la mappatura a due tratti manda hitFrame esattamente su slamHit
+  const A = man.anims.attack, hf = A.hitFrame, hp = br.slamHit;
+  const frameAt = (a) => { const f = (a <= hp) ? Math.pow(a / hp, 0.72) * hf : hf + ((a - hp) / (1 - hp)) * (A.frames - 1 - hf);
+    return Math.max(0, Math.min(A.frames - 1, Math.round(f))); };
+  assert(frameAt(hp) === hf, 'a slamHit si vede esattamente il fotogramma d impatto');
+  assert(frameAt(0) === 0 && frameAt(1) === A.frames - 1, 'la mappatura copre tutta l animazione');
+  let mono = true; for (let i = 1; i <= 20; i++) if (frameAt(i / 20) < frameAt((i - 1) / 20)) mono = false;
+  assert(mono, 'la mappatura non torna mai indietro');
+
+  // PASSO AGGANCIATO AL TERRENO: il manifest dichiara quanti px copre un ciclo completo
+  assert(man.anims.walk.cyclePx > 0, 'la camminata dichiara cyclePx (passo agganciato alla distanza)');
+  const eff = br.speed * Math.max(0.6, Math.min(1.45, 16 / br.radius));
+  const cyclesPerSec = eff / man.anims.walk.cyclePx;
+  assert(cyclesPerSec > 0.1 && cyclesPerSec < 1.2, 'a velocita nominale la cadenza e plausibile (' + cyclesPerSec.toFixed(2) + ' cicli/s)');
+  assert(man.blend > 0, 'e dichiarata la dissolvenza fra animazioni');
+
+  // BEHOLDER dall ondata 10
+  assert(!Waves.poolForWave(9).some(x => x.id === 'occhio'), 'niente Beholder alla 9');
+  assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder dalla 10');
+  assert(Mon.MONSTERS.occhio.maxAlive === 8, 'il tetto di 8 presenze resta');
+  ok('novita v1.60 verificate');
+}
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
   const Mon = require('../shared/monsters.js');
@@ -929,8 +973,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.59)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.60)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -42,7 +42,7 @@
     if (w >= 4) add('cave_brute', 8);     // tank con slam ad area
     if (w >= 5) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
     if (w >= 7) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
-    if (w >= 15) add('occhio', 9);        // debuffer tier 3, tardi e col tetto di 8 vivi (def.maxAlive)
+    if (w >= 10) add('occhio', 9);        // debuffer tier 3, dal secondo boss, col tetto di 8 vivi (def.maxAlive)
     return p;
   }
 

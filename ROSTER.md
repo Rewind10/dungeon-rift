@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.59.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.60.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -42,7 +42,7 @@ per i nemici d'ondata).
 | 4 | 🟠 Troll delle Caverne | 8 |
 | 5 | 🍄 Fungo Sporifero | 10 |
 | 7 | 💀 Sfera d'Ossa | 9 |
-| 15 | 👁️ Beholder *(max 8 vivi)* | 9 |
+| 10 | 👁️ Beholder *(max 8 vivi)* | 9 |
 
 La rampa è **monotona**: una volta entrato, un archetipo non esce più dal pool (verificato da `testV150`).
 
@@ -96,6 +96,9 @@ Tank da mischia: lento e telegrafato, ma se ti raggiunge fa malissimo. Colpo ad 
 - **IA:** `brute` · **Gittata att.:** 72 · **Cooldown:** 2.1s · **Raggio slam:** 108 · **XP:** 26
 - **Accento:** `#ffb14a` · **Render:** **SPRITE SHEET** `troll` (idle/walk/attack, 3 fogli 5×5 @256px) · **Comparsa:** ondata 4
 - **Elite:** `eliteHp 1.5` *(v1.50)* — moltiplicatore PV ridotto rispetto al 2.4 standard, altrimenti fuori scala.
+- *(v1.60)* Lastre nuove, misurate frame per frame. Ancora dell'attacco corretta (`ay` 205→216: prima
+  "saltava" di 11px colpendo), **impatto al fotogramma 15** agganciato a `slamHit`, **passo agganciato alla
+  distanza percorsa** (`cyclePx 150`) e dissolvenza di 0.14s fra le animazioni.
 - **Meccaniche:**
   - **SLAM a due tempi** guidato dagli eventi: `slam_wind` (con eid) avvia i 25 frame d'attacco, il danno scatta
     a `slamHit 0.72` dello swing — l'istante in cui il martello tocca terra a schermo. `slamWind 0.78`,
@@ -155,7 +158,7 @@ Niente gambe, niente camminata: si carica e parte come una palla da bowling.
 | 🟠 Troll delle Caverne | `cave_brute` | 2 | 220 | 60 | 26 | 28 | 72 | brute | tank area | 4+ |
 | 🍄 Fungo Sporifero | `spore_fungus` | 1 | 110 | 0 | 20 | 11 | 340 | sentry | zona / immobile | 5+ |
 | 💀 Sfera d'Ossa | `bone_roller` | 2 | 120 | 96 | 19 | 20 | 30 | roller | carica rotolante | 7+ |
-| 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 15+ (max 8) |
+| 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 10+ (max 8) |
 | 🟢 Melma Minore *(divisione)* | `slime_mini` | 0 | 34 | 66 | 13 | 7 | 110 | blob | evocato | — |
 | 🟢 Zombie Minore | `zombie_mini` | 0 | 26 | 120 | 12 | 8 | 34 | swarm | evocato | — |
 
