@@ -27,11 +27,20 @@
     // Lento, coriaceo; overlay: nucleo verde pulsante + occhi che avvampano + AURA VERDE (def.aura) + bolle acide.
     // v1.45 — la Melma STRISCIA lenta; quando è VICINA SALTA e SPUTA bolle d'acido ad ALTO danno (attacco ravvicinato).
     // v1.46 — Melma Corrosiva in vista TOP-DOWN (pozza fluo che striscia): render dedicato _slimePuddle (niente billboard).
-    slime: { id: 'slime', name: 'Melma Corrosiva', tier: 1, hp: 90, speed: 52, radius: 22, dmg: 12, atkRange: 150, atkCd: 1.7, ai: 'blob', atk: 'ranged', xp: 9, weight: 12, color: '#2f3a1c', color2: '#141a0c', eye: '#a6ff3a', shape: 'slime', topdown: true, puppet: true, bubbles: true, sightRange: 560, projSpeed: 205, projColor: '#a6ff3a', acidMult: 1.8, acidCount: 3 },
+    slime: { id: 'slime', name: 'Melma Corrosiva', tier: 1, hp: 90, speed: 52, radius: 22, dmg: 12, atkRange: 150, atkCd: 1.7, ai: 'blob', atk: 'ranged', xp: 9, weight: 12, color: '#2f3a1c', color2: '#141a0c', eye: '#a6ff3a', shape: 'slime', topdown: true, puppet: true, bubbles: true, sightRange: 560, projSpeed: 205, projColor: '#a6ff3a', acidMult: 1.8, acidCount: 3, splitInto: 'slime_mini', splitCount: 2 },  // v1.58 — alla morte si DIVIDE in due melme minori
     // v1.49 — BEHOLDER (id 'occhio'): reintrodotto. Bulbo oculare fluttuante con eye-stalks e tentacoli
     // tutt'intorno (render _eyeF). NON spara: il suo attacco e' lo SGUARDO (debuff nel campo visivo, gazer).
     // Le EYESTALKS RUOTANO -> alterna ciclicamente i 3 tipi di sguardo (weaken/slow/sunder); fascio ricolorato.
-    occhio: { id: 'occhio', name: 'Beholder', tier: 3, hp: 130, speed: 92, radius: 22, dmg: 16, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 24, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff5ad0', shape: 'beholder', puppet: true, beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 340, strafeDist: 240, gazeCycle: 4, eliteHp: 1.9 },  // v1.49 — reso col RENDER PUPPET raster (illustrazione ritagliata) + iris che segue
+    occhio: { id: 'occhio', name: 'Beholder', tier: 3, hp: 130, speed: 92, radius: 22, dmg: 16, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 24, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff5ad0', shape: 'beholder', puppet: true, beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 340, strafeDist: 240, gazeCycle: 4, eliteHp: 1.9, maxAlive: 8 },  // v1.49 — reso col RENDER PUPPET raster (illustrazione ritagliata) + iris che segue
+    // v1.58 — FUNGO SPORIFERO: immobile. Vive dove nasce e semina zone di spore dove ti trovi: e' il nemico
+    // che punisce chi resta fermo, ruolo che al roster mancava. Zero animazione di camminata (non cammina).
+    spore_fungus: { id: 'spore_fungus', name: 'Fungo Sporifero', tier: 1, hp: 110, speed: 0, radius: 20, dmg: 11, atkRange: 340, atkCd: 3.1, ai: 'sentry', atk: 'zone', xp: 12, weight: 0, color: '#2f3a24', color2: '#151c10', eye: '#c8ff6a', shape: 'fungus', front: true, fungus: true, immobile: true, sightRange: 340, spores: 2, zoneRadius: 62, zoneDelay: 1.05, zoneMult: 1.0, projColor: '#a6ff3a', eliteHp: 2.0 },
+    // v1.58 — SFERA D'OSSA: niente gambe. Carica, poi rotola in linea retta rimbalzando sui muri.
+    // Ti obbliga a schivare di lato, cosa che nessun altro nemico faceva.
+    bone_roller: { id: 'bone_roller', name: 'Sfera d\'Ossa', tier: 2, hp: 120, speed: 96, radius: 19, dmg: 20, atkRange: 30, atkCd: 0.8, ai: 'roller', atk: 'melee', xp: 18, weight: 0, color: '#cfc7b0', color2: '#5d574a', eye: '#ff7a3b', shape: 'roller', front: true, roller: true, sightRange: 470, rollWind: 0.62, rollTime: 2.3, rollSpeed: 3.1, rollCd: 1.5, rollKnock: 3.2, eliteHp: 1.9 },
+    // v1.58 — MELMA MINORE: nasce dalla divisione della Melma Corrosiva. Riusa lo stesso sprite a raggio
+    // ridotto (come lo Zombie Minore col ghoul): zero asset nuovi. NON si divide a sua volta.
+    slime_mini: { id: 'slime_mini', name: 'Melma Minore', tier: 0, hp: 34, speed: 66, radius: 13, dmg: 7, atkRange: 110, atkCd: 1.6, ai: 'blob', atk: 'ranged', xp: 4, weight: 0, color: '#2f3a1c', color2: '#141a0c', eye: '#a6ff3a', shape: 'slime', topdown: true, puppet: true, bubbles: true, minion: true, sightRange: 420, projSpeed: 190, projColor: '#a6ff3a', acidMult: 1.4, acidCount: 2 },
     // v1.30 — Mimic MANTENUTO solo come CASSA: non entra nel pool delle ondate (weight 0),
     // compare esclusivamente dalle casse-mima e dalla modalità TESORO. Sprite top-down a forziere.
     mimic: { id: 'mimic', name: 'Bestia Mimica', tier: 2, hp: 150, speed: 150, radius: 19, dmg: 26, atkRange: 40, atkCd: 1.0, ai: 'ambush', atk: 'melee', xp: 14, weight: 0, color: '#8a5a2b', color2: '#4a2f16', eye: '#ff3b3b', shape: 'mimic', chestOnly: true },
@@ -41,6 +50,6 @@
     lich_king: { id: 'lich_king', name: 'Re Lich', tier: 4, boss: true, hp: 2200, speed: 116, radius: 30, dmg: 26, atkRange: 420, atkCd: 1.1, ai: 'boss_lich', atk: 'ranged', xp: 200, weight: 0, color: '#2f4a6a', color2: '#12233a', eye: '#7dffea', shape: 'lich', projSpeed: 280, projColor: '#7dffea', summon: 'skeleton', summonCd: 5, summonCount: 5, shieldCd: 7, shieldTime: 3.5 },
     mega_dragon: { id: 'mega_dragon', name: 'AZ\'GAROTH, il Divoratore di Mondi', tier: 6, boss: true, mega: true, hp: 9000, speed: 104, radius: 52, dmg: 52, atkRange: 520, atkCd: 0.9, ai: 'boss_dragon', atk: 'special', xp: 800, weight: 0, color: '#5a0d2a', color2: '#2a0512', eye: '#ff2d55', shape: 'dragon', projSpeed: 340, projColor: '#ff2d55', enrageAtHp: 0.4 },
   };
-  const ORDER = ['skeleton', 'darkmage', 'cave_brute', 'slime', 'occhio'];
+  const ORDER = ['skeleton', 'slime', 'slime_mini', 'darkmage', 'cave_brute', 'spore_fungus', 'bone_roller', 'occhio'];
   return { MONSTERS, BOSSES, ORDER };
 });

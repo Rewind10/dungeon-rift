@@ -930,6 +930,94 @@
       ctx.beginPath(); ctx.ellipse(x, y + 30, 46 + bt * 6, 18 + bt * 3, 0, 0, 7); ctx.stroke();
       this._drawVendor(ctx, { x, y, kind: 'smith', name: 'Fabbro', face: 0, sub: 'emporio' });
     },
+    // v1.58 — FUNGO SPORIFERO. Immobile per design: tutto il movimento sta nel respiro del cappello e
+    // nell'urto di quando sputa le spore. Vettoriale puro, nessun asset.
+    _fungusF(ctx, m, r, def, atk) {
+      const t = this.time, eye = def.eye || '#c8ff6a';
+      const a = atk || 0;
+      const puff = a > 0 ? Math.sin(Math.min(1, a) * Math.PI) : 0;         // gonfia -> sgonfia
+      const breathe = 1 + Math.sin(t * 1.6 + m.x * 0.02) * 0.035 + puff * 0.30;
+      ctx.save();
+      // micelio a terra
+      ctx.strokeStyle = 'rgba(120,160,80,.22)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (let i = 0; i < 7; i++) { const an = (i / 7) * 6.283 + m.x * 0.01;
+        ctx.beginPath(); ctx.moveTo(0, r * 0.55); ctx.lineTo(Math.cos(an) * r * 1.35, r * 0.55 + Math.sin(an) * r * 0.34); ctx.stroke(); }
+      ctx.lineCap = 'butt';
+      ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.95, r * 0.34, 0, 0, 7); ctx.fill();
+      // gambo
+      const st = ctx.createLinearGradient(0, -r * 0.2, 0, r * 0.6); st.addColorStop(0, '#d8d0b4'); st.addColorStop(1, '#7d745c');
+      ctx.fillStyle = st; ctx.strokeStyle = '#2a2a1e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-r * 0.28, r * 0.6); ctx.quadraticCurveTo(-r * 0.20, 0, -r * 0.22, -r * 0.25);
+      ctx.lineTo(r * 0.22, -r * 0.25); ctx.quadraticCurveTo(r * 0.20, 0, r * 0.28, r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // lamelle luminose sotto il cappello
+      ctx.save(); ctx.scale(breathe, breathe);
+      const gl = ctx.createRadialGradient(0, -r * 0.18, 1, 0, -r * 0.18, r * 1.05);
+      gl.addColorStop(0, this._rgba ? this._rgba(eye, 0.55 + puff * 0.4) : eye); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(0, -r * 0.14, r * 1.0, r * 0.42, 0, 0, 7); ctx.fill();
+      // cappello
+      const cg = ctx.createLinearGradient(0, -r * 1.15, 0, -r * 0.1);
+      cg.addColorStop(0, '#4a5a34'); cg.addColorStop(1, '#202a16');
+      ctx.fillStyle = cg; ctx.strokeStyle = '#12180c'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.28, r * 1.02, r * 0.78, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // macchie
+      ctx.fillStyle = 'rgba(200,255,120,.55)';
+      for (const d of [[-0.44, -0.62, 0.15], [0.30, -0.72, 0.13], [0.62, -0.44, 0.10], [-0.10, -0.86, 0.11]])
+        { ctx.beginPath(); ctx.ellipse(d[0] * r, d[1] * r, d[2] * r, d[2] * r * 0.72, 0, 0, 7); ctx.fill(); }
+      // occhietti sotto la cuffia
+      ctx.fillStyle = eye; ctx.globalAlpha = 0.65 + 0.35 * Math.sin(t * 3);
+      ctx.beginPath(); ctx.arc(-r * 0.18, -r * 0.12, r * 0.09, 0, 7); ctx.arc(r * 0.18, -r * 0.12, r * 0.09, 0, 7); ctx.fill();
+      ctx.globalAlpha = 1; ctx.restore();
+      // spore che salgono quando spara
+      if (puff > 0.02) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 9; i++) { const an = (i / 9) * 6.283 + t, rr2 = r * (0.5 + puff * 1.5);
+          ctx.fillStyle = this._rgba ? this._rgba(eye, 0.5 * puff) : eye;
+          ctx.beginPath(); ctx.arc(Math.cos(an) * rr2, -r * 0.5 + Math.sin(an) * rr2 * 0.5 - puff * r, r * 0.10, 0, 7); ctx.fill(); }
+        ctx.restore(); }
+      ctx.restore();
+    },
+    // v1.58 — SFERA D'OSSA. La rotazione e ricavata dallo SPOSTAMENTO REALE (niente frame): rotola davvero,
+    // e quando e ferma resta ferma. In carica si schiaccia e vibra.
+    _rollerF(ctx, m, r, def, atk) {
+      const t = this.time, eye = def.eye || '#ff7a3b';
+      this._roll = this._roll || {}; this._rollP = this._rollP || {};
+      const prev = this._rollP[m.e]; let step = 0;
+      if (prev) step = Math.hypot(m.x - prev.x, m.y - prev.y);
+      this._rollP[m.e] = { x: m.x, y: m.y };
+      const dir = step > 0.4 ? Math.atan2(m.y - (prev ? prev.y : m.y), m.x - (prev ? prev.x : m.x)) : (m.f || 0);
+      this._roll[m.e] = (this._roll[m.e] || 0) + (step / Math.max(6, r)) * (Math.cos(dir) >= 0 ? 1 : -1);
+      const spin = this._roll[m.e];
+      const a = atk || 0;
+      const wind = a > 0 ? Math.sin(Math.min(1, a) * Math.PI) : 0;      // carica: schiaccia e trema
+      const sx = 1 + wind * 0.22, sy = 1 - wind * 0.18;
+      const shake = wind * 2.4;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(0, r * 0.72, r * 0.86, r * 0.3, 0, 0, 7); ctx.fill();
+      ctx.translate(Math.sin(t * 40) * shake, Math.cos(t * 37) * shake * 0.6);
+      ctx.scale(sx, sy); ctx.rotate(spin);
+      // sfera di ossa
+      const bg = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.15, 0, 0, r);
+      bg.addColorStop(0, '#efe8d2'); bg.addColorStop(0.6, '#cfc7b0'); bg.addColorStop(1, '#6f6857');
+      ctx.fillStyle = bg; ctx.strokeStyle = '#3a3527'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+      // suture / placche
+      ctx.strokeStyle = 'rgba(60,54,40,.75)'; ctx.lineWidth = 2;
+      for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(0, 0, r * (0.92 - k * 0.06), r * (0.34 + k * 0.2), k * 1.05, 0, 7); ctx.stroke(); }
+      // spuntoni d'osso
+      ctx.fillStyle = '#e6dfc8'; ctx.strokeStyle = '#3a3527'; ctx.lineWidth = 1.6;
+      for (let k = 0; k < 6; k++) { const an = (k / 6) * 6.283; ctx.save(); ctx.rotate(an);
+        ctx.beginPath(); ctx.moveTo(-r * 0.16, -r * 0.94); ctx.lineTo(0, -r * 1.24); ctx.lineTo(r * 0.16, -r * 0.94); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      // orbite accese
+      ctx.fillStyle = '#171410'; ctx.beginPath(); ctx.ellipse(-r * 0.3, -r * 0.1, r * 0.19, r * 0.24, -0.2, 0, 7); ctx.ellipse(r * 0.3, -r * 0.1, r * 0.19, r * 0.24, 0.2, 0, 7); ctx.fill();
+      const gp = 0.6 + 0.4 * Math.sin(t * 5) + wind * 0.5;
+      ctx.fillStyle = this._rgba ? this._rgba(eye, Math.min(1, gp)) : eye;
+      ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.1, r * 0.10, 0, 7); ctx.arc(r * 0.3, -r * 0.1, r * 0.10, 0, 7); ctx.fill();
+      ctx.restore();
+      // scia di polvere mentre rotola
+      if (step > 1.2) { ctx.save(); ctx.globalAlpha = 0.28;
+        for (let i = 1; i <= 3; i++) { ctx.fillStyle = '#8a8270';
+          ctx.beginPath(); ctx.arc(-Math.cos(dir) * r * i * 0.7, -Math.sin(dir) * r * i * 0.7 + r * 0.4, r * (0.3 - i * 0.06), 0, 7); ctx.fill(); }
+        ctx.restore(); }
+    },
     _drawDarkMerchant(ctx, mrc, me) {
       const t = this.time; const x = mrc.x, y = mrc.y; const bob = Math.sin(t * 1.6) * 1.4; const flick = 0.6 + 0.4 * Math.sin(t * 9 + x);
       // v1.32 — beacon SEMPRE visibile (parità col Mercante Errante): colonna di luce viola/cremisi + anello pulsante
@@ -1185,6 +1273,8 @@
       // ora attivano davvero l'animazione di CAMMINATA invece di restare in idle mentre scivolano.
       const moveInfo = (e) => { const gm = this._gmv || (this._gmv = {}); let pv = gm[e]; if (!pv) { pv = gm[e] = { x: m.x, y: m.y, mv: 0, on: 0, dir: 0 }; return pv; } const dx = m.x - pv.x, dy = m.y - pv.y, sp = Math.hypot(dx, dy); pv.mv = pv.mv != null ? pv.mv * 0.8 + sp * 0.2 : sp; if (pv.on) { if (pv.mv < 0.10) pv.on = 0; } else { if (pv.mv > 0.28) pv.on = 1; } if (sp > 0.05) pv.dir = Math.atan2(dy, dx); pv.x = m.x; pv.y = m.y; return pv; };
       if (def.topdown) { const pv = moveInfo(m.e); this._slimePuddle(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.46 — MELMA top-down (pozza fluo)
+      else if (def.fungus) { this._fungusF(ctx, m, rr, def, atk); }   // v1.58 — immobile: nessuna camminata da animare
+      else if (def.roller) { this._rollerF(ctx, m, rr, def, atk); }   // v1.58 — rotola: l'animazione e una rotazione
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
         if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }

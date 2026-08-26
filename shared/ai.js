@@ -178,6 +178,54 @@
         if (m.gazeTick <= 0) { m.gazeTick = ctx.GAZE_TICK || 0.4; ctx.gaze(m, p, m.gazeKind); }
       } else { m.gazeActive = 0; }
     },
+    // v1.58 — SENTINELLA (Fungo Sporifero): non si muove MAI. Nessun ciclo di camminata da animare, e in
+    // cambio nega il terreno: se ti vede, semina zone di spore dove sei. Punisce chi resta fermo.
+    sentry(m, ctx) {
+      m.mx = m.my = 0;
+      const p = ctx.nearest(m); if (!p) { m.alert = 0; return; }
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+      const seen = d <= (m.def.sightRange || 340) && ctx.losClear(m.x, m.y, p.x, p.y);
+      m.alert = seen ? 1 : 0;
+      if (!seen) return;
+      m.facing = Math.atan2(p.y - m.y, p.x - m.x);
+      if (m.atkT > 0) return;
+      m.atkT = m.def.atkCd;
+      ctx.emit({ t: 'spore', e: m.eid, x: m.x, y: m.y, c: m.def.projColor });
+      const n = m.def.spores || 2;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, r = i === 0 ? 0 : MU.rand(46, 104);
+        ctx.zone(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, m.def.zoneRadius || 62,
+          m.def.zoneDelay || 1.05, Math.round(m.dmg * (m.def.zoneMult || 1)), m.def.projColor || '#9fe06a');
+      }
+    },
+    // v1.58 — ROTOLANTE (Sfera d'Ossa): niente gambe, niente camminata. Si carica, poi CORRE in linea retta
+    // e rimbalza sui muri finche' non si esaurisce. L'animazione e' una rotazione: la fa il renderer.
+    roller(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+      if (!m.rolling) {
+        m.mx = m.my = 0; m.rollCd = (m.rollCd || 0) - ctx.dt;
+        m.facing = Math.atan2(p.y - m.y, p.x - m.x);
+        if (m.rollCd > 0) { m.windT = 0; return; }
+        if (d > (m.def.sightRange || 470) || !ctx.losClear(m.x, m.y, p.x, p.y)) { m.windT = 0; return; }
+        if (!m.windT) ctx.emit({ t: 'roll_wind', e: m.eid, x: m.x, y: m.y, dur: m.def.rollWind || 0.62 });
+        m.windT = (m.windT || 0) + ctx.dt;
+        if (m.windT >= (m.def.rollWind || 0.62)) {
+          const n = MU.norm(p.x - m.x, p.y - m.y);
+          m.rolling = 1; m.windT = 0; m.rollLeft = m.def.rollTime || 2.3; m.rvx = n.x; m.rvy = n.y;
+          ctx.emit({ t: 'roll_go', e: m.eid, x: m.x, y: m.y });
+        }
+        return;
+      }
+      const sp = m.speed * (m.def.rollSpeed || 3.1);
+      const step = sp * ctx.dt + m.radius * 0.9;
+      if (ctx.isWallAt(m.x + m.rvx * step, m.y)) { m.rvx = -m.rvx; ctx.emit({ t: 'roll_hit', x: m.x, y: m.y }); }
+      if (ctx.isWallAt(m.x, m.y + m.rvy * step)) { m.rvy = -m.rvy; ctx.emit({ t: 'roll_hit', x: m.x, y: m.y }); }
+      m.mx = m.rvx * sp; m.my = m.rvy * sp; m.facing = Math.atan2(m.rvy, m.rvx);
+      if (d <= m.def.atkRange + p.radius && m.atkT <= 0) { ctx.melee(m, p, m.dmg, m.def.rollKnock || 3.2); m.atkT = m.def.atkCd; }
+      m.rollLeft -= ctx.dt;
+      if (m.rollLeft <= 0) { m.rolling = 0; m.rollCd = m.def.rollCd || 1.5; }
+    },
     summoner(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < m.def.atkRange * 0.5) flee(m, ctx, 0.85); else if (d > m.def.atkRange) seek(m, ctx, 0.85); else stop(m, p); m.summonT = (m.summonT || 0) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 6.5; for (let i = 0; i < (m.def.summonCount || 3); i++) { const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 40; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 0) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 8; m.shielded = m.def.shieldTime || 3; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.zoneT = (m.zoneT || MU.rand(3, 5)) - ctx.dt; if (m.zoneT <= 0 && d <= m.def.atkRange) { ctx.zone(p.x, p.y, 66, 1.0, m.dmg * 1.3, m.def.projColor); m.zoneT = MU.rand(4.5, 7); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },
     boss_warlord(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const e = m.hp / m.maxHp <= (m.def.enrageAtHp || 0.5); m.summonT = (m.summonT || 3) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 7; for (let i = 0; i < (m.def.summonCount || 4); i++) { const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } seek(m, ctx, e ? (m.def.enrageSpeed || 1.7) : 1.1); const d = MU.dist(m.x, m.y, p.x, p.y); if (d <= m.def.atkRange && m.atkT <= 0) { ctx.areaDamage(m.x, m.y, m.def.slamRadius || 90, m.dmg * (e ? 1.5 : 1), '#ff5252', 2.6); m.atkT = m.def.atkCd; ctx.emit({ t: 'slam', x: m.x, y: m.y, r: m.def.slamRadius || 90 }); } },
     boss_lich(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < 260) flee(m, ctx, 0.9); else if (d > m.def.atkRange) seek(m, ctx, 0.9); else stop(m, p); m.summonT = (m.summonT || 2) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 5; for (let i = 0; i < (m.def.summonCount || 5); i++) { const a = Math.random() * Math.PI * 2, r = 50 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 4) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 7; m.shielded = m.def.shieldTime || 3.5; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.novaT = (m.novaT || 3) - ctx.dt; if (m.novaT <= 0) { m.novaT = 5.5; for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; ctx.shoot(m, Math.cos(a), Math.sin(a), m.def.projSpeed * 0.8, m.dmg * 0.7, m.def.projColor); } ctx.emit({ t: 'nova', x: m.x, y: m.y }); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },

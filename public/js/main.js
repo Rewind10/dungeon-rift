@@ -58,6 +58,11 @@
       case 'market': HUD.modeBanner('\uD83C\uDFEA MERCATO', '#ffcf4a', 'Nessun nemico \u00b7 potenzia l\'equipaggiamento e prosegui dal portale EXIT'); HUD.killfeed('\uD83C\uDFEA <b style="color:#ffcf4a">MERCATO</b> \u2014 il portale <b>EXIT</b> porta all\'ondata ' + ev.next); break;
       case 'market_exit': HUD.killfeed('\uD83D\uDEAA <b>' + esc(ev.name || 'Qualcuno') + '</b> ha varcato il portale EXIT'); break;
       case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
+      case 'spore': if (ev.e != null) R.hitAttack(ev.e, 0.9); R.ring(ev.x, ev.y - 6, ev.c || '#a6ff3a', 4, 34, 0.45); R.burst(ev.x, ev.y - 8, ev.c || '#a6ff3a', 12, 120, 0.6); break;  // v1.58 — il fungo sbuffa
+      case 'roll_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.62); R.ring(ev.x, ev.y, '#ff7a3b', 3, 26, 0.35); break;  // v1.58 — la sfera si carica
+      case 'roll_go': A.kill && A.kill(false); R.burst(ev.x, ev.y, '#cfc7b0', 10, 150, 0.35); break;
+      case 'roll_hit': R.addShake(4); R.burst(ev.x, ev.y, '#cfc7b0', 8, 130, 0.3); R.ring(ev.x, ev.y, '#8a8270', 4, 30, 0.25); break;  // rimbalzo sul muro
+      case 'split': R.ring(ev.x, ev.y, ev.c || '#a6ff3a', 5, 40, 0.4); R.burst(ev.x, ev.y, ev.c || '#a6ff3a', 16, 160, 0.5); break;  // v1.58 — la melma si divide
       case 'merchant_leave': if (ev.dark) { G._darkOpen = false; HUD.hideMerchant(true); } else { G._merchOpen = false; HUD.hideMerchant(false); } break;
       case 'merchant_buy': A.buy(); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 60, 0.5); R.burst(ev.x, ev.y, ev.color || '#ffd24a', 16, 160, 0.5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> acquistato dal mercante!`); break;
       case 'dark_buy': A.evo(); R.ring(ev.x, ev.y, ev.color || '#7b2cbf', 10, 90, 0.6); R.burst(ev.x, ev.y, ev.color || '#a4133c', 22, 200, 0.6); R.addShake(5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 ${esc(ev.note || 'patto siglato')}`); break;

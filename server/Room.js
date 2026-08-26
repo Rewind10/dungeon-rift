@@ -116,6 +116,7 @@ class Room {
   // muoversi ma non avanza (wedge in un angolo, senza essere dentro un muro). Qui prova a SCIVOLARE: tra 8 direzioni
   // sceglie quella non bloccata più allineata all'intento; se persiste, fa un piccolo salto verso una cella libera.
   _recoverStuck(m, aim) {
+    if (m.def && m.def.immobile) return;   // v1.58 — il fungo non e incastrato: sta fermo per design
     const r = m.radius * 0.8; const step = Math.max(8, m.speed * this.dt * 1.2);
     let bx = null, by = null, best = -Infinity;
     for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; const nx = m.x + Math.cos(a) * step, ny = m.y + Math.sin(a) * step; if (this._blk(nx, ny, r)) continue; const score = 1 + Math.cos(a - aim); if (score > best) { best = score; bx = nx; by = ny; } }
@@ -462,8 +463,27 @@ class Room {
     for (const o of this.monsters) { if (o === m || o.dead) continue; const dd = MU.dist2(m.x, m.y, o.x, o.y); if (dd < bd) { bd = dd; best = o; } }
     if (best) { const dmg = 6 + 4 * (src.boon.chain || 0); this.events.push({ t: 'chain', x1: m.x, y1: m.y, x2: best.x, y2: best.y }); this.damageMonster(best, dmg, m.x, m.y, 0, src, src.boon.frostChain ? { slow: true } : {}); if (jumps > 1) this._chain(best, src, jumps - 1); }
   }
+  // v1.58 — tetto di presenze per tipo (def.maxAlive): serve per i nemici che in gruppo diventano
+  // insopportabili (il Beholder debilita, otto Beholder ti spengono). Se il tetto e' pieno si ripiega
+  // sullo sciame base invece di saltare lo spawn, cosi' il conteggio dell'ondata resta quello previsto.
+  _capType(typeId) {
+    const def = Mon.MONSTERS[typeId]; if (!def || !def.maxAlive) return typeId;
+    let alive = 0; for (const m of this.monsters) if (!m.dead && m.type === typeId) alive++;
+    return alive >= def.maxAlive ? 'skeleton' : typeId;
+  }
   killMonster(m, src) {
     m.dead = true;
+    // v1.58 — DIVISIONE: la Melma alla morte lascia due melme minori (che non si dividono a loro volta).
+    if (m.def.splitInto && !m.minion && !m.treasure && this.monsters.length < 200) {
+      const n = m.def.splitCount || 2;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + Math.random(), r = 16 + Math.random() * 14;
+        const mm = this.spawnMonster(m.def.splitInto, m.x + Math.cos(a) * r, m.y + Math.sin(a) * r,
+          { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) });
+        if (mm) { mm.minion = true; mm.awake = true; }
+      }
+      this.events.push({ t: 'split', x: m.x, y: m.y, c: m.def.eye });
+    }
     this.events.push({ t: 'mkill', x: m.x, y: m.y, id: m.type, f: +(m.facing || 0).toFixed(2), boss: m.boss, elite: m.elite, mega: m.mega });
     if (m.boss || m.elite || m.treasure) this.events.push({ t: 'hitstop', d: m.mega ? 0.16 : (m.boss ? 0.12 : 0.06) });
     if (src) {
@@ -582,9 +602,9 @@ class Room {
     const inCombat = (this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS);
     // MODALITÀ sopravvivenza: timer + respawn continuo
     if (inCombat && this.surviveT > 0) { this.surviveT -= dt; }
-    if (inCombat && this.pending > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(it.type, pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
+    if (inCombat && this.pending > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
-    if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this.monsters.length < 14) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(it.id, pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
+    if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this.monsters.length < 14) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {

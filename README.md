@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.57.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.58.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.58 (due nemici senza gambe, Melma che si divide, Beholder col tetto)
+- **🍄 Fungo Sporifero** (ondata 5+): **immobile**, semina zone di spore dove sei. Il primo nemico che
+  punisce chi resta fermo. Vettoriale, zero asset.
+- **💀 Sfera d'Ossa** (ondata 7+): si carica e **rotola in linea retta** rimbalzando sui muri. Ti obbliga a
+  schivare di lato. L'animazione e' una rotazione ricavata dallo spostamento: niente frame da disegnare.
+- **🟢 La Melma si divide**: alla morte lascia 2 Melme Minori (stesso sprite a raggio ridotto). Le minori
+  non si dividono.
+- **👁️ Beholder**: entra solo dall'**ondata 15** e ha un **tetto di 8 presenze**; oltre il tetto lo spawn
+  ripiega sullo sciame base.
+- Test: **361 passati, 0 falliti**.
 
 ## 🆕 Novita v1.57 (il mercato e' una SALA SCAVATA)
 - **⛏️ Siamo sottoterra**: via case, alberi e staccionate della v1.56. Il generatore parte da **roccia piena**

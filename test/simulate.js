@@ -397,7 +397,7 @@ function testV139() {
   const Mon = require('../shared/monsters.js');
   // roster PUPPET: zombie + negromante (entrambi puppet); spettro/occhio restano rimossi
   for (const id of ['spettro']) assert(!Mon.MONSTERS[id], 'nemico vettoriale ancora rimosso: ' + id); // v1.49 — occhio reintrodotto (Beholder)
-  assert(Mon.ORDER.slice(0, 2).join(',') === 'skeleton,darkmage', 'ORDER inizia con skeleton,darkmage');
+  assert(Mon.ORDER[0] === 'skeleton' && Mon.ORDER.includes('darkmage'), 'ORDER parte dallo sciame base e contiene il Negromante');
   const z = Mon.MONSTERS.skeleton, dm = Mon.MONSTERS.darkmage, mn = Mon.MONSTERS.zombie_mini;
   assert(z && z.puppet && z.shape === 'ghoul', 'Zombie Putrido = puppet ghoul');
   // Negromante: puppet 'mage', ranged, con curse + fov + evocazione limitata
@@ -520,7 +520,7 @@ function testV149() {
   assert(oc && oc.gazeFov > 0 && oc.gazeRange > 0, 'ha un campo visivo (gazeFov + gazeRange)');
   assert(oc && oc.gazeCycle > 0, 'le eyestalks RUOTANO: alterna il tipo di sguardo (gazeCycle)');
   assert(Mon.ORDER.indexOf('occhio') >= 0, 'occhio presente nell ORDER del bestiario');
-  assert(Waves.poolForWave(6).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 6, dopo il primo boss');
+  assert(Waves.poolForWave(15).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 15 (v1.58: tardi e col tetto di presenze)');
   const dt = 1 / C.TICK_RATE;
   const room = new Room('v149'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
   room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
@@ -605,7 +605,7 @@ function testV150() {
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
   assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
-  assert(!at(5).includes('occhio') && at(6).includes('occhio'), 'Beholder introdotto all ondata 6');
+  assert(!at(14).includes('occhio') && at(15).includes('occhio'), 'Beholder introdotto all ondata 15');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -801,6 +801,86 @@ function testV157() {
   ok('novita v1.57 verificate');
 }
 
+function testV158() {
+  console.log('\n[TEST 29] Novita v1.58 — Fungo immobile, Sfera d\'Ossa rotolante, Melma che si divide, tetto al Beholder');
+  const Mon = require('../shared/monsters.js');
+  const dt = 1 / C.TICK_RATE;
+
+  // ---------- FUNGO SPORIFERO: non si muove, nega il terreno ----------
+  const fg = Mon.MONSTERS.spore_fungus;
+  assert(!!fg && fg.ai === 'sentry' && fg.immobile, 'il Fungo esiste, e immobile e usa la IA sentry');
+  assert(fg.speed === 0, 'velocita zero: niente camminata da animare');
+  const r1 = new Room('v158a'); const p1 = r1.addPlayer('b', { send() {} }, 'B', 'enforcer'); r1.startGame();
+  r1.pending = 0; r1.waveList = []; p1.hp = 9999; p1.maxHp = 9999;
+  const f = r1.spawnMonster('spore_fungus', p1.x + 200, p1.y, { scaling: Waves.scaling(6, 1) });
+  const fx = f.x, fy = f.y;
+  r1.zones.length = 0;
+  for (let i = 0; i < C.TICK_RATE * 5 && !r1.zones.length; i++) r1.update(dt);
+  assert(Math.abs(f.x - fx) < 1 && Math.abs(f.y - fy) < 1, 'il Fungo non si sposta di un pixel');
+  assert(r1.zones.length > 0, 'vedendo il giocatore semina zone di spore');
+  assert(r1.zones.every(z => z.r > 0 && z.dmg > 0), 'le zone hanno raggio e danno');
+  // il danno arriva solo dopo il telegrafo
+  const z = r1.zones[0]; assert(z.t > 0, 'la zona e telegrafata: fa danno dopo un ritardo');
+
+  // ---------- SFERA D'OSSA: carica, rotola, rimbalza ----------
+  const br = Mon.MONSTERS.bone_roller;
+  assert(!!br && br.ai === 'roller' && br.rollSpeed > 1, 'la Sfera d\'Ossa esiste e usa la IA roller');
+  const r2 = new Room('v158b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
+  r2.pending = 0; r2.waveList = []; p2.hp = 9999; p2.maxHp = 9999;
+  const b2 = r2.spawnMonster('bone_roller', p2.x + 260, p2.y, { scaling: Waves.scaling(8, 1) });
+  r2.events.length = 0;
+  let winded = false, rolled = false, moved = 0; let bx = b2.x, by = b2.y;
+  for (let i = 0; i < C.TICK_RATE * 6; i++) { r2.update(dt);
+    for (const e of r2.events) { if (e.t === 'roll_wind') winded = true; if (e.t === 'roll_go') rolled = true; }
+    moved = Math.max(moved, MU.dist(b2.x, b2.y, bx, by)); }
+  assert(winded, 'si carica prima di partire (telegrafo roll_wind)');
+  assert(rolled, 'poi parte in carica (roll_go)');
+  assert(moved > 40, 'durante la carica percorre distanza (' + Math.round(moved) + 'px)');
+  const hp0 = p2.hp; p2.x = b2.x + 8; p2.y = b2.y; b2.atkT = 0;
+  for (let i = 0; i < 20 && p2.hp >= hp0; i++) r2.update(dt);
+  assert(p2.hp < hp0, 'travolge il giocatore che colpisce');
+
+  // ---------- MELMA CHE SI DIVIDE ----------
+  assert(Mon.MONSTERS.slime.splitInto === 'slime_mini', 'la Melma si divide in melme minori');
+  assert(!Mon.MONSTERS.slime_mini.splitInto, 'la Melma Minore NON si divide a sua volta (niente catena infinita)');
+  const r3 = new Room('v158c'); const p3 = r3.addPlayer('b', { send() {} }, 'B', 'enforcer'); r3.startGame();
+  r3.pending = 0; r3.waveList = []; r3.monsters.length = 0;
+  const sl = r3.spawnMonster('slime', p3.x + 120, p3.y, { scaling: Waves.scaling(4, 1) });
+  r3.killMonster(sl, p3);
+  const minis = r3.monsters.filter(x => x.type === 'slime_mini' && !x.dead);
+  assert(minis.length === (Mon.MONSTERS.slime.splitCount || 2), 'alla morte lascia ' + minis.length + ' melme minori');
+  assert(minis.every(x => x.minion), 'le minori sono marcate come minion');
+  const before = r3.monsters.filter(x => !x.dead).length;
+  r3.killMonster(minis[0], p3);
+  assert(r3.monsters.filter(x => !x.dead).length < before, 'uccidendo una minore non ne nascono altre');
+
+  // ---------- BEHOLDER: tardi e col tetto ----------
+  const oc = Mon.MONSTERS.occhio;
+  assert(oc.maxAlive === 8, 'il Beholder ha un tetto di 8 presenze contemporanee');
+  assert(!Waves.poolForWave(14).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 15');
+  assert(Waves.poolForWave(15).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 15');
+  const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'enforcer'); r4.startGame();
+  r4.pending = 0; r4.waveList = []; r4.monsters.length = 0;
+  for (let i = 0; i < 12; i++) { const t = r4._capType('occhio'); const pos = r4.randomSpawnPos();
+    r4.spawnMonster(t, pos.x, pos.y, { scaling: Waves.scaling(15, 1) }); }
+  const alive = r4.monsters.filter(x => x.type === 'occhio' && !x.dead).length;
+  assert(alive <= oc.maxAlive, 'oltre il tetto non ne compaiono altri (' + alive + ' vivi su 12 tentativi)');
+  assert(r4.monsters.filter(x => x.type === 'skeleton').length > 0, 'oltre il tetto si ripiega sullo sciame base');
+
+  // ---------- la rampa resta monotona e ordinata ----------
+  const at2 = w => Waves.poolForWave(w).map(x => x.id);
+  assert(!at2(4).includes('spore_fungus') && at2(5).includes('spore_fungus'), 'Fungo introdotto all ondata 5');
+  assert(!at2(6).includes('bone_roller') && at2(7).includes('bone_roller'), 'Sfera d\'Ossa introdotta all ondata 7');
+  let mono2 = true; for (let w = 1; w < 20; w++) { const a = at2(w), b = at2(w + 1); if (!a.every(id => b.includes(id))) mono2 = false; }
+  assert(mono2, 'la rampa resta monotona con i nemici nuovi');
+  // niente NaN con tutti i nuovi in campo
+  const r5 = new Room('v158e'); const p5 = r5.addPlayer('b', { send() {} }, 'B', 'enforcer'); r5.startGame();
+  r5.pending = 0; r5.waveList = [];
+  for (const id of ['spore_fungus', 'bone_roller', 'slime', 'occhio']) { const pos = r5.randomSpawnPos(); r5.spawnMonster(id, pos.x, pos.y, { scaling: Waves.scaling(15, 1) }); }
+  for (let i = 0; i < C.TICK_RATE * 8; i++) { r5.setInput('b', bot(r5, p5)); r5.update(dt); if (hasNaN(r5)) break; }
+  assert(hasNaN(r5) === null, 'nessun NaN con i nemici nuovi in campo');
+  ok('novita v1.58 verificate');
+}
 function testV147() {
   console.log('\n[TEST 22] Novita v1.47 — Troll delle Caverne reso con SPRITE SHEET animato (idle/walk/attack)');
   const Mon = require('../shared/monsters.js');
@@ -823,8 +903,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.57)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.58)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

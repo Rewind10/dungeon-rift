@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.57.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.58.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -40,7 +40,9 @@ per i nemici d'ondata).
 | 2 | 🟢 Melma Corrosiva | 16 |
 | 3 | 🟣 Negromante | 12 |
 | 4 | 🟠 Troll delle Caverne | 8 |
-| 6 | 👁️ Beholder *(dopo il primo boss)* | 9 |
+| 5 | 🍄 Fungo Sporifero | 10 |
+| 7 | 💀 Sfera d'Ossa | 9 |
+| 15 | 👁️ Beholder *(max 8 vivi)* | 9 |
 
 La rampa è **monotona**: una volta entrato, un archetipo non esce più dal pool (verificato da `testV150`).
 
@@ -116,6 +118,31 @@ Bulbo oculare fluttuante con eye-stalks e tentacoli. **Non spara**: ti **debilit
 
 ---
 
+## 🍄 Fungo Sporifero · `spore_fungus`
+Immobile. Non insegue nessuno: nega il terreno.
+
+- **Tier:** 1 · **PV:** 110 · **Velocità:** 0 (mai) · **Raggio:** 20 · **Danno zona:** 11
+- **IA:** `sentry` · **Vista:** 340 · **Cooldown:** 3.1s · **XP:** 12 · **Comparsa:** ondata 5
+- **Accento:** `#c8ff6a` · **Render:** vettoriale `fungus` (nessun asset)
+- **Meccaniche:** se ti vede con LOS libera semina **2 zone di spore** telegoriche (raggio 62, ritardo 1.05s)
+  centrate su di te. Il cappello si gonfia prima dello sbuffo: il telegrafo è sul corpo, non solo a terra.
+- **Nota:** `def.immobile` lo esclude dall'anti-incastro del server — non è bloccato, sta fermo per design.
+
+## 💀 Sfera d'Ossa · `bone_roller`
+Niente gambe, niente camminata: si carica e parte come una palla da bowling.
+
+- **Tier:** 2 · **PV:** 120 · **Velocità:** 96 (×3.1 in carica) · **Raggio:** 19 · **Danno:** 20
+- **IA:** `roller` · **Vista:** 470 · **Gittata att.:** 30 · **XP:** 18 · **Comparsa:** ondata 7
+- **Accento:** `#ff7a3b` · **Render:** vettoriale `roller` (nessun asset)
+- **Meccaniche:** carica per **0.62s** (`roll_wind`, si schiaccia e trema), poi corre **2.3s** in linea retta
+  **rimbalzando sui muri**; travolge con forte respinta. Poi 1.5s di pausa. La rotazione a schermo è
+  calcolata dallo **spostamento reale**: se sta ferma non gira.
+
+## 🟢 Melma Minore · `slime_mini` *(dalla divisione)*
+- **Tier:** 0 · **PV:** 34 · **Velocità:** 66 · **Raggio:** 13 · **Danno:** 7 · **XP:** 4
+- Nasce **due alla volta** dalla morte della Melma Corrosiva (`splitInto`/`splitCount`). Riusa il puppet
+  `slime` a raggio ridotto: nessun asset nuovo. **Non si divide** a sua volta.
+
 ## 📊 Tabella comparativa (nemici d'ondata)
 
 | Nemico | id | Tier | PV | Vel. | Raggio | Danno | Gittata | IA | Archetipo | Ondata |
@@ -124,7 +151,10 @@ Bulbo oculare fluttuante con eye-stalks e tentacoli. **Non spara**: ti **debilit
 | 🟢 Melma Corrosiva | `slime` | 1 | 90 | 52 | 22 | 12 | 150 | blob | zona / acido | 2+ |
 | 🟣 Negromante | `darkmage` | 2 | 96 | 72 | 18 | 14 | 340 | necromancer | caster / evoca | 3+ |
 | 🟠 Troll delle Caverne | `cave_brute` | 2 | 220 | 60 | 26 | 28 | 72 | brute | tank area | 4+ |
-| 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 6+ |
+| 🍄 Fungo Sporifero | `spore_fungus` | 1 | 110 | 0 | 20 | 11 | 340 | sentry | zona / immobile | 5+ |
+| 💀 Sfera d'Ossa | `bone_roller` | 2 | 120 | 96 | 19 | 20 | 30 | roller | carica rotolante | 7+ |
+| 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 15+ (max 8) |
+| 🟢 Melma Minore *(divisione)* | `slime_mini` | 0 | 34 | 66 | 13 | 7 | 110 | blob | evocato | — |
 | 🟢 Zombie Minore | `zombie_mini` | 0 | 26 | 120 | 12 | 8 | 34 | swarm | evocato | — |
 
 ### ⚠️ La "Vel." in tabella NON è la velocità in gioco

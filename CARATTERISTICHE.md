@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.57.0`
+**Versione attuale:** `1.58.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 👾 Tre aggiunte al bestiario, nessuna con le gambe *(novita v1.58)*
+- **🍄 Fungo Sporifero** (dall'ondata 5): **non si muove mai**. Se ti vede semina zone di spore telegrafate
+  dove ti trovi. E' il primo nemico che rende pericoloso restare fermi.
+- **💀 Sfera d'Ossa** (dall'ondata 7): si carica, poi **rotola in linea retta** rimbalzando sui muri e
+  travolgendo chi trova. Ti obbliga a schivare di lato, cosa che nessun altro nemico faceva.
+- **🟢 La Melma Corrosiva si divide**: alla morte lascia due **Melme Minori**. Le minori non si dividono a
+  loro volta.
+- **👁️ Il Beholder e' stato messo al guinzaglio**: compare solo dall'**ondata 15** e non piu' di **8 alla
+  volta**. Il tetto vale anche in Sopravvivenza.
+- Entrambi i nemici nuovi sono disegnati **senza sprite e senza cicli di camminata**: uno sta fermo,
+  l'altro rotola. Il vincolo tecnico e' diventato il criterio con cui sono stati scelti.
 
 ## ⛏️ Il mercato e' una SALA SCAVATA *(novita v1.57)*
 - Siamo **sottoterra**, e ora si vede: niente case, alberi o staccionate. Il mercato e' una **camera scavata

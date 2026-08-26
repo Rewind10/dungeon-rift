@@ -2,6 +2,50 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.58.0] — 2026-08-26 · "Due nemici senza gambe, la Melma che si divide, il Beholder col guinzaglio"
+
+Tre aggiunte al bestiario scelte per **non richiedere cicli di camminata**: il vincolo tecnico diventa il
+criterio di design invece di un ostacolo.
+
+#### 🍄 Fungo Sporifero (`spore_fungus`) — ondata 5+
+- **Immobile**: `speed 0`, IA `sentry`. Non insegue, non vaga, non cammina. Se ti vede (LOS libera,
+  340px) semina **zone di spore telegrafate** dove ti trovi, due per volta.
+- Riempie il buco meccanico che il roster aveva: **nessun nemico puniva lo stare fermi**. Ora il terreno
+  sotto i piedi diventa una risorsa.
+- Render vettoriale, **zero asset**: cappello che respira, lamelle luminose, gonfiata prima dello sbuffo.
+- L'anti-incastro del server lo **ignora** (`def.immobile`): non è bloccato, sta fermo per design.
+
+#### 💀 Sfera d'Ossa (`bone_roller`) — ondata 7+
+- Niente gambe: si **carica** (telegrafo `roll_wind`, 0.62s), poi **corre in linea retta** rimbalzando sui
+  muri per ~2.3s a 3.1× la sua velocità, e travolge chi trova.
+- Anche qui un buco colmato: nessun nemico ti obbligava a **schivare di lato**.
+- L'animazione è una **rotazione ricavata dallo spostamento reale**, non da frame: rotola davvero, e se sta
+  ferma non gira. Scia di polvere in corsa, schiacciamento in carica.
+
+#### 🟢 La Melma si divide
+- `slime` alla morte lascia **2 Melme Minori** (`slime_mini`), che riusano lo stesso sprite a raggio
+  ridotto — **nessun asset nuovo**, come lo Zombie Minore col ghoul.
+- Le minori **non si dividono**: niente catena infinita. Verificato dal test.
+
+#### 👁️ Beholder col guinzaglio
+- Entra nel pool solo dall'**ondata 15** (prima: 6) e ha un **tetto di 8 presenze contemporanee**
+  (`def.maxAlive`). Otto debuffer addosso non sono una sfida, sono un interruttore.
+- Il tetto è un meccanismo **generico**: quando è pieno lo spawn ripiega sullo sciame base invece di
+  saltare, così il conteggio dell'ondata resta quello previsto. Vale anche per la modalità Sopravvivenza.
+
+#### 🌊 Rampa aggiornata
+| Ondata | 1 | 2 | 3 | 4 | 5 | 7 | 15 |
+|---|---|---|---|---|---|---|---|
+| Entra | Zombie | Melma | Negromante | Troll | **Fungo** | **Sfera d'Ossa** | Beholder |
+
+#### 🧪 Test
+- Nuovo **testV158**: il Fungo non si sposta di un pixel e semina zone telegrafate; la Sfera si carica,
+  parte, percorre distanza e travolge; la Melma lascia esattamente 2 minori e le minori non si dividono;
+  il tetto del Beholder regge a 12 tentativi di spawn e ripiega sullo sciame; la rampa resta monotona.
+  Aggiornati testV139/V149/V150 (Beholder spostato alla 15). **361 passati, 0 falliti.**
+
+---
+
 ### [1.57.0] — 2026-08-25 · "Il mercato è una sala scavata, non un villaggio"
 
 La v1.56 aveva un errore di ambientazione: case col tetto spiovente, alberi e staccionate **sottoterra**.
