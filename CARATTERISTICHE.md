@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.61.1`
+**Versione attuale:** `1.62.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🔥 Il terreno conta *(novita v1.62)*
+- **Pozze di pericolo** in ogni mappa: lava nelle caverne, ghiaccio nelle cripte gelate, melma nelle rovine.
+  Ti fanno male se ci resti dentro — ma le fanno anche ai mostri, quindi diventano un'arma se sai attirarli.
+- Non possono **mai** chiudere un passaggio: nascono solo dove c'e' spazio per aggirarle. Non ti costringono
+  mai a incassare danno per passare.
+- **Non si parte piu' sempre dallo stesso punto** e non si esce piu' sempre dallo stesso angolo. Sembra poco,
+  ma era il motivo per cui il percorso mentale di ogni partita era identico.
+- **Piu' oggetti sparsi** fra una zona tematica e l'altra: la differenza fra una stanza arredata e una stanza
+  che sembra vissuta.
+- Ogni zona ha un **nome** ("Cripta Dimenticata", "Caverne di Lava", "Tempio Arcano"): erano gia' scritti nel
+  gioco da sempre e non li vedeva nessuno.
 
 ## 🦇 Lo sciame e il fuoco fatuo *(novita v1.61)*
 - **Nugolo di Pipistrelli**: non e' un nemico, e' **nove pipistrelli** che si muovono insieme. Poca vita, ma

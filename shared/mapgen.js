@@ -48,6 +48,19 @@
     const grid = new Uint8Array(W * H).fill(C.T_FLOOR);
     for (let x = 0; x < W; x++) { grid[idx(x, 0)] = C.T_WALL; grid[idx(x, 1)] = C.T_WALL; grid[idx(x, H - 1)] = C.T_WALL; grid[idx(x, H - 2)] = C.T_WALL; }
     for (let y = 0; y < H; y++) { grid[idx(0, y)] = C.T_WALL; grid[idx(1, y)] = C.T_WALL; grid[idx(W - 1, y)] = C.T_WALL; grid[idx(W - 2, y)] = C.T_WALL; }
+    // ⚠️ v1.62 — theme.blobMul RESTA SCOLLEGATO, e non per dimenticanza: e' stato provato e MISURATO,
+    // e collegarlo non cambia niente. Vale la pena scrivere perche', perche' e' la stessa ragione per cui
+    // tutte le mappe si somigliano.
+    //   1) La posa satura. `areaFree` pretende 2 tessere di pavimento libero attorno a ogni masso: la mappa
+    //      esaurisce i posti legali a ~15 blob e i 700 tentativi finiscono sempre. Chiederne 20 o 38 e'
+    //      identico. Quindi dalla v1.22 blobCount e' di fatto una COSTANTE — e anche il termine sul livello
+    //      non fa nulla: la mappa dell'ondata 20 ha la stessa roccia di quella dell'ondata 1.
+    //   2) Anche forzando la posa (pad 1 -> 26 massi, 769 tessere di muro contro 611), `widenForBoss`
+    //      RIPORTA TUTTO INDIETRO: misurato su 60 mappe, pad 1 -> 513 muri finali, pad 2 -> 536, pad 3 -> 513.
+    //      Non e' un correttore di corridoi, e' un REGOLATORE DI DENSITA': cancella qualunque mappa piu'
+    //      chiusa di "campo aperto con pilastri", che e' esattamente l'unica pianta che il gioco produce.
+    // Morale: la varieta' di pianta non si ottiene da qui. Va rifatto `widenForBoss` (garantire il passaggio
+    // dei boss lungo un percorso, non ovunque), e quello e' il lavoro degli ARCHETIPI DI PIANTA, non di qui.
     const blobCount = Math.round(14 + Math.min(12, Math.floor(level * 0.7)) + rint(0, 6)); let placed = 0, tries = 0;
     while (placed < blobCount && tries < 700) { tries++; const rw = rint(1, 3), rh = rint(1, 3); const cx = rint(4, W - 5), cy = rint(4, H - 5); if (Math.abs(cx - cxm) < 6 && Math.abs(cy - cym) < 6) continue; if (!areaFree(grid, cx, cy, rw, rh, 2)) continue; stampBlob(grid, cx, cy, rw, rh, C.T_WALL); placed++; }
     // connettivita: apri i muri che separano zone raggiungibili, poi mura le sacche isolate
@@ -56,13 +69,79 @@
     ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
     widenForBoss(grid); // v1.28 — garantisce corridoi >= 3 tile per il passaggio dei boss
     ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
-    const free = []; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] === C.T_FLOOR && seen[i]) { const cd = Math.hypot(x - cxm, y - cym); free.push({ x, y, i, cd }); } }
-    // uscita = cella raggiungibile piu lontana
-    let exit = null, best = -1; for (const c of free) if (grid[c.i] === C.T_FLOOR && c.cd > best) { best = c.cd; exit = c; }
-    if (exit) grid[exit.i] = C.T_EXIT;
+    const free = []; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] === C.T_FLOOR && seen[i]) free.push({ x, y, i, cd: 0 }); }
     const isW = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : grid[idx(x, y)] === C.T_WALL;
     const nearWall = (c) => isW(c.x - 1, c.y) || isW(c.x + 1, c.y) || isW(c.x, c.y - 1) || isW(c.x, c.y + 1);
     const wcx = (c) => c.x * TILE + TILE / 2, wcy = (c) => c.y * TILE + TILE / 2;
+
+    // v1.62 — PARTENZA VARIABILE. Prima lo spawn era il centro ESATTO della mappa e l'uscita LA cella piu'
+    // lontana: due costanti, quindi il percorso mentale era identico a ogni partita. Ora la partenza e' una
+    // radura vicina al centro scelta col seed (serve spazio libero: i giocatori nascono sparpagliati su
+    // +-40px), e TUTTE le distanze a valle — decorazioni, bracieri, casse, spawn dei nemici — si misurano
+    // da li' invece che dal centro geometrico. E' un cambio di significato, non solo di numero: "lontano
+    // dallo spawn" e "lontano dal centro" coincidevano solo perche' lo spawn ERA il centro.
+    // La radura non basta che sia libera: deve essere AMPIA quanto lo era il centro. Il centro geometrico
+    // era di fatto sgombro perche i blob di roccia lo evitano (|dx|,|dy| < 6), e mezzo gioco lo dava per
+    // scontato: nemici generati a 200-260px dal giocatore con linea di vista libera. Quindi qui si misura
+    // il raggio libero di ogni candidata e si sceglie solo fra le PIU AMPIE.
+    let start = null;
+    { const cand = free.filter(c => Math.hypot(c.x - cxm, c.y - cym) <= 7);
+      let bestR = 0; const scored = [];
+      for (const c of cand) { let r = 0; while (r < 6 && areaFree(grid, c.x, c.y, r + 1, r + 1, 0)) r++; if (r >= 2) { scored.push({ c, r }); if (r > bestR) bestR = r; } }
+      const top = scored.filter(o => o.r >= bestR);
+      if (top.length) start = top[(rng() * top.length) | 0].c; }
+    if (!start) start = free.find(c => c.x === cxm && c.y === cym) || free[0] || { x: cxm, y: cym, i: idx(cxm, cym) };
+    for (const c of free) c.cd = Math.hypot(c.x - start.x, c.y - start.y);
+
+    // v1.62 — USCITA VARIABILE: non piu' LA cella piu' lontana ma una a caso fra il 20% piu' lontano.
+    // La traversata da fare resta la stessa, ma non finisce piu' sempre nello stesso angolo.
+    let exit = null;
+    { const far = free.filter(c => grid[c.i] === C.T_FLOOR).sort((a, b) => b.cd - a.cd);
+      const pick = far.slice(0, Math.max(1, Math.floor(far.length * 0.2)));
+      if (pick.length) exit = pick[(rng() * pick.length) | 0]; }
+    if (exit) grid[exit.i] = C.T_EXIT;
+
+    // ===== v1.62 — POZZE DI PERICOLO (T_HAZARD) =====
+    // Il tile esisteva gia' DA CIMA A FONDO e non lo generava nessuno: il server toglie 6 PV ogni 0.25s ai
+    // giocatori e 8 ai mostri, il renderer scava la conca, versa il liquido, ci mette riflesso e profondita',
+    // accende una luce del colore del tema e lo disegna sulla minimappa. Mancava solo chi lo mettesse.
+    // La quantita' la decide theme.hazMul (lava 1.9, arcano 1.2, foresta 1.1, cripta 1.0, ghiaccio 0.9),
+    // l'altro parametro che era dichiarato e moltiplicava il nulla.
+    //
+    // REGOLA DI SICUREZZA: una pozza puo' nascere solo dove il 3x3 attorno NON tocca muro. Cosi' una pozza
+    // non puo' MAI tappare un corridoio: in un corridoio da 3 tessere solo la corsia centrale e' ammessa e
+    // le due laterali restano libere. Si deve sempre poter girare intorno invece di dover incassare danno.
+    const hazCells = [];
+    { const openSpot = (c) => {
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const t = grid[idx(c.x + dx, c.y + dy)];
+          if (t === C.T_WALL || t === C.T_EXIT) return false;
+        }
+        return true;
+      };
+      const pools = Math.max(0, Math.round((1.6 + Math.min(2.4, level * 0.16)) * (theme.hazMul || 1)));
+      let spots = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 7 && openSpot(c));
+      for (let z = spots.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = spots[z]; spots[z] = spots[j]; spots[j] = t; }
+      const centers = [];
+      for (const c of spots) {
+        if (centers.length >= pools) break;
+        if (!centers.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 7)) continue;
+        centers.push(c);
+        // la pozza cresce come una passeggiata casuale: forma organica, mai un rettangolo
+        let cur = c; const steps = 3 + rint(0, 5);
+        for (let k = 0; k < steps; k++) {
+          // la passeggiata puo tornare verso il centro: il vincolo di distanza dalla partenza va
+          // ricontrollato a OGNI passo, non solo sul punto di partenza della pozza.
+          if (grid[cur.i] === C.T_FLOOR && openSpot(cur) && Math.hypot(cur.x - start.x, cur.y - start.y) > 7) { grid[cur.i] = C.T_HAZARD; hazCells.push(cur.i); }
+          const d = [[1, 0], [-1, 0], [0, 1], [0, -1]][(rng() * 4) | 0];
+          const nx = cur.x + d[0], ny = cur.y + d[1];
+          if (nx < 2 || ny < 2 || nx >= W - 2 || ny >= H - 2) break;
+          const ni = idx(nx, ny);
+          if (grid[ni] !== C.T_FLOOR) break;
+          cur = { x: nx, y: ny, i: ni };
+        }
+      }
+    }
 
     // ===== DECORAZIONI a CLUSTER coerenti, LIMITATE (max 3-4 per tipo; le TORCE fanno eccezione) =====
     const props = []; const pcnt = {}; const CAP = 4;
@@ -113,6 +192,25 @@
     for (let z = order.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = order[z]; order[z] = order[j]; order[j] = t; }
     // piazza le zone tematiche (2 passate) col cap dei tipi che evita le ripetizioni eccessive
     let placedFeat = 0; for (let pass = 0; pass < 2 && placedFeat < 9; pass++) { for (const name of order) { if (placedFeat >= 9) break; if (!feats[name]) continue; const c = takeSpot(7); if (!c) break; feats[name](c); placedFeat++; } }
+    // v1.62 — STRATO AMBIENTALE (theme.propMix). Anche questo era dichiarato in tutti i temi e mai letto.
+    // Non e' un doppione delle feature: le feature sono i PUNTI DI INTERESSE (grandi, max 3-4 per tipo,
+    // raccontano una scena), questi sono la TEXTURE fra un punto e l'altro — piccoli (scala 0.6-0.9),
+    // sparsi lungo le pareti, e volutamente FUORI dal cap per tipo, che serve a limitare le scene, non il
+    // pulviscolo. E' la differenza fra una stanza arredata e una stanza arredata che sembra vissuta.
+    { const bag = theme.propMix || [];
+      if (bag.length) {
+        let amb = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 5 && nearWall(c));
+        for (let z = amb.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = amb[z]; amb[z] = amb[j]; amb[j] = t; }
+        const want = 9 + rint(0, 5); const put = [];
+        for (const c of amb) {
+          if (put.length >= want) break;
+          if (!used.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3)) continue;
+          if (!put.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3)) continue;
+          props.push({ type: bag[(rng() * bag.length) | 0], x: wcx(c) + MU.rand(-10, 10), y: wcy(c) + MU.rand(-10, 10), s: MU.rand(0.62, 0.9), r: rng() });
+          put.push(c);
+        }
+      }
+    }
     // micro-aree per il mercante = alcuni spot usati
     const microAreas = used.slice(0, 6).map(c => ({ x: wcx(c), y: wcy(c) }));
     // BRACIERI sparsi (luce), in celle aperte: max CAP
@@ -122,7 +220,7 @@
 
     const crateSpawns = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 5).map(c => ({ x: wcx(c), y: wcy(c) }));
     const spawnCells = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > Math.min(W, H) * 0.28).map(c => ({ x: c.x, y: c.y }));
-    return { w: W, h: H, tile: TILE, seed, level, theme, grid: Array.from(grid), spawn: { x: cxm * TILE + TILE / 2, y: cym * TILE + TILE / 2 }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
+    return { w: W, h: H, tile: TILE, seed, level, theme, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
   }
 
   // ===================== v1.56 — MAPPA MERCATO: un VILLAGGIO, non una caverna =====================

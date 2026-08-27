@@ -2,6 +2,69 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.62.0] — 2026-08-27 · "Il terreno conta"
+
+Primo blocco del lavoro sulla varieta' delle mappe: tutto quello che si poteva fare **senza toccare la pianta**.
+Tre delle quattro cose erano gia' scritte nel progetto e non le usava nessuno.
+
+#### 🔥 Le pozze di pericolo esistevano da sempre e non le generava nessuno
+`T_HAZARD` era implementato **da cima a fondo**: il server toglie 6 PV ogni 0.25s ai giocatori e 8 ai mostri,
+il renderer scava la conca, versa il liquido, ci mette riflesso e profondita', accende una luce del colore del
+tema e lo disegna sulla minimappa. `mapgen` non ne piazzava **nemmeno uno**.
+- Ora ogni mappa ne ha, in quantita' decisa da `theme.hazMul` — l'altro parametro dichiarato che moltiplicava
+  il nulla. Misurato: lava **~18 tessere/mappa**, ghiaccio **~7**.
+- Le pozze crescono come una **passeggiata casuale**: forma organica, mai un rettangolo.
+- **Regola di sicurezza:** una pozza puo' nascere solo dove il 3×3 attorno non tocca muro. Cosi' non puo' mai
+  tappare un corridoio — in un passaggio da 3 tessere solo la corsia centrale e' ammessa e le due laterali
+  restano libere. Si deve sempre poter **girare intorno**, mai essere costretti a incassare.
+- Mai sopra il portale d'uscita, mai entro 7 tessere dalla partenza.
+- Fanno danno anche ai mostri: la pozza e' un alleato, non solo una trappola.
+
+#### 🪨 Strato ambientale (`theme.propMix`)
+Terzo parametro dichiarato in tutti i temi e mai letto. Non e' un doppione delle zone tematiche: quelle sono i
+**punti di interesse** (grandi, max 3-4 per tipo, raccontano una scena), questo e' la **texture** fra un punto
+e l'altro — oggetti piccoli (scala 0.6-0.9) sparsi lungo le pareti. Da ~30 a **~46 oggetti per mappa**.
+
+#### 🧭 Partenza e uscita non sono piu' due costanti
+- La partenza era il **centro geometrico esatto**, l'uscita **LA** cella piu' lontana: il percorso mentale era
+  identico a ogni partita. Ora la partenza e' una **radura** scelta col seed fra le piu' ampie vicine al centro
+  (68 posizioni distinte su 300 mappe), e l'uscita e' una a caso fra il **20% piu' lontano** — la traversata da
+  fare non cambia, ma non finisce piu' sempre nello stesso angolo.
+- Cambio di significato importante: **tutte le distanze a valle** — decorazioni, bracieri, casse, punti di
+  spawn dei nemici — ora si misurano **dalla partenza** e non dal centro. Prima le due cose coincidevano solo
+  perche' la partenza *era* il centro.
+
+#### 🗺️ Il nome della zona si vede
+"Cripta Dimenticata", "Caverne di Lava", "Tempio Arcano", "Sala dei Mercanti": erano scritti in `THEMES[].name`
+e non comparivano da nessuna parte. Ora sono una didascalia sotto la barra in alto, nel colore d'accento del tema.
+
+#### ⚠️ `blobMul` NON e' stato collegato, e non e' una dimenticanza
+E' stato provato e **misurato**, e collegarlo non cambia niente. Il perche' e' annotato in `mapgen.js` perche'
+e' la stessa ragione per cui tutte le mappe si somigliano:
+1. **La posa satura.** `areaFree` pretende 2 tessere libere attorno a ogni masso: la mappa esaurisce i posti
+   legali a **~15 blob** e i 700 tentativi finiscono sempre. Chiederne 20 o 38 e' identico — quindi dalla v1.22
+   `blobCount` e' di fatto una **costante**, e anche il termine sul livello non fa nulla: la mappa dell'ondata
+   20 ha la stessa roccia di quella dell'ondata 1.
+2. **`widenForBoss` livella tutto.** Forzando la posa (pad 1 → 26 massi, 769 tessere di muro contro 611), il
+   risultato finale non cambia: misurato su 60 mappe, **pad 1 → 513 muri, pad 2 → 536, pad 3 → 513**. Non e' un
+   correttore di corridoi, e' un **regolatore di densita'**: cancella qualunque mappa piu' chiusa di "campo
+   aperto con pilastri", che e' esattamente l'unica pianta che il gioco sa produrre.
+
+La varieta' di pianta non si ottiene di qui: va rifatto `widenForBoss` (garantire il passaggio dei boss **lungo
+un percorso**, non ovunque). E' il primo passo del lavoro sugli **archetipi di pianta**.
+
+#### 🧪 Test
+- Nuovo `testV162` su 240 mappe: pozze presenti in ogni tema, **zero** adiacenti a un muro, zero sull'uscita,
+  zero entro 7 tessere dalla partenza, nessun giocatore che nasce dentro una; `hazMul` verificato (lava > 1.4×
+  ghiaccio); oltre 30 oggetti per mappa e sacchetto del tema sempre usato; partenza e uscita variabili con
+  uscita **sempre raggiungibile** e **sempre lontana**; nessuno spawn nemici a ridosso della partenza; danno
+  della pozza verificato in partita su giocatore **e** mostro.
+- Corretti tre test della 1.45/1.58 che erano **intermittenti**: piazzavano il nemico a un offset fisso dal
+  giocatore (+90, +120, +260px) dando per scontato che li' ci fosse pavimento libero e linea di vista — cosa
+  vera solo finche' la partenza era il centro sgombro. Ora usano `losSpot()`, che cerca un punto alla distanza
+  voluta **senza muro e in vista**: e' la condizione che quei test volevano davvero esprimere.
+- **448 passati, 0 falliti** (verificato su 10 esecuzioni consecutive).
+
 ### [1.61.1] — 2026-08-26 · "I due nuovi prendono posto nella rampa"
 
 I nemici della 1.61 escono dalla prova e vanno alla loro soglia. Niente altro cambia: stesse def, stessa IA,

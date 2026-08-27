@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.61.1` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.62.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -474,6 +474,24 @@ git tag vX.Y.Z
 ---
 
 ## 14. Vincoli noti & troubleshooting
+
+- **⚠️ MAPPE — `widenForBoss` e' un regolatore di densita', non un correttore di corridoi** *(misurato v1.62)*.
+  Fa 4 passate e allarga a 3 tessere ogni corridoio piu' stretto. Effetto collaterale: **azzera qualunque
+  differenza di densita' in ingresso**. Misurato su 60 mappe con la stessa posa forzata a densita' diverse —
+  pad 1 → 769 tessere di muro alla posa, **513 dopo**; pad 2 → 611, **536 dopo**; pad 3 → 513, **513 dopo**.
+  Tutto converge a "campo aperto con pilastri". Conseguenze da tenere a mente:
+  - `theme.blobMul` **non e' collegato di proposito**: collegarlo non cambia niente (provato e misurato).
+  - Anche il termine sul livello in `blobCount` non fa nulla: la mappa dell'ondata 20 ha la stessa roccia
+    di quella dell'ondata 1. In piu' la posa **satura a ~15 blob** perche' `areaFree` pretende 2 tessere
+    libere attorno a ogni masso, e i 700 tentativi finiscono sempre.
+  - **Qualunque archetipo di pianta con corridoi stretti (catacombe, labirinto) va in conflitto con questa
+    funzione**: e' la prima cosa da rifare quando si affrontano gli archetipi. La direzione e' garantire il
+    passaggio dei boss **lungo un percorso** (spawn → uscita) invece che su tutta la mappa.
+- **⚠️ MAPPE — non dare per scontato che vicino al giocatore ci sia pavimento libero** *(v1.62)*. Fino alla
+  1.61 la partenza era il centro geometrico, di fatto sempre sgombro, e diversi test piazzavano il nemico a
+  un offset fisso (+90, +260px) contando su quello. Con la partenza variabile la garanzia non c'e' piu':
+  in `test/simulate.js` si usa `losSpot(room, p, dist)`, che cerca un punto alla distanza voluta senza muro
+  e con linea di vista libera.
 
 - **Solo vista frontale.** Il puppet frontale non mostra bene la schiena: allontanandosi (`back`) togliamo gli occhi
   e mettiamo un velo scuro. Per un vero "dorso" servirebbe un set di pezzi "back".

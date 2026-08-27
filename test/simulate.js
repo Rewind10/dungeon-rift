@@ -19,6 +19,21 @@ function bot(room, p) {
     return { mx: Math.cos(a) + (Math.random() - 0.5) * 0.7, my: Math.sin(a) + (Math.random() - 0.5) * 0.7, aim: a, shoot: false, q: false, e: false, dash: false };
   }
   let n = null, bd = Infinity; for (const m of room.monsters) { const d = MU.dist2(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; n = m; } } const i = { mx: 0, my: 0, aim: p.aim, shoot: false, q: false, e: false, dash: false }; if (n) { const d = Math.sqrt(bd); i.aim = Math.atan2(n.y - p.y, n.x - p.x); i.shoot = true; const dir = d < 160 ? -1 : (d > 320 ? 1 : 0); i.mx = Math.cos(i.aim) * dir + (Math.random() - 0.5) * 0.6; i.my = Math.sin(i.aim) * dir + (Math.random() - 0.5) * 0.6; if (p.cdQ <= 0 && Math.random() < 0.05) i.q = true; if (p.cdE <= 0 && Math.random() < 0.04) i.e = true; if (p.cdDash <= 0 && d < 140 && Math.random() < 0.06) i.dash = true; } else { i.mx = Math.random() - 0.5; i.my = Math.random() - 0.5; } return i; }
+// v1.62 — con la partenza variabile (prima era il centro esatto, di fatto sempre sgombro) non si puo' piu'
+// dare per scontato che "giocatore + 260px sull asse x" sia pavimento libero e in vista: puo' esserci roccia.
+// Diversi test della 1.45/1.58 lo davano per scontato e fallivano a intermittenza a seconda della mappa.
+// Questo helper cerca un punto alla distanza voluta girando attorno al giocatore finche' ne trova uno
+// SENZA MURO e con LINEA DI VISTA libera — che e' la condizione che quei test volevano davvero esprimere.
+function losSpot(room, p, dist) {
+  for (let k = 0; k < 64; k++) {
+    const a = (k / 64) * Math.PI * 2;
+    const x = p.x + Math.cos(a) * dist, y = p.y + Math.sin(a) * dist;
+    if (room.isWallAt(x, y)) continue;
+    if (!room.losClear(p.x, p.y, x, y)) continue;
+    return { x, y };
+  }
+  return { x: p.x + dist, y: p.y };
+}
 function hasNaN(room) { for (const p of room.players.values()) if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.hp)) return 'player'; for (const m of room.monsters) if (!isFinite(m.x) || !isFinite(m.y) || !isFinite(m.hp)) return 'mon ' + m.type; for (const b of room.bullets) if (!isFinite(b.x) || !isFinite(b.y)) return 'bullet'; return null; }
 
 function testMapThemes() {
@@ -497,7 +512,8 @@ function testV145() {
   assert(p2.includes('slime') && p2.includes('skeleton'), 'Melma nel pool dall ondata 2, insieme allo sciame base');
   // simulazione: a distanza ravvicinata deve SPUTARE proiettili d'acido OSTILI (danno elevato) ed emettere 'acid'
   const room = new Room('v145'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
-  const m = room.spawnMonster('slime', pl.x + 90, pl.y, { scaling: Waves.scaling(1, 1) });
+  const sp145 = losSpot(room, pl, 90);
+  const m = room.spawnMonster('slime', sp145.x, sp145.y, { scaling: Waves.scaling(1, 1) });
   assert(m && m.type === 'slime' && isFinite(m.hp) && m.hp > 0, 'la Melma si genera correttamente');
   pl.x = m.x + 80; pl.y = m.y; m.atkT = 0; room.bullets.length = 0; room.events.length = 0;
   const dt = 1 / C.TICK_RATE; let sawAcid = false, acidBullets = 0;
@@ -840,7 +856,8 @@ function testV158() {
   assert(!!br && br.ai === 'roller' && br.rollSpeed > 1, 'la Sfera d\'Ossa esiste e usa la IA roller');
   const r2 = new Room('v158b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
   r2.pending = 0; r2.waveList = []; p2.hp = 9999; p2.maxHp = 9999;
-  const b2 = r2.spawnMonster('bone_roller', p2.x + 260, p2.y, { scaling: Waves.scaling(8, 1) });
+  const sp158 = losSpot(r2, p2, 260);
+  const b2 = r2.spawnMonster('bone_roller', sp158.x, sp158.y, { scaling: Waves.scaling(8, 1) });
   r2.events.length = 0;
   let winded = false, rolled = false, moved = 0; let bx = b2.x, by = b2.y;
   for (let i = 0; i < C.TICK_RATE * 6; i++) { r2.update(dt);
@@ -858,7 +875,8 @@ function testV158() {
   assert(!Mon.MONSTERS.slime_mini.splitInto, 'la Melma Minore NON si divide a sua volta (niente catena infinita)');
   const r3 = new Room('v158c'); const p3 = r3.addPlayer('b', { send() {} }, 'B', 'enforcer'); r3.startGame();
   r3.pending = 0; r3.waveList = []; r3.monsters.length = 0;
-  const sl = r3.spawnMonster('slime', p3.x + 120, p3.y, { scaling: Waves.scaling(4, 1) });
+  const sp158b = losSpot(r3, p3, 120);
+  const sl = r3.spawnMonster('slime', sp158b.x, sp158b.y, { scaling: Waves.scaling(4, 1) });
   r3.killMonster(sl, p3);
   const minis = r3.monsters.filter(x => x.type === 'slime_mini' && !x.dead);
   assert(minis.length === (Mon.MONSTERS.slime.splitCount || 2), 'alla morte lascia ' + minis.length + ' melme minori');
@@ -919,6 +937,91 @@ function testV159() {
   for (let i = 0; i < C.TICK_RATE * 4; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
   assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
   ok('novita v1.59 verificate');
+}
+function testV162() {
+  console.log('\n[TEST 33] Novita v1.62 — pozze di pericolo, strato ambientale, partenza e uscita variabili');
+  const PF = require('../shared/pathfinding.js');
+  const N = 240;
+  const byTheme = {}; const spawns = new Set(), exits = new Set();
+  let hazTot = 0, hazNearWall = 0, hazOnExit = 0, hazNearStart = 0, propTot = 0, offBag = 0, unreach = 0, startInHaz = 0;
+  let farOK = 0, enemyClose = 0;
+
+  for (let k = 0; k < N; k++) {
+    const m = MapGen.generate(k * 7919 + 13, 1 + (k % 20));
+    const th = m.theme; const a = byTheme[th.id] = byTheme[th.id] || { n: 0, haz: 0, name: th.name };
+    a.n++;
+    const sgx = (m.spawn.x / m.tile) | 0, sgy = (m.spawn.y / m.tile) | 0;
+    spawns.add(sgx + ',' + sgy); if (m.exit) exits.add(m.exit.x + ',' + m.exit.y);
+    if (m.grid[sgy * m.w + sgx] === C.T_HAZARD) startInHaz++;
+
+    for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) {
+      if (m.grid[y * m.w + x] !== C.T_HAZARD) continue;
+      hazTot++; a.haz++;
+      // GARANZIA: mai attaccata a un muro -> si puo' sempre girarle intorno invece di incassare danno
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+        if (m.grid[(y + dy) * m.w + (x + dx)] === C.T_WALL) hazNearWall++;
+      if (m.exit && m.exit.x === x && m.exit.y === y) hazOnExit++;
+      if (Math.hypot(x - sgx, y - sgy) <= 7) hazNearStart++;
+    }
+
+    propTot += m.props.length;
+    const bag = th.propMix || [];
+    if (bag.length) for (const p of m.props) { /* le feature usano tipi fuori dal bag: conta solo che il bag sia USATO */ }
+    if (bag.length && !m.props.some(p => bag.indexOf(p.type) >= 0)) offBag++;
+
+    // la mappa resta percorribile DALLA NUOVA PARTENZA fino all uscita
+    const d = PF.build(m.grid, m.w, m.h, [{ gx: sgx, gy: sgy }]);
+    if (!m.exit || d[m.exit.y * m.w + m.exit.x] < 0) unreach++;
+    if (m.exit && Math.hypot(m.exit.x - sgx, m.exit.y - sgy) > Math.min(m.w, m.h) * 0.5) farOK++;
+    for (const sp of m.enemySpawns) if (Math.hypot(sp.x - sgx, sp.y - sgy) < 8) { enemyClose++; break; }
+  }
+
+  // --- POZZE (T_HAZARD): il tile era gia gestito da server e renderer, non lo generava nessuno ---
+  assert(hazTot > 0, 'le mappe generano pozze di pericolo (' + hazTot + ' tessere su ' + N + ' mappe)');
+  assert(hazNearWall === 0, 'NESSUNA pozza tocca un muro: si puo' + String.fromCharCode(39) + ' sempre aggirare (violazioni: ' + hazNearWall + ')');
+  assert(hazOnExit === 0, 'nessuna pozza sopra il portale di uscita');
+  assert(hazNearStart === 0, 'nessuna pozza entro 7 tessere dalla partenza');
+  assert(startInHaz === 0, 'i giocatori non nascono mai dentro una pozza');
+  // hazMul: la lava deve averne molte piu del ghiaccio
+  const lava = byTheme.lava, ice = byTheme.ice;
+  if (lava && ice) assert((lava.haz / lava.n) > (ice.haz / ice.n) * 1.4,
+    'theme.hazMul conta davvero: lava ' + (lava.haz / lava.n).toFixed(1) + ' tessere/mappa contro ghiaccio ' + (ice.haz / ice.n).toFixed(1));
+  for (const id of Object.keys(byTheme)) assert(byTheme[id].haz > 0, 'il tema ' + id + ' genera pozze');
+
+  // --- STRATO AMBIENTALE (theme.propMix) ---
+  assert(propTot / N > 30, 'oggetti per mappa oltre i 30 (media ' + (propTot / N).toFixed(1) + ', prima ~30 di sole feature)');
+  assert(offBag === 0, 'ogni mappa usa il sacchetto di oggetti del suo tema (theme.propMix)');
+
+  // --- PARTENZA E USCITA VARIABILI ---
+  assert(spawns.size > 10, 'la partenza non e piu una costante: ' + spawns.size + ' posizioni distinte su ' + N + ' mappe');
+  assert(exits.size > N * 0.4, 'anche l uscita varia: ' + exits.size + ' posizioni distinte su ' + N);
+  assert(unreach === 0, 'l uscita resta raggiungibile dalla nuova partenza in tutte le mappe');
+  assert(farOK > N * 0.85, 'l uscita resta comunque lontana: la traversata da fare non e sparita (' + farOK + '/' + N + ')');
+  assert(enemyClose === 0, 'nessun punto di spawn nemici a ridosso della partenza (le distanze si misurano da li)');
+
+  // --- NOME DELLA ZONA: era scritto nei temi e non lo vedeva nessuno ---
+  for (const th of MapGen.THEMES) assert(!!th.name && th.name.length > 3, 'il tema ' + th.id + ' ha un nome da mostrare ("' + th.name + '")');
+  assert(!!MapGen.VILLAGE_THEME.name, 'anche il mercato ha un nome ("' + MapGen.VILLAGE_THEME.name + '")');
+
+  // --- il pericolo del terreno FUNZIONA davvero in partita ---
+  const dt = 1 / C.TICK_RATE;
+  let room = null, pl = null, hc = null;
+  for (let attempt = 0; attempt < 12 && !hc; attempt++) {
+    room = new Room('v162_' + attempt); pl = room.addPlayer('h', { send() {} }, 'H', 'enforcer'); room.startGame();
+    for (let y = 2; y < room.map.h - 2 && !hc; y++) for (let x = 2; x < room.map.w - 2; x++)
+      if (room.map.grid[y * room.map.w + x] === C.T_HAZARD) { hc = { x, y }; break; }
+  }
+  if (hc) {
+    pl.x = hc.x * C.TILE + C.TILE / 2; pl.y = hc.y * C.TILE + C.TILE / 2;
+    pl.hp = 200; pl.buffs = {}; const h0 = pl.hp;
+    for (let i = 0; i < C.TICK_RATE * 2 && pl.hp >= h0; i++) { pl.x = hc.x * C.TILE + C.TILE / 2; pl.y = hc.y * C.TILE + C.TILE / 2; room.update(dt); }
+    assert(pl.hp < h0, 'stare in una pozza fa danno al giocatore');
+    const mo = room.spawnMonster('skeleton', pl.x, pl.y, { scaling: Waves.scaling(1, 1) });
+    const m0 = mo.hp;
+    for (let i = 0; i < C.TICK_RATE * 2 && mo.hp >= m0 && !mo.dead; i++) { mo.x = hc.x * C.TILE + C.TILE / 2; mo.y = hc.y * C.TILE + C.TILE / 2; room.update(dt); }
+    assert(mo.hp < m0 || mo.dead, 'e fa danno anche ai mostri: la pozza e un alleato, non solo una trappola');
+  } else { assert(false, 'trovata almeno una pozza nella mappa di prova'); }
+  ok('novita v1.62 verificate');
 }
 function testV161() {
   console.log('\n[TEST 32] Novita v1.61 — Nugolo di Pipistrelli (sciame ondeggiante) e Fuoco Fatuo (attraversa i muri)');
@@ -1088,8 +1191,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.61)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.62)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.61.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.62.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.62 (il terreno conta)
+- **🔥 Pozze di pericolo** in ogni mappa (lava, ghiaccio sottile, melma): fanno danno a te **e ai mostri**.
+  Non possono mai tappare un passaggio — si puo' sempre girarci intorno.
+- **🪨 Piu' oggetti di scena**: da ~30 a ~46 per mappa, uno strato di pulviscolo oltre alle zone tematiche.
+- **🧭 Partenza e uscita non sono piu' fisse**: prima si partiva sempre dal centro esatto e si usciva sempre
+  dal punto piu' lontano. Ora variano, e tutte le distanze si misurano dalla partenza.
+- **🗺️ Il nome della zona** ("Cripta Dimenticata", "Caverne di Lava"...) compare sotto la barra in alto:
+  c'era gia' scritto nel codice e non lo vedeva nessuno.
+- Test: **448 passati, 0 falliti**.
 
 ## 🆕 Novita v1.61.1 (i due nuovi prendono posto)
 - **🦇 Nugolo dall'ondata 6**, **🔵 Fuoco Fatuo dall'ondata 8**. Il Nugolo prima perche' insegna a guidare
