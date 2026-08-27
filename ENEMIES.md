@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.64.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.65.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---

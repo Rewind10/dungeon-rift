@@ -1,10 +1,18 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.64.0`
+**Versione attuale:** `1.65.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🔮 Il fascio della Faglia *(novita v1.65)*
+- L'effetto che segnalava il danno del bordo era troppo discreto: si vedeva appena. Ora e' un **fascio** che
+  esce dalla roccia piu' vicina a te, con filamenti che ti **arrivano addosso** e un nucleo che pulsa — la
+  stessa lettura del fascio dello sguardo del Beholder, che a colpo d'occhio si capisce sempre.
+- I filamenti che **toccano il personaggio** sono la parte importante: collegano la causa all'effetto, cosi'
+  e' evidente che a farti male e' **quel muro**, non un malessere generico.
+- In un **angolo** partono due fasci, uno per lato.
 
 ## ⚡ Prestazioni: via il singhiozzo *(novita v1.64)*
 - Con molti nemici il gioco scattava. Misurato: non era **lento** — il frame tipico stava benissimo — ma un

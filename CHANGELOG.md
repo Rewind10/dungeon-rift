@@ -2,6 +2,31 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.65.0] — 2026-08-27 · "Il fascio della Faglia"
+
+I tentacoli della 1.64 erano troppo timidi: si vedevano appena, e un avviso che non si vede non e' un avviso.
+Rifatto l'effetto con il **linguaggio visivo del fascio dello sguardo del Beholder**, che nel gioco funziona.
+
+#### 🔮 Cosa cambia
+- **Ventaglio pieno** che si apre dal punto della roccia piu' vicino a te, con gradiente forte alla radice —
+  come il fascio del Beholder, non piu' quattro tratti sottili.
+- **I filamenti ARRIVANO addosso al giocatore** invece di allungarsi a caso nel vuoto. E' la differenza che
+  conta: la linea collega **causa ed effetto**, quindi si capisce a colpo d'occhio che e' *quel muro* a farti
+  male, non "l'aria".
+- **Nucleo pulsante ad alta frequenza** lungo l'asse (stesso trucco della linea centrale dello sguardo).
+- **Bagliore alla radice**: la ferita nella roccia da cui esce tutto.
+- In un **angolo** partono due fasci, uno per lato — coerente col fatto che li' la faglia morde il doppio.
+- **Buco nel buio** alla radice: il bordo mappa e' la zona piu' buia, e senza aprire la nebbia proprio li'
+  l'effetto restava invisibile esattamente dove serviva vederlo.
+
+#### ⚡ Costo
+Zero regressioni sulle prestazioni della 1.64: i gradienti del ventaglio e del bagliore sono **in cache**
+(chiave sulla lunghezza arrotondata a 40px), e il fascio si disegna solo quando sei nei paraggi del bordo.
+La guardia di prestazione in `test/client.js` misura **114 gradienti per frame** con 60 nemici, invariata.
+
+#### 🧪 Test
+- **475 passati, 0 falliti** + suite client invariata.
+
 ### [1.64.0] — 2026-08-27 · "Prestazioni: il singhiozzo era il garbage collector"
 
 Il gioco scattava con molti nemici. Prima di toccare una riga ho profilato **server e client separatamente**.

@@ -1281,41 +1281,87 @@
     // la carica comincia a salire APPENA entri nella fascia — cioe' 2.5 secondi PRIMA che il danno inizi.
     // E' un avviso, non un castigo: quando i filamenti compaiono hai gia' perso vita, quando l'alone e'
     // appena accennato sei ancora in tempo. Il valore arriva dallo snapshot (me.eg, 0..1).
-    // v1.64 — I TENTACOLI DELLA FAGLIA. La vignetta sullo schermo dice "sei in pericolo" ma non dice DA DOVE:
-    // e' un effetto di interfaccia, non un oggetto del mondo. Questi invece escono dalla roccia del bordo
-    // PIU' VICINO a te e si allungano verso l'interno mentre la carica sale — in un angolo escono da due lati
-    // contemporaneamente, che e' anche il punto in cui la faglia morde il doppio. Costano 18 tratti senza un
-    // solo gradiente, e solo quando sei nei paraggi del bordo.
+    // v1.65 — IL FASCIO DELLA FAGLIA. La prima versione (tentacoli sottili) era troppo timida: si vedeva
+    // appena, e un avviso che non si vede non e' un avviso. Rifatta con lo stesso linguaggio visivo del
+    // FASCIO DELLO SGUARDO del Beholder, che nel gioco funziona: ventaglio pieno che si allarga dalla
+    // sorgente + nucleo pulsante ad alta frequenza + bagliore alla radice.
+    // Differenza chiave rispetto ai tentacoli: i filamenti ARRIVANO al giocatore invece di allungarsi a
+    // caso. E' la linea che collega causa ed effetto — si capisce a colpo d'occhio che e' QUEL muro a farti
+    // male, non "l'aria". In un angolo partono due fasci, uno per lato.
+    // le RADICI del fascio: il punto sulla roccia del bordo piu' vicino, per ogni lato entro portata.
+    // Serve sia al fascio sia al buio (che deve aprire un buco li', altrimenti l'effetto resta al buio).
+    _edgeRoots(me) {
+      const m = this.map; if (!m || !me) return [];
+      const T = m.tile;
+      const x0 = 2 * T, y0 = 2 * T, x1 = (m.w - 2) * T, y1 = (m.h - 2) * T;
+      const REACH = (C.EDGE_MARGIN || 3) * T + 150;
+      const r = [];
+      if (me.x - x0 < REACH) r.push({ x: x0 - T * 0.5, y: me.y });
+      if (x1 - me.x < REACH) r.push({ x: x1 + T * 0.5, y: me.y });
+      if (me.y - y0 < REACH) r.push({ x: me.x, y: y0 - T * 0.5 });
+      if (y1 - me.y < REACH) r.push({ x: me.x, y: y1 + T * 0.5 });
+      return r;
+    },
     _drawEdgeTendrils(ctx, world) {
       const me = world.me; if (!me) return;
       const lv = me.eg || 0; if (lv <= 0.02) return;
       const m = this.map; if (!m) return;
-      const T = m.tile, t = this.time;
+      const T = m.tile, t = this.time, col = '#b25cff';
       const x0 = 2 * T, y0 = 2 * T, x1 = (m.w - 2) * T, y1 = (m.h - 2) * T;
-      const REACH = (C.EDGE_MARGIN || 3) * T + 120;
-      const sides = [];
-      if (me.x - x0 < REACH) sides.push({ ax: x0, dir: 1, vert: true });
-      if (x1 - me.x < REACH) sides.push({ ax: x1, dir: -1, vert: true });
-      if (me.y - y0 < REACH) sides.push({ ax: y0, dir: 1, vert: false });
-      if (y1 - me.y < REACH) sides.push({ ax: y1, dir: -1, vert: false });
-      if (!sides.length) return;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-      for (const sd of sides) {
-        const along = sd.vert ? me.y : me.x;
-        const N = 9;
-        for (let i = 0; i < N; i++) {
-          const base = along + (i - (N - 1) / 2) * 76 + Math.sin(t * 0.7 + i * 2.1) * 18;
-          const len = (0.30 + 0.70 * lv) * (90 + 70 * Math.sin(t * (1.5 + i * 0.21) + i * 1.3));
-          const wob = Math.sin(t * 2.1 + i * 0.9) * len * 0.26;
-          ctx.strokeStyle = 'rgba(158,66,244,' + (0.07 + 0.20 * lv).toFixed(3) + ')';
-          ctx.lineWidth = 1.4 + 2.6 * lv * (0.55 + 0.45 * ((i * 0.37) % 1));
+      const roots = this._edgeRoots(me);
+      if (!roots.length) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const r of roots) {
+        const dx = me.x - r.x, dy = me.y - r.y;
+        const len = Math.max(30, Math.hypot(dx, dy));
+        const ang = Math.atan2(dy, dx);
+        ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(ang);
+
+        // 1) VENTAGLIO — gradiente in cache su lunghezze arrotondate (niente allocazioni per frame)
+        const L = Math.max(40, Math.round(len / 40) * 40);
+        const spread = Math.tan(0.40) * len;
+        const gr = this._grad('ef|' + L, () => {
+          const q = ctx.createLinearGradient(0, 0, L, 0);
+          q.addColorStop(0, this._rgba(col, 0.46)); q.addColorStop(0.6, this._rgba(col, 0.12)); q.addColorStop(1, this._rgba(col, 0.02));
+          return q;
+        });
+        ctx.globalAlpha = 0.28 + 0.72 * lv;
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, -spread * 0.55); ctx.lineTo(len, spread * 0.55); ctx.closePath(); ctx.fill();
+
+        // 2) FILAMENTI che arrivano ADDOSSO al giocatore
+        ctx.globalAlpha = 1;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 5; i++) {
+          const w1 = Math.sin(t * (2.1 + i * 0.6) + i * 1.9) * len * 0.16;
+          const w2 = Math.sin(t * (1.5 + i * 0.5) + i * 2.7) * len * 0.11;
+          ctx.strokeStyle = this._rgba(col, (0.30 + 0.50 * lv) * (0.55 + 0.45 * Math.sin(t * 8 + i * 2.1)));
+          ctx.lineWidth = 1.8 + 3.2 * lv * (0.5 + 0.5 * ((i * 0.37) % 1));
           ctx.beginPath();
-          if (sd.vert) { ctx.moveTo(sd.ax, base); ctx.quadraticCurveTo(sd.ax + sd.dir * len * 0.5, base + wob, sd.ax + sd.dir * len, base + wob * 1.7); }
-          else { ctx.moveTo(base, sd.ax); ctx.quadraticCurveTo(base + wob, sd.ax + sd.dir * len * 0.5, base + wob * 1.7, sd.ax + sd.dir * len); }
+          ctx.moveTo(0, (i - 2) * 9);
+          ctx.bezierCurveTo(len * 0.34, w1, len * 0.68, w2, len, 0);
           ctx.stroke();
         }
+
+        // 3) NUCLEO pulsante ad alta frequenza, come la linea centrale dello sguardo del Beholder
+        ctx.strokeStyle = this._rgba('#eccfff', (0.30 + 0.55 * lv) * (0.5 + 0.5 * Math.sin(t * 14)));
+        ctx.lineWidth = 1.4 + 2.2 * lv;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+        ctx.lineCap = 'butt';
+
+        // 4) BAGLIORE alla radice: la ferita nella roccia da cui esce tutto
+        const fg = this._grad('efr', () => {
+          const q = ctx.createRadialGradient(0, 0, 2, 0, 0, 110);
+          q.addColorStop(0, this._rgba('#e0b3ff', 0.85)); q.addColorStop(0.35, this._rgba(col, 0.35)); q.addColorStop(1, this._rgba(col, 0));
+          return q;
+        });
+        ctx.globalAlpha = (0.35 + 0.65 * lv) * (0.75 + 0.25 * Math.sin(t * 6));
+        ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(0, 0, 110, 0, 7); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.restore();
       }
-      ctx.lineCap = 'butt'; ctx.restore();
+      ctx.restore();
     },
     _drawEdgeVignette(ctx, world) {
       const me = world.me; if (!me) return;
@@ -1375,6 +1421,9 @@
       // e si spegne contro le pareti nere. E' l'unica sorgente della stanza.
       if (this.bigLight) halo(this.bigLight.x, this.bigLight.y, this.bigLight.r, 0.99);
       for (const hz of (this.hazards || [])) halo(hz.x, hz.y, (hz.r || 40) * 0.75, 0.5); // v1.18 — le pozze si intravedono nel buio
+      // v1.65 — il fascio della faglia esce dal bordo, cioe' dalla parte piu' buia della mappa: senza un
+      // buco nel buio proprio li' l'effetto resterebbe invisibile esattamente dove serve vederlo.
+      if (world.me && (world.me.eg || 0) > 0.04) { const lv = world.me.eg; for (const r of this._edgeRoots(world.me)) halo(r.x, r.y, 150, 0.35 + 0.55 * lv); }
       for (const gl of (this.glows || [])) halo(gl.x, gl.y, (gl.rad || 40) * 0.7, 0.55); // v1.20 — funghi bioluminescenti
       if (this.map.exit) { const ex = this.map.exit.x * this.map.tile + this.map.tile / 2, ey = this.map.exit.y * this.map.tile + this.map.tile / 2; halo(ex, ey, 74, 0.85); }
       if (world.merch) halo(world.merch.x, world.merch.y, 140, 0.92);

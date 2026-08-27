@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.64.0',
+    VERSION: '1.65.0',
     // v1.51 — level up fra le ondate
     BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
     SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
