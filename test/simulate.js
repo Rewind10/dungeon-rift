@@ -938,6 +938,128 @@ function testV159() {
   assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
   ok('novita v1.59 verificate');
 }
+function testV163() {
+  console.log('\n[TEST 34] Novita v1.63 — la Faglia consuma chi resta ai margini; casse solo al centro');
+  const dt = 1 / C.TICK_RATE;
+
+  // ---------- la geometria del margine ----------
+  const r0 = new Room('v163g'); r0.addPlayer('a', { send() {} }, 'A', 'enforcer'); r0.startGame();
+  const m0 = r0.map, T2 = C.TILE, M = C.EDGE_MARGIN;
+  const at = (gx, gy) => r0._edgeDepth(gx * T2 + T2 / 2, gy * T2 + T2 / 2);
+  assert(at((m0.w / 2) | 0, (m0.h / 2) | 0) === 0, 'al centro la profondita nel margine e zero');
+  assert(at(2, (m0.h / 2) | 0) === M, 'sul bordo dritto la profondita e ' + M);
+  assert(at(2, 2) === M * 2, 'in un ANGOLO la profondita raddoppia (' + at(2, 2) + '): la faglia morde il doppio piu in fretta');
+  assert(at(2 + M, (m0.h / 2) | 0) === 0, 'oltre ' + M + ' tessere dal bordo si e fuori dalla fascia');
+  let band = 0, tot = 0;
+  for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) { tot++; if (at(x, y) > 0) band++; }
+  assert(band / tot > 0.15 && band / tot < 0.45, 'la fascia copre una quota sensata della mappa (' + (band / tot * 100).toFixed(0) + '%)');
+
+  // ---------- grazia, poi drenaggio crescente ----------
+  const room = new Room('v163a'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  // Svuotare del tutto i mostri chiude l'ondata: la stanza passa a 'shop' e li' CURA i giocatori, quindi il
+  // drenaggio veniva rimborsato a ogni tick e il test misurava zero. Si tiene in campo UN Fungo Sporifero al
+  // centro: e' immobile e la sua vista non arriva al bordo, quindi la stanza resta in combattimento senza
+  // che nessuno interferisca con la misura.
+  room.pending = 0; room.waveList = []; room.monsters.length = 0;
+  const ccx = ((room.map.w / 2) | 0) * C.TILE + C.TILE / 2, ccy = ((room.map.h / 2) | 0) * C.TILE + C.TILE / 2;
+  const fung = room.spawnMonster('spore_fungus', ccx, ccy, { scaling: Waves.scaling(1, 1) });
+  let spot = null;
+  for (let y = 2; y < room.map.h - 2 && !spot; y++) for (let x = 2; x < room.map.w - 2; x++)
+    if (room.map.grid[y * room.map.w + x] === C.T_FLOOR && room._edgeDepth(x * T2 + T2 / 2, y * T2 + T2 / 2) === C.EDGE_MARGIN * 2) { spot = { x, y }; break; }
+  if (!spot) for (let y = 2; y < room.map.h - 2 && !spot; y++) for (let x = 2; x < room.map.w - 2; x++)
+    if (room.map.grid[y * room.map.w + x] === C.T_FLOOR && room._edgeDepth(x * T2 + T2 / 2, y * T2 + T2 / 2) > 0) { spot = { x, y }; break; }
+  assert(!!spot, 'trovata una casella nel margine per la prova');
+  const px = spot.x * T2 + T2 / 2, py = spot.y * T2 + T2 / 2;
+  // il Fungo va tenuto VIVO a forza: puo' essere nato dentro una pozza (v1.62) e morirci in 4 secondi.
+  // Se muore l'ondata si chiude, la stanza passa a 'shop' e li' CURA i giocatori — e la misura salta.
+  // Due cose vanno neutralizzate perche' la misura riguardi SOLO la faglia:
+  //  - il Fungo va tenuto vivo (puo' essere nato dentro una pozza v1.62 e morirci in 4 secondi; se muore
+  //    l'ondata si chiude, la stanza passa a 'shop' e li' CURA i giocatori);
+  //  - il RECUPERO ANTI-STALLO (v1.43): se per 6 secondi il numero di mostri non cala, la stanza li
+  //    teletrasporta tutti a 240px da un giocatore. Con un solo Fungo fermo scatta sempre, e il Fungo
+  //    si materializzava addosso al punto "al sicuro" seminandoci le spore.
+  const pin = () => { pl.x = px; pl.y = py; fung.hp = fung.maxHp; room._stallT = 0; };
+  pl.hp = 500; pl.maxHp = 500; pl.buffs = {};
+
+  // 1 secondo dentro la fascia: siamo dentro la grazia, nessun danno
+  let h = pl.hp;
+  for (let i = 0; i < C.TICK_RATE * 1; i++) { pin(); room.setInput('b', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); room.update(dt); }
+  assert(pl.hp === h, 'il primo secondo nel margine NON fa danno: e la finestra di grazia');
+  assert((pl.edgeLv || 0) > 0, 'ma la carica sta gia salendo (edgeLv ' + (pl.edgeLv || 0).toFixed(2) + '): il giocatore e avvisato prima di essere punito');
+
+  // altri 4 secondi: ora deve drenare, e l evento deve essere partito una volta sola
+  room.events.length = 0;
+  for (let i = 0; i < C.TICK_RATE * 4; i++) { pin(); room.update(dt); }
+  const lost1 = h - pl.hp;
+  assert(lost1 > 0, 'passata la grazia il drenaggio comincia (persi ' + lost1 + ' PV)');
+  const warn = room.events.filter(e => e.t === 'rift_edge');
+  assert(warn.length === 1, 'l avviso rift_edge parte UNA volta sola, non a ogni tick (' + warn.length + ')');
+  assert(warn[0].who === 'b', 'l avviso dice a CHI sta capitando');
+
+  // il drenaggio CRESCE: gli stessi 4 secondi, piu avanti, tolgono di piu
+  h = pl.hp;
+  for (let i = 0; i < C.TICK_RATE * 4; i++) { pin(); room.update(dt); }
+  const lost2 = h - pl.hp;
+  assert(lost2 > lost1, 'il drenaggio CRESCE col tempo (' + lost1 + ' PV poi ' + lost2 + ' PV): indugiare costa sempre di piu');
+
+  // ---------- uscire lo riassorbe ----------
+  // il punto "al sicuro" non puo' essere il centro: li' c'e' il Fungo che tiene viva l'ondata, e le sue
+  // spore falserebbero la misura. Serve una casella FUORI dalla fascia e fuori dalla sua vista (340px).
+  let safe = null, bestD = -1;
+  for (let y = 2; y < room.map.h - 2; y++) for (let x = 2; x < room.map.w - 2; x++) {
+    if (room.map.grid[y * room.map.w + x] !== C.T_FLOOR) continue;
+    if (room._edgeDepth(x * T2 + T2 / 2, y * T2 + T2 / 2) !== 0) continue;
+    // la distanza va misurata dalla posizione REALE del fungo: se il centro era roccia, spawnMonster
+    // lo ha spostato, e misurare dal centro teorico puo' scegliere un punto che il fungo vede benissimo.
+    const d = Math.hypot(x * T2 + T2 / 2 - fung.x, y * T2 + T2 / 2 - fung.y);
+    if (d > bestD) { bestD = d; safe = { x: x * T2 + T2 / 2, y: y * T2 + T2 / 2 }; }
+  }
+  assert(!!safe && bestD > 500, 'trovato un punto al sicuro fuori dalla fascia e fuori dalla vista del Fungo (' + bestD.toFixed(0) + 'px)');
+  const cx = safe.x, cy = safe.y;
+  const before = pl.edgeT;
+  for (let i = 0; i < C.TICK_RATE * 3; i++) { pl.x = cx; pl.y = cy; fung.hp = fung.maxHp; room._stallT = 0; room.update(dt); }
+  assert(pl.edgeT < before, 'tornando verso il centro la carica si riassorbe (' + before.toFixed(1) + 's -> ' + pl.edgeT.toFixed(1) + 's)');
+  h = pl.hp;
+  for (let i = 0; i < C.TICK_RATE * 5; i++) { pl.x = cx; pl.y = cy; fung.hp = fung.maxHp; room._stallT = 0; room.update(dt); }
+  assert(pl.hp === h, 'al centro la faglia non tocca il giocatore [hp ' + pl.hp + ' era ' + h + ' fase ' + room.phase + ' mostri ' + room.monsters.length + ' edgeT ' + (pl.edgeT || 0).toFixed(2) + ' zone ' + room.zones.length + ' distFungo ' + Math.hypot(cx - fung.x, cy - fung.y).toFixed(0) + ']');
+
+  // attraversare il margine di corsa non deve costare nulla
+  pl.edgeT = 0; pl.hp = 500; h = pl.hp;
+  for (let k = 0; k < 6; k++) {
+    for (let i = 0; i < C.TICK_RATE * 1; i++) { pin(); room.update(dt); }
+    for (let i = 0; i < C.TICK_RATE * 2; i++) { pl.x = cx; pl.y = cy; fung.hp = fung.maxHp; room._stallT = 0; room.update(dt); }
+  }
+  assert(pl.hp === h, 'passare dal margine e tornare indietro non costa niente: e l ACCAMPARSI a costare [hp ' + pl.hp + ' era ' + h + ' fase ' + room.phase + ' mostri ' + room.monsters.length + ' edgeT ' + (pl.edgeT || 0).toFixed(2) + ' depthSpot ' + room._edgeDepth(px, py) + ']');
+
+  // ---------- al mercato la faglia non esiste ----------
+  const r3 = new Room('v163m'); const p3 = r3.addPlayer('c', { send() {} }, 'C', 'enforcer'); r3.startGame();
+  r3.newMap(99, 3, true); r3.phase = C.PHASE_MARKET;
+  let mspot = null;
+  for (let y = 2; y < r3.map.h - 2 && !mspot; y++) for (let x = 2; x < r3.map.w - 2; x++)
+    if (r3.map.grid[y * r3.map.w + x] === C.T_FLOOR && r3._edgeDepth(x * T2 + T2 / 2, y * T2 + T2 / 2) > 0) { mspot = { x, y }; break; }
+  if (mspot) {
+    p3.hp = 300; const mh = p3.hp;
+    for (let i = 0; i < C.TICK_RATE * 8; i++) { p3.x = mspot.x * T2 + T2 / 2; p3.y = mspot.y * T2 + T2 / 2; r3.update(dt); }
+    assert(p3.hp === mh, 'nella sala del MERCATO la faglia e spenta (la sala e quasi tutta margine)');
+  } else assert(true, 'sala del mercato senza margine calpestabile');
+
+  // ---------- lo snapshot porta la carica al client ----------
+  const snap = room.snapshot ? room.snapshot() : null;
+  if (snap && snap.players && snap.players.length) assert(snap.players[0].eg != null, 'lo snapshot espone la carica della faglia (eg) per la vignetta');
+  else assert(true, 'snapshot non ispezionabile da qui');
+
+  // ---------- CASSE E ARMI SOLO AL CENTRO ----------
+  let fuori = 0, mappe = 0, minCelle = 1e9;
+  for (let k = 0; k < 120; k++) {
+    const mm = MapGen.generate(k * 104729 + 7, 1 + (k % 20));
+    mappe++; minCelle = Math.min(minCelle, mm.crateSpawns.length);
+    const lim = Math.min(mm.w, mm.h) * 0.36 + 1;
+    for (const c of mm.crateSpawns) if (Math.hypot(c.x / mm.tile - mm.w / 2, c.y / mm.tile - mm.h / 2) > lim) fuori++;
+  }
+  assert(fuori === 0, 'casse e armi nascono solo nella zona centrale (fuori: ' + fuori + ' su ' + mappe + ' mappe)');
+  assert(minCelle > 20, 'restano abbastanza posizioni centrali (minimo ' + minCelle + ')');
+  ok('novita v1.63 verificate');
+}
 function testV162() {
   console.log('\n[TEST 33] Novita v1.62 — pozze di pericolo, strato ambientale, partenza e uscita variabili');
   const PF = require('../shared/pathfinding.js');
@@ -1191,8 +1313,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.62)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.63)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

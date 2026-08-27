@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.62.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.63.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.63 (la Faglia ai margini)
+- **🟣 Il bordo della mappa ti consuma** se ci resti: 2,5s di grazia, poi un drenaggio crescente (3 → 20 PV/s).
+  Negli **angoli** la grazia dura la meta'. Uscire ferma il danno all'istante — passare non costa niente,
+  accamparsi si'.
+- **⚠️ Avvisa prima di punire**: alone viola che si chiude, filamenti quando morde, e la fascia segnata
+  sulla **minimappa**.
+- **📦 Casse e armi solo al centro**: ogni ondata ti obbliga ad attraversare lo spazio aperto per prenderle.
+- Misurato: nell'angolo si subiva **4,8 volte meno danno** (arco da difendere 79° contro 243°). Ora chi si
+  accampa sul bordo sopravvive **26s invece di 81**, mentre il gioco normale e' invariato.
+- Test: **468 passati, 0 falliti**.
 
 ## 🆕 Novita v1.62 (il terreno conta)
 - **🔥 Pozze di pericolo** in ogni mappa (lava, ghiaccio sottile, melma): fanno danno a te **e ai mostri**.

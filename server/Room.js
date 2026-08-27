@@ -40,7 +40,7 @@ class Room {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
-    for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); }
+    for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
     this.merchant = null; this.darkMerchant = null; this.gearMerchant = null;
     if (market) {
       // v1.52 — sosta senza nemici: niente casse (il 30% sarebbe un mimic, cioe' un nemico in una stanza che
@@ -111,6 +111,16 @@ class Room {
   moveCircle(e, dx, dy) { const r = e.radius * 0.8; let nx = e.x + dx; if (!this._blk(nx, e.y, r)) e.x = nx; else e.x = this._snap(e.x, nx, e.y, r, true); let ny = e.y + dy; if (!this._blk(e.x, ny, r)) e.y = ny; else e.y = this._snap(e.y, ny, e.x, r, false); }
   _blk(x, y, r) { return this.isWallAt(x - r, y) || this.isWallAt(x + r, y) || this.isWallAt(x, y - r) || this.isWallAt(x, y + r); }
   _snap(cur, tgt, oth, r, isX) { const st = tgt > cur ? 1 : -1; let v = cur; for (let i = 0; i < 12; i++) { const t = v + st * 2; const bx = isX ? t : oth, by = isX ? oth : t; if (this._blk(bx, by, r)) break; v = t; } return v; }
+  // v1.63 — PROFONDITA' NEL MARGINE: 0 = sei al sicuro, cresce avvicinandosi al bordo giocabile.
+  // I due assi si SOMMANO, quindi un angolo (dove sei coperto su due lati, il posto piu' abusato)
+  // vale il doppio di un bordo dritto e la faglia ti mangia il doppio piu' in fretta.
+  _edgeDepth(x, y) {
+    const T = C.TILE, M = C.EDGE_MARGIN;
+    const gx = (x / T) | 0, gy = (y / T) | 0;
+    const dx = Math.min(gx - 2, (this.map.w - 3) - gx);
+    const dy = Math.min(gy - 2, (this.map.h - 3) - gy);
+    return Math.max(0, M - dx) + Math.max(0, M - dy);
+  }
   _unstuck(e) { const T = C.TILE; const gx = (e.x / T) | 0, gy = (e.y / T) | 0; let best = null, bd = Infinity; for (let ry = -3; ry <= 3; ry++) for (let rx = -3; rx <= 3; rx++) { const nx = gx + rx, ny = gy + ry; if (nx < 0 || ny < 0 || nx >= this.map.w || ny >= this.map.h) continue; if (this.map.grid[ny * this.map.w + nx] === C.T_WALL) continue; const cx = nx * T + T / 2, cy = ny * T + T / 2; const d = MU.dist2(e.x, e.y, cx, cy); if (d < bd) { bd = d; best = { x: cx, y: cy }; } } if (best) { const n = MU.norm(best.x - e.x, best.y - e.y); e.x += n.x * 6; e.y += n.y * 6; if (this.isWallAt(e.x, e.y) && bd < 9999) { e.x = best.x; e.y = best.y; } } }
   // v1.43 — RECUPERO da INCASTRO (per QUALSIASI mostro, boss compresi). Il monster è "incastrato" quando prova a
   // muoversi ma non avanza (wedge in un angolo, senza essere dentro un muro). Qui prova a SCIVOLARE: tra 8 direzioni
@@ -696,6 +706,30 @@ class Room {
       const t = this.tileAtWorld(p.x, p.y);
       if (t === C.T_HAZARD && !p.buffs.iframe && !p.buffs.i_invuln) { p.hazT = (p.hazT || 0) + dt; if (p.hazT > 0.25) { this.damagePlayer(p, 6, p.x + 1, p.y, 0); p.hazT = 0; } }
       else if (t === C.T_TRAP && !p.buffs.iframe && !p.buffs.i_invuln) { p.trapT = (p.trapT || 0) + dt; if (p.trapT > 0.6) { this.damagePlayer(p, 14, p.x, p.y - 1, 0); p.trapT = 0; this.events.push({ t: 'trap', x: p.x, y: p.y }); } }
+      // v1.63 — LA FAGLIA CONSUMA CHI RESTA AI MARGINI. Non un danno secco: una carica che sale solo
+      // mentre sei nella fascia (piu' in fretta quanto piu' sei incastrato nell'angolo), ha 2.5s di grazia
+      // e poi drena in modo crescente. Uscire la riassorbe al doppio della velocita': passare dal bordo
+      // non costa niente, ACCAMPARSI si'. Solo in combattimento: al mercato la sala e' tutta margine.
+      if ((this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS) && !p.dead && !p.down) {
+        const dep = this._edgeDepth(p.x, p.y);
+        if (dep > 0) p.edgeT = (p.edgeT || 0) + dt * (dep / C.EDGE_MARGIN);
+        else p.edgeT = Math.max(0, (p.edgeT || 0) - dt * C.EDGE_RECOVER);
+        p.edgeLv = Math.max(0, Math.min(1, (p.edgeT || 0) / (C.EDGE_GRACE + C.EDGE_RAMP)));
+        const over = (p.edgeT || 0) - C.EDGE_GRACE;
+        // il danno richiede di ESSERE nella fascia: uscirne lo ferma sul colpo. La carica invece resta e
+        // si riassorbe piano, cosi' rientrare subito ricomincia a mordere quasi immediatamente — ma non si
+        // continua a perdere vita stando al sicuro, che sarebbe solo incomprensibile.
+        if (dep > 0 && over > 0 && !p.buffs.iframe && !p.buffs.i_invuln) {
+          const k = Math.max(0, Math.min(1, over / C.EDGE_RAMP));
+          p.edgeTick = (p.edgeTick || 0) + dt;
+          if (p.edgeTick >= 0.25) {
+            const dps = C.EDGE_DPS_MIN + (C.EDGE_DPS_MAX - C.EDGE_DPS_MIN) * k;
+            this.damagePlayer(p, Math.max(1, Math.round(dps * p.edgeTick)), p.x + 1, p.y, 0);
+            p.edgeTick = 0;
+            if (!p._edgeWarn) { p._edgeWarn = 1; this.events.push({ t: 'rift_edge', who: p.id, x: p.x, y: p.y }); }
+          }
+        } else { p.edgeTick = 0; if (over <= 0 || dep === 0) p._edgeWarn = 0; }
+      } else { p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
       p.aim = p.input.aim; p.facing = p.input.aim;
       if (p.input.shoot && !p.buffs.dash) this.firePlayerWeapon(p);
       if (p.input.q && !p._qH) this.useQ(p); if (p.input.e && !p._eH) this.useE(p); if (p.input.dash && !p._dH) this.useDash(p);
@@ -763,7 +797,7 @@ class Room {
     const players = [];
     for (const p of this.players.values()) {
       const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln']) if (p.buffs[k] > 0) tb.push(k);
-      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
+      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, eg: +(p.edgeLv || 0).toFixed(2), nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
     }
     // v1.59 — per il Beholder si manda anche gt: quanto manca al cambio di sguardo (0 = sta per cambiare).
     // Serve al client per ANTICIPARE il telegrafo sul corpo invece di limitarsi a reagire dopo.

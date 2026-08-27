@@ -2,6 +2,64 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.63.0] — 2026-08-27 · "La Faglia ai margini"
+
+Chiude un exploit: restare attaccati al bordo esterno della mappa rendeva il gioco molto piu' facile.
+
+#### 📐 Prima la misura
+Bot fermo, 40 secondi, 5 prove, ondata 6:
+
+| posizione | danno subito/s | arco occupato dai nemici | nemici a contatto |
+|---|---:|---:|---:|
+| centro | 85,7 | 243° | 4,7 |
+| bordo | 27,6 | 76° | 1,3 |
+| angolo | **17,7** | **79°** | 0,7 |
+
+**Nell'angolo si subiva 4,8 volte meno.** La causa e' tutta nella terza colonna: al centro l'arco da
+difendere e' 243°, nell'angolo 79°. E non e' solo difesa — con tutti i nemici dentro un ottavo di cerchio,
+sono anche tutti dentro il cono di tiro. Meno danni in entrata **e** piu' danni in uscita insieme.
+
+#### 🟣 La Faglia
+L'anello esterno della mappa (3 tessere) carica una pressione mentre ci resti:
+- **2,5s di grazia** a profondita' piena, poi un drenaggio che **cresce** da 3 a 20 PV/s in 6 secondi.
+- La profondita' somma i **due assi**: un **angolo** vale il doppio di un bordo dritto, quindi li' la grazia
+  dura 1,25s. Il posto piu' abusato e' il piu' punito.
+- **Uscire ferma il danno sul colpo.** La carica invece resta e si riassorbe al doppio della velocita' con
+  cui sale: attraversare il margine di corsa non costa niente, **accamparsi** si'.
+- Solo in combattimento: nella sala del **Mercato** e' spenta (quella sala e' quasi tutta margine).
+- **Avvisa prima di punire**: l'alone viola comincia a chiudersi appena entri nella fascia, cioe' 2,5s prima
+  del primo danno; i filamenti compaiono solo quando il drenaggio morde davvero. La fascia e' anche segnata
+  sulla **minimappa**, piu' marcata negli angoli: la regola si impara guardando, non leggendo.
+
+#### 📦 Casse e armi solo al centro
+Sono l'unico richiamo periodico del gioco: se compaiono ovunque, chi si accampa sul bordo se le ritrova
+servite. Confinate nella zona centrale (36% del lato), ogni ondata obbliga ad attraversare lo spazio aperto.
+E' la spinta che accompagna la spinta contraria.
+
+#### 📊 Poi la verifica
+Bot che **kita** (si allontana dalla minaccia e spara), fino alla morte, 6 prove:
+
+| modalita' | Faglia | ondata raggiunta | secondi sopravvissuti |
+|---|---|---:|---:|
+| libero | OFF | 3,5 | 161 |
+| libero | **ON** | 4,2 | 156 |
+| bordo | OFF | 2,3 | 81 |
+| bordo | **ON** | **1,0** | **26** |
+
+Il gioco normale **non e' toccato** (161 → 156 s, rumore statistico). Chi resta incollato al bordo passa da
+81 a 26 secondi. E' esattamente la forma voluta: nessuna tassa su chi gioca, un muro per chi si accampa.
+
+#### 🧪 Test
+- Nuovo `testV163`: geometria del margine (centro 0, bordo 3, **angolo 6**), grazia senza danno ma con la
+  carica gia' visibile, drenaggio crescente misurato su due finestre, avviso `rift_edge` emesso **una volta
+  sola**, riassorbimento uscendo, attraversamento ripetuto a costo zero, faglia spenta al Mercato, `eg`
+  esposto nello snapshot, casse e armi tutte dentro il raggio centrale su 120 mappe.
+- Scrivere questo test ha fatto emergere tre comportamenti del motore che vale la pena avere annotati:
+  svuotare i mostri **chiude l'ondata e la stanza cura i giocatori**; un mostro puo' **morire nelle pozze**
+  della v1.62; e il **recupero anti-stallo** (v1.43) teletrasporta i mostri a 240px dal giocatore se per 6
+  secondi il conteggio non cala — cioe' esisteva gia' un anti-campeggio, solo molto piu' rozzo.
+- **468 passati, 0 falliti** (verificato su 12 esecuzioni consecutive).
+
 ### [1.62.0] — 2026-08-27 · "Il terreno conta"
 
 Primo blocco del lavoro sulla varieta' delle mappe: tutto quello che si poteva fare **senza toccare la pianta**.

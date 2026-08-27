@@ -1,10 +1,23 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.62.0`
+**Versione attuale:** `1.63.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🟣 La Faglia ai margini *(novita v1.63)*
+- Restare attaccati al **bordo esterno** della mappa era il modo piu' facile di rompere il gioco: con le
+  spalle coperte dalla roccia i nemici potevano arrivare solo da un ottavo di cerchio. Misurato: nell'angolo
+  si subivano **4,8 volte meno danni** che al centro.
+- Ora il bordo **ti consuma**. Non subito: hai due secondi e mezzo per uscirne (uno e mezzo in un angolo),
+  poi la faglia comincia a drenarti vita, e piu' resti piu' morde. **Uscire la ferma all'istante**:
+  attraversare il margine non costa niente, viverci si'.
+- Ti **avvisa prima di farti male**: un alone viola si chiude dai bordi dello schermo appena entri nella
+  fascia, molto prima del primo danno, e la fascia e' segnata sulla minimappa.
+- Nella sala del **Mercato** la faglia e' spenta.
+- **Casse e armi compaiono solo nella zona centrale**: ogni ondata c'e' un motivo per attraversare la mappa,
+  non solo un motivo per non stare fermo sul bordo.
 
 ## 🔥 Il terreno conta *(novita v1.62)*
 - **Pozze di pericolo** in ogni mappa: lava nelle caverne, ghiaccio nelle cripte gelate, melma nelle rovine.

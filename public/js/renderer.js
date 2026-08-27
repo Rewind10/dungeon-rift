@@ -382,6 +382,14 @@
         if (t === C.T_WALL) { g.fillStyle = wl; g.fillRect(x * px, y * px, px, px); }
         else if (t === C.T_HAZARD) { g.fillStyle = 'rgba(255,90,30,.5)'; g.fillRect(x * px, y * px, px, px); }
         else { g.fillStyle = 'rgba(150,170,210,.10)'; g.fillRect(x * px, y * px, px, px); }
+        // v1.63 — la FASCIA della faglia e' segnata sulla minimappa: cosi' la regola si impara guardando,
+        // senza doverla leggere. Tinta piu' forte negli angoli, dove la profondita' e' doppia.
+        if (t !== C.T_WALL) {
+          const M = C.EDGE_MARGIN || 3;
+          const dx = Math.min(x - 2, (m.w - 3) - x), dy = Math.min(y - 2, (m.h - 3) - y);
+          const dep = Math.max(0, M - dx) + Math.max(0, M - dy);
+          if (dep > 0) { g.fillStyle = 'rgba(170,80,240,' + (0.025 + 0.018 * dep).toFixed(3) + ')'; g.fillRect(x * px, y * px, px, px); }
+        }
       }
       this.minimapCanvas = cv;
     },
@@ -753,6 +761,7 @@
       ctx.restore(); this._drawLighting(ctx, world, camX, camY);
       this._drawDarkness(world, camX, camY); // v1.16 — cono torcia + mappa scura (tasto L)
       if (world.bt) { ctx.fillStyle = 'rgba(0,240,200,0.06)'; ctx.fillRect(0, 0, this.w, this.h); ctx.strokeStyle = 'rgba(0,240,200,0.15)'; ctx.lineWidth = 8; ctx.strokeRect(4, 4, this.w - 8, this.h - 8); }
+      this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
       this._drawMinimap(ctx, world);
     },
     _flame(ctx, x, y, sc) { const t = this.time; const f = 1 + Math.sin(t * 12 + x) * 0.14 + Math.sin(t * 7.3 + y) * 0.1; const s = sc * f; let gr = ctx.createRadialGradient(x, y, 0, x, y, 26 * s); gr.addColorStop(0, 'rgba(255,150,40,.5)'); gr.addColorStop(1, 'rgba(255,80,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26 * s, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,120,30,.9)'; ctx.beginPath(); ctx.moveTo(x - 6 * s, y + 4 * s); ctx.quadraticCurveTo(x - 7 * s, y - 8 * s, x, y - 16 * s); ctx.quadraticCurveTo(x + 7 * s, y - 8 * s, x + 6 * s, y + 4 * s); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,225,120,.95)'; ctx.beginPath(); ctx.moveTo(x - 3 * s, y + 2 * s); ctx.quadraticCurveTo(x - 3.5 * s, y - 5 * s, x, y - 11 * s); ctx.quadraticCurveTo(x + 3.5 * s, y - 5 * s, x + 3 * s, y + 2 * s); ctx.closePath(); ctx.fill(); if (Math.random() < 0.25 * sc) this.particles.push({ x: x + MU.rand(-3, 3), y: y - 6 * s, vx: MU.rand(-8, 8), vy: -MU.rand(20, 50), life: MU.rand(0.4, 0.9), t: 0, fire: true, r: MU.rand(1.5, 3) * sc, over: true }); },
@@ -1218,6 +1227,45 @@
     _drawCrate(ctx, c) { const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; },
     _drawWeapon(ctx, wd) { const W = window.GAME.Loot.WEAPONS[wd.wt] || {}; const col = W.color || '#ffd24a'; const t = this.time; const x = wd.x, y = wd.y + Math.sin(t * 2.5 + wd.e) * 1.6; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(wd.x, wd.y + 14, 13, 5, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + wd.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.globalAlpha = 1; ctx.save(); ctx.translate(x, y); ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; if (wd.wt === 'scatter') { ctx.fillStyle = col; this._rr(ctx, -10, -4, 20, 8, 2); ctx.fill(); ctx.stroke(); } else if (wd.wt === 'burst') { ctx.fillStyle = col; this._rr(ctx, -9, -3, 16, 6, 2); ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -7); ctx.lineTo(11, 0); ctx.lineTo(0, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.restore(); for (let i = 0; i < 3; i++) { ctx.fillStyle = i < (wd.lv || 1) ? col : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x - 8 + i * 8, y - 15, 2.4, 0, 7); ctx.fill(); } },
     _drawChains(ctx) { for (const c of this.chains) { const a = c.t / 0.18; ctx.strokeStyle = 'rgba(140,220,255,' + a + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); const seg = 4; ctx.moveTo(c.x1, c.y1); for (let i = 1; i < seg; i++) { const t = i / seg; ctx.lineTo(MU.lerp(c.x1, c.x2, t) + MU.rand(-6, 6), MU.lerp(c.y1, c.y2, t) + MU.rand(-6, 6)); } ctx.lineTo(c.x2, c.y2); ctx.stroke(); } },
+    // v1.63 — LA FAGLIA AI MARGINI. L'alone si chiude dai bordi dello schermo mentre la carica sale, e
+    // la carica comincia a salire APPENA entri nella fascia — cioe' 2.5 secondi PRIMA che il danno inizi.
+    // E' un avviso, non un castigo: quando i filamenti compaiono hai gia' perso vita, quando l'alone e'
+    // appena accennato sei ancora in tempo. Il valore arriva dallo snapshot (me.eg, 0..1).
+    _drawEdgeVignette(ctx, world) {
+      const me = world.me; if (!me) return;
+      const lv = me.eg || 0; if (lv <= 0.01) return;
+      const t = this.time, W = this.w, H = this.h;
+      const pulse = 0.72 + 0.28 * Math.sin(t * (4 + lv * 10));
+      // soglia bassa ALZATA: a lv 0.15 (dentro la finestra di grazia, nessun danno ancora) prima non si
+      // vedeva niente, e un avviso invisibile non e' un avviso. Ora l'alone si accende subito e poi si chiude.
+      const a = Math.min(0.82, 0.14 + lv * 0.72) * pulse;
+      ctx.save();
+      const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * (0.55 - lv * 0.26), W / 2, H / 2, Math.max(W, H) * 0.74);
+      g.addColorStop(0, 'rgba(120,30,180,0)');
+      g.addColorStop(0.6, 'rgba(108,26,168,' + (a * 0.30).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(52,6,96,' + a.toFixed(3) + ')');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      // filamenti che strisciano verso l'interno: compaiono solo quando il drenaggio morde davvero
+      if (lv > 0.34) {
+        const k = (lv - 0.34) / 0.66;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(190,110,255,' + (0.16 + 0.22 * k).toFixed(3) + ')';
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 22; i++) {
+          const s = (i * 0.61803) % 1, side = i % 4;
+          const len = (26 + 74 * k) * (0.5 + ((i * 0.37) % 1)) * (0.8 + 0.2 * Math.sin(t * 3 + i));
+          ctx.lineWidth = 1 + 1.6 * ((i * 0.53) % 1);
+          ctx.beginPath();
+          if (side === 0) { ctx.moveTo(s * W, 0); ctx.quadraticCurveTo(s * W + len * 0.3, len * 0.5, s * W - len * 0.2, len); }
+          else if (side === 1) { ctx.moveTo(s * W, H); ctx.quadraticCurveTo(s * W - len * 0.3, H - len * 0.5, s * W + len * 0.2, H - len); }
+          else if (side === 2) { ctx.moveTo(0, s * H); ctx.quadraticCurveTo(len * 0.5, s * H + len * 0.3, len, s * H - len * 0.2); }
+          else { ctx.moveTo(W, s * H); ctx.quadraticCurveTo(W - len * 0.5, s * H - len * 0.3, W - len, s * H + len * 0.2); }
+          ctx.stroke();
+        }
+        ctx.lineCap = 'butt';
+      }
+      ctx.restore();
+    },
     _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.enforcer; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {

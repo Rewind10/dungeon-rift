@@ -61,6 +61,7 @@
       case 'spore': if (ev.e != null) R.hitAttack(ev.e, 0.9); R.ring(ev.x, ev.y - 6, ev.c || '#a6ff3a', 4, 34, 0.45); R.burst(ev.x, ev.y - 8, ev.c || '#a6ff3a', 12, 120, 0.6); break;  // v1.58 — il fungo sbuffa
       case 'roll_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.62); R.ring(ev.x, ev.y, '#ff7a3b', 3, 26, 0.35); break;  // v1.58 — la sfera si carica
       case 'roll_go': A.kill && A.kill(false); R.burst(ev.x, ev.y, '#cfc7b0', 10, 150, 0.35); break;
+      case 'rift_edge': if (ev.who === Net.id) { HUD.modeBanner('\u26A0 LA FAGLIA TI STA CONSUMANDO', '#b25cff', 'Sei troppo vicino al bordo \u00b7 torna verso il centro'); R.addShake(4); R.ring(ev.x, ev.y, '#b25cff', 6, 70, 0.5); } break;  // v1.63
       case 'drain': if (ev.e != null) R.hitAttack(ev.e, 0.5); R.drain(ev.tx, ev.ty, ev.x, ev.y, ev.c || '#7dffea'); break;  // v1.61 — il fuoco fatuo succhia vita: scia di scintille dal giocatore verso il fatuo
       case 'roll_hit': R.addShake(4); R.burst(ev.x, ev.y, '#cfc7b0', 8, 130, 0.3); R.ring(ev.x, ev.y, '#8a8270', 4, 30, 0.25); break;  // rimbalzo sul muro
       case 'split': R.ring(ev.x, ev.y, ev.c || '#a6ff3a', 5, 40, 0.4); R.burst(ev.x, ev.y, ev.c || '#a6ff3a', 16, 160, 0.5); break;  // v1.58 — la melma si divide
