@@ -866,8 +866,10 @@ function testV158() {
   assert(winded, 'si carica prima di partire (telegrafo roll_wind)');
   assert(rolled, 'poi parte in carica (roll_go)');
   assert(moved > 40, 'durante la carica percorre distanza (' + Math.round(moved) + 'px)');
-  const hp0 = p2.hp; p2.x = b2.x + 8; p2.y = b2.y; b2.atkT = 0;
-  for (let i = 0; i < 20 && p2.hp >= hp0; i++) r2.update(dt);
+  // v1.64 — il giocatore va tenuto ADDOSSO alla sfera a ogni tick: la sfera sta rotolando, e in 20 tick
+  // poteva allontanarsi dal punto dove il test lo aveva messo una volta sola. Era una flakiness rara.
+  const hp0 = p2.hp; b2.atkT = 0;
+  for (let i = 0; i < 40 && p2.hp >= hp0; i++) { p2.x = b2.x + 8; p2.y = b2.y; r2.update(dt); }
   assert(p2.hp < hp0, 'travolge il giocatore che colpisce');
 
   // ---------- MELMA CHE SI DIVIDE ----------
@@ -937,6 +939,47 @@ function testV159() {
   for (let i = 0; i < C.TICK_RATE * 4; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
   assert(hasNaN(room) === null, 'nessun NaN col Beholder aggiornato');
   ok('novita v1.59 verificate');
+}
+function testV164() {
+  console.log('\n[TEST 35] Novita v1.64 — tetto ai nemici vivi (la coda non perde nessuno)');
+  const dt = 1 / C.TICK_RATE;
+  assert(C.MAX_ALIVE > 0, 'esiste un tetto ai nemici vivi (' + C.MAX_ALIVE + ')');
+
+  // ondata pesante: 6 giocatori all ondata 18. Il totale da uccidere deve restare quello previsto,
+  // ma non devono stare tutti in campo insieme.
+  const room = new Room('v164'); const pls = [];
+  for (let i = 0; i < 6; i++) pls.push(room.addPlayer('p' + i, { send() {} }, 'P' + i, 'enforcer'));
+  room.startGame();
+  room.wave = 18; room.nextWave();
+  const totale = room.pending + room.monsters.length;
+  assert(totale > C.MAX_ALIVE, 'l ondata scelta e piu grande del tetto (' + totale + ' nemici previsti contro un tetto di ' + C.MAX_ALIVE + ')');
+
+  // i giocatori non fanno nulla: i mostri si accumulano finche il tetto non li ferma
+  let picco = 0;
+  for (let i = 0; i < C.TICK_RATE * 90; i++) {
+    for (const p of pls) { p.hp = 1e9; room.setInput(p.id, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); }
+    room.update(dt);
+    // conta solo i VIVI: killMonster marca .dead e la rimozione dall array avviene al tick dopo, quindi
+    // un mostro che si divide puo far vedere per un istante il proprio posto occupato due volte.
+    picco = Math.max(picco, room.monsters.filter(x => !x.dead).length);
+    if (room.phase !== C.PHASE_COMBAT && room.phase !== C.PHASE_BOSS) break;
+  }
+  assert(picco <= C.MAX_ALIVE, 'in campo non se ne vedono mai piu di ' + C.MAX_ALIVE + ' (picco ' + picco + ')');
+  assert(room.pending > 0, 'i nemici in eccesso NON spariscono: restano in coda (' + room.pending + ' ancora da entrare)');
+  assert(room.monsters.length + room.pending >= totale - 2, 'il totale da uccidere e rimasto quello: ' + (room.monsters.length + room.pending) + ' su ' + totale);
+
+  // uccidendone qualcuno, la coda riprende a scorrere
+  const codaPrima = room.pending;
+  // vanno uccisi 12 mostri DISTINTI e ancora vivi: killMonster marca .dead ma la rimozione dall array
+  // avviene dopo, quindi prendere sempre monsters[0] significherebbe ammazzare dodici volte lo stesso.
+  for (const vittima of room.monsters.filter(x => !x.dead).slice(0, 12)) room.killMonster(vittima, null);
+  for (let i = 0; i < C.TICK_RATE * 25; i++) {
+    for (const p of pls) { p.hp = 1e9; room.setInput(p.id, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); }
+    room.update(dt);
+  }
+  assert(room.pending < codaPrima, 'appena si fa spazio la coda riprende a entrare (' + codaPrima + ' -> ' + room.pending + ')');
+  assert(room.monsters.filter(x => !x.dead).length <= C.MAX_ALIVE, 'e il tetto continua a valere (' + room.monsters.filter(x => !x.dead).length + ')');
+  ok('novita v1.64 verificate');
 }
 function testV163() {
   console.log('\n[TEST 34] Novita v1.63 — la Faglia consuma chi resta ai margini; casse solo al centro');
@@ -1313,8 +1356,8 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.63)'); console.log('==================================================');
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.64)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

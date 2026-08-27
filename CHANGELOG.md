@@ -2,6 +2,89 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.64.0] — 2026-08-27 · "Prestazioni: il singhiozzo era il garbage collector"
+
+Il gioco scattava con molti nemici. Prima di toccare una riga ho profilato **server e client separatamente**.
+
+#### 🔍 Il server non c'entrava niente
+300 tick misurati per configurazione, budget di un tick = 33,3 ms:
+
+| mostri | giocatori | `update` medio | % del budget |
+|---:|---:|---:|---:|
+| 60 | 1 | 0,35 ms | 1,1% |
+| 100 | 4 | 0,52 ms | 1,5% |
+| 150 | 6 | 0,75 ms | 2,3% |
+
+#### 🔍 E il client non era *lento*: **singhiozzava**
+
+| mostri | mediana | p95 | p99 | massimo |
+|---:|---:|---:|---:|---:|
+| 10 | 2,8 ms | 4,5 | 5,2 | 9,4 ms |
+| 50 | 4,8 ms | 6,2 | 13,0 | 29,5 ms |
+| 80 | 6,5 ms | 9,1 | 13,4 | **39,7 ms** |
+
+Il frame peggiore era **6 volte** la mediana. Una mediana ottima con code lunghissime ha quasi sempre una
+causa sola, e infatti: **558 gradienti creati a OGNI frame** con 80 nemici — **33.494 al secondo** — quasi
+tutti identici a quelli del frame precedente. Non era il disegno, era il garbage collector.
+
+#### ✅ 1. Cache dei gradienti
+Un `CanvasGradient` e' un oggetto riusabile e le sue coordinate stanno nello **spazio utente**: basta
+costruirlo attorno all'origine e disegnarlo col contesto gia' traslato sull'entita'. Quello che cambia a ogni
+frame (il pulsare) si ottiene con `globalAlpha`, che non alloca. Applicato all'alone dei mostri, alla
+funzione `light()` dell'illuminazione e agli aloni del buio.
+
+**Risultato: da 558 a 184 gradienti per frame (−67%). Frame peggiore da 39,7 ms a 18,5 ms.**
+
+#### ✅ 2. Il Nugolo di Pipistrelli era il nemico piu' caro del gioco
+Misurato per singolo nemico per frame: **116 µs**, tre volte lo scheletro e quindici volte la melma. Colpa
+mia (v1.61): 9 sagome × (2 gradienti lineari + una ventina di operazioni di path) = **18 gradienti e ~180
+operazioni per nugolo, 60 volte al secondo**. Ma il battito d'ali e' una sinusoide, cioe' ha un numero finito
+di pose: ora le 12 pose si disegnano **una volta sola** su canvas piccole (`_batFrames`) e a schermo si fa
+`drawImage`, che e' una copia di pixel.
+
+**Risultato: da 116 µs a 30,8 µs (−73%).** Da nemico piu' caro a meta' classifica.
+
+| nemico | prima | dopo |
+|---|---:|---:|
+| Nugolo di Pipistrelli | 116 µs | **31 µs** |
+| Zombie Putrido | 39 µs | 41 µs |
+| Negromante | 28 µs | 30 µs |
+| Melma | 7 µs | 7 µs |
+
+#### ✅ 3. Scarto fuori inquadratura
+Mostri e proiettili venivano disegnati **tutti**, anche fuori schermo: la canvas li ritagliava, ma il costo di
+costruire i tracciati era gia' stato pagato. L'illuminazione lo faceva gia', il disegno no. **11-15% del frame.**
+
+#### 🔢 4. Tetto di 50 nemici vivi
+Non riduce l'ondata: la **ritma**. I nemici in eccesso restano in coda ed entrano man mano che gli altri
+muoiono, quindi il totale da uccidere non cambia — cambia quanti ne hai addosso insieme. Il tetto vale anche
+per **evocazioni e divisioni**, altrimenti "mai piu' di 50" sarebbe un auspicio e non una promessa.
+
+#### 🟣 La Faglia adesso si vede nel mondo, non solo sullo schermo
+La vignetta della v1.63 diceva "sei in pericolo" ma non diceva **da dove**: e' un effetto di interfaccia.
+Ora ci sono due cose in piu', entrambe nel mondo di gioco:
+- **La fascia dipinta sulla roccia**, cotta dentro l'immagine della mappa (costo a schermo: **zero**). Quattro
+  sfumature, una per lato, che partono dal bordo e sfumano verso l'interno; negli **angoli si sovrappongono**,
+  quindi il viola e' piu' carico esattamente dove la faglia morde il doppio. Si vede **prima** di entrarci.
+- **I tentacoli**, che escono dalla roccia del bordo **piu' vicino a te** e si allungano mentre la carica sale.
+  In un angolo escono da due lati. 18 tratti, nessun gradiente, e solo quando sei nei paraggi.
+
+Scartato il cono: il gioco usa gia' il cono per il **campo visivo del Negromante**, e riusare la stessa forma
+per un significato diverso confonde.
+
+#### 🧪 Test
+- Nuovo `testV164` (server): il tetto regge su un'ondata da 6 giocatori all'ondata 18, la coda **non perde
+  nessuno**, e appena si fa spazio riprende a scorrere.
+- Nuovo **[CLIENT 2]** in `test/client.js`: una **guardia di prestazione** vera. Carica il renderer con un
+  contesto 2D finto che **conta le allocazioni**, disegna 60 nemici e pretende meno di 240 gradienti per frame
+  (misurati: **115**) e meno di 3,2 per nemico (misurati: 1,92); verifica che i fotogrammi del Nugolo siano
+  precotti e che un nemico fuori inquadratura non costi **niente**. Se qualcuno rimette un `createGradient`
+  dentro un ciclo per-nemico, salta fuori subito invece che tra sei mesi giocando.
+- Corrette due flakiness pre-esistenti: il test della Sfera d'Ossa metteva il giocatore accanto alla sfera
+  **una volta sola** mentre la sfera stava rotolando via; e il conteggio dei mostri vivi ora esclude quelli
+  gia' marcati morti (la rimozione dall'array avviene al tick dopo).
+- **475 passati, 0 falliti** + suite client.
+
 ### [1.63.0] — 2026-08-27 · "La Faglia ai margini"
 
 Chiude un exploit: restare attaccati al bordo esterno della mappa rendeva il gioco molto piu' facile.

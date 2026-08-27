@@ -147,9 +147,9 @@ class Room {
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
       isWallAt: (x, y) => self.isWallAt(x, y),
       shoot(m, dx, dy, spd, dmg, color) { self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: dx * spd, vy: dy * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); },
-      summon(id, x, y) { if (self.monsters.length > 260) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
+      summon(id, x, y) { if (self.monsters.length >= (C.MAX_ALIVE || 50)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
       // v1.39 — evocazione OWNED (con proprietario) per il tetto di minion del Negromante
-      summonMinion(id, x, y, owner) { if (self.monsters.length > 260) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
+      summonMinion(id, x, y, owner) { if (self.monsters.length >= (C.MAX_ALIVE || 50)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
       countMinions(owner) { let c = 0; for (const mm of self.monsters) { if (!mm.dead && mm.owner === owner) c++; } return c; },
       melee(m, p, dmg, kn) { self.damagePlayer(p, dmg, m.x, m.y, kn || 1); if (p.boon && p.boon.thorns > 0 && !m.dead) self.damageMonster(m, p.boon.thorns, p.x, p.y, 0, p); },
       areaDamage(x, y, r, dmg, color, kn) { self.events.push({ t: 'area', x, y, r, c: color }); for (const p of self.alivePlayers) if (MU.dist(x, y, p.x, p.y) <= r + p.radius) self.damagePlayer(p, dmg, x, y, kn || 1); },
@@ -484,7 +484,9 @@ class Room {
   killMonster(m, src) {
     m.dead = true;
     // v1.58 — DIVISIONE: la Melma alla morte lascia due melme minori (che non si dividono a loro volta).
-    if (m.def.splitInto && !m.minion && !m.treasure && this.monsters.length < 200) {
+    // v1.64 — anche la divisione rispetta il tetto: e' l'unico modo perche' "mai piu' di N in campo" sia
+    // una promessa vera e non un auspicio. Il mostro che si divide libera comunque il proprio posto.
+    if (m.def.splitInto && !m.minion && !m.treasure && this.monsters.length < (C.MAX_ALIVE || 50)) {
       const n = m.def.splitCount || 2;
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + Math.random(), r = 16 + Math.random() * 14;
@@ -612,7 +614,7 @@ class Room {
     const inCombat = (this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS);
     // MODALITÀ sopravvivenza: timer + respawn continuo
     if (inCombat && this.surviveT > 0) { this.surviveT -= dt; }
-    if (inCombat && this.pending > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
+    if (inCombat && this.pending > 0 && this.monsters.length < (C.MAX_ALIVE || 50)) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this.monsters.length < 14) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.63.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.64.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.64 (prestazioni)
+- **⚡ Via il singhiozzo**: il frame peggiore con 80 nemici passa da **39,7 ms a 18,5 ms**. La causa erano
+  **33.494 gradienti creati al secondo** e buttati via subito — ora sono in cache.
+- **🦇 Il Nugolo di Pipistrelli** era il nemico piu' caro del gioco (116 µs l'uno): le pose delle ali sono
+  ora **precotte**, e costa **31 µs**.
+- **✂️ Non si disegna piu' cio' che sta fuori schermo** (11-15% del frame).
+- **🔢 Tetto di 50 nemici vivi**: l'ondata non si accorcia, si **ritma** — i nemici in eccesso entrano man
+  mano che gli altri muoiono.
+- **🟣 La Faglia si vede nel mondo**: la fascia e' dipinta sulla roccia (piu' carica negli angoli) e i
+  **tentacoli** escono dal bordo piu' vicino a te.
+- Test: **475 passati, 0 falliti**, piu' una nuova guardia di prestazione che conta le allocazioni del renderer.
 
 ## 🆕 Novita v1.63 (la Faglia ai margini)
 - **🟣 Il bordo della mappa ti consuma** se ci resti: 2,5s di grazia, poi un drenaggio crescente (3 → 20 PV/s).

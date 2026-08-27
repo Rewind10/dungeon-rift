@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.63.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.64.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -474,6 +474,22 @@ git tag vX.Y.Z
 ---
 
 ## 14. Vincoli noti & troubleshooting
+
+- **⚠️ PRESTAZIONI — mai creare un gradiente dentro un ciclo per-entita'** *(misurato v1.64)*. Un
+  `createRadialGradient`/`createLinearGradient` per mostro (o per proiettile, o per pipistrello) sembra
+  innocuo e invece e' la prima causa di singhiozzo: con 80 nemici si arrivava a **558 gradienti per frame,
+  33.494 al secondo**, e il frame peggiore era **6 volte** la mediana pur avendo una mediana ottima. Un
+  `CanvasGradient` e' riusabile e le sue coordinate stanno nello spazio utente: si costruisce attorno
+  all'ORIGINE, si mette in cache (`R._grad(chiave, fabbrica)`) e si disegna col contesto gia' traslato
+  sull'entita'. Cio' che varia a ogni frame si fa con `globalAlpha`. **`test/client.js` ha una guardia che
+  conta le allocazioni**: se una regressione rimette un gradiente in un ciclo, il test fallisce.
+- **⚠️ PRESTAZIONI — un nemico disegnato a mano vettorialmente costa quanto la sua complessita'**. Il Nugolo
+  (9 sagome × ~20 operazioni) costava **116 µs per nemico per frame**, tre volte lo scheletro. Quando
+  l'animazione e' **periodica** (un battito d'ali, una rotazione) le pose sono un numero finito: vanno
+  **cotte** su canvas piccole una volta sola (`_batFrames`) e poi ricopiate con `drawImage`. Da 116 a 31 µs.
+- **⚠️ PRESTAZIONI — disegnare cio' che e' fuori inquadratura non e' gratis.** La canvas ritaglia, ma il costo
+  di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
+  test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
 
 - **⚠️ MAPPE — `widenForBoss` e' un regolatore di densita', non un correttore di corridoi** *(misurato v1.62)*.
   Fa 4 passate e allarga a 3 tessere ogni corridoio piu' stretto. Effetto collaterale: **azzera qualunque

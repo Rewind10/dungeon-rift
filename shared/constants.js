@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.63.0',
+    VERSION: '1.64.0',
     // v1.51 — level up fra le ondate
     BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
     SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
@@ -26,11 +26,15 @@
     // v1.63 — LA FAGLIA AI MARGINI. Restare attaccati al bordo esterno riduceva l'arco da difendere da
     // ~240 a ~80 gradi: misurato, all'ondata 6 significava subire 4,8 volte meno danni stando fermi.
     // Non e' un muro invisibile: e' una pressione che cresce solo se INDUGI, e si riassorbe se rientri.
-    EDGE_MARGIN: 3,        // tessere di fascia dal bordo giocabile (la profondita' pesa: vedi _edgeDepth)
-    EDGE_GRACE: 2.5,       // secondi di carica prima che il drenaggio inizi (a profondita' piena)
-    EDGE_RAMP: 6,          // secondi perche' il drenaggio arrivi al massimo
+    EDGE_MARGIN: 2,        // tessere di fascia dal bordo giocabile (la profondita' pesa: vedi _edgeDepth)
+    EDGE_GRACE: 5,       // secondi di carica prima che il drenaggio inizi (a profondita' piena)
+    EDGE_RAMP: 10,          // secondi perche' il drenaggio arrivi al massimo
     EDGE_DPS_MIN: 3, EDGE_DPS_MAX: 20,
     EDGE_RECOVER: 2,       // la carica si riassorbe al doppio della velocita' con cui sale
+    // v1.64 — TETTO AI NEMICI VIVI. Non riduce la dimensione dell'ondata: la RITMA. I mostri in eccesso
+    // restano in coda (pending) ed entrano man mano che gli altri muoiono, quindi il totale da uccidere
+    // non cambia — cambia quanti ne hai addosso insieme, che e' cio' che costava frame e leggibilita'.
+    MAX_ALIVE: 50,
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
     // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).
     // v1.56 — le distanze di fabbro e portale non si calcolano piu' a runtime: il villaggio e' disegnato

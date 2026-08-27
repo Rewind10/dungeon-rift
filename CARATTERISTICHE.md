@@ -1,10 +1,23 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.63.0`
+**Versione attuale:** `1.64.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## ⚡ Prestazioni: via il singhiozzo *(novita v1.64)*
+- Con molti nemici il gioco scattava. Misurato: non era **lento** — il frame tipico stava benissimo — ma un
+  frame ogni tanto costava sei volte gli altri. La causa erano **trentatremila oggetti al secondo** creati e
+  buttati via subito dal disegno, che il sistema doveva poi ripulire tutti insieme.
+- Ora quegli oggetti si riusano. Il frame peggiore e' **piu' che dimezzato**.
+- Il **Nugolo di Pipistrelli** era da solo il nemico piu' costoso del gioco: le pose del battito d'ali sono
+  ora disegnate una volta sola e poi ricopiate. Costa **un quarto** di prima.
+- Non viene piu' disegnato quello che sta **fuori dallo schermo**.
+- **Massimo 50 nemici alla volta**: l'ondata non diventa piu' corta, i nemici in eccesso aspettano il turno.
+  Si combatte meglio e si capisce meglio cosa sta succedendo.
+- La **Faglia** ora si vede anche nel mondo e non solo a schermo: il bordo della mappa e' tinto di viola sulla
+  roccia — piu' carico negli angoli — e quando la carica sale ne escono **tentacoli**, dal lato piu' vicino a te.
 
 ## 🟣 La Faglia ai margini *(novita v1.63)*
 - Restare attaccati al **bordo esterno** della mappa era il modo piu' facile di rompere il gioco: con le

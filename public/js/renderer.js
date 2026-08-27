@@ -370,6 +370,19 @@
         if (p.type === 'well') { this._bakeProp(g, p); this.glows.push({ x: p.x, y: p.y + 5, col: (this.theme && this.theme.accent) || '#7de0ff', rad: 40, a: 0.18 }); continue; }
         this._bakeProp(g, p);
       }
+      // v1.64 — LA FASCIA DELLA FAGLIA dipinta direttamente sulla mappa cotta: il giocatore deve poter
+      // vedere DOVE comincia il pericolo prima di entrarci, altrimenti la punizione arriva senza preavviso.
+      // Quattro sfumature, una per lato, che partono dalla roccia del bordo e sfumano verso l'interno; negli
+      // angoli si sovrappongono e quindi il viola e' piu' carico — esattamente dove la faglia morde il doppio.
+      // Essendo cotta qui dentro, a schermo non costa niente: e' gia' dentro l'immagine di sfondo.
+      { const M = (C.EDGE_MARGIN || 3) * T, x1 = m.w * T, y1 = m.h * T;
+        const stops = (q) => { q.addColorStop(0, 'rgba(122,40,196,0.26)'); q.addColorStop(0.32, 'rgba(122,40,196,0.05)'); q.addColorStop(1, 'rgba(122,40,196,0)'); return q; };
+        const d = 2 * T + M;
+        g.fillStyle = stops(g.createLinearGradient(0, 0, d, 0)); g.fillRect(0, 0, d, y1);
+        g.fillStyle = stops(g.createLinearGradient(x1, 0, x1 - d, 0)); g.fillRect(x1 - d, 0, d, y1);
+        g.fillStyle = stops(g.createLinearGradient(0, 0, 0, d)); g.fillRect(0, 0, x1, d);
+        g.fillStyle = stops(g.createLinearGradient(0, y1, 0, y1 - d)); g.fillRect(0, y1 - d, x1, d);
+      }
       this.mapCanvas = cv;
     },
     _bakeMinimap() {
@@ -705,6 +718,7 @@
       let sx = 0, sy = 0; if (this.shake > 0.1) { sx = MU.rand(-this.shake, this.shake); sy = MU.rand(-this.shake, this.shake); this.shake *= 0.86; }
       const camX = this.cam.x - this.w / 2 + sx, camY = this.cam.y - this.h / 2 + sy; ctx.save(); ctx.translate(-camX, -camY);
       if (this.mapCanvas) ctx.drawImage(this.mapCanvas, 0, 0);
+      this._drawEdgeTendrils(ctx, world);   // v1.64 — i tentacoli escono dalla roccia vicino a te
       for (const tc of this.torches) this._flame(ctx, tc.x, tc.y, 0.8);
       for (const cf of this.campfires) this._flame(ctx, cf.fx || cf.x, cf.fy || cf.y, 1.5);
       if (this.map.exit) {
@@ -750,8 +764,12 @@
       for (const o of world.orbs) this._drawOrb(ctx, o);
       this._drawCritters(ctx, camX, camY, dt); // v1.22 — animaletti
       this._drawParticles(ctx, false);
-      for (const b of world.bul) this._drawBullet(ctx, b);
-      for (const m of world.mon) this._drawMonster(ctx, m);
+      // v1.64 — SCARTO FUORI INQUADRATURA. Finora mostri e proiettili venivano disegnati TUTTI, anche quelli
+      // fuori schermo: la canvas li ritagliava, ma il costo di costruire i tracciati era gia' stato pagato.
+      // L'illuminazione lo faceva gia' (light() ha il suo test), il disegno no. Misurato: 11-15% del frame.
+      const vx0 = camX - 90, vy0 = camY - 90, vx1 = camX + this.w + 90, vy1 = camY + this.h + 90;
+      for (const b of world.bul) { if (b.x < vx0 || b.x > vx1 || b.y < vy0 || b.y > vy1) continue; this._drawBullet(ctx, b); }
+      for (const m of world.mon) { if (m.x < vx0 || m.x > vx1 || m.y < vy0 || m.y > vy1) continue; this._drawMonster(ctx, m); }
       this._drawDeaths(ctx); // v1.26 — sprite di morte (crollo/dissolvenza)
       for (const p of world.players) this._drawPlayer(ctx, p, me && p.i === me.i);
       this._drawChains(ctx);
@@ -1070,13 +1088,45 @@
           x: Math.cos(an) * rad * 1.42,
           y: Math.sin(an * 0.9 + ph) * rad * 0.54 - r * 0.26 + Math.sin(t * 3.1 + i) * r * 0.12,
           s: r * 0.225 * (0.80 + 0.40 * ((i * 0.71) % 1)),
-          up: 0.30 + 0.70 * Math.sin(t * (11 + (i % 4) * 2.3) + i * 1.7),
+          ph: t * (11 + (i % 4) * 2.3) + i * 1.7,
           fp: Math.cos(an) < 0 ? -1 : 1,
         });
       }
       list.sort((p, q) => p.y - q.y);
-      for (const b of list) this._bat1(ctx, b.x, b.y, b.s, b.up, eye, b.fp);
+      // v1.64 — niente piu' disegno vettoriale per pipistrello: si sceglie la posa dal battito (che e' una
+      // sinusoide, quindi periodica) e si copia il fotogramma gia' cotto.
+      const FR = this._batFrames(eye);
+      for (const b of list) {
+        const idx = ((((b.ph / 6.283185) % 1) + 1) % 1 * FR.n) | 0;
+        const k = b.s / FR.S;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.scale(b.fp * k, k);
+        ctx.drawImage(FR.frames[idx], -FR.ox, -FR.oy);
+        ctx.restore();
+      }
       ctx.restore();
+    },
+    // v1.64 — PIPISTRELLO COTTO. Misurato: il Nugolo costava 116 microsecondi per nemico per frame, TRE volte
+    // lo scheletro e quindici volte la melma — di gran lunga il nemico piu' caro del gioco. Il motivo: 9 sagome
+    // x (2 gradienti lineari + una ventina di operazioni di path) = 18 gradienti e ~180 operazioni per singolo
+    // nugolo, sessanta volte al secondo. Il battito d'ali pero' e' una sinusoide: ha solo N pose distinte.
+    // Le disegniamo UNA volta su canvas piccole e poi si fa drawImage, che e' una copia di pixel.
+    _batFrames(eye) {
+      const key = 'bat|' + eye;
+      this._batC = this._batC || {};
+      if (this._batC[key]) return this._batC[key];
+      const S = 26, N = 12;
+      const W = Math.ceil(S * 4.6 + 10), H = Math.ceil(S * 2.5 + 10);
+      const ox = W / 2, oy = S * 1.7 + 5;
+      const frames = [];
+      for (let i = 0; i < N; i++) {
+        const up = 0.30 + 0.70 * Math.sin((i / N) * 6.283185);
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const g = cv.getContext('2d'); g.translate(ox, oy);
+        this._bat1(g, 0, 0, S, up, eye, 1);
+        frames.push(cv);
+      }
+      const o = { frames, n: N, S, ox, oy };
+      this._batC[key] = o; return o;
     },
     // singolo pipistrello: ali = due archi che si aprono/chiudono con `up`, corpo = ellisse, orecchie, occhietti
     _bat1(ctx, x, y, s, up, eye, flip) {
@@ -1231,6 +1281,42 @@
     // la carica comincia a salire APPENA entri nella fascia — cioe' 2.5 secondi PRIMA che il danno inizi.
     // E' un avviso, non un castigo: quando i filamenti compaiono hai gia' perso vita, quando l'alone e'
     // appena accennato sei ancora in tempo. Il valore arriva dallo snapshot (me.eg, 0..1).
+    // v1.64 — I TENTACOLI DELLA FAGLIA. La vignetta sullo schermo dice "sei in pericolo" ma non dice DA DOVE:
+    // e' un effetto di interfaccia, non un oggetto del mondo. Questi invece escono dalla roccia del bordo
+    // PIU' VICINO a te e si allungano verso l'interno mentre la carica sale — in un angolo escono da due lati
+    // contemporaneamente, che e' anche il punto in cui la faglia morde il doppio. Costano 18 tratti senza un
+    // solo gradiente, e solo quando sei nei paraggi del bordo.
+    _drawEdgeTendrils(ctx, world) {
+      const me = world.me; if (!me) return;
+      const lv = me.eg || 0; if (lv <= 0.02) return;
+      const m = this.map; if (!m) return;
+      const T = m.tile, t = this.time;
+      const x0 = 2 * T, y0 = 2 * T, x1 = (m.w - 2) * T, y1 = (m.h - 2) * T;
+      const REACH = (C.EDGE_MARGIN || 3) * T + 120;
+      const sides = [];
+      if (me.x - x0 < REACH) sides.push({ ax: x0, dir: 1, vert: true });
+      if (x1 - me.x < REACH) sides.push({ ax: x1, dir: -1, vert: true });
+      if (me.y - y0 < REACH) sides.push({ ax: y0, dir: 1, vert: false });
+      if (y1 - me.y < REACH) sides.push({ ax: y1, dir: -1, vert: false });
+      if (!sides.length) return;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (const sd of sides) {
+        const along = sd.vert ? me.y : me.x;
+        const N = 9;
+        for (let i = 0; i < N; i++) {
+          const base = along + (i - (N - 1) / 2) * 76 + Math.sin(t * 0.7 + i * 2.1) * 18;
+          const len = (0.30 + 0.70 * lv) * (90 + 70 * Math.sin(t * (1.5 + i * 0.21) + i * 1.3));
+          const wob = Math.sin(t * 2.1 + i * 0.9) * len * 0.26;
+          ctx.strokeStyle = 'rgba(158,66,244,' + (0.07 + 0.20 * lv).toFixed(3) + ')';
+          ctx.lineWidth = 1.4 + 2.6 * lv * (0.55 + 0.45 * ((i * 0.37) % 1));
+          ctx.beginPath();
+          if (sd.vert) { ctx.moveTo(sd.ax, base); ctx.quadraticCurveTo(sd.ax + sd.dir * len * 0.5, base + wob, sd.ax + sd.dir * len, base + wob * 1.7); }
+          else { ctx.moveTo(base, sd.ax); ctx.quadraticCurveTo(base + wob, sd.ax + sd.dir * len * 0.5, base + wob * 1.7, sd.ax + sd.dir * len); }
+          ctx.stroke();
+        }
+      }
+      ctx.lineCap = 'butt'; ctx.restore();
+    },
     _drawEdgeVignette(ctx, world) {
       const me = world.me; if (!me) return;
       const lv = me.eg || 0; if (lv <= 0.01) return;
@@ -1266,7 +1352,10 @@
       }
       ctx.restore();
     },
-    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.enforcer; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
+    // v1.64 — la funzione light() prende il gradiente dalla CACHE: prima ne allocava uno per OGNI sorgente
+    // a ogni frame (torce, proiettili, monete, oggetti, giocatori, boss...). ATTENZIONE: questo metodo e' una
+    // sola istruzione lunghissima, i commenti vanno sopra la riga, mai in coda.
+    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.enforcer; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {
       if (!this.torch || !this.darkCv || !this.map) return;
@@ -1275,7 +1364,8 @@
       dg.setTransform(1, 0, 0, 1, 0, 0); dg.globalCompositeOperation = 'source-over'; dg.clearRect(0, 0, W, H);
       dg.fillStyle = 'rgba(2,3,8,' + this.darkness + ')'; dg.fillRect(0, 0, W, H);
       dg.globalCompositeOperation = 'destination-out';
-      const halo = (wx, wy, rad, a0) => { const x = (wx - camX) * s, y = (wy - camY) * s, r = rad * s; if (x < -r || y < -r || x > W + r || y > H + r) return; const gr = dg.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(0,0,0,' + a0 + ')'); gr.addColorStop(0.6, 'rgba(0,0,0,' + (a0 * 0.82) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = gr; dg.beginPath(); dg.arc(x, y, r, 0, 7); dg.fill(); };
+      // v1.64 — stessa cura degli aloni di luce: gradiente costruito UNA volta attorno all'origine e riusato.
+      const halo = (wx, wy, rad, a0) => { const x = (wx - camX) * s, y = (wy - camY) * s, r = Math.round(rad * s); if (x < -r || y < -r || x > W + r || y > H + r) return; const A = Math.round(a0 * 20) / 20; const gr = this._grad('ha|' + r + '|' + A, () => { const q = dg.createRadialGradient(0, 0, 0, 0, 0, r); q.addColorStop(0, 'rgba(0,0,0,' + A + ')'); q.addColorStop(0.6, 'rgba(0,0,0,' + (A * 0.82) + ')'); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); dg.fillStyle = gr; dg.translate(x, y); dg.beginPath(); dg.arc(0, 0, r, 0, 7); dg.fill(); dg.translate(-x, -y); };
       // v1.17 — grande alone TONDO attorno a ogni eroe (niente più cono direzionale)
       for (const p of world.players) { if (p.d) continue; halo(p.x, p.y, this.haloR, 0.98); }
       // sorgenti che restano visibili nel buio
@@ -1451,9 +1541,11 @@
       }
       if (def.puppet || def.sheet) { // alone emissivo tenue (puppet e sprite-sheet): più marcato e pulsante per lo SLIME (def.aura)
         const gc = def.eye || '#8bff86'; const aur = def.aura || 1; const pulse = def.aura ? (0.8 + 0.2 * Math.sin(this.time * 3 + x * 0.05)) : 1; const R2 = rr * (1.02 + (def.aura ? 0.4 : 0));
-        ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gr = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, R2); gr.addColorStop(0, this._rgba(gc, 0.12 * aur * pulse)); gr.addColorStop(1, this._rgba(gc, 0)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 7); ctx.fill(); ctx.restore();
+        // v1.64 — gradiente preso dalla cache (il pulsare passa da globalAlpha): era 1 allocazione per mostro per frame
+        const gr = this._grad('au|' + gc + '|' + aur + '|' + R2.toFixed(1) + '|' + rr.toFixed(1), () => { const q = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, R2); q.addColorStop(0, this._rgba(gc, 0.12 * aur)); q.addColorStop(1, this._rgba(gc, 0)); return q; });
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pulse; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 7); ctx.fill(); ctx.restore();
         if (def.bubbles && Math.random() < 0.35) { const bl = MU.rand(0.5, 0.9); this.particles.push({ x: x + MU.rand(-rr * 0.7, rr * 0.7), y: y + rr * 0.4, vx: MU.rand(-6, 6), vy: -MU.rand(18, 42), life: bl, t: bl, color: gc, r: MU.rand(1.5, 3), over: true }); } // v1.44 — bolle acide che salgono
-      } else { const gc = def.eye || def.color || '#ff6b6b'; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gr = ctx.createRadialGradient(0, 0, rr * 0.25, 0, 0, rr * 1.75); gr.addColorStop(0, gc); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = (m.mg ? 0.55 : m.b ? 0.5 : m.el ? 0.42 : 0.3) * (0.85 + 0.15 * Math.sin(this.time * 4 + x * 0.05)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr * 1.75, 0, 7); ctx.fill(); ctx.restore(); } // v1.15 alone emissivo
+      } else { const gc = def.eye || def.color || '#ff6b6b'; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gr = this._grad('a2|' + gc + '|' + rr.toFixed(1), () => { const q = ctx.createRadialGradient(0, 0, rr * 0.25, 0, 0, rr * 1.75); q.addColorStop(0, gc); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); ctx.globalAlpha = (m.mg ? 0.55 : m.b ? 0.5 : m.el ? 0.42 : 0.3) * (0.85 + 0.15 * Math.sin(this.time * 4 + x * 0.05)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr * 1.75, 0, 7); ctx.fill(); ctx.restore(); } // v1.15 alone emissivo
       if (m.tr) { ctx.strokeStyle = 'rgba(255,210,80,' + (0.6 + 0.3 * Math.sin(this.time * 7)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8, 0, 7); ctx.stroke(); }
       else if (m.mg) { ctx.strokeStyle = 'rgba(255,45,85,' + (0.5 + 0.3 * Math.sin(this.time * 6)) + ')'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, rr + 12 + Math.sin(this.time * 4) * 3, 0, 7); ctx.stroke(); }
       else if (m.b) { ctx.strokeStyle = 'rgba(255,60,60,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8 + Math.sin(this.time * 4) * 2, 0, 7); ctx.stroke(); }
@@ -2171,6 +2263,19 @@
           if (Math.random() < 0.3) this.particles.push({ x: r * 1.5, y: 0, vx: 40, vy: 0, life: 0.6, t: 0, fire: true, r: 3, over: true }); break; }
         default: { const bg = ctx.createLinearGradient(-r, -r, r, r); bg.addColorStop(0, dark); bg.addColorStop(1, col); ctx.fillStyle = bg; ctx.strokeStyle = D; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke(); eyes(r * .3, r * .3, r * .15); }
       }
+    },
+    // ===================== v1.64 — CACHE DEI GRADIENTI =====================
+    // Misurato con 80 mostri in campo: il renderer creava 558 gradienti OGNI frame (33.500 al secondo),
+    // quasi tutti identici a quelli del frame prima. Il frame mediano stava benissimo (6,5ms) ma il peggiore
+    // arrivava a 39,7ms: non lentezza, SINGHIOZZO — ed e' la firma del garbage collector, non del disegno.
+    // Un CanvasGradient e' un oggetto riusabile e le sue coordinate stanno nello SPAZIO UTENTE: basta
+    // costruirlo attorno all'ORIGINE e disegnarlo col contesto gia' traslato sull'entita'. Quello che
+    // cambia a ogni frame (il pulsare) si ottiene con globalAlpha, che non alloca niente.
+    _grad(key, make) {
+      const c = this._gcache || (this._gcache = new Map());
+      let g = c.get(key);
+      if (g === undefined) { g = make(); if (c.size > 512) c.clear(); c.set(key, g); }
+      return g;
     },
     _rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); },
   };
