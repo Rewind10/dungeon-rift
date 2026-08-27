@@ -26,7 +26,7 @@
     // v1.63 — LA FAGLIA AI MARGINI. Restare attaccati al bordo esterno riduceva l'arco da difendere da
     // ~240 a ~80 gradi: misurato, all'ondata 6 significava subire 4,8 volte meno danni stando fermi.
     // Non e' un muro invisibile: e' una pressione che cresce solo se INDUGI, e si riassorbe se rientri.
-    EDGE_MARGIN: 2,        // tessere di fascia dal bordo giocabile (la profondita' pesa: vedi _edgeDepth)
+    EDGE_MARGIN: 3,        // tessere di fascia dal bordo giocabile (la profondita' pesa: vedi _edgeDepth)
     EDGE_GRACE: 5,       // secondi di carica prima che il drenaggio inizi (a profondita' piena)
     EDGE_RAMP: 10,          // secondi perche' il drenaggio arrivi al massimo
     EDGE_DPS_MIN: 3, EDGE_DPS_MAX: 20,
