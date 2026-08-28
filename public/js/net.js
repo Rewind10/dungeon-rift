@@ -11,7 +11,7 @@
     sendInput(i) { i.t = C.MSG.INPUT; this.send(i); },
     start() { this.send({ t: 'start' }); },
     buyStat(id) { this.send({ t: C.MSG.BUY_STAT, id }); },
-    buyGear(slot) { this.send({ t: C.MSG.BUY_GEAR, slot }); },
+    buyGear(id) { this.send({ t: C.MSG.BUY_GEAR, id }); },
     buyMerchant(id, dark) { this.send({ t: C.MSG.BUY_MERCHANT, id, dark: dark ? 1 : 0 }); },
     pickBoon(id) { this.send({ t: C.MSG.PICK_BOON, id }); },
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'

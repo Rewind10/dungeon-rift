@@ -5,6 +5,7 @@ const MU = require('../shared/mathutils.js');
 const Heroes = require('../shared/heroes.js');
 const Mon = require('../shared/monsters.js');
 const Loot = require('../shared/loot.js');
+const Gear = require('../shared/gear.js');
 const MapGen = require('../shared/mapgen.js');
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
@@ -69,9 +70,14 @@ class Room {
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
       hp: hero.hp, maxHp: hero.hp, dead: false, down: false, downT: 0, fireCd: 0, facing: 0,
       input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
-      lives: C.START_LIVES, xpPool: 0, buys: {}, weapon2: null, coins: 0, gear: { armor: 0, boots: 0, weapon: 0 },
+      lives: C.START_LIVES, xpPool: 0, buys: {}, weapon2: null, coins: 0,
+      // v1.67 — l'equipaggiamento non e' piu' tre contatori di livello ma tre ID di oggetto: si parte con
+      // il rango 1 di ogni slot della classe (shared/gear.js). `gearBonus` e' la somma dei loro bonus,
+      // RICALCOLATA da zero a ogni cambio: col cambio libero sommare i delta lascerebbe in giro il bonus
+      // dell'oggetto sostituito.
+      gear: Gear.startingGear(hero.id), gearBonus: { maxHpFlat: 0, dmgReduce: 0, speedMult: 0 },
       boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
-      stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0, pierce: hero.weapon.pierce || 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0,
+      stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0, pierce: 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0,
         // v1.66 — le quattro statistiche da gioco di ruolo non agiscono su un danno generico ma sulla SCUOLA
         // dell'arma (shared/heroes.js -> weapon.school): Forza sul melee, Intelligenza sulla magia, Destrezza
         // sul tiro. Cosi' le classi miste previste in progressione hanno gia' il binario giusto: un guerriero
@@ -79,7 +85,7 @@ class Room {
         schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } },
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
-    this.players.set(pid, p); return p;
+    this._recomputeGear(p); this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
   setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; }
@@ -87,7 +93,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = { armor: 0, boots: 0, weapon: 0 }; this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -334,7 +340,8 @@ class Room {
     if (p.buffs.phase) d *= 0.7;
     if (p.buffs.b_shield) d *= 0.5;
     if (p.buffs.i_armor) d *= 0.45;
-    if (p.stats.dmgReduce > 0) d *= (1 - Math.min(0.85, p.stats.dmgReduce));
+    const dr = (p.stats.dmgReduce || 0) + (p.gearBonus ? p.gearBonus.dmgReduce : 0);
+    if (dr > 0) d *= (1 - Math.min(0.85, dr));
     if (p.buffs.gz_sunder > 0) d *= (C.GAZE_SUNDER_MULT || 1.32); // v1.34 — "meno difesa": danni subiti aumentati dallo sguardo
     if (p.buffs.barrier > 0) { const ang = Math.atan2(sy - p.y, sx - p.x); let diff = Math.abs(((ang - p.facing + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff < 1.2) { this.events.push({ t: 'block', x: p.x, y: p.y }); return; } }
     d = Math.max(1, Math.round(d)); p.hp -= d; const n = MU.norm(p.x - sx, p.y - sy); p.vx += n.x * 40 * kn; p.vy += n.y * 40 * kn; p.hitFlash = 0.15;
@@ -373,14 +380,29 @@ class Room {
   gameOver() { this.phase = C.PHASE_GAMEOVER; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'gameover', wave: this.wave, stats: this.buildRunStats(), dur: Math.round(this.time - (this.runStart || 0)) } }); }
   victory() { this.phase = C.PHASE_VICTORY; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'victory', wave: this.wave, stats: this.buildRunStats(), dur: Math.round(this.time - (this.runStart || 0)) } }); }
 
-  effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat; }
-  effSpeed(p) { let s = p.hero.speed * p.stats.speedMult * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  // v1.67 — l'ARMA arriva dall'oggetto equipaggiato, non piu' dalla classe: e' l'unico punto da cui
+  // leggerla. La scuola resta quella dell'eroe, altrimenti comprare un'arma spegnerebbe la statistica
+  // su cui il giocatore ha investito la run intera.
+  effWeapon(p) {
+    const it = p.gear && Gear.BY_ID[p.gear.weapon];
+    if (!it || !it.weapon) return p.hero.weapon;
+    if (!it._w || it._w.school !== p.hero.weapon.school) it._w = Object.assign({}, it.weapon, { school: p.hero.weapon.school });
+    return it._w;
+  }
+  // Ricalcola da zero i bonus degli oggetti indossati e riporta i PV dentro il nuovo massimo.
+  _recomputeGear(p) {
+    p.gearBonus = Gear.bonusOf(p.gear);
+    p.stats.pierce = this.effWeapon(p).pierce || 0;
+    p.hp = Math.min(p.hp, this.effMaxHp(p));
+  }
+  effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0); }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
-  effFireDelay(p) { let base = p.hero.weapon.fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
-  effDamage(p) { let d = (p.hero.weapon.dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p); if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
+  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
+  effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p); if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
   // v1.66 — moltiplicatori della scuola dell'arma impugnata (1 se l'arma non ne dichiara una).
-  schoolDmg(p) { const k = p.hero.weapon.school; return (k && p.stats.schoolDmg && p.stats.schoolDmg[k]) || 1; }
-  schoolRate(p) { const k = p.hero.weapon.school; return (k && p.stats.schoolRate && p.stats.schoolRate[k]) || 1; }
+  schoolDmg(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolDmg && p.stats.schoolDmg[k]) || 1; }
+  schoolRate(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolRate && p.stats.schoolRate[k]) || 1; }
   abilPow(p) { return p.stats.abilityMult; }
   comboMult(p) { if (!p || (p.combo || 0) < C.COMBO_MIN) return 1; return 1 + Math.min(C.COMBO_CAP, (p.combo - C.COMBO_MIN + 1) * C.COMBO_STEP); }
   // Ricompense combo a soglie (v1.7): scattano esattamente al raggiungimento della soglia.
@@ -404,7 +426,7 @@ class Room {
   }
 
   firePlayerWeapon(p) {
-    const w = p.hero.weapon; if (p.fireCd > 0) return; p.fireCd = this.effFireDelay(p);
+    const w = this.effWeapon(p); if (p.fireCd > 0) return; p.fireCd = this.effFireDelay(p);
     const base = p.aim; let pc = 1 + p.stats.extraProjectiles + (p.buffs.b_quad ? 2 : 0);
     let dmg = this.effDamage(p); let crit = MU.chance(p.stats.critChance);
     if (crit) dmg *= p.stats.critMult; dmg = Math.round(dmg);
@@ -581,24 +603,33 @@ class Room {
     });
     this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, xp: p.xpPool, stats, wave: this.wave });
   }
+  // v1.67 — il fabbro mostra SOLO il catalogo della classe di chi sta guardando, slot per slot. Il client
+  // non filtra niente: cio' che non e' della tua classe non attraversa nemmeno la rete.
   offerGear(p, near) {
-    const slots = Loot.GEAR.map(g => { const owned = p.gear[g.slot] || 0; const maxed = owned >= g.max; return { slot: g.slot, name: g.name, icon: 'assets/gear/' + p.heroId + '_' + g.slot + '.png', color: g.color, tier: owned, max: g.max, rank: owned > 0 ? Loot.GEAR_RANK[owned - 1] : '', nextRank: maxed ? '' : Loot.GEAR_RANK[owned], rarity: maxed ? Loot.GEAR_RARITY[owned - 1] : Loot.GEAR_RARITY[owned], cost: maxed ? 0 : Loot.gearCost(g, owned), desc: g.desc(owned + (maxed ? 0 : 1)), maxed }; });
+    const slots = Gear.slotsFor(p.heroId).map(slot => ({
+      slot, name: Gear.SLOT_NAME[slot] || slot, icon: Gear.SLOT_ICON[slot] || '⚔️',
+      items: Gear.itemsFor(p.heroId, slot).map(it => ({
+        id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost,
+        rarity: Gear.rarityOf(it), owned: p.gear[slot] === it.id ? 1 : 0,
+      })),
+    }));
     this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0 });
   }
-  buyGear(pid, slot) {
+  buyGear(pid, itemId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
-    // v1.52 — l'equipaggiamento si compra SOLO dal mercante, nella mappa MERCATO (il pannello di fine
+    // v1.52 — l'equipaggiamento si compra SOLO dal fabbro, nella mappa MERCATO (il pannello di fine
     // ondata resta disponibile solo se SHOP_GEAR_ENABLED viene riacceso).
     const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant && MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
     const atPanel = this.phase === C.PHASE_SHOP && C.SHOP_GEAR_ENABLED;
     if (!atMarket && !atPanel) return;
-    const def = Loot.GEAR_BY_SLOT[slot]; if (!def) return;
-    const owned = p.gear[slot] || 0; if (owned >= def.max) return;
-    const cost = Loot.gearCost(def, owned); if (p.coins < cost) return;
-    p.coins -= cost; p.gear[slot] = owned + 1;
-    // applica il delta del tier alle statistiche (campi additivi gia esistenti in p.stats)
-    for (const k of Object.keys(def.per)) { if (k === 'maxHpFlat') { p.stats.maxHpFlat += def.per[k]; p.hp += def.per[k]; } else p.stats[k] = (p.stats[k] || 0) + def.per[k]; }
-    this.offerGear(p, atMarket ? 1 : 0); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', slot, tier: p.gear[slot], name: def.name, icon: 'assets/gear/' + p.heroId + '_' + slot + '.png', color: def.color, rank: Loot.GEAR_RANK[p.gear[slot] - 1] } });
+    const it = Gear.BY_ID[itemId]; if (!it) return;
+    if (it.hero !== p.heroId) return;                       // la roba di un'altra classe non si compra
+    if (p.gear[it.slot] === it.id) return;                  // gia' addosso
+    if (p.coins < it.cost) return;
+    p.coins -= it.cost; p.gear[it.slot] = it.id;            // cambio LIBERO: il vecchio viene rimpiazzato
+    this._recomputeGear(p);
+    this.offerGear(p, atMarket ? 1 : 0);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank } });
   }
   offerBoon(p) {
     const choices = Loot.offerBoons(C.RARITY, p.boonsOwned);
@@ -833,7 +864,7 @@ class Room {
     const players = [];
     for (const p of this.players.values()) {
       const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln']) if (p.buffs[k] > 0) tb.push(k);
-      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, eg: +(p.edgeLv || 0).toFixed(2), nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
+      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, wp: p.gear ? p.gear.weapon : null, sh: p.gear ? p.gear.shield : null, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, eg: +(p.edgeLv || 0).toFixed(2), nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
     }
     // v1.59 — per il Beholder si manda anche gt: quanto manca al cambio di sguardo (0 = sta per cambiare).
     // Serve al client per ANTICIPARE il telegrafo sul corpo invece di limitarsi a reagire dopo.

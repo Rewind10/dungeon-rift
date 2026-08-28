@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'mapgen']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -48,6 +48,29 @@ ok(cards.length === L.XP_STATS.length, 'una carta per statistica');
 ok(cards[0].className.includes('maxed') && cards[0].innerHTML.includes('MAX'), 'la statistica al tetto e marcata MAX');
 ok(cards[1].innerHTML.includes('Lv.2/' + L.STAT_MAX_LEVEL), 'le altre mostrano Lv.x/12');
 ok(document.getElementById('gearSection').classList.contains('hidden'), 'la sezione Emporio resta nascosta senza dati equipaggiamento');
+// 3) v1.67 — pannello del FABBRO: catalogo per classe, una riga per slot
+const G = window.GAME.Gear;
+const gearPayload = (heroId, coins, indosso) => ({ coins, near: 1, slots: G.slotsFor(heroId).map(slot => ({
+  slot, name: G.SLOT_NAME[slot], icon: G.SLOT_ICON[slot],
+  items: G.itemsFor(heroId, slot).map(it => ({ id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost, rarity: G.rarityOf(it), owned: (indosso || {})[slot] === it.id ? 1 : 0 })) })) });
+let comprato = null;
+HUD.showGear(gearPayload('guerriero', 300, G.startingGear('guerriero')), (id) => { comprato = id; });
+const gw = document.getElementById('gearNpcCards');
+ok(gw.children.length === 3, 'il guerriero vede tre slot (arma, armatura, scudo)');
+const righe = gw.children.map(b => b.children.filter(c => c.className === 'gslot-row')[0]).filter(Boolean);
+ok(righe.length === 3, 'ogni slot ha la sua riga di oggetti');
+ok(righe[0].children.length === 3, 'lo slot arma mostra le tre armi del guerriero');
+const carte = righe[0].children;
+ok(carte[0].className.includes('maxed') && carte[0].innerHTML.includes('IN USO'), 'l oggetto indosso e marcato IN USO');
+ok(carte[1].innerHTML.includes('Spadone') && carte[1].innerHTML.includes('230'), 'lo spadone mostra nome e prezzo');
+ok(!carte[1].className.includes('disabled'), 'con 300 monete lo spadone e acquistabile');
+ok(carte[2].className.includes('disabled'), 'l alabarda (470) non e acquistabile con 300 monete');
+carte[1].onclick(); ok(comprato === 'gue_spadone', 'il clic manda l id dell oggetto, non lo slot');
+carte[0].onclick(); ok(comprato === 'gue_spadone', 'cliccare l oggetto gia indosso non ricompra nulla');
+HUD.hideGear();
+HUD.showGear(gearPayload('mago', 1000, G.startingGear('mago')), () => {});
+ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede due soli slot: niente scudo, niente calzature');
+
 // ============================================================================================
 // v1.64 — GUARDIA DI PRESTAZIONE SUL RENDERER
 // Il gioco singhiozzava con molti nemici. Profilato: il frame MEDIANO stava bene (6,5ms) ma il

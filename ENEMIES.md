@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.66.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.67.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -490,6 +490,28 @@ git tag vX.Y.Z
 - **⚠️ PRESTAZIONI — disegnare cio' che e' fuori inquadratura non e' gratis.** La canvas ritaglia, ma il costo
   di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
   test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
+
+- **⚠️ Un bonus ADDITIVO non sopravvive a un oggetto che si puo' TOGLIERE** *(v1.67)*. Finche' l'equipaggiamento
+  saliva di livello e basta, sommare il delta a `p.stats` funzionava. Col cambio libero (si compra qualunque
+  oggetto dello slot, anche tornando indietro) non funziona piu': il bonus del pezzo sostituito resta
+  attaccato al personaggio per sempre, e dopo tre acquisti il giocatore ha addosso i bonus di sei oggetti.
+  La forma giusta e' tenere i bonus dell'equipaggiamento **fuori** da `p.stats`, in un `p.gearBonus`
+  ricalcolato **da zero** a ogni cambio (`Room._recomputeGear`), e sommarlo dove serve. Il test che lo
+  protegge non compra e basta: compra, **torna indietro**, e verifica che il valore sia *esattamente* quello
+  di partenza.
+- **⚠️ Ogni classe deve vedere solo la propria roba, e il filtro sta sul SERVER** *(v1.67)*. Non "il client
+  nasconde le carte sbagliate": cio' che non e' della tua classe non attraversa la rete, e `buyGear` rifiuta
+  comunque un id che appartiene a un'altra classe. Un filtro solo sul client e' una regola di gioco che
+  chiunque puo' spegnere.
+- **⚠️ Un prezzo si tara sull'economia MISURATA, non su una sensazione** *(v1.67)*. Prima di scrivere i costi
+  del catalogo va contato quante monete rende davvero una partita: qui ~65-70 a ondata, con il Mercato che
+  apre ogni 3 ondate, quindi ~200 al primo passaggio e ~400 al secondo. Da li' escono i prezzi (rango 2 sui
+  230-300, rango 3 sui 470-500) e non viceversa. Lo stesso vale per la XP: e' cosi' che nella 1.66 e' nata la
+  regola "una run intera = una statistica al tetto".
+- **⚠️ "🪙 0" non e' un prezzo, e' un malinteso** *(v1.67)*. L'oggetto di partenza costa zero perche' lo hai
+  gia' addosso, non perche' e' in saldo: mostrarlo come prezzo lo fa sembrare l'affare del giorno. Nel
+  pannello si scrive **DI BASE**. Vale in generale: uno zero mostrato dove il giocatore si aspetta un numero
+  significativo va tradotto in parole.
 
 - **⚠️ NaN NON E' UN ERRORE, E' UN FILTRO CHE NON FILTRA** *(v1.66)*. Il fendente del guerriero scriveva `m.r`
   per il raggio del mostro, che **non esiste**: il campo e' `m.radius`. In JavaScript non salta niente —

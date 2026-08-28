@@ -22,8 +22,8 @@
   // 'near' distingue i due casi.
   Net.onOfferGear = (m) => {
     G.gearData = m;
-    if (m.near) HUD.showGear(m, (slot) => Net.buyGear(slot));
-    else if (C.SHOP_GEAR_ENABLED) HUD.setGear(m, (slot) => Net.buyGear(slot));
+    if (m.near) HUD.showGear(m, (id) => Net.buyGear(id));
+    else if (C.SHOP_GEAR_ENABLED) HUD.setGear(m, (id) => Net.buyGear(id));
   };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
@@ -88,7 +88,7 @@
       case 'shop': HUD.killfeed('✨ Scegli un potere e spendi la XP'); break;
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;
-      case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const gic = /\.(png|svg|webp|jpg)$/i.test(ev.icon || '') ? `<img class="gearmini" src="/${ev.icon}" alt="">` : (ev.icon || ''); HUD.killfeed(`${gic} <b style="color:${ev.color}">${esc(ev.name)} ${esc(ev.rank || '')}</b> equipaggiato!`); break; }
+      case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
       case 'boon_ok': A.boon(); HUD.killfeed(`🎴 Potere ottenuto: ${ev.icon} <b>${esc(ev.name)}</b>`); HUD.onBoonPicked(); break;
       case 'weapon_evo': A.evo(); R.ring(ev.x, ev.y, ev.color || '#b061ff', 10, 90, 0.7); R.burst(ev.x, ev.y, ev.color || '#b061ff', 26, 220, 0.7); R.addShake(8); HUD.killfeed(`✦ <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ARMA EVOLUTA: <b>${esc(ev.name)}</b>!`); break;
       case 'treasure_spawn': HUD.killfeed('👑 <b style="color:#ffd24a">Scrigno del Tesoro!</b> Uccidilo prima che fugga!'); break;
@@ -122,7 +122,7 @@
     if (w.me) {
       if (w.me.nm && !G._merchOpen && G.merchWares) { G._merchOpen = true; HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), null, false); } else if (!w.me.nm && G._merchOpen) { G._merchOpen = false; HUD.hideMerchant(false); }
       if (w.me.nmd && !G._darkOpen && G.darkWares) { G._darkOpen = true; HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), null, true); } else if (!w.me.nmd && G._darkOpen) { G._darkOpen = false; HUD.hideMerchant(true); }
-      if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (slot) => Net.buyGear(slot)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
+      if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
     w.mon = next.mon.map(nm => { const p = mm[nm.e] || nm; return Object.assign({}, nm, { x: lerp(p.x, nm.x, a), y: lerp(p.y, nm.y, a), f: lerpA(p.f, nm.f, a) }); });

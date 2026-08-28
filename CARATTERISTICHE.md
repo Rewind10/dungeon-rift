@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.66.0`
+**Versione attuale:** `1.67.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -522,6 +522,38 @@ A fine ondata il gioco va in **pausa**: durante la scelta dei poteri, il negozio
 è **congelato**. In singolo giocatore si riparte **solo** col tasto **Continua** (in multiplayer c'è un timeout
 anti-AFK). I drop rimasti a terra (XP e monete) vengono **raccolti automaticamente**.
 
+## 🔨 Il fabbro e l'equipaggiamento *(rifatto in v1.67)*
+
+Il fabbro del **Mercato** (ogni 3 ondate) vende un **catalogo di oggetti per classe**, pagato in **monete**.
+Ogni classe ha **i suoi slot** e vede **solo la propria roba**: il filtro sta sul server.
+
+| | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
+|---|---|---|---|
+| **Arma** | Spada · Spadone 🪙230 · Alabarda 🪙470 | Bacchetta di Frassino · Scettro Runico 🪙240 · Bastone del Vuoto 🪙500 | Arco Corto · Arco Lungo 🪙300 |
+| **Armatura** | Maglia di Ferro · Armatura a Piastre 🪙250 | Veste da Apprendista · Manto dell'Arcanista 🪙270 | Giaco di Pelle · Corazza di Cuoio 🪙240 |
+| **Scudo** | Scudo · Scudo a Torre 🪙290 | — | — |
+| **Calzature** | — | — | Scarpe di Corda · Stivali del Passo Lieve 🪙260 |
+
+**Il rango 1 costa 0 ed e' cio' che hai addosso alla partenza**: nel pannello e' marcato *DI BASE*. Un rango
+piu' alto costa di piu' e vale di piu', sempre — niente scambi alla pari e niente svantaggi nascosti.
+
+**Il cambio e' libero**: qualunque oggetto dello slot, in qualunque momento, a prezzo pieno; il vecchio viene
+rimpiazzato, anche tornando indietro. I bonus vengono **ricalcolati da zero** a ogni cambio.
+
+**Le armi cambiano il modo di combattere, non solo i numeri.** Per il guerriero, piu' l'arma e' lunga piu'
+l'arco del fendente e' **stretto** (alabarda 152px/71°, spada 100px/109°): si sceglie fra tenere lontano e
+coprire i fianchi. Per il mago la **cadenza resta la stessa** su tutte le bacchette — quella la alza
+l'Intelligenza — e cambiano danno, velocita' e grandezza della bolla, cioe' quante ne vanno a segno.
+
+**Si vede cio' che si compra**: scudo a torre piu' grande e spesso, arco lungo che sporge davanti e dietro,
+orbe della bacchetta che cresce e cambia colore, e l'arco del fendente che segue l'arma. Armature, vesti e
+calzature restano invisibili: da sopra, a questa scala, non si leggerebbero.
+
+**Prezzi** tarati sull'economia misurata (~65-70 monete a ondata): al primo mercato ci si permette un rango 2,
+al secondo un rango 3 oppure due rango 2.
+
+Il catalogo vive in **`shared/gear.js`**: aggiungere un oggetto e' una riga sola.
+
 ## 🦸 Le tre classi *(v1.66)*
 
 **GUERRIERO 🛡️ · MAGO 🔮 · LADRO 🏹** hanno sostituito Enforcer-7, Sgt. Viper e NULL: il gioco e' un dungeon
@@ -694,7 +726,7 @@ shared/  constants (+combo +MONETE), mathutils, loot (BOON + EVO + item + XP + E
 server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP, COMBO, homing, RICOMPENSE-COMBO, SINERGIE, STATS, MONETE, EMPORIO)
 public/  index.html (scelta boon + combo meter), style.css
 public/js/ net (+fix input), audio, renderer (boon-fx, tesoro, MINIMAPPA, MONETE, PROP-TETRI), hud (boon+modalità+COMBO+STATS+EMPORIO+ICONE-IMG), main (hit-stop, combo, sinergie, monete)
-public/assets/gear/ 9 icone PNG (3 slot x 3 eroi)
+shared/gear.js — catalogo dell equipaggiamento per classe
 test/    simulate.js — 499 test automatici headless · client.js — controlli su HUD e renderer
 ```
 

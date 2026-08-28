@@ -71,6 +71,41 @@
     showShop() { $('upgradeScreen').classList.remove('hidden'); this._render(); },
     setStats(data, onBuy, onReady) { this._stats = data; this._buy = onBuy; this._ready = onReady; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     setBoons(data, onPick) { this._boons = data; this._pick = onPick; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    // v1.67 — il pannello del fabbro non mostra piu' tre barre da riempire ma il CATALOGO della classe,
+    // una riga per slot. Ogni carta e' un oggetto con un nome: quello indosso e' marcato IN USO, gli altri
+    // portano il prezzo. Il cambio e' libero, quindi non si "sblocca" niente — si sceglie.
+    _gearCard(it, coins, onBuy) {
+      const rar = RAR[it.rarity] || RAR.common;
+      const inUso = !!it.owned, afford = coins >= it.cost;
+      const el = document.createElement('div');
+      el.className = 'gc' + (inUso ? ' maxed' : (afford ? '' : ' disabled'));
+      el.style.borderColor = it.color;
+      const pips = []; for (let i = 0; i < 3; i++) pips.push('<span class="' + (i < it.rank ? 'on' : '') + '" style="' + (i < it.rank ? 'background:' + it.color : '') + '"></span>');
+      // il rango 1 costa 0: scrivere "🪙 0" fa sembrare un affare cio' che e' semplicemente l'equipaggiamento
+      // di partenza. Si scrive DI BASE, che e' l'informazione vera.
+      const foot = inUso
+        ? '<div class="cost maxed" style="color:' + it.color + '">IN USO ★</div>'
+        : (it.cost > 0
+          ? '<div class="cost" style="color:' + (afford ? it.color : '#ff8a8a') + '">🪙 ' + it.cost + '</div>'
+          : '<div class="cost" style="color:#8d97ab">DI BASE</div>');
+      el.innerHTML = '<span class="rar" style="color:' + rar.color + '">' + esc(rar.name) + '</span>'
+        + '<div class="nm">' + esc(it.name) + '</div><div class="ds">' + esc(it.desc) + '</div>'
+        + '<div class="pips">' + pips.join('') + '</div>' + foot;
+      el.onclick = () => { if (!inUso && afford && onBuy) onBuy(it.id); };
+      return el;
+    },
+    _gearSlots(wrap, data, onBuy) {
+      wrap.innerHTML = '';
+      (data.slots || []).forEach(sl => {
+        const box = document.createElement('div'); box.className = 'gslot';
+        const h = document.createElement('div'); h.className = 'gslot-h';
+        h.innerHTML = '<span class="ic">' + sl.icon + '</span> ' + esc(sl.name);
+        box.appendChild(h);
+        const row = document.createElement('div'); row.className = 'gslot-row';
+        (sl.items || []).forEach(it => row.appendChild(this._gearCard(it, data.coins || 0, onBuy)));
+        box.appendChild(row); wrap.appendChild(box);
+      });
+    },
     setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     _render() {
       // BOON row (top)
@@ -85,17 +120,7 @@
       if (gsec) gsec.classList.toggle('hidden', !(this._gear && this._gear.slots && this._gear.slots.length));
       if (this._gear && this._gear.slots) {
         $('shopCoins').textContent = this._gear.coins;
-        const gc = $('gearCards'); gc.innerHTML = '';
-        this._gear.slots.forEach(g => {
-          const rar = RAR[g.rarity] || RAR.common;
-          const afford = !g.maxed && this._gear.coins >= g.cost;
-          const el = document.createElement('div'); el.className = 'gc' + (g.maxed ? ' maxed' : (afford ? '' : ' disabled')); el.style.borderColor = g.color;
-          const pips = []; for (let i = 0; i < g.max; i++) pips.push(`<span class="${i < g.tier ? 'on' : ''}" style="${i < g.tier ? 'background:' + g.color : ''}"></span>`);
-          const foot = g.maxed ? `<div class="cost maxed" style="color:${g.color}">MAX ★</div>` : `<div class="cost" style="color:${g.color}">🪙 ${g.cost}</div>`;
-          el.innerHTML = `<span class="rar" style="color:${rar.color}">${g.tier > 0 ? 'Lv.' + g.tier + '/' + g.max : 'Nuovo'}</span><div class="icon">${iconHTML(g.icon, "gicon")}</div><div class="nm">${g.name} ${g.maxed ? g.rank : (g.nextRank ? '→ ' + g.nextRank : '')}</div><div class="ds">${g.desc}</div><div class="pips">${pips.join('')}</div>${foot}`;
-          el.onclick = () => { if (afford && this._buyGear) this._buyGear(g.slot); };
-          gc.appendChild(el);
-        });
+        this._gearSlots($('gearCards'), this._gear, (id) => { if (this._buyGear) this._buyGear(id); });
       }
       // v1.51 — le statistiche hanno un TETTO di livello e costi molto piu' ripidi: la carta mostra Lv.x/max
       // e diventa MAX quando e' esaurita, cosi' si vede a colpo d'occhio dove hai gia' investito.
@@ -174,22 +199,12 @@
     _renderGearNpc() {
       const d = this._gearNpc; if (!d) return;
       const hd = $('gearHead');
-      if (hd) hd.innerHTML = '\uD83D\uDD28 <b>Fabbro dell\'Emporio</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
-      const sig = JSON.stringify((d.slots || []).map(g => [g.slot, g.tier, g.cost, g.maxed])) + '|' + (d.coins || 0);
+      if (hd) hd.innerHTML = '\uD83D\uDD28 <b>Fabbro</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
+      // la firma evita di ricostruire il pannello 20 volte al secondo mentre resti vicino al fabbro
+      const sig = JSON.stringify((d.slots || []).map(sl => [sl.slot, (sl.items || []).map(i => [i.id, i.owned])])) + '|' + (d.coins || 0);
       if (sig === this._gearNpcSig) return; this._gearNpcSig = sig;
-      const wrap = $('gearNpcCards'); if (!wrap) return; wrap.innerHTML = '';
-      (d.slots || []).forEach(g => {
-        const rar = RAR[g.rarity] || RAR.common;
-        const afford = !g.maxed && (d.coins || 0) >= g.cost;
-        const el = document.createElement('div');
-        el.className = 'gc' + (g.maxed ? ' maxed' : (afford ? '' : ' disabled'));
-        el.style.borderColor = g.color;
-        const pips = []; for (let i = 0; i < g.max; i++) pips.push('<span class="' + (i < g.tier ? 'on' : '') + '" style="' + (i < g.tier ? 'background:' + g.color : '') + '"></span>');
-        const foot = g.maxed ? '<div class="cost maxed" style="color:' + g.color + '">MAX \u2605</div>' : '<div class="cost" style="color:' + (afford ? g.color : '#ff8a8a') + '">\uD83E\uDE99 ' + g.cost + '</div>';
-        el.innerHTML = '<span class="rar" style="color:' + rar.color + '">' + (g.tier > 0 ? 'Lv.' + g.tier + '/' + g.max : 'Nuovo') + '</span><div class="icon">' + iconHTML(g.icon, 'gicon') + '</div><div class="nm">' + esc(g.name) + ' ' + esc(g.maxed ? g.rank : (g.nextRank ? '\u2192 ' + g.nextRank : '')) + '</div><div class="ds">' + esc(g.desc) + '</div><div class="pips">' + pips.join('') + '</div>' + foot;
-        el.onclick = () => { if (afford && this._buyGearNpc) this._buyGearNpc(g.slot); };
-        wrap.appendChild(el);
-      });
+      const wrap = $('gearNpcCards'); if (!wrap) return;
+      this._gearSlots(wrap, d, (id) => { if (this._buyGearNpc) this._buyGearNpc(id); });
     },
     lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.guerriero; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
     hideLobby() { $('lobby').classList.add('hidden'); },

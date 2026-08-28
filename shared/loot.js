@@ -168,19 +168,9 @@
 
   // ===== EQUIPAGGIAMENTO a slot (v1.8): acquistabile con MONETE. 5 slot x 5 tier. =====
   // Ogni tier aggiunge `per` alle statistiche del giocatore (delta additivo, campi gia esistenti in p.stats).
-  const GEAR_RANK = ['I', 'II', 'III', 'IV', 'V'];
-  const GEAR_RARITY = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  const GEAR = [
-    { slot: 'armor', name: 'Armatura', icon: 'assets/gear/armor.png', color: '#7dffea', max: 5, baseCost: 80, costMul: 2.15,
-      per: { dmgReduce: 0.04, maxHpFlat: 15 }, desc: t => `-${t * 4}% danni subiti, +${t * 15} PV massimi` },
-    { slot: 'boots', name: 'Stivali', icon: 'assets/gear/boots.png', color: '#8bd6ff', max: 5, baseCost: 70, costMul: 2.10,
-      per: { speedMult: 0.05 }, desc: t => `+${t * 5}% velocita di movimento` },
-    { slot: 'weapon', name: 'Arma', icon: 'assets/gear/weapon.png', color: '#ff8a5b', max: 5, baseCost: 95, costMul: 2.20,
-      per: { dmgMult: 0.08, fireRateMult: 0.04 }, desc: t => `+${t * 8}% danno, +${t * 4}% cadenza` },
-  ];
-  const GEAR_BY_SLOT = {}; for (const g of GEAR) GEAR_BY_SLOT[g.slot] = g;
-  // Costo per salire dal tier posseduto `owned` al successivo.
-  function gearCost(def, owned) { return Math.round(def.baseCost * Math.pow(def.costMul, owned)); }
+  // v1.67 — l'EMPORIO generico (tre slot da salire a livelli: GEAR, GEAR_BY_SLOT, gearCost, GEAR_RANK,
+  // GEAR_RARITY) e' stato rimosso: al suo posto c'e' il catalogo di oggetti per classe in shared/gear.js,
+  // dove ogni pezzo ha un nome, un prezzo e statistiche proprie. Qui restava solo una scala di numeri.
 
   // ===== MONETE (v1.8): converte un valore in "monete" di vario taglio per il drop a terra. =====
   function coinsFor(value, denoms) {
@@ -191,5 +181,5 @@
     return out;
   }
 
-  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, GEAR, GEAR_BY_SLOT, GEAR_RANK, GEAR_RARITY, gearCost, coinsFor };
+  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, coinsFor };
 });

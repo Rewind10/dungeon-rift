@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.66.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.67.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.67 (il fabbro vende oggetti, non livelli)
+- **🔨 Catalogo per classe**: l'Emporio a tre barre e' sostituito da **oggetti con un nome**, e ogni classe
+  vede solo la propria roba, con i propri slot — il guerriero ha lo scudo, il ladro le calzature, il mago no.
+- **⚔️ Guerriero**: Spada · **Spadone** 🪙230 · **Alabarda** 🪙470 — piu' e' lunga, piu' l'arco e' **stretto**
+  (152px/71° contro 100px/109°). Armatura a Piastre 🪙250, Scudo a Torre 🪙290.
+- **🔮 Mago**: Bacchetta di Frassino · **Scettro Runico** 🪙240 · **Bastone del Vuoto** 🪙500 — stessa cadenza
+  per tutte (quella la alza l'Intelligenza), cambiano danno, velocita' e **grandezza della bolla**. Manto
+  dell'Arcanista 🪙270.
+- **🏹 Ladro**: Arco Corto · **Arco Lungo** 🪙300, Corazza di Cuoio 🪙240, Stivali del Passo Lieve 🪙260.
+- **🔁 Cambio libero**: si compra qualunque oggetto dello slot, anche tornando indietro; il vecchio viene
+  rimpiazzato e i bonus vengono **ricalcolati da zero** (niente bonus fantasma).
+- **👁️ Cio' che compri si vede**: scudo a torre piu' grande, arco lungo che sporge, orbe della bacchetta,
+  e l'arco del fendente che cambia con l'arma.
 
 ## 🆕 Novita v1.66 (Guerriero, Mago, Ladro)
 - **🦸 Tre classi nuove al posto dei tre eroi cyberpunk**: il **Guerriero** colpisce con un **semicerchio**
@@ -515,7 +529,7 @@ server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP, combo
 public/  index.html (scelta boon + badge versione), style.css
 public/js/ net, input, audio, renderer (puppet + sprite-sheet + boon-fx + MINIMAPPA), hud, main
 public/assets/enemies/  pezzi raster + manifest dei mostri (ghoul, mage, brute, slime, beholder, troll_sheet)
-public/assets/art/      artwork del bestiario · public/assets/gear/ icone emporio (3 slot x 3 eroi)
+public/assets/art/      artwork del bestiario
 tools/   slicer e anteprime rig — Python offline, NON servono a runtime
 test/    simulate.js — suite headless server (273 test) · client.js — smoke test interfaccia (DOM finto)
 ```

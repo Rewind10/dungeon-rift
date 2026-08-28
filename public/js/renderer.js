@@ -1589,7 +1589,7 @@
         const gc = p.gz === 'slow' ? '#5ad0ff' : p.gz === 'sunder' ? '#c48cff' : '#ff7a5a';
         ctx.strokeStyle = this._rgba(gc, 0.4 + 0.35 * Math.sin(this.time * 7)); ctx.lineWidth = 2.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 7); ctx.stroke(); ctx.setLineDash([]);
       }
-      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a); this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20); ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
+      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a); this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }
@@ -1605,16 +1605,20 @@
     // testa a r*0.5) perche' e' quella che si legge alla scala di gioco: cambiano stoffa, sagoma e arma.
     // Le sfumature passano dalla cache _grad: r e' costante, quindi si costruiscono una volta sola e
     // non ogni fotogramma (v1.64 — mai creare gradienti dentro un ciclo per entita').
-    _hero(ctx, id, r, t, dashing, atk) {
+    // v1.67 — `eq` porta l'equipaggiamento visibile (`wp` arma, `sh` scudo). Si disegna cio' che cambia
+    // la SAGOMA — scudo a torre, arco lungo, orbe della bacchetta — perche' e' l'unica differenza che si
+    // legge dall'alto a questa scala; il resto (armature, vesti, calzature) si legge nelle statistiche.
+    _hero(ctx, id, r, t, dashing, atk, eq) {
       const a = Math.max(0, Math.min(1, atk || 0));
-      if (id === 'mago') this._heroMago(ctx, r, t, a);
-      else if (id === 'ladro') this._heroLadro(ctx, r, t, a);
-      else this._heroGuerriero(ctx, r, t, a);
+      eq = eq || {};
+      if (id === 'mago') this._heroMago(ctx, r, t, a, eq);
+      else if (id === 'ladro') this._heroLadro(ctx, r, t, a, eq);
+      else this._heroGuerriero(ctx, r, t, a, eq);
       if (dashing) { const h = HERO[id] || HERO.guerriero; ctx.strokeStyle = h.accent || '#9fe0ff'; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     },
     // ---- MAGO: il mantello e' la sagoma. La massa della stoffa la fa il VALORE, non il contorno: il
     // primo tentativo aveva panno quasi nero e filo ciano tutt'intorno e da sopra leggeva come un anello.
-    _heroMago(ctx, r, t, atk) {
+    _heroMago(ctx, r, t, atk, eq) {
       const DK = '#0a0c12', body = '#16181f', bodyDk = '#05060a', accent = '#00f0c8', skin = '#d8d2c8';
       const sway = Math.sin(t * 5) * 0.12, sw2 = Math.sin(t * 5 + 0.8) * 0.10;
       ctx.lineJoin = 'round';
@@ -1649,8 +1653,9 @@
       ctx.fillStyle = '#2a1d10'; ctx.strokeStyle = DK; ctx.lineWidth = 1.5;   // bastone
       this._rr(ctx, r * 0.45, -r * 0.06, r * 1.05, r * 0.12, 2); ctx.fill(); ctx.stroke();
       ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // orbe: divampa quando lancia
-      const og = this._grad('h_orb|' + r, () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * 0.50); q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.28, 'rgba(0,240,200,.85)'); q.addColorStop(1, 'rgba(0,240,200,0)'); return q; });
-      ctx.globalAlpha = 0.75 + 0.25 * atk; ctx.fillStyle = og; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * (0.50 + 0.34 * atk), 0, 7); ctx.fill(); ctx.restore();
+      const orb = { mag_scettro: ['163,140,255', 0.62], mag_bastone: ['127,251,228', 0.76] }[eq && eq.wp] || ['0,240,200', 0.50];
+      const og = this._grad('h_orb|' + r + '|' + orb[0], () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * orb[1]); q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.28, 'rgba(' + orb[0] + ',.85)'); q.addColorStop(1, 'rgba(' + orb[0] + ',0)'); return q; });
+      ctx.globalAlpha = 0.75 + 0.25 * atk; ctx.fillStyle = og; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * (orb[1] + 0.34 * atk), 0, 7); ctx.fill(); ctx.restore();
       ctx.fillStyle = skin; ctx.strokeStyle = DK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.5, 0, 7); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#0c0d12'; ctx.strokeStyle = DK; ctx.lineWidth = 2;     // cappuccio a punta
       ctx.beginPath(); ctx.moveTo(r * 0.16, -r * 0.46); ctx.quadraticCurveTo(-r * 0.55, -r * 0.52, -r * 1.06, -r * 0.10);
@@ -1666,7 +1671,7 @@
     // ---- GUERRIERO: armatura abbozzata (pochi solchi, non dettagli) e scudo ad arco ")" davanti.
     // Gli spallacci sono volutamente PIU SCURI del pettorale: con lo stesso acciaio la figura diventava
     // un grumo di grigi. L'elmo, al contrario, e' PIU CHIARO, altrimenti la testa spariva nel torace.
-    _heroGuerriero(ctx, r, t, atk) {
+    _heroGuerriero(ctx, r, t, atk, eq) {
       const DK = '#0a0c12', clothDk = '#243516', cloth = '#3f5a2c', steelDk = '#3a424e';
       const sway = Math.sin(t * 5) * 0.12;
       ctx.lineJoin = 'round';
@@ -1691,13 +1696,19 @@
       for (const sgy of [-1, 1]) { ctx.fillStyle = sp; ctx.strokeStyle = DK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-r * 0.14, sgy * r * 0.60, r * 0.30, r * 0.21, sgy * 0.3, 0, 7); ctx.fill(); ctx.stroke(); }
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
       ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
-      const RS = r * 0.86, TH = r * 0.26, A0 = -1.15, A1 = 1.15;
-      const sgd = this._grad('h_scudo|' + r, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, '#3f4650'); q.addColorStop(0.55, '#8d97a5'); q.addColorStop(1, '#c9d1dc'); return q; });
+      // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
+      // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
+      const torre = eq && eq.sh === 'gue_torre';
+      const RS = r * (torre ? 0.94 : 0.86), TH = r * (torre ? 0.38 : 0.26), A0 = torre ? -1.45 : -1.15, A1 = -A0;
+      const sgd = this._grad('h_scudo|' + r + '|' + (torre ? 't' : 'n'), () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, '#3f4650'); q.addColorStop(0.55, '#8d97a5'); q.addColorStop(1, '#c9d1dc'); return q; });
       ctx.fillStyle = sgd; ctx.strokeStyle = DK; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2, A0, A1); ctx.arc(0, 0, RS - TH / 2, A1, A0, true); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#c8a23a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
       ctx.fillStyle = '#c8a23a'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * 0.11, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#e6ecf4'; ctx.beginPath(); ctx.arc(Math.cos(-0.72) * RS, Math.sin(-0.72) * RS, r * 0.05, 0, 7); ctx.arc(Math.cos(0.72) * RS, Math.sin(0.72) * RS, r * 0.05, 0, 7); ctx.fill();
+      ctx.fillStyle = '#e6ecf4';
+      const riv = torre ? 1.05 : 0.72;
+      ctx.beginPath(); ctx.arc(Math.cos(-riv) * RS, Math.sin(-riv) * RS, r * 0.05, 0, 7); ctx.arc(Math.cos(riv) * RS, Math.sin(riv) * RS, r * 0.05, 0, 7); ctx.fill();
+      if (torre) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
       ctx.restore();
       const hg = this._grad('h_elmo|' + r, () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, '#6e7784'); q.addColorStop(0.5, '#aeb6c2'); q.addColorStop(1, '#e2e7ee'); return q; });
       ctx.fillStyle = hg; ctx.strokeStyle = DK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.46, 0, 7); ctx.fill(); ctx.stroke();
@@ -1709,7 +1720,7 @@
     },
     // ---- LADRO: cappuccio, mantellina corta, faretra, e l'arco disegnato di LATO — la curva ")" corre
     // lungo il fianco, non davanti: di fronte sarebbe uno scudo, non un arco.
-    _heroLadro(ctx, r, t, atk) {
+    _heroLadro(ctx, r, t, atk, eq) {
       const DK = '#0a0c12', cloth = '#3c5140', clothDk = '#1d2a22', skin = '#c99a6a', wood = '#8a6534';
       const sway = Math.sin(t * 5) * 0.12, draw = atk;
       ctx.lineJoin = 'round';
@@ -1730,14 +1741,18 @@
       ctx.strokeStyle = '#ded4ab'; ctx.lineWidth = 1.8;
       for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * r * 0.06, -r * 0.34); ctx.lineTo(k * r * 0.09, -r * 0.60); ctx.stroke(); }
       ctx.restore(); ctx.strokeStyle = DK; ctx.lineWidth = 2;
-      const bx0 = -r * 0.56, bx1 = r * 0.80, by = -r * 1.00;                   // ARCO ")" di lato
-      ctx.strokeStyle = wood; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.13;
-      ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * 0.46, bx1, by + r * 0.10); ctx.stroke();
+      // l'arco lungo esce oltre la sagoma davanti e dietro, e la curva e' piu' profonda: da sopra e' la
+      // sola cosa che distingue i due archi, e si vede subito.
+      const lungo = eq && eq.wp === 'lad_arcolungo', BL = lungo ? 1.34 : 1, BC = lungo ? 0.62 : 0.46;
+      const bx0 = -r * 0.56 * BL, bx1 = r * 0.80 * BL, by = -r * 1.00;         // ARCO ")" di lato
+      ctx.strokeStyle = lungo ? '#a67c3d' : wood; ctx.lineCap = 'round'; ctx.lineWidth = r * (lungo ? 0.15 : 0.13);
+      ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * BC, bx1, by + r * 0.10); ctx.stroke();
       ctx.strokeStyle = '#5a4326'; ctx.lineWidth = r * 0.05;
-      ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * 0.46, bx1, by + r * 0.10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * BC, bx1, by + r * 0.10); ctx.stroke();
       ctx.strokeStyle = 'rgba(240,240,230,.9)'; ctx.lineWidth = 1.6; ctx.lineCap = 'butt';
       const pull = by + r * (0.10 + 0.60 * draw);                              // corda tirata mentre incocca
       ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.lineTo(r * 0.12, pull); ctx.lineTo(bx1, by + r * 0.10); ctx.stroke();
+      if (lungo) { ctx.strokeStyle = 'rgba(230,220,190,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * (BC - 0.10), bx1, by + r * 0.10); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,230,.9)'; ctx.lineWidth = 1.6; }
       if (draw > 0.05) {
         ctx.strokeStyle = '#efe7cf'; ctx.lineWidth = 2.2;
         ctx.beginPath(); ctx.moveTo(r * 0.12, pull); ctx.lineTo(r * 1.22, pull - r * 0.04); ctx.stroke();

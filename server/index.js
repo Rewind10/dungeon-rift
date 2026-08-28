@@ -30,7 +30,7 @@ attach(server, (conn) => {
       case C.MSG.INPUT: if (room) room.setInput(pid, m); break;
       case 'start': if (room) room.startGame(); break;
       case C.MSG.BUY_STAT: if (room) room.buyStat(pid, m.id); break;
-      case C.MSG.BUY_GEAR: if (room) room.buyGear(pid, m.slot); break;
+      case C.MSG.BUY_GEAR: if (room) room.buyGear(pid, m.id); break;
       case C.MSG.BUY_MERCHANT: if (room) { if (m.dark) room.buyDark(pid, m.id); else room.buyMerchant(pid, m.id); } break;
       case C.MSG.PICK_BOON: if (room) room.pickBoon(pid, m.id); break;
       case C.MSG.SHOP_READY: if (room) room.shopReady(pid, m.dest); break;

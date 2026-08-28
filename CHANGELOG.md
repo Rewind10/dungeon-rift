@@ -2,6 +2,73 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.67.0] — 2026-08-28 · "Il fabbro vende oggetti, non livelli"
+
+L'Emporio erano **tre barre da riempire** — Armatura, Stivali, Arma, cinque livelli l'una, uguali per tutti e
+tre gli eroi. Una barra da riempire e' una decisione sola: *ho abbastanza monete?* Da questa versione il
+fabbro vende **oggetti con un nome**, e la decisione diventa un'altra: *mi serve la portata dell'alabarda o
+la cadenza dello spadone?*
+
+#### 🔨 Un catalogo per classe
+Ogni classe vede **solo la propria roba**, e ha **i suoi slot**: il guerriero lo scudo, il ladro le calzature,
+il mago nessuno dei due. Il filtro sta sul server — cio' che non e' della tua classe non attraversa la rete.
+
+| | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
+|---|---|---|---|
+| **Arma** | Spada · Spadone 🪙230 · Alabarda 🪙470 | Bacchetta di Frassino · Scettro Runico 🪙240 · Bastone del Vuoto 🪙500 | Arco Corto · Arco Lungo 🪙300 |
+| **Armatura** | Maglia di Ferro · Armatura a Piastre 🪙250 | Veste da Apprendista · Manto dell'Arcanista 🪙270 | Giaco di Pelle · Corazza di Cuoio 🪙240 |
+| **Scudo** | Scudo · Scudo a Torre 🪙290 | — | — |
+| **Calzature** | — | — | Scarpe di Corda · Stivali del Passo Lieve 🪙260 |
+
+Il **rango 1 costa 0 ed e' quello che hai gia' addosso alla partenza**: non e' un oggetto vuoto, e' il metro
+con cui si leggono gli altri. Nel pannello e' marcato **DI BASE**, non "🪙 0", che farebbe sembrare un affare
+cio' che possiedi gia'.
+
+Le tre armi del guerriero non sono la stessa arma piu' grande: **piu' e' lunga, piu' l'arco e' stretto**.
+L'alabarda arriva a 152px ma copre 71°, lo spadone 122px per 94°, la spada 100px per 109°. Si sceglie fra
+tenere lontano e coprire i fianchi. Le tre bacchette hanno invece **la stessa cadenza**: quella e' la firma
+del mago e la alza l'Intelligenza, non il portafoglio — le bacchette migliori danno danno, velocita' e
+grandezza della bolla, cioe' *quante ne vanno a segno*, che su un proiettile lento conta quanto il danno.
+
+#### 🔁 Il cambio e' libero
+Si compra qualunque oggetto dello slot in qualunque momento, a prezzo pieno, e il vecchio viene rimpiazzato.
+Anche all'indietro: se l'alabarda non ti piace, torni allo spadone. Per questo i bonus **non si sommano man
+mano**: il server li **ricalcola da zero** a ogni cambio, altrimenti il bonus del pezzo tolto resterebbe
+attaccato al personaggio per sempre. C'e' un test apposta che compra, torna indietro e verifica che la
+velocita' sia esattamente quella di prima.
+
+#### 👁️ Cio' che si compra si vede
+- **Scudo a torre**: arco piu' ampio, lamiera piu' spessa, seconda nervatura. E' l'unico pezzo d'armatura che
+  cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
+- **Arco lungo**: sporge davanti e dietro la sagoma, con la curva piu' profonda e il legno piu' chiaro.
+- **Bacchette**: l'orbe cresce e cambia colore (viola per lo Scettro, ciano chiaro per il Bastone), e la
+  **bolla che spara** e' quella dell'arma — raggio, velocita' e colore.
+- **Fendente**: l'arco disegnato e' sempre *esattamente* l'area che ferisce, quindi cambiando arma si vede
+  subito quanto arriva.
+
+Armature, vesti e calzature restano invisibili per ora: da sopra, a questa scala, non si leggerebbero.
+
+#### 💰 Prezzi tarati sull'economia vera
+Misurata: **65-70 monete a ondata**, e il Mercato apre ogni 3 ondate. Al primo mercato si hanno ~200 monete
+(un oggetto di rango 2), al secondo ~400 (un rango 3, oppure due rango 2). Nessun oggetto e' fuori portata,
+nessuno e' regalato.
+
+#### 🧪 Test
+- **609 passati, 0 falliti** (+111): il catalogo e' verificato a tappeto — ogni oggetto sta in uno slot che la
+  sua classe possiede, ogni rango superiore **costa di piu' E vale di piu'** (danni al secondo per le armi,
+  somma pesata dei bonus per il resto), e nessuna classe puo' comprare la roba di un'altra.
+- Nuovi controlli anche sul pannello del fabbro (`test/client.js`): il guerriero vede tre slot, il mago due,
+  l'oggetto indosso e' marcato IN USO e non si ricompra, e il clic manda **l'id dell'oggetto**, non lo slot.
+- Bilanciamento rimisurato: a parita' di tutto il resto, il guerriero passa da 35 uccisioni per partita con la
+  spada a 38 con lo spadone e **46 con l'alabarda**, e sopravvive 95s invece di 73s. La scala funziona.
+
+#### ➖ Rimosso
+`Loot.GEAR`, `GEAR_BY_SLOT`, `gearCost`, `GEAR_RANK`, `GEAR_RARITY`: erano una scala di numeri uguale per
+tutti. Con loro non serve piu' nessuna delle icone in `public/assets/gear/` (le carte ora portano il NOME
+dell'oggetto e le sue statistiche, che e' cio' che si legge): i file sono ancora sul disco e si possono
+cancellare a mano. Il catalogo vive in **`shared/gear.js`**, e aggiungere un oggetto e' una
+riga sola — negozio, HUD, ricalcolo dei bonus e test lo pescano tutti da li'.
+
 ### [1.66.0] — 2026-08-28 · "Guerriero, Mago, Ladro"
 
 Il gioco e' un dungeon con troll, lich e beholder, e i tre protagonisti erano un poliziotto cibernetico, un
