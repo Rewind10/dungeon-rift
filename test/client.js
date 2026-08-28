@@ -46,7 +46,7 @@ ok(document.getElementById('boonCards').children.length === 3, 'il negozio diseg
 const cards = document.getElementById('upgradeCards').children;
 ok(cards.length === L.XP_STATS.length, 'una carta per statistica');
 ok(cards[0].className.includes('maxed') && cards[0].innerHTML.includes('MAX'), 'la statistica al tetto e marcata MAX');
-ok(cards[1].innerHTML.includes('Lv.2/' + L.STAT_MAX_LEVEL), 'le altre mostrano Lv.x/8');
+ok(cards[1].innerHTML.includes('Lv.2/' + L.STAT_MAX_LEVEL), 'le altre mostrano Lv.x/12');
 ok(document.getElementById('gearSection').classList.contains('hidden'), 'la sezione Emporio resta nascosta senza dati equipaggiamento');
 // ============================================================================================
 // v1.64 — GUARDIA DI PRESTAZIONE SUL RENDERER

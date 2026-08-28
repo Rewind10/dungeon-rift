@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.65.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.66.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -18,10 +18,21 @@ Test: `npm test`
 | Mira | Mouse |
 | Spara | Click sinistro / Spazio |
 | **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
-| Abilità 1 / 2 | Q / E |
+| ~~Abilità 1 / 2~~ | *sospese in v1.66 — torneranno con l'evoluzione delle classi* |
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.66 (Guerriero, Mago, Ladro)
+- **🦸 Tre classi nuove al posto dei tre eroi cyberpunk**: il **Guerriero** colpisce con un **semicerchio**
+  davanti a se (raggio e apertura vengono dall'arma), il **Mago** lancia **bolle di energia** lente e pesanti,
+  il **Ladro** tira **frecce** veloci che perforano un nemico.
+- **📊 Quattro statistiche da gioco di ruolo** — **Forza, Costituzione, Intelligenza, Destrezza**, da 1 a 12 —
+  al posto delle sei da sparatutto. Ognuna alza danno e cadenza della **sua scuola** (mischia / magia /
+  distanza): chiunque puo' comprarle tutte, e cio' che compri fuori scuola servira' alle **classi miste**.
+- **💰 Curva XP rifatta**: con l'XP di **una run intera** si cappa **esattamente una** statistica (17.980 XP).
+- **➖ Abilita' Q/E sospese** (erano cucite sui vecchi eroi: torneranno con l'evoluzione dopo il boss),
+  **niente piu' armi a terra** e **acquisto armi sospeso** — l'arsenale va ripensato sulle tre scuole.
 
 ## 🆕 Novita v1.65 (il fascio della Faglia)
 - **🔮 L'effetto del bordo ora si vede davvero**: un **ventaglio** che si apre dalla roccia piu' vicina, con
@@ -436,7 +447,7 @@ Distribuiti come **zone tematiche coerenti** legate ai biomi (Cripta/Lava/Forest
 
 ## 🆕 Novita v1.10 (icone emporio, poteri & dungeon tetri)
 1. **🎨 Icone emporio uniche per personaggio** — armatura, stivali e arma hanno icone-immagine dedicate e
-   **diverse per i 3 eroi** (Enforcer blu, Recon verde, Glitch cyan).
+   **diverse per i 3 eroi** (dalla v1.66: Guerriero acciaio, Mago viola, Ladro verde).
 2. **🎴 Piu poteri, scelta tra 2** — catalogo boon ampliato (23 totali, +6 nuovi); a fine ondata si sceglie 1 di 2.
 3. **🛒 Emporio a 3 slot e piu costoso** — rimossi Anello e Amuleto; oggetti molto piu cari (scelta di lungo periodo).
 4. **🪦 Dungeon piu tetri** — tombe, cadaveri, strumenti di tortura, gabbie, piu ragnatele/catene/teschi; atmosfera oscurata.
@@ -494,7 +505,7 @@ Include (dalle versioni precedenti): sistema di **vite** (2), **XP raccoglibile 
 **item drop** (pozioni, stivali, corazza, casse armi, +100% danno, invulnerabilità, Cuore Fenice),
 **20 livelli** con **MEGA boss finale** AZ'GAROTH, **temi mappa** (Cripta, Lava, Foresta, Ghiaccio, Arcano),
 dash che attraversa i nemici, 3 armi raccoglibili, musica tetra da dungeon, casse con bonus/mimic,
-3 eroi caratterizzati, 10 mostri + boss, netcode autoritativo.
+3 classi (guerriero, mago, ladro), 10 mostri + boss, netcode autoritativo.
 
 ## 🗂️ Architettura (file dedicati)
 ```

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.65.0`
+**Versione attuale:** `1.66.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -498,7 +498,7 @@ ufficiale, altrimenti l'ufficiale. **Mai entrambi insieme.**
 | Mira | Mouse |
 | Spara | Click sinistro / Spazio |
 | Scatto (dash) | Tasto destro del mouse (o Shift) — attraversa i nemici |
-| Abilità 1 / 2 | Q / E |
+| ~~Abilità 1 / 2~~ | *sospese in v1.66* |
 | Negozio: pronto | Spazio |
 | Musica on/off | M |
 | Chat | Invio |
@@ -522,12 +522,46 @@ A fine ondata il gioco va in **pausa**: durante la scelta dei poteri, il negozio
 è **congelato**. In singolo giocatore si riparte **solo** col tasto **Continua** (in multiplayer c'è un timeout
 anti-AFK). I drop rimasti a terra (XP e monete) vengono **raccolti automaticamente**.
 
-## ⚔️ Abilità *(2 per eroe, novità v1.9)*
+## 🦸 Le tre classi *(v1.66)*
 
-Ogni eroe ha **esattamente 2 abilità** (Q ed E), più lo **scatto** universale (tasto destro, invariato) e il fuoco.
-Novità di questa versione, ispirate ad altri giochi:
-- 🎯 **Torretta Schierabile** (Enforcer, E) — piazza una torretta che spara per 8s.
-- 🎯 **Colpo del Cecchino** (Recon, E) — proiettile perforante a lunga gittata (sostituisce lo scatto ridondante).
+**GUERRIERO 🛡️ · MAGO 🔮 · LADRO 🏹** hanno sostituito Enforcer-7, Sgt. Viper e NULL: il gioco e' un dungeon
+con troll, lich e beholder, e i tre protagonisti erano un poliziotto cibernetico, un sergente col fucile
+d'assalto e un hacker.
+
+| | Arma | Come colpisce | Danno/s | PV | Passo |
+|---|---|---|---:|---:|---:|
+| 🛡️ **Guerriero** | Spada | **semicerchio** davanti a se, 100px / 109° | 99 sul piu' vicino | 200 | 194 |
+| 🔮 **Mago** | Bolla di Energia | proiettile lento (430 px/s) e grosso | 96 | 100 | 200 |
+| 🏹 **Ladro** | Arco | freccia veloce (900 px/s), perfora 1 | 93 | 112 | 218 |
+
+Il **fendente** del guerriero non e' un proiettile: colpisce chi sta nel settore davanti al personaggio.
+**Raggio e apertura vengono dall'arma** — la spada corta fara' 74px/131°, l'alabarda 144px/71°: *piu' lunga =
+piu' stretta*. Il client disegna esattamente l'arco che ferisce. E' ad area ma limitata: il bersaglio piu'
+vicino incassa tutto, gli altri il 55%, non piu' di 5 per colpo.
+
+## 📊 Le quattro statistiche *(v1.66, al posto delle sei da sparatutto)*
+
+| Statistica | Per livello (1→12) |
+|---|---|
+| 💪 **Forza** | +9% danno in mischia, +3% rinculo |
+| ❤️ **Costituzione** | +20 PV massimi, −1,2% danni subiti |
+| 🔮 **Intelligenza** | +9% danno magico, **+7% cadenza delle magie** |
+| 🏹 **Destrezza** | +8% danno dei dardi, +6% cadenza, **+2,5% velocita'** |
+
+Il legame fra statistica e attacco e' la **scuola dell'arma** (`weapon.school`: `melee` / `magic` / `ranged`).
+Ogni statistica alza danno e cadenza *della sua scuola*, non un danno generico. **Chiunque puo' comprare
+qualunque statistica**: cio' che si compra fuori scuola non e' sprecato, e' l'investimento sulle **classi miste**
+previste nella progressione dopo il boss.
+
+**Curva**: con l'XP di una run intera (~18.000) si cappa **esattamente una** statistica (17.980 XP). Tutte e
+quattro costerebbero 71.920, cioe' quattro run pulite.
+
+## ⚔️ Abilità *(sospese in v1.66)*
+
+Le due abilita' Q ed E introdotte in v1.9 erano cucite sui tre eroi eliminati (torretta, granata, colpo del
+cecchino, bullet-time, rift) e sono state **rimosse in blocco**: vanno ripensate sulle nuove classi, dove i
+poteri arriveranno dall'**evoluzione dopo il boss** e non da uno slot fisso. Restano lo **scatto** universale
+(tasto destro) e il fuoco.
 
 ## 💀 Mercante Nero *(novità v1.12)*
 
@@ -624,11 +658,11 @@ Hit-stop (freeze-frame) su critici e uccisioni di boss/élite, screen shake, par
 
 ---
 
-## 🦸 Eroi (3)
+## 🦸 Eroi (3) *(rifatti in v1.66)*
 
-- **Enforcer** 🤖 — proiettili a ricerca leggera, **Torretta Schierabile** (nuova), resistenza.
-- **Recon** 🎖️ — granata, **Colpo del Cecchino** (nuovo), danni aumentati a basso HP.
-- **Glitch** 🕶️ — bullet-time, rift dimensionale, critici periodici.
+- **Guerriero** 🛡️ — fendente ad arco in mischia, il piu' resistente (200 PV, −12% danni subiti).
+- **Mago** 🔮 — bolle di energia lente e pesanti; l'Intelligenza ne alza danno e cadenza.
+- **Ladro** 🏹 — frecce veloci che perforano, il piu' rapido; la Destrezza ne alza danno, cadenza e passo.
 
 ## 👹 Nemici e boss
 
@@ -661,7 +695,7 @@ server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP, COMBO
 public/  index.html (scelta boon + combo meter), style.css
 public/js/ net (+fix input), audio, renderer (boon-fx, tesoro, MINIMAPPA, MONETE, PROP-TETRI), hud (boon+modalità+COMBO+STATS+EMPORIO+ICONE-IMG), main (hit-stop, combo, sinergie, monete)
 public/assets/gear/ 9 icone PNG (3 slot x 3 eroi)
-test/    simulate.js — 181 test automatici headless
+test/    simulate.js — 499 test automatici headless · client.js — controlli su HUD e renderer
 ```
 
 ## 🚀 Avvio

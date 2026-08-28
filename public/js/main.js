@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'enforcer', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, mode: 'assault', survive: 0 }, lastInput: 0 };
+  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, mode: 'assault', survive: 0 }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -34,7 +34,9 @@
 
   function onEv(ev) {
     switch (ev.t) {
-      case 'shot': A.shoot(ev.hero, ev.wt); R.burst(ev.x, ev.y, '#ffe', 2, 60, 0.15); break;
+      case 'shot': A.shoot(ev.hero, ev.wt); R.heroAtk(ev.who); R.burst(ev.x + Math.cos(ev.a) * 14, ev.y + Math.sin(ev.a) * 14, ev.hero === 'mago' ? '#7ffbe4' : '#ffe', 2, 60, 0.15); break;
+      // v1.66 — FENDENTE del guerriero: l'arco disegnato e' esattamente l'area che ha ferito.
+      case 'swing': R.heroAtk(ev.who); R.swing(ev.x, ev.y, ev.a, ev.rad, ev.half, ev.crit); A.shoot('guerriero', null); if (ev.hits > 1) R.addShake(2); break;
       case 'turret_fire': R.burst(ev.x + Math.cos(ev.a) * 14, ev.y + Math.sin(ev.a) * 14, '#9fe0ff', 2, 80, 0.12); break;
       case 'mhit': A.hitMonster(); R.floater(ev.x, ev.y - 10, '' + ev.d, ev.crit ? '#fff36b' : '#ffd9d9', ev.crit); R.burst(ev.x, ev.y, '#ffb0b0', ev.crit ? 6 : 3, ev.crit ? 130 : 90, 0.25); break;
       case 'hitstop': G.hitstop = Math.max(G.hitstop, ev.d || 0.05); break;

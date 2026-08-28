@@ -2,6 +2,99 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.66.0] — 2026-08-28 · "Guerriero, Mago, Ladro"
+
+Il gioco e' un dungeon con troll, lich e beholder, e i tre protagonisti erano un poliziotto cibernetico, un
+sergente col fucile d'assalto e un hacker. **ENFORCER-7, SGT. VIPER e NULL sono stati sostituiti da GUERRIERO,
+MAGO e LADRO**, e con loro e' cambiato tutto cio' che li riguardava: come attaccano, come crescono, cosa
+comprano. E' la versione piu' invasiva dalla 1.51.
+
+#### 🦸 Tre classi, tre modi di colpire
+| | Arma | Come colpisce | Danno/s | PV |
+|---|---|---|---:|---:|
+| 🛡️ **GUERRIERO** | Spada | **semicerchio** davanti a se, 100px / 109° | 99 sul piu' vicino | 200 |
+| 🔮 **MAGO** | Bolla di Energia | proiettile lento (430 px/s) e grosso | 96 | 100 |
+| 🏹 **LADRO** | Arco | freccia veloce (900 px/s) che perfora 1 nemico | 93 | 112 |
+
+Il **fendente** non e' un proiettile: colpisce chi sta nel settore davanti al personaggio. **Raggio e apertura
+vengono dall'arma, non dall'eroe** — la spada corta fara' 74px/131°, l'alabarda 144px/71°: *piu' lunga = piu'
+stretta*, che e' cio' che le rende diverse invece che solo piu' grandi. Il client disegna **esattamente** l'arco
+che ferisce, quindi la portata si impara guardando.
+
+Il fendente e' ad area ma **non illimitata**: il bersaglio piu' vicino incassa tutto, gli altri il 55%, e non
+piu' di 5 per colpo. Senza questo tetto, misurato, il guerriero faceva **300-640 uccisioni** per partita contro
+le ~50 dei due tiratori: le ondate avanzavano al doppio della velocita' e la squadra si autodistruggeva.
+
+Il **mago** parte volutamente lento (1,5 colpi/s contro i 6,5-9,5/s dei vecchi fucilieri): e' l'Intelligenza a
+fargli salire cadenza *e* danno. I PV del guerriero sono a 200 perche' e' l'unico che non puo' tenere le
+distanze: a 150 moriva sistematicamente un'ondata prima degli altri due, e non per mancanza di danno (alzarlo
+non cambiava niente) ma per il tempo passato a contatto.
+
+#### 📊 Quattro statistiche da gioco di ruolo (al posto di sei da sparatutto)
+Vitalita'/Potenza/Cadenza/Abilita'/Agilita'/Precisione sono sostituite da **FORZA, COSTITUZIONE, INTELLIGENZA,
+DESTREZZA**, da 1 a **12** (prima 8).
+
+| Statistica | Per livello |
+|---|---|
+| 💪 **Forza** | +9% danno in mischia, +3% rinculo |
+| ❤️ **Costituzione** | +20 PV massimi, −1,2% danni subiti |
+| 🔮 **Intelligenza** | +9% danno magico, **+7% cadenza delle magie** |
+| 🏹 **Destrezza** | +8% danno dei dardi, +6% cadenza, **+2,5% velocita'** |
+
+Il meccanismo che le lega agli attacchi e' la **scuola dell'arma** (`weapon.school`: `melee`, `magic`,
+`ranged`). Ogni statistica alza danno e cadenza *della sua scuola*, non un danno generico. **Chiunque puo'
+comprare qualunque statistica**: un guerriero che compra Intelligenza non guadagna niente sulla spada, ma
+guadagnera' tutto sulla prima magia che gli si mette in mano — che e' esattamente cio' che serve alle classi
+miste previste nella progressione dopo il boss.
+
+**Curva rifatta su una regola sola**: con l'XP di **una run intera** (nell'ordine dei 18.000, misurato su
+partita vera) si deve poter cappare **esattamente una** statistica.
+
+| livello | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| costo | 60 | 100 | 160 | 250 | 380 | 560 | 820 | 1200 | 1750 | 2600 | 4000 | 6100 |
+| salto | — | +67% | +60% | +56% | +52% | +47% | +46% | +46% | +46% | +49% | +54% | +53% |
+
+Totale per una statistica al tetto: **17.980 XP**. Tutte e quattro: 71.920, cioe' quattro run pulite. Il
+**gradino piatto** della vecchia tabella (il 7° livello costava solo il 13% piu' del 6°) e' sparito: la
+crescita non scende mai sotto il +46%, quindi ogni livello e' sempre una rinuncia sentita.
+
+#### ➖ Cosa e' stato tolto (per ora)
+- **Abilita' Q ed E**: erano cucite sui tre eroi eliminati (torretta, granata, colpo del cecchino,
+  bullet-time, rift). Vanno ripensate sulle nuove classi, dove i poteri arriveranno dall'**evoluzione dopo il
+  boss** e non da uno slot fisso. Lo **scatto** (tasto destro) resta.
+- **Armi a terra**: non si raccolgono piu' dalla mappa e non escono piu' dalle casse. Saranno solo da negozio.
+- **Acquisto delle armi**: sospeso (via la Cassa Armi dal mercante) finche' l'arsenale non viene ripensato
+  attorno alle tre scuole.
+
+#### 🎨 Grafica
+I tre eroi sono disegnati **dall'alto**, riusando l'impalcatura del vecchio `_hero` (stivali, braccia come
+tratti, torso arrotondato, testa a `r*0.5`) — e' quella che si legge alla scala di gioco. Il **mago** ha il
+mantello ampio con l'orlo mosso e il cappuccio a punta, bastone e orbe; il **guerriero** ha armatura abbozzata
+(pochi solchi, non dettagli), spallacci scuri, elmo chiaro con feritoia e **scudo ad arco " ) "** davanti; il
+**ladro** ha cappuccio, mantellina, faretra e **arco " ) " di lato** — di fronte sarebbe uno scudo. Nessuno dei
+tre ha occhi disegnati: sotto la feritoia e dentro il cappuccio c'e' solo ombra.
+
+Nuovi disegni anche per i proiettili: **bolla** translucida con membrana pulsante e riflesso, **freccia** con
+asta, punta e impennaggio orientati sulla traiettoria. Il **fendente** e' un settore che si apre in 70ms, in
+oro (bianco sui critici). Un timbro audio per scuola: colpo sordo, tono basso e morbido, schiocco secco.
+
+#### 🐛 Due bug trovati dai test, non dal codice
+- Il fendente usava `m.r` per il raggio del mostro, che **non esiste** (e' `m.radius`). In JavaScript non da'
+  errore: `d > rad + undefined` e `diff > half + NaN` sono entrambi `false`, quindi il colpo **prendeva tutti i
+  mostri della mappa, anche alle spalle**. Se n'e' accorto il test del bersaglio dietro le spalle.
+- Il raggio dichiarato dall'arma (`weapon.r`) veniva ignorato: la bolla del mago, che deve essere grossa
+  proprio perche' e' lenta, volava larga come un proiettile qualunque.
+
+#### 🧪 Test
+- **499 passati, 0 falliti** (+31 nuovi) + suite client aggiornata al tetto di 12 livelli.
+- Il **bot** dei test e' stato istruito a giocare in mischia: prima indietreggiava sotto i 160px, quindi con
+  un'arma da 100px non arrivava mai a contatto e "moriva disarmato". Ora tiene la distanza della *sua* arma,
+  si stacca mentre l'arma e' in ricarica e si sgancia sotto il 40% dei PV. Senza questa correzione il dato
+  diceva "la classe e' fragile" quando diceva "il bot non sa giocarla".
+- Bilanciamento verificato **contro la versione precedente**, con lo stesso bot: in trio le nuove classi
+  arrivano alle ondate 3-7 contro le 5-7 delle vecchie, in singolo restano entro un'ondata.
+
 ### [1.65.0] — 2026-08-27 · "Il fascio della Faglia"
 
 I tentacoli della 1.64 erano troppo timidi: si vedevano appena, e un avviso che non si vede non e' un avviso.
@@ -217,7 +310,11 @@ e' la stessa ragione per cui tutte le mappe si somigliano:
    aperto con pilastri", che e' esattamente l'unica pianta che il gioco sa produrre.
 
 La varieta' di pianta non si ottiene di qui: va rifatto `widenForBoss` (garantire il passaggio dei boss **lungo
-un percorso**, non ovunque). E' il primo passo del lavoro sugli **archetipi di pianta**.
+un percorso**, non ovunque).
+
+> **Nota (agosto 2026):** la varieta' di PIANTA e' stata poi **accantonata per scelta**. La misura qui sopra
+> resta vera e utile — spiega perche' tutte le mappe si somigliano — ma non c'e' nessun lavoro in corso sugli
+> archetipi. Se un giorno si riprende, si riparte da \`widenForBoss\`.
 
 #### 🧪 Test
 - Nuovo `testV162` su 240 mappe: pozze presenti in ogni tema, **zero** adiacenti a un muro, zero sull'uscita,

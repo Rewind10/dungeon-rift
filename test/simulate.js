@@ -18,7 +18,21 @@ function bot(room, p) {
     const a = Math.atan2(ey - p.y, ex - p.x);
     return { mx: Math.cos(a) + (Math.random() - 0.5) * 0.7, my: Math.sin(a) + (Math.random() - 0.5) * 0.7, aim: a, shoot: false, q: false, e: false, dash: false };
   }
-  let n = null, bd = Infinity; for (const m of room.monsters) { const d = MU.dist2(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; n = m; } } const i = { mx: 0, my: 0, aim: p.aim, shoot: false, q: false, e: false, dash: false }; if (n) { const d = Math.sqrt(bd); i.aim = Math.atan2(n.y - p.y, n.x - p.x); i.shoot = true; const dir = d < 160 ? -1 : (d > 320 ? 1 : 0); i.mx = Math.cos(i.aim) * dir + (Math.random() - 0.5) * 0.6; i.my = Math.sin(i.aim) * dir + (Math.random() - 0.5) * 0.6; if (p.cdQ <= 0 && Math.random() < 0.05) i.q = true; if (p.cdE <= 0 && Math.random() < 0.04) i.e = true; if (p.cdDash <= 0 && d < 140 && Math.random() < 0.06) i.dash = true; } else { i.mx = Math.random() - 0.5; i.my = Math.random() - 0.5; } return i; }
+  let n = null, bd = Infinity; for (const m of room.monsters) { const d = MU.dist2(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; n = m; } } const i = { mx: 0, my: 0, aim: p.aim, shoot: false, q: false, e: false, dash: false }; if (n) { const d = Math.sqrt(bd); i.aim = Math.atan2(n.y - p.y, n.x - p.x); i.shoot = true;
+    // v1.66 — un bot che indietreggia sotto i 160px e' un TIRATORE. Il guerriero colpisce a 100px: con la
+    // vecchia regola non arrivava mai a contatto e "moriva disarmato", il che diceva qualcosa del bot, non
+    // del personaggio. Chi ha un'arma da mischia tiene la distanza della sua arma.
+    const rMax = p.hero.weapon.melee ? (p.hero.weapon.arcRadius || 100) : 320, rMin = p.hero.weapon.melee ? rMax * 0.55 : 160;
+    // ...e quando e' ridotto male si sgancia, come farebbe chiunque. Senza questa riga il bot in mischia
+    // muore in piedi davanti all'ondata e il dato che ne esce misura il bot, non il bilanciamento.
+    const hurt = p.hp / (p.maxHp + p.stats.maxHpFlat) < 0.40;
+    // MORDI E FUGGI: chi combatte in mischia non resta appoggiato al nemico fra un fendente e l'altro,
+    // si stacca mentre l'arma e' in ricarica e rientra per il colpo. Senza questa riga il bot restava a
+    // contatto per tutta la partita, moriva sempre per primo, e il dato diceva 'la classe e' fragile'
+    // quando diceva 'il bot non sa giocarla'.
+    const ricarica = p.hero.weapon.melee && p.fireCd > 0.35 / (p.hero.weapon.fireRate || 1);
+    const dir = (hurt || ricarica) ? 1 : (d < rMin ? -1 : (d > rMax ? 1 : 0));
+    if (hurt && p.cdDash <= 0 && Math.random() < 0.12) i.dash = true; i.mx = Math.cos(i.aim) * dir + (Math.random() - 0.5) * 0.6; i.my = Math.sin(i.aim) * dir + (Math.random() - 0.5) * 0.6; if (p.cdQ <= 0 && Math.random() < 0.05) i.q = true; if (p.cdE <= 0 && Math.random() < 0.04) i.e = true; if (p.cdDash <= 0 && d < 140 && Math.random() < 0.06) i.dash = true; } else { i.mx = Math.random() - 0.5; i.my = Math.random() - 0.5; } return i; }
 // v1.62 — con la partenza variabile (prima era il centro esatto, di fatto sempre sgombro) non si puo' piu'
 // dare per scontato che "giocatore + 260px sull asse x" sia pavimento libero e in vista: puo' esserci roccia.
 // Diversi test della 1.45/1.58 lo davano per scontato e fallivano a intermittenza a seconda della mappa.
@@ -44,7 +58,7 @@ function testMapThemes() {
 }
 function testLives() {
   console.log('\n[TEST 2] Sistema di vite');
-  const room = new Room('lives'); const p = room.addPlayer('b', { send() {} }, 'B', 'recon'); room.startGame();
+  const room = new Room('lives'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   assert(p.lives === C.START_LIVES, 'parte con ' + C.START_LIVES + ' vite');
   const dt = 1 / C.TICK_RATE;
   const bleedOut = () => { p.buffs = {}; p.hp = 1; room.damagePlayer(p, 999, p.x + 10, p.y, 0); for (let i = 0; i < Math.ceil(C.DOWN_BLEED_TIME * C.TICK_RATE) + 3 && !p.dead; i++) { p.buffs.iframe = 0; room.update(dt); } };
@@ -53,7 +67,7 @@ function testLives() {
 }
 function testBoons() {
   console.log('\n[TEST 3] Boon a scelta (effetti unici)');
-  const room = new Room('boon'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame(); room.phase = C.PHASE_SHOP;
+  const room = new Room('boon'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP;
   room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length > 0, 'offre boon a scelta (' + (p.boonOffer || []).length + ')');
   // applica boon 'pierce' se offerto, altrimenti forza
   const pierceBefore = p.boon.pierce; room.boonOfferForce = null;
@@ -70,11 +84,11 @@ function testBoons() {
 }
 function testWeaponEvo() {
   console.log('\n[TEST 4] Evoluzione armi');
-  const room = new Room('evo'); const p = room.addPlayer('b', { send() {} }, 'B', 'recon'); room.startGame(); room.phase = C.PHASE_SHOP; p.xpPool = 100000;
+  const room = new Room('evo'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP; p.xpPool = 100000;
   p.weapon2 = { type: 'scatter', level: 3, evolved: null };
-  // richiede st_dmg >= 3
-  room.buyStat('b', 'st_dmg'); room.buyStat('b', 'st_dmg'); assert(!p.weapon2.evolved, 'non evolve prima della soglia');
-  room.buyStat('b', 'st_dmg'); assert(p.weapon2.evolved === 'scatter_evo', 'evolve al raggiungimento della statistica');
+  // richiede st_for >= 3
+  room.buyStat('b', 'st_for'); room.buyStat('b', 'st_for'); assert(!p.weapon2.evolved, 'non evolve prima della soglia');
+  room.buyStat('b', 'st_for'); assert(p.weapon2.evolved === 'scatter_evo', 'evolve al raggiungimento della statistica');
   // il fuoco usa il tier evoluto (più pallini + nova)
   room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const n = room.bullets.filter(x => !x.hostile).length; assert(n >= 12, 'arma evoluta spara molti proiettili (' + n + ')');
   ok('evoluzione verificata');
@@ -89,7 +103,7 @@ function testModes() {
   const hunt = Waves.buildWave(8, 1, Waves.MODES.hunt); const horde = Waves.buildWave(8, 1, Waves.MODES.horde);
   assert(horde.list.length > hunt.list.length, 'Orda ha più nemici della Caccia');
   // treasure: la modalità spawn-a uno scrigno fuggitivo
-  const room = new Room('tr'); room.addPlayer('b', { send() {} }, 'B', 'recon'); room.startGame();
+  const room = new Room('tr'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.wave = 0; // forza una wave treasure
   room.wave = 1; room.mode = Waves.MODES.treasure; room.waveScaling = Waves.scaling(3, 1); room.spawnTreasure();
   assert(room.treasure && room.treasure.treasure, 'lo scrigno-tesoro viene generato'); assert(room.treasure.escapeT > 0, 'lo scrigno ha un timer di fuga');
@@ -97,7 +111,7 @@ function testModes() {
 }
 function testHitstop() {
   console.log('\n[TEST 6] Hit-stop (eventi di feedback)');
-  const room = new Room('hs'); const p = room.addPlayer('b', { send() {} }, 'B', 'glitch'); room.startGame();
+  const room = new Room('hs'); const p = room.addPlayer('b', { send() {} }, 'B', 'mago'); room.startGame();
   const m = room.spawnMonster('skeleton', p.x + 30, p.y, { scaling: Waves.scaling(2, 1) });
   room.damageMonster(m, 5, p.x, p.y, 0, p, { crit: true });
   assert(room.events.some(e => e.t === 'hitstop'), 'un crit emette un evento hit-stop');
@@ -106,18 +120,18 @@ function testHitstop() {
 }
 function testXpItems() {
   console.log('\n[TEST 7] XP + item + negozio');
-  const room = new Room('xp'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('xp'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const m = room.spawnMonster('skeleton', p.x + 30, p.y, { scaling: Waves.scaling(3, 1) }); const before = room.groundXp.length; room.killMonster(m, p);
   assert(room.groundXp.length > before, 'uccisione lascia XP');
   const dt = 1 / C.TICK_RATE; const xp0 = p.xpPool; for (let i = 0; i < 60; i++) room.update(dt); assert(p.xpPool > xp0, 'XP raccolta');
   room.items = [{ eid: 1, x: p.x + 8, y: p.y, r: 13, id: 'i_life', t: 30 }]; const l0 = p.lives; room.updatePickups(dt); assert(p.lives === l0 + 1, 'Cuore Fenice +1 vita');
-  p.xpPool = 500; room.phase = C.PHASE_SHOP; const hp0 = room.effMaxHp(p); room.buyStat('b', 'st_hp'); assert(room.effMaxHp(p) > hp0, 'negozio: Vitalità aumenta PV'); ok('XP/item/negozio OK');
+  p.xpPool = 500; room.phase = C.PHASE_SHOP; const hp0 = room.effMaxHp(p); room.buyStat('b', 'st_cos'); assert(room.effMaxHp(p) > hp0, 'negozio: Vitalità aumenta PV'); ok('XP/item/negozio OK');
 }
 function testFullRun(n, label) {
   console.log(`\n[TEST 8] Partita completa — ${n} bot (${label})`);
   const room = new Room('r' + n); for (let i = 0; i < n; i++) room.addPlayer('b' + i, { send() {} }, 'B' + i, Heroes.ORDER[i % 3]); room.startGame();
   const dt = 1 / C.TICK_RATE; let ticks = 0, maxMs = 0, tot = 0, nan = null, pWall = 0, maxMon = 0;
-  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (Math.random() < 0.3) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, 5)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
+  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (Math.random() < 0.3) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
   console.log(`  fase: ${room.phase} · ondata: ${room.wave} · ~${(ticks / C.TICK_RATE) | 0}s · perf avg ${(tot / ticks).toFixed(3)}ms max ${maxMs.toFixed(2)}ms · picco ${maxMon} mostri`);
   assert(nan === null, 'nessun NaN (' + (nan || 'ok') + ')'); assert(maxMs < (1000 / C.TICK_RATE) * 3, 'no tick catastrofico'); assert((tot / ticks) < (1000 / C.TICK_RATE), 'perf media OK'); assert(pWall === 0, 'giocatori mai nei muri'); assert(room.wave >= 1, 'run progredita');
 }
@@ -131,14 +145,14 @@ function testSanity() {
 }
 function testV16() {
   console.log('\n[TEST 10] Novita v1.6 — combo, homing, avidita');
-  const room = new Room('v16'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v16'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   // combo: uccisioni consecutive aumentano combo e moltiplicatore
   assert(room.comboMult(p) === 1, 'moltiplicatore combo parte da 1');
   for (let i = 0; i < 6; i++) { const m = room.spawnMonster('skeleton', p.x + 30, p.y, { scaling: Waves.scaling(2, 1) }); room.killMonster(m, p); }
   assert(p.combo === 6, 'combo conta le uccisioni consecutive (' + p.combo + ')');
   assert(room.comboMult(p) > 1, 'combo aumenta il moltiplicatore XP (x' + room.comboMult(p).toFixed(2) + ')');
   // XP scala col combo: stessa uccisione rende piu XP ad alto combo che a combo 0
-  const p2 = room.addPlayer('c', { send() {} }, 'C', 'enforcer');
+  const p2 = room.addPlayer('c', { send() {} }, 'C', 'ladro');
   const xpAt = (pl) => { room.groundXp.length = 0; const m = room.spawnMonster('skeleton', pl.x + 30, pl.y, { scaling: Waves.scaling(2, 1) }); const xp0 = m.xp; room.killMonster(m, pl); let tot = 0; for (const o of room.groundXp) tot += o.v; return { tot, base: xp0 }; };
   p2.combo = 0; p2.comboT = 0; const lo = xpAt(p2);
   p.combo = 20; p.comboT = C.COMBO_TIME; const hi = xpAt(p);
@@ -155,7 +169,7 @@ function testV16() {
   // boon avidita: aumenta xpMult
   const g0 = p.stats.xpMult; p.boonOffer = ['greed']; room.pickBoon('b', 'greed'); assert(p.stats.xpMult > g0, 'boon Avidita aumenta la raccolta XP');
   // boon baluardo: riduce i danni
-  const p3 = room.addPlayer('d', { send() {} }, 'D', 'recon'); p3.boonOffer = ['bulwark']; room.pickBoon('d', 'bulwark'); assert(p3.stats.dmgReduce > 0, 'boon Baluardo riduce i danni');
+  const p3 = room.addPlayer('d', { send() {} }, 'D', 'ladro'); p3.boonOffer = ['bulwark']; room.pickBoon('d', 'bulwark'); assert(p3.stats.dmgReduce > 0, 'boon Baluardo riduce i danni');
   p3.buffs = {}; p3.hp = 1000; p3.maxHp = 1000; const h0 = p3.hp; room.damagePlayer(p3, 100, p3.x + 10, p3.y, 0); const dealt = h0 - p3.hp; assert(dealt < 100, 'Baluardo attenua i danni subiti (' + dealt + ' < 100)');
   // snapshot espone i campi combo
   p.combo = 8; p.comboT = C.COMBO_TIME; const snap = room.snapshot(); const me = snap.players.find(x => x.i === 'b'); assert(me && me.cmb === 8 && me.cmx > 1, 'lo snapshot espone combo e moltiplicatore');
@@ -163,7 +177,7 @@ function testV16() {
 }
 function testV17() {
   console.log('\n[TEST 11] Novita v1.7 — stats fine partita, ricompense combo, sinergie');
-  const room = new Room('v17'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } }; const p = room.addPlayer('b', cap, 'B', 'enforcer'); const p2 = room.addPlayer('c', { send() {} }, 'C', 'recon'); room.startGame();
+  const room = new Room('v17'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } }; const p = room.addPlayer('b', cap, 'B', 'ladro'); const p2 = room.addPlayer('c', { send() {} }, 'C', 'ladro'); room.startGame();
   // --- ricompense combo a soglie ---
   const killN = (pl, n) => { for (let i = 0; i < n; i++) { const m = room.spawnMonster('skeleton', pl.x + 30, pl.y, { scaling: Waves.scaling(2, 1) }); room.killMonster(m, pl); } };
   room.events.length = 0; p.combo = 14; killN(p, 1); assert(p.combo === 15 && room.events.some(e => e.t === 'combo_reward' && e.tier === 1), 'combo 15 sblocca ricompensa tier 1 (Frenesia)');
@@ -188,7 +202,7 @@ function testV17() {
   // la sinergia gia attiva non si ri-applica: detectSynergies esclude quelle in synActive
   const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'seeker'), 'la sinergia gia attiva non viene rilevata di nuovo');
   // toxicBurst avvelena ad area
-  const tp = room.addPlayer('d', { send() {} }, 'D', 'enforcer'); tp.boon.toxicBurst = 1; tp.boon.poison = 1;
+  const tp = room.addPlayer('d', { send() {} }, 'D', 'ladro'); tp.boon.toxicBurst = 1; tp.boon.poison = 1;
   const tm = room.spawnMonster('skeleton', tp.x + 20, tp.y, { scaling: Waves.scaling(2, 1) }); tm.poison = 0;
   room._toxicBurst(tp.x + 20, tp.y, 90, tp); assert(tm.poison > 0 && tm.poisonT > 0, 'la Deflagrazione Tossica avvelena i nemici ad area');
   // --- statistiche di fine partita ---
@@ -205,7 +219,7 @@ function testV17() {
 function testV18() {
   console.log('\n[TEST 12] Novita v1.8 — monete & negozio equipaggiamento');
   const room = new Room('v18'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
-  const p = room.addPlayer('b', cap, 'B', 'enforcer'); room.startGame();
+  const p = room.addPlayer('b', cap, 'B', 'ladro'); room.startGame();
   assert(p.coins === 0, 'il giocatore parte con 0 monete');
   assert(p.gear && p.gear.armor === 0 && p.gear.weapon === 0 && p.gear.boots === 0, 'tutti gli slot equipaggiamento partono a 0');
   // --- drop monete alla morte ---
@@ -251,7 +265,7 @@ function testV19() {
   assert(C.VERSION && typeof C.VERSION === 'string', 'la versione e definita nelle costanti (' + C.VERSION + ')');
   const dt = 1 / C.TICK_RATE;
   // --- PAUSA durante il negozio: il mondo non si simula ---
-  const room = new Room('v19'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v19'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const mon = room.spawnMonster('skeleton', p.x + 120, p.y, { scaling: Waves.scaling(2, 1) }); mon.mx = 200; mon.my = 0;
   room.bullets.push({ eid: 99999, hostile: true, x: p.x + 40, y: p.y, vx: 300, vy: 0, r: 5, dmg: 5, life: 3 });
   room.phase = C.PHASE_SHOP; room.shopTimer = 45; p.ready = false;
@@ -264,37 +278,31 @@ function testV19() {
   assert(room.phase === C.PHASE_SHOP, 'in singolo il negozio non avanza da solo (attende il click)');
   room.shopReady('b'); room.update(dt); assert(room.phase !== C.PHASE_SHOP, 'il pulsante Continua (shopReady) fa proseguire la partita');
   // --- RACCOLTA AUTOMATICA a fine ondata ---
-  const room2 = new Room('v19b'); const q = room2.addPlayer('c', { send() {} }, 'C', 'recon'); room2.startGame();
+  const room2 = new Room('v19b'); const q = room2.addPlayer('c', { send() {} }, 'C', 'ladro'); room2.startGame();
   room2.groundXp.push({ eid: 1, x: 5000, y: 5000, v: 30, t: 30 });
   room2.groundCoins.push({ eid: 2, x: 5000, y: 5000, v: 25, cid: 'gold', t: 30 });
   const xp0 = q.xpPool, co0 = q.coins; room2.enterShop();
   assert(q.xpPool >= xp0 + 30, 'la XP rimasta a terra viene raccolta automaticamente');
   assert(q.coins >= co0 + 25, 'le monete rimaste a terra vengono raccolte automaticamente');
   assert(room2.groundXp.length === 0 && room2.groundCoins.length === 0, 'il terreno viene ripulito dai drop');
-  // --- NUOVA ABILITA: Torretta (Enforcer E) ---
-  const room3 = new Room('v19c'); const e = room3.addPlayer('d', { send() {} }, 'D', 'enforcer'); room3.startGame(); e.cdE = 0;
-  room3.useE(e); const turret = room3.orbs.find(o => o.turret); assert(turret, 'Enforcer E schiera una torretta');
-  assert(e.cdE > 0, 'la torretta va in cooldown');
-  assert(!e.buffs.barrier, 'Enforcer E non e piu la vecchia barriera');
-  room3.spawnMonster('skeleton', turret.x + 100, turret.y, { scaling: Waves.scaling(2, 1) });
-  const nb0 = room3.bullets.length; for (let i = 0; i < 20; i++) room3.updateOrbs(dt); assert(room3.bullets.length > nb0, 'la torretta spara ai nemici vicini');
-  // --- NUOVA ABILITA: Colpo del Cecchino (Recon E), non piu uno scatto ---
-  const room4 = new Room('v19d'); const r = room4.addPlayer('f', { send() {} }, 'F', 'recon'); room4.startGame(); r.cdE = 0;
-  room4.useE(r);
-  const snipe = room4.bullets.find(b => b.sniper); assert(snipe, 'Recon E spara un colpo da cecchino');
-  assert(snipe.pierce >= 5, 'il colpo del cecchino e altamente perforante');
-  assert(!r.buffs.dash, 'Recon E non e piu uno scatto (ridondanza rimossa)');
+  // --- v1.66: le abilita' Q/E sono state RIMOSSE (torretta, cecchino, bullet-time erano cucite sui tre
+  // eroi cyberpunk eliminati). Il test non verifica piu' che ci siano, ma che non tornino di soppiatto:
+  // gli eroi non ne dichiarano nessuna e useQ/useE non devono produrre NIENTE.
+  const room3 = new Room('v19c'); const e = room3.addPlayer('d', { send() {} }, 'D', 'guerriero'); room3.startGame();
+  e.cdQ = 0; e.cdE = 0; const nOrb = room3.orbs.length, nBul = room3.bullets.length;
+  room3.useQ(e); room3.useE(e);
+  assert(room3.orbs.length === nOrb && room3.bullets.length === nBul, 'Q/E non producono piu nulla');
+  assert(e.cdQ === 0 && e.cdE === 0, 'Q/E non consumano nemmeno un cooldown');
+  for (const id of Heroes.ORDER) { const h = Heroes.HEROES[id]; assert(h.abilities && Object.keys(h.abilities).length === 0, id + ' non dichiara abilita in v1.66'); }
   // --- lo SCATTO universale (tasto destro) resta funzionante ---
-  const room5 = new Room('v19e'); const g = room5.addPlayer('h', { send() {} }, 'H', 'recon'); room5.startGame(); g.cdDash = 0;
+  const room5 = new Room('v19e'); const g = room5.addPlayer('h', { send() {} }, 'H', 'ladro'); room5.startGame(); g.cdDash = 0;
   room5.useDash(g); assert(g.buffs.dash > 0 && g.cdDash > 0, 'lo scatto universale (tasto destro) resta attivo');
-  // --- ogni eroe ha esattamente 2 abilita (Q + E) ---
-  for (const id of Heroes.ORDER) { const h = Heroes.HEROES[id]; assert(h.abilities.q && h.abilities.e && Object.keys(h.abilities).length === 2, id + ' ha esattamente 2 abilita'); }
   ok('novita v1.9 verificate');
 }
 function testV110() {
   console.log('\n[TEST 14] Novita v1.10 — 2 poteri a scelta, piu boon, emporio 3 slot');
   // --- si sceglie tra ESATTAMENTE 2 poteri ---
-  const room = new Room('v110'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame(); room.phase = C.PHASE_SHOP;
+  const room = new Room('v110'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP;
   room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 3, 'a fine ondata si sceglie 1 di 3 poteri — v1.51, era 1 di 2 (offerti: ' + (p.boonOffer || []).length + ')');
   // --- catalogo boon ampliato ---
   assert(Loot.BOONS.length >= 23, 'il catalogo dei poteri e ampliato (' + Loot.BOONS.length + ')');
@@ -309,8 +317,8 @@ function testV110() {
   const armorDef = Loot.GEAR_BY_SLOT.armor; assert(Loot.gearCost(armorDef, 0) >= 60, 'gli oggetti sono molto piu costosi (base ' + Loot.gearCost(armorDef, 0) + ')');
   // --- icone equipaggiamento uniche per personaggio (percorso immagine per eroe) ---
   const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
-  const eb = room.addPlayer('z', cap, 'Z', 'glitch'); room.offerGear(eb);
-  const gearMsg = sent.find(m => m.t === C.MSG.OFFER_GEAR); assert(gearMsg && gearMsg.slots.every(s => /assets\/gear\/glitch_/.test(s.icon)), 'le icone dell\'emporio sono uniche per personaggio (path per eroe)');
+  const eb = room.addPlayer('z', cap, 'Z', 'mago'); room.offerGear(eb);
+  const gearMsg = sent.find(m => m.t === C.MSG.OFFER_GEAR); assert(gearMsg && gearMsg.slots.every(s => /assets\/gear\/mago_/.test(s.icon)), 'le icone dell\'emporio sono uniche per personaggio (path per eroe)');
   ok('novita v1.10 verificate');
 }
 function testV111() {
@@ -318,7 +326,7 @@ function testV111() {
   const dt = 1 / C.TICK_RATE;
   // --- MERCANTE: spawn con 3 offerte, acquisto per monete, prossimita ---
   const room = new Room('v111'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
-  const p = room.addPlayer('b', cap, 'B', 'enforcer'); room.startGame();
+  const p = room.addPlayer('b', cap, 'B', 'ladro'); room.startGame();
   room.spawnMerchant(); // v1.17 — forza il mercante ufficiale (a fine round e casuale: ufficiale O nero)
   assert(room.merchant && Array.isArray(room.merchant.wares) && room.merchant.wares.length === 3, 'il mercante appare con 3 offerte');
   assert(room.merchant.wares.every(w => w.cost > 0 && w.id && w.icon), 'le offerte hanno costo/icona/id');
@@ -352,7 +360,7 @@ function testV112() {
   console.log('\n[TEST 16] Novita v1.12 — Mercante Nero (rischio/ricompensa) + differenziazione');
   const dt = 1 / C.TICK_RATE;
   const room = new Room('v112'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
-  const p = room.addPlayer('b', cap, 'B', 'enforcer'); room.startGame();
+  const p = room.addPlayer('b', cap, 'B', 'ladro'); room.startGame();
   // forza lo spawn del mercante nero (di norma e casuale ~35%)
   room.spawnDarkMerchant();
   assert(room.darkMerchant && Array.isArray(room.darkMerchant.wares) && room.darkMerchant.wares.length === 3, 'il mercante nero appare con 3 patti');
@@ -392,7 +400,7 @@ function testV113() {
   assert(C.VIS_SCALE >= 1.3 && C.VIS_SCALE <= 1.6, 'VIS_SCALE leggero (~1.45): ' + C.VIS_SCALE);
   assert(C.COL_SCALE >= 1.0 && C.COL_SCALE <= 1.15, 'COL_SCALE quasi invariato (~1.08): ' + C.COL_SCALE);
   assert(C.VIS_SCALE > C.COL_SCALE + 0.2, 'il visivo e nettamente maggiore della collisione (occhi grandi, hitbox piccola)');
-  const room = new Room('v113'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v113'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   // collisione giocatore quasi invariata
   const expP = C.PLAYER_RADIUS * C.COL_SCALE; assert(Math.abs(p.radius - expP) < 0.5, 'raggio collisione giocatore leggero (' + p.radius.toFixed(1) + ' ~ ' + expP.toFixed(1) + ')');
   assert(p.radius < C.PLAYER_RADIUS * 1.2, 'la hitbox giocatore resta vicina a quella originale (fluidita)');
@@ -427,7 +435,7 @@ function testV139() {
   assert(!Waves.poolForWave(2).some(x => x.id === 'darkmage'), 'niente Negromante prima dell\'ondata 3');
   assert(Waves.poolForWave(3).some(x => x.id === 'darkmage'), 'Negromante nel pool dall\'ondata 3');
   // simulazione: il Negromante evoca al massimo minionCap zombi minori e non supera il tetto
-  const room = new Room('v139'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v139'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const nm = room.spawnMonster('darkmage', pl.x + 300, pl.y, { scaling: Waves.scaling(4, 1) });
   assert(nm && nm.type === 'darkmage', 'il Negromante si genera');
   const dt = 1 / C.TICK_RATE; for (let i = 0; i < C.TICK_RATE * 30; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
@@ -453,7 +461,7 @@ function testV142() {
   // v1.50 — il Troll entra nel pool dall'ondata 4 (la comparsa dal primo stage era temporanea)
   assert(Waves.poolForWave(4).some(x => x.id === 'cave_brute'), 'Troll nel pool dall ondata 4');
   // si genera e lo slam colpisce ad area emettendo l'evento con eid (per l'animazione client)
-  const room = new Room('v142'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v142'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const m = room.spawnMonster('cave_brute', pl.x + 40, pl.y, { scaling: Waves.scaling(4, 1) });
   assert(m && m.type === 'cave_brute' && isFinite(m.hp) && m.hp > 0, 'il Bruto si genera correttamente (scalato)');
   // v1.43 — SLAM a due tempi: a bruciapelo (in vista) alza le braccia (slam_wind con eid) → poi schianta ad area.
@@ -478,7 +486,7 @@ function testV143() {
   const br = Mon.MONSTERS.cave_brute;
   assert(br && br.slamWind > 0 && br.sightRange > 0, 'il Bruto ha wind-up (slamWind) e un campo visivo (sightRange)');
   // VAGABONDAGGIO: uno zombie che NON vede il giocatore (troppo lontano) deve muoversi comunque (roaming), non restare fermo.
-  const room = new Room('v143w'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v143w'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const far = room.map.spawn;
   const z = room.spawnMonster('skeleton', far.x + 40, far.y + 40, { scaling: Waves.scaling(2, 1) });
   pl.x = far.x + 2000; pl.y = far.y + 2000; // porta il giocatore lontanissimo → fuori vista
@@ -511,7 +519,7 @@ function testV145() {
   const p2 = Waves.poolForWave(2).map(x => x.id);
   assert(p2.includes('slime') && p2.includes('skeleton'), 'Melma nel pool dall ondata 2, insieme allo sciame base');
   // simulazione: a distanza ravvicinata deve SPUTARE proiettili d'acido OSTILI (danno elevato) ed emettere 'acid'
-  const room = new Room('v145'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v145'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const sp145 = losSpot(room, pl, 90);
   const m = room.spawnMonster('slime', sp145.x, sp145.y, { scaling: Waves.scaling(1, 1) });
   assert(m && m.type === 'slime' && isFinite(m.hp) && m.hp > 0, 'la Melma si genera correttamente');
@@ -539,7 +547,7 @@ function testV149() {
   assert(Mon.ORDER.indexOf('occhio') >= 0, 'occhio presente nell ORDER del bestiario');
   assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 10 (col tetto di presenze)');
   const dt = 1 / C.TICK_RATE;
-  const room = new Room('v149'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v149'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
   const sp = room.map.spawn;
   const m = room.spawnMonster('occhio', sp.x, sp.y, { scaling: Waves.scaling(3, 1) });
@@ -570,20 +578,20 @@ function testV151() {
   assert(NEW.every(id => { const b = Loot.BOON_BY_ID[id]; return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon; }), 'ogni nuovo potere ha icona, descrizione, max e apply');
   assert(new Set(Loot.BOONS.map(b => b.id)).size === Loot.BOONS.length, 'nessun id di potere duplicato');
   // --- 3) il negozio XP e ora una scelta, non un rubinetto ---
-  assert(Loot.STAT_MAX_LEVEL === 8, 'tetto di 8 livelli per statistica');
+  assert(Loot.STAT_MAX_LEVEL === 12, 'tetto di 12 livelli per statistica (v1.66)');
   const fullTree = Loot.XP_STATS.reduce((a, s) => { let t = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) t += Loot.statCost(s.base, n); return a + t; }, 0);
   assert(fullTree > 15000, 'massimizzare tutto l albero costa oltre 15.000 XP (prima 3.526): ' + fullTree);
   // --- 4) prove a runtime ---
   const msgs = [];
   const room = new Room('v151');
-  const pl = room.addPlayer('b', { send(s) { try { msgs.push(JSON.parse(s)); } catch (e) { } } }, 'B', 'enforcer');
+  const pl = room.addPlayer('b', { send(s) { try { msgs.push(JSON.parse(s)); } catch (e) { } } }, 'B', 'ladro');
   room.startGame();
   room.offerBoon(pl);
   assert(pl.boonOffer && pl.boonOffer.length === 3, 'a fine ondata arrivano 3 carte (una sola selezionabile)');
   // tetto: comprando all infinito ci si ferma a 8
   room.phase = C.PHASE_SHOP; pl.xpPool = 9999999;
-  for (let i = 0; i < 25; i++) room.buyStat('b', 'st_dmg');
-  assert((pl.buys.st_dmg || 0) === Loot.STAT_MAX_LEVEL, 'la statistica si ferma al tetto di 8 livelli (arrivata a ' + (pl.buys.st_dmg || 0) + ')');
+  for (let i = 0; i < 25; i++) room.buyStat('b', 'st_for');
+  assert((pl.buys.st_for || 0) === Loot.STAT_MAX_LEVEL, 'la statistica si ferma al tetto di 8 livelli (arrivata a ' + (pl.buys.st_for || 0) + ')');
   // Emporio NASCOSTO: entrando nel negozio non arriva piu l offerta di equipaggiamento
   msgs.length = 0; room.enterShop();
   assert(!msgs.some(m => m.t === C.MSG.OFFER_GEAR), 'l Emporio a monete non viene piu offerto (nascosto in v1.51)');
@@ -606,7 +614,7 @@ function testV151() {
   room.damagePlayer(pl, 60, pl.x + 10, pl.y, 0);
   assert(pl.hp < 500, 'il colpo successivo passa (egida in ricarica)');
   // nessun NaN con i nuovi poteri tutti attivi
-  const room2 = new Room('v151b'); const p2 = room2.addPlayer('c', { send() { } }, 'C', 'recon'); room2.startGame();
+  const room2 = new Room('v151b'); const p2 = room2.addPlayer('c', { send() { } }, 'C', 'ladro'); room2.startGame();
   for (const id of NEW) { const b = Loot.BOON_BY_ID[id]; for (let k = 0; k < b.max; k++) { b.apply(p2); p2.boonsOwned[id] = (p2.boonsOwned[id] || 0) + 1; } }
   for (let i = 0; i < C.TICK_RATE * 25; i++) { room2.setInput('c', bot(room2, p2)); room2.update(dt); if (hasNaN(room2)) break; }
   assert(hasNaN(room2) === null, 'nessun NaN con tutti e 10 i nuovi poteri al massimo');
@@ -639,7 +647,7 @@ function testV150() {
   assert(Math.abs(zomE.maxHp / zom.maxHp - 2.4) < 0.05, 'gli altri nemici mantengono il 2.4x degli elite');
   // 3) nessuna regressione a runtime con la nuova curva
   const dt = 1 / C.TICK_RATE;
-  const room = new Room('v150'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v150'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   for (let i = 0; i < C.TICK_RATE * 20; i++) { room.setInput('b', bot(room, pl)); room.update(dt); if (hasNaN(room)) break; }
   assert(hasNaN(room) === null, 'nessun NaN con la nuova curva del pool');
   ok('novita v1.50 verificate');
@@ -647,7 +655,7 @@ function testV150() {
 function testV152() {
   console.log('\n[TEST 26] Novita v1.52 — mappa MERCATO ogni 3 ondate + fabbro dell\'equipaggiamento');
   const dt = 1 / C.TICK_RATE, T = C.TILE;
-  const room = new Room('v152'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v152'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   // v1.53 — niente piu' cadenza fissa: al mercato ci si va scegliendolo dal menu di pausa
   room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
   assert(room.phase === C.PHASE_MARKET, 'dopo l\'ondata 3 si entra nel MERCATO');
@@ -683,7 +691,7 @@ function testV152() {
   room.wave = 15; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
   assert(room.phase === C.PHASE_MARKET && room.wave === 15, 'il mercato SEGUE l\'ondata boss, non la sostituisce');
   // nessun NaN girando nel mercato
-  const r2 = new Room('v152b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
+  const r2 = new Room('v152b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'ladro'); r2.startGame();
   r2.wave = 3; r2.phase = C.PHASE_SHOP; r2.shopReady('b', 'market'); r2._afterShop();
   for (let i = 0; i < C.TICK_RATE * 5; i++) { r2.setInput('b', bot(r2, p2)); r2.update(dt); if (hasNaN(r2)) break; }
   assert(hasNaN(r2) === null, 'nessun NaN nel mercato');
@@ -692,7 +700,7 @@ function testV152() {
 function testV153() {
   console.log('\n[TEST 27] Novita v1.53/1.55 — mercato centrale, destinazioni nel menu di pausa, tabella dei costi XP');
   const T = C.TILE;
-  const room = new Room('v153'); const p = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v153'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
 
   // --- 1) il MERCATO si sceglie, non capita ---
   room.wave = 2; room.phase = C.PHASE_SHOP; room._afterShop();
@@ -717,7 +725,7 @@ function testV153() {
   assert(room.map.grid[Math.round(room.gearMerchant.y / T - 0.5) * room.map.w + Math.round(room.gearMerchant.x / T - 0.5)] !== C.T_WALL, 'il fabbro non e dentro un muro');
 
   // --- 3) in co-op vale la PRIMA scelta espressa ---
-  const r2 = new Room('v153b'); r2.addPlayer('a', { send() {} }, 'A', 'enforcer'); r2.addPlayer('c', { send() {} }, 'C', 'recon'); r2.startGame();
+  const r2 = new Room('v153b'); r2.addPlayer('a', { send() {} }, 'A', 'ladro'); r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
   r2.wave = 4; r2.phase = C.PHASE_SHOP; r2.shopDest = null;
   r2.shopReady('a', 'market'); r2.shopReady('c', 'wave');
   assert(r2.shopDest === 'market', 'in co-op decide chi sceglie per primo');
@@ -726,21 +734,17 @@ function testV153() {
   const base = 10;
   // v1.55 — rispetto alla v1.54: primi 6 livelli x3, ultimi 2 x2. Il reddito reale misurato in partita
   // (~240 XP alla sola ondata 2) e' circa 2.4x quello che stimava il vecchio modello senza combo.
-  const V154 = [30, 48, 66, 185, 517, 1449, 2463, 4187];
-  assert(Array.isArray(Loot.STAT_COST_STEPS) && Loot.STAT_COST_STEPS.length === Loot.STAT_MAX_LEVEL, 'la tabella dei costi copre tutti gli 8 livelli');
-  let tripled = true, doubled = true;
-  for (let n = 0; n < 6; n++) if (Loot.statCost(base, n) / V154[n] < 2.95) tripled = false;
-  for (let n = 6; n < 8; n++) { const r = Loot.statCost(base, n) / V154[n]; if (r < 1.95 || r > 2.05) doubled = false; }
-  assert(tripled, 'i primi 6 livelli costano il triplo della v1.54');
-  assert(doubled, 'il 7 e l 8 livello costano il doppio della v1.54');
+  // v1.66 — la curva e' stata rifatta su una regola sola, dichiarata dal committente: con l'XP di UNA run
+  // (nell'ordine dei 18.000, misurato su partita vera) si deve poter cappare ESATTAMENTE una statistica.
+  // Il confronto con la tabella v1.54 non ha piu' senso: quella aveva 8 livelli, questa ne ha 12.
+  assert(Array.isArray(Loot.STAT_COST_STEPS) && Loot.STAT_COST_STEPS.length === Loot.STAT_MAX_LEVEL, 'la tabella dei costi copre tutti i 12 livelli');
   let one = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) one += Loot.statCost(base, n);
-  assert(one > 20000, 'portare UNA statistica al tetto costa oltre 20.000 XP, piu di una run intera (' + one + ')');
+  assert(one >= 17000 && one <= 19000, 'cappare UNA statistica costa quanto una run intera (' + one + ')');
   const tree = Loot.XP_STATS.reduce((a, s) => { let t = 0; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) t += Loot.statCost(s.base, n); return a + t; }, 0);
-  assert(tree > 100000, 'l albero completo supera i 100.000 XP (' + tree + ')');
-  // il costo scala con la base della statistica: le piu' care restano piu' care a ogni livello
-  const cheap = Loot.XP_STATS.find(s => s.base === 8), dear = Loot.XP_STATS.find(s => s.base === 12);
-  if (cheap && dear) { let okScale = true; for (let n = 0; n < Loot.STAT_MAX_LEVEL; n++) if (Loot.statCost(dear.base, n) <= Loot.statCost(cheap.base, n)) okScale = false;
-    assert(okScale, 'il costo resta proporzionale alla base della statistica'); }
+  assert(tree >= one * 3.8, 'l albero completo resta fuori portata: ' + tree + ' XP, cioe piu di tre run');
+  // nessun gradino piatto: il 7 livello della vecchia tabella costava solo il 13% piu del 6 e si sentiva
+  let minStep = Infinity; for (let n = 1; n < Loot.STAT_MAX_LEVEL; n++) minStep = Math.min(minStep, Loot.statCost(base, n) / Loot.statCost(base, n - 1));
+  assert(minStep >= 1.4, 'ogni livello costa almeno il 40% piu del precedente (minimo ' + Math.round((minStep - 1) * 100) + '%)');
   // la curva resta monotona: nessun livello costa meno del precedente
   let mono = true; for (let n = 1; n < Loot.STAT_MAX_LEVEL; n++) if (Loot.statCost(base, n) <= Loot.statCost(base, n - 1)) mono = false;
   assert(mono, 'la curva dei costi e monotona crescente');
@@ -811,7 +815,7 @@ function testV157() {
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
-  const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
   assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa la sala');
   assert(room.monsters.length === 0 && room.crates.length === 0, 'nella sala non ci sono nemici ne casse');
@@ -831,7 +835,7 @@ function testV158() {
   const fg = Mon.MONSTERS.spore_fungus;
   assert(!!fg && fg.ai === 'sentry' && fg.immobile, 'il Fungo esiste, e immobile e usa la IA sentry');
   assert(fg.speed === 0, 'velocita zero: niente camminata da animare');
-  const r1 = new Room('v158a'); const p1 = r1.addPlayer('b', { send() {} }, 'B', 'enforcer'); r1.startGame();
+  const r1 = new Room('v158a'); const p1 = r1.addPlayer('b', { send() {} }, 'B', 'ladro'); r1.startGame();
   r1.pending = 0; r1.waveList = []; p1.hp = 9999; p1.maxHp = 9999;
   // v1.61.1 — la posizione va cercata LIBERA: a offset fisso il fungo puo nascere dentro un muro, e li
   // il server lo sposta con _unstuck (giustamente). Il test diventava intermittente per colpa della mappa.
@@ -854,7 +858,7 @@ function testV158() {
   // ---------- SFERA D'OSSA: carica, rotola, rimbalza ----------
   const br = Mon.MONSTERS.bone_roller;
   assert(!!br && br.ai === 'roller' && br.rollSpeed > 1, 'la Sfera d\'Ossa esiste e usa la IA roller');
-  const r2 = new Room('v158b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'enforcer'); r2.startGame();
+  const r2 = new Room('v158b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'ladro'); r2.startGame();
   r2.pending = 0; r2.waveList = []; p2.hp = 9999; p2.maxHp = 9999;
   const sp158 = losSpot(r2, p2, 260);
   const b2 = r2.spawnMonster('bone_roller', sp158.x, sp158.y, { scaling: Waves.scaling(8, 1) });
@@ -875,7 +879,7 @@ function testV158() {
   // ---------- MELMA CHE SI DIVIDE ----------
   assert(Mon.MONSTERS.slime.splitInto === 'slime_mini', 'la Melma si divide in melme minori');
   assert(!Mon.MONSTERS.slime_mini.splitInto, 'la Melma Minore NON si divide a sua volta (niente catena infinita)');
-  const r3 = new Room('v158c'); const p3 = r3.addPlayer('b', { send() {} }, 'B', 'enforcer'); r3.startGame();
+  const r3 = new Room('v158c'); const p3 = r3.addPlayer('b', { send() {} }, 'B', 'ladro'); r3.startGame();
   r3.pending = 0; r3.waveList = []; r3.monsters.length = 0;
   const sp158b = losSpot(r3, p3, 120);
   const sl = r3.spawnMonster('slime', sp158b.x, sp158b.y, { scaling: Waves.scaling(4, 1) });
@@ -892,7 +896,7 @@ function testV158() {
   assert(oc.maxAlive === 8, 'il Beholder ha un tetto di 8 presenze contemporanee');
   assert(!Waves.poolForWave(9).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 10');
   assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 10');
-  const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'enforcer'); r4.startGame();
+  const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'ladro'); r4.startGame();
   r4.pending = 0; r4.waveList = []; r4.monsters.length = 0;
   for (let i = 0; i < 12; i++) { const t = r4._capType('occhio'); const pos = r4.randomSpawnPos();
     r4.spawnMonster(t, pos.x, pos.y, { scaling: Waves.scaling(15, 1) }); }
@@ -907,7 +911,7 @@ function testV158() {
   let mono2 = true; for (let w = 1; w < 20; w++) { const a = at2(w), b = at2(w + 1); if (!a.every(id => b.includes(id))) mono2 = false; }
   assert(mono2, 'la rampa resta monotona con i nemici nuovi');
   // niente NaN con tutti i nuovi in campo
-  const r5 = new Room('v158e'); const p5 = r5.addPlayer('b', { send() {} }, 'B', 'enforcer'); r5.startGame();
+  const r5 = new Room('v158e'); const p5 = r5.addPlayer('b', { send() {} }, 'B', 'ladro'); r5.startGame();
   r5.pending = 0; r5.waveList = [];
   for (const id of ['spore_fungus', 'bone_roller', 'slime', 'occhio']) { const pos = r5.randomSpawnPos(); r5.spawnMonster(id, pos.x, pos.y, { scaling: Waves.scaling(15, 1) }); }
   for (let i = 0; i < C.TICK_RATE * 8; i++) { r5.setInput('b', bot(r5, p5)); r5.update(dt); if (hasNaN(r5)) break; }
@@ -917,7 +921,7 @@ function testV158() {
 function testV159() {
   console.log('\n[TEST 30] Novita v1.59 — Beholder meno statico: telegrafo del cambio sguardo esposto al client');
   const dt = 1 / C.TICK_RATE, Mon = require('../shared/monsters.js');
-  const room = new Room('v159'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v159'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.pending = 0; room.waveList = []; pl.hp = 9999; pl.maxHp = 9999;
   const sp = room.map.spawn;
   const m = room.spawnMonster('occhio', sp.x + 80, sp.y, { scaling: Waves.scaling(15, 1) });
@@ -948,7 +952,7 @@ function testV164() {
   // ondata pesante: 6 giocatori all ondata 18. Il totale da uccidere deve restare quello previsto,
   // ma non devono stare tutti in campo insieme.
   const room = new Room('v164'); const pls = [];
-  for (let i = 0; i < 6; i++) pls.push(room.addPlayer('p' + i, { send() {} }, 'P' + i, 'enforcer'));
+  for (let i = 0; i < 6; i++) pls.push(room.addPlayer('p' + i, { send() {} }, 'P' + i, 'ladro'));
   room.startGame();
   room.wave = 18; room.nextWave();
   const totale = room.pending + room.monsters.length;
@@ -986,7 +990,7 @@ function testV163() {
   const dt = 1 / C.TICK_RATE;
 
   // ---------- la geometria del margine ----------
-  const r0 = new Room('v163g'); r0.addPlayer('a', { send() {} }, 'A', 'enforcer'); r0.startGame();
+  const r0 = new Room('v163g'); r0.addPlayer('a', { send() {} }, 'A', 'ladro'); r0.startGame();
   const m0 = r0.map, T2 = C.TILE, M = C.EDGE_MARGIN;
   const at = (gx, gy) => r0._edgeDepth(gx * T2 + T2 / 2, gy * T2 + T2 / 2);
   assert(at((m0.w / 2) | 0, (m0.h / 2) | 0) === 0, 'al centro la profondita nel margine e zero');
@@ -998,7 +1002,7 @@ function testV163() {
   assert(band / tot > 0.15 && band / tot < 0.45, 'la fascia copre una quota sensata della mappa (' + (band / tot * 100).toFixed(0) + '%)');
 
   // ---------- grazia, poi drenaggio crescente ----------
-  const room = new Room('v163a'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v163a'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   // Svuotare del tutto i mostri chiude l'ondata: la stanza passa a 'shop' e li' CURA i giocatori, quindi il
   // drenaggio veniva rimborsato a ogni tick e il test misurava zero. Si tiene in campo UN Fungo Sporifero al
   // centro: e' immobile e la sua vista non arriva al bordo, quindi la stanza resta in combattimento senza
@@ -1075,7 +1079,7 @@ function testV163() {
   assert(pl.hp === h, 'passare dal margine e tornare indietro non costa niente: e l ACCAMPARSI a costare [hp ' + pl.hp + ' era ' + h + ' fase ' + room.phase + ' mostri ' + room.monsters.length + ' edgeT ' + (pl.edgeT || 0).toFixed(2) + ' depthSpot ' + room._edgeDepth(px, py) + ']');
 
   // ---------- al mercato la faglia non esiste ----------
-  const r3 = new Room('v163m'); const p3 = r3.addPlayer('c', { send() {} }, 'C', 'enforcer'); r3.startGame();
+  const r3 = new Room('v163m'); const p3 = r3.addPlayer('c', { send() {} }, 'C', 'ladro'); r3.startGame();
   r3.newMap(99, 3, true); r3.phase = C.PHASE_MARKET;
   let mspot = null;
   for (let y = 2; y < r3.map.h - 2 && !mspot; y++) for (let x = 2; x < r3.map.w - 2; x++)
@@ -1172,7 +1176,7 @@ function testV162() {
   const dt = 1 / C.TICK_RATE;
   let room = null, pl = null, hc = null;
   for (let attempt = 0; attempt < 12 && !hc; attempt++) {
-    room = new Room('v162_' + attempt); pl = room.addPlayer('h', { send() {} }, 'H', 'enforcer'); room.startGame();
+    room = new Room('v162_' + attempt); pl = room.addPlayer('h', { send() {} }, 'H', 'ladro'); room.startGame();
     for (let y = 2; y < room.map.h - 2 && !hc; y++) for (let x = 2; x < room.map.w - 2; x++)
       if (room.map.grid[y * room.map.w + x] === C.T_HAZARD) { hc = { x, y }; break; }
   }
@@ -1219,7 +1223,7 @@ function testV161() {
   // --- IL FATUO ATTRAVERSA DAVVERO I MURI ---
   // Un mostro normale messo dentro un muro viene ESPULSO da _unstuck (salto secco).
   // Il fatuo invece deve proseguire di suo, passo dopo passo, e uscire da solo.
-  const room = new Room('v161'); const pl = room.addPlayer('a', { send() {} }, 'A', 'enforcer'); room.startGame();
+  const room = new Room('v161'); const pl = room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
   let wx = -1, wy = -1;
   for (let gy = 2; gy < room.map.h - 2 && wx < 0; gy++) for (let gx = 2; gx < room.map.w - 2; gx++)
     if (room.map.grid[gy * room.map.w + gx] === C.T_WALL) { wx = gx; wy = gy; break; }
@@ -1247,7 +1251,7 @@ function testV161() {
   assert(skOut, 'controprova: un nemico normale nel muro viene comunque rimesso fuori');
 
   // --- IL FATUO DRENA: danneggia e si cura ---
-  const room2 = new Room('v161b'); const p2 = room2.addPlayer('b', { send() {} }, 'B', 'enforcer'); room2.startGame();
+  const room2 = new Room('v161b'); const p2 = room2.addPlayer('b', { send() {} }, 'B', 'ladro'); room2.startGame();
   const w2 = room2.spawnMonster('wisp', p2.x + 40, p2.y, { scaling: Waves.scaling(1, 1) });
   w2.hp = Math.max(1, Math.round(w2.maxHp * 0.4)); const wh0 = w2.hp;
   p2.hp = 500; const ph0 = p2.hp; w2.atkT = 0; room2.events.length = 0;
@@ -1259,7 +1263,7 @@ function testV161() {
   assert(w2.hp <= w2.maxHp, 'la cura non supera i PV massimi');
 
   // --- IL NUGOLO ONDEGGIA: la traiettoria non e una retta verso il giocatore ---
-  const room3 = new Room('v161c'); const p3 = room3.addPlayer('c', { send() {} }, 'C', 'enforcer'); room3.startGame();
+  const room3 = new Room('v161c'); const p3 = room3.addPlayer('c', { send() {} }, 'C', 'ladro'); room3.startGame();
   const b = room3.spawnMonster('bat_swarm', p3.x + 300, p3.y, { scaling: Waves.scaling(1, 1) });
   let maxLat = 0, sgnPos = false, sgnNeg = false;
   for (let i = 0; i < C.TICK_RATE * 4; i++) {
@@ -1274,7 +1278,7 @@ function testV161() {
   assert(sgnPos && sgnNeg, 'e la deviazione cambia lato: serpentina, non una curva sola');
 
   // --- il nugolo fa danno a contatto ---
-  const room4 = new Room('v161d'); const p4 = room4.addPlayer('d', { send() {} }, 'D', 'enforcer'); room4.startGame();
+  const room4 = new Room('v161d'); const p4 = room4.addPlayer('d', { send() {} }, 'D', 'ladro'); room4.startGame();
   const b4 = room4.spawnMonster('bat_swarm', p4.x + 30, p4.y, { scaling: Waves.scaling(1, 1) });
   p4.hp = 400; const h4 = p4.hp; b4.atkT = 0;
   for (let i = 0; i < C.TICK_RATE * 3 && p4.hp >= h4; i++) room4.update(dt);
@@ -1343,7 +1347,7 @@ function testV147() {
   assert(br && br.ai === 'brute' && br.slamWind > 0 && br.slamHit > 0, 'mantiene IA brute + wind-up + istante d\'impatto');
   assert(br && br.name.indexOf('Troll') === 0, 'rinominato "Troll delle Caverne"');
   // simula lo slam a due tempi (invariato): parte il telegrafo e poi lo schianto danneggia ad area
-  const room = new Room('v147'); const pl = room.addPlayer('b', { send() {} }, 'B', 'enforcer'); room.startGame();
+  const room = new Room('v147'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const m = room.spawnMonster('cave_brute', pl.x + 40, pl.y, { scaling: Waves.scaling(4, 1) });
   assert(m && m.type === 'cave_brute' && m.hp > 0, 'il Troll si genera');
   pl.x = m.x + 26; pl.y = m.y; pl.buffs = {}; pl.hp = 500; const hp0 = pl.hp; m.atkT = 0; room.events.length = 0;
@@ -1356,8 +1360,90 @@ function testV147() {
   assert(hasNaN(room) === null, 'nessun NaN col Troll sprite-sheet in campo');
   ok('novita v1.47 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.64)'); console.log('==================================================');
+function testV166() {
+  console.log('\n[TEST 36] Novita v1.66 — tre classi da dungeon, quattro statistiche, fendente in mischia');
+  // --- 1) il roster e' cambiato: niente piu' eroi cyberpunk, niente piu' abilita' Q/E ---
+  assert(Heroes.ORDER.join(',') === 'guerriero,mago,ladro', 'il roster e guerriero/mago/ladro');
+  assert(!Heroes.HEROES.enforcer && !Heroes.HEROES.recon && !Heroes.HEROES.glitch, 'i tre eroi cyberpunk non esistono piu');
+  const SCUOLE = { guerriero: 'melee', mago: 'magic', ladro: 'ranged' };
+  for (const id of Heroes.ORDER) assert(Heroes.HEROES[id].weapon.school === SCUOLE[id], id + ' dichiara la scuola ' + SCUOLE[id]);
+  // --- 2) quattro statistiche da gioco di ruolo, tetto 12 ---
+  const ids = Loot.XP_STATS.map(s => s.id).join(',');
+  assert(ids === 'st_for,st_cos,st_int,st_des', 'le statistiche sono Forza/Costituzione/Intelligenza/Destrezza');
+  assert(Loot.STAT_MAX_LEVEL === 12, 'il tetto per statistica e 12');
+  // --- 3) ogni statistica agisce sulla SCUOLA, non su un danno generico: e' cio' che rende
+  //        sensate le classi miste future (chiunque puo comprare qualunque statistica) ---
+  const room = new Room('v166'); room.startGame(); room.phase = C.PHASE_SHOP;
+  const gue = room.addPlayer('g', { send() {} }, 'G', 'guerriero');
+  const mag = room.addPlayer('m', { send() {} }, 'M', 'mago');
+  const lad = room.addPlayer('l', { send() {} }, 'L', 'ladro');
+  for (const p of [gue, mag, lad]) p.xpPool = 9999999;
+  const d0 = { g: room.effDamage(gue), m: room.effDamage(mag), l: room.effDamage(lad) };
+  const c0 = { m: room.effFireDelay(mag), l: room.effFireDelay(lad), g: room.effFireDelay(gue) };
+  room.buyStat('g', 'st_for');
+  assert(room.effDamage(gue) > d0.g, 'la Forza alza il danno in mischia del guerriero');
+  assert(Math.abs(room.effFireDelay(gue) - c0.g) < 1e-9, 'la Forza NON tocca la cadenza');
+  room.buyStat('m', 'st_for');
+  assert(Math.abs(room.effDamage(mag) - d0.m) < 1e-9, 'la Forza non fa nulla sulle magie del mago');
+  room.buyStat('m', 'st_int');
+  assert(room.effDamage(mag) > d0.m, 'l Intelligenza alza il danno delle magie');
+  assert(room.effFireDelay(mag) < c0.m, 'l Intelligenza alza anche la cadenza delle magie');
+  const sp0 = room.effSpeed(lad);
+  room.buyStat('l', 'st_des');
+  assert(room.effDamage(lad) > d0.l, 'la Destrezza alza il danno delle frecce');
+  assert(room.effFireDelay(lad) < c0.l, 'la Destrezza alza la cadenza');
+  assert(room.effSpeed(lad) > sp0, 'la Destrezza alza anche la velocita di movimento');
+  const hp0 = room.effMaxHp(gue), dr0 = gue.stats.dmgReduce;
+  room.buyStat('g', 'st_cos');
+  assert(room.effMaxHp(gue) > hp0 && gue.stats.dmgReduce > dr0, 'la Costituzione da PV e riduzione dei danni');
+  // il mago parte piu' LENTO dei vecchi fucilieri: e' l Intelligenza a farlo salire (richiesta esplicita)
+  assert(Heroes.HEROES.mago.weapon.fireRate < 3, 'il mago parte con una cadenza bassa (' + Heroes.HEROES.mago.weapon.fireRate + '/s)');
+  // --- 4) FENDENTE: nessun proiettile, danno nel settore davanti, niente alle spalle ---
+  const r2 = new Room('v166b'); const p = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
+  const w = p.hero.weapon; assert(w.melee && w.arcRadius > 0 && w.arcHalf > 0, 'la spada dichiara raggio e apertura dell arco');
+  const avanti = losSpot(r2, p, w.arcRadius * 0.6);
+  p.aim = Math.atan2(avanti.y - p.y, avanti.x - p.x); p.input.aim = p.aim;
+  const m1 = r2.spawnMonster('skeleton', avanti.x, avanti.y, { scaling: Waves.scaling(2, 1) });
+  const dietro = { x: p.x - Math.cos(p.aim) * w.arcRadius * 0.6, y: p.y - Math.sin(p.aim) * w.arcRadius * 0.6 };
+  const m2 = r2.spawnMonster('skeleton', dietro.x, dietro.y, { scaling: Waves.scaling(2, 1) });
+  m1.hp = m1.maxHp = 9999; m2.hp = m2.maxHp = 9999;
+  r2.bullets.length = 0; r2.events.length = 0; p.fireCd = 0; r2.firePlayerWeapon(p);
+  assert(r2.bullets.filter(b => !b.hostile).length === 0, 'il guerriero non spara proiettili');
+  assert(m1.hp < 9999, 'il bersaglio DAVANTI incassa il fendente');
+  assert(m2.hp === 9999, 'il bersaglio ALLE SPALLE non viene toccato');
+  const sw = r2.events.find(e => e.t === 'swing');
+  assert(sw && sw.rad === w.arcRadius && sw.half === w.arcHalf, 'l evento porta al client il raggio e l apertura REALI dell area');
+  // il fendente e' ad AREA ma limitato: il piu' vicino incassa tutto, gli altri una quota, e c'e' un tetto
+  const r3 = new Room('v166c'); const q = r3.addPlayer('c', { send() {} }, 'C', 'guerriero'); r3.startGame();
+  const sp = losSpot(r3, q, 50); q.aim = Math.atan2(sp.y - q.y, sp.x - q.x); q.input.aim = q.aim;
+  const mob = []; for (let i = 0; i < C.MELEE_MAX_TARGETS + 3; i++) {
+    const off = (i - (C.MELEE_MAX_TARGETS + 2) / 2) * 0.12;
+    const mm = r3.spawnMonster('skeleton', q.x + Math.cos(q.aim + off) * 55, q.y + Math.sin(q.aim + off) * 55, { scaling: Waves.scaling(2, 1) });
+    if (mm) { mm.hp = mm.maxHp = 9999; mob.push(mm); }
+  }
+  q.fireCd = 0; r3.firePlayerWeapon(q);
+  const colpiti = mob.filter(m => m.hp < 9999);
+  assert(colpiti.length <= C.MELEE_MAX_TARGETS, 'un fendente colpisce al massimo ' + C.MELEE_MAX_TARGETS + ' bersagli (colpiti ' + colpiti.length + ')');
+  if (colpiti.length > 1) { const danni = colpiti.map(m => 9999 - m.hp).sort((a, b) => b - a); assert(danni[danni.length - 1] < danni[0], 'i bersagli secondari incassano meno del primo'); }
+  // --- 5) proiettili riconoscibili: bolla per il mago, freccia per il ladro ---
+  const r4 = new Room('v166d'); const mg = r4.addPlayer('d', { send() {} }, 'D', 'mago'); r4.startGame();
+  r4.bullets.length = 0; mg.fireCd = 0; r4.firePlayerWeapon(mg);
+  const bolla = r4.bullets.find(b => !b.hostile); assert(bolla && bolla.bubble && !bolla.arrow, 'il mago spara bolle');
+  const r5 = new Room('v166e'); const ld = r5.addPlayer('e', { send() {} }, 'E', 'ladro'); r5.startGame();
+  r5.bullets.length = 0; ld.fireCd = 0; r5.firePlayerWeapon(ld);
+  const frec = r5.bullets.find(b => !b.hostile); assert(frec && frec.arrow && !frec.bubble, 'il ladro spara frecce');
+  const snap = r5.snapshot(); const sb = snap.bul.find(b => b.ar);
+  assert(sb && sb.a != null, 'lo snapshot porta l orientamento della freccia (serve al client per disegnarla)');
+  // --- 6) le armi non si raccolgono piu' dalla mappa e non si comprano ---
+  const r6 = new Room('v166f'); r6.addPlayer('f', { send() {} }, 'F', 'ladro'); r6.startGame();
+  assert(r6.weaponDrops.length === 0, 'nessuna arma a terra all inizio dell ondata');
+  r6.spawnWeapons(); assert(r6.weaponDrops.length === 0, 'spawnWeapons e disattivata');
+  assert(!r6.merchantWaresPool().some(w => w.kind === 'weapon'), 'il mercante non vende piu casse armi');
+  assert(!Loot.ITEMS.some(i => i.kind === 'weapon'), 'le casse armi non escono piu dalle casse');
+  ok('novita v1.66 verificate');
+}
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.66)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

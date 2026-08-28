@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.65.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.66.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -491,6 +491,33 @@ git tag vX.Y.Z
   di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
   test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
 
+- **⚠️ NaN NON E' UN ERRORE, E' UN FILTRO CHE NON FILTRA** *(v1.66)*. Il fendente del guerriero scriveva `m.r`
+  per il raggio del mostro, che **non esiste**: il campo e' `m.radius`. In JavaScript non salta niente —
+  `d > rad + undefined` e' `false`, `diff > half + NaN` e' `false` — e siccome le due righe servivano a
+  **scartare** i bersagli fuori portata, scartare "false" significa **prendere tutto**: il colpo raggiungeva
+  ogni mostro della mappa, anche alle spalle del personaggio. Se ne e' accorto un test che verificava il
+  bersaglio *dietro*, non un errore a runtime. Regola: quando un confronto serve a scartare, un operando
+  indefinito non produce un errore ma **disattiva il filtro**; e i nomi dei campi vanno verificati, non
+  ricordati (giocatore → `p.radius`, mostro → `m.radius`, proiettile → `b.r`).
+- **⚠️ Un campo dichiarato e mai letto e' peggio di un campo assente** *(v1.66)*. `weapon.r` (raggio del
+  proiettile) esisteva nella definizione dell'arma ma `mkBullet` non lo leggeva: la bolla del mago, che deve
+  essere grossa **proprio perche' e' lenta**, volava larga come un proiettile qualunque. Non se n'era accorto
+  nessuno perche' nessuna arma precedente lo dichiarava. Quando si aggiunge un campo a una definizione,
+  verificare a mano che il consumatore lo legga davvero — o scriverne il test.
+- **⚠️ Un bot di simulazione misura anche SE STESSO** *(v1.66)*. Il bot dei test indietreggiava sotto i 160px
+  da qualunque nemico: era un tiratore. Col guerriero, che colpisce a 100px, **non arrivava mai a contatto** e
+  moriva senza aver usato l'arma — e il dato che ne usciva ("la classe e' fragile") descriveva il bot, non il
+  bilanciamento. Prima di tarare una classe nuova va verificato che il bot sappia giocarla: distanza della
+  *sua* arma, mordi-e-fuggi mentre l'arma e' in ricarica, sgancio sotto il 40% dei PV. E ogni confronto di
+  bilanciamento fra due versioni va fatto **con lo stesso bot** su entrambe (`git archive HEAD` in una
+  cartella a parte e si misurano fianco a fianco).
+- **⚠️ Un attacco ad area senza tetto non e' una classe, e' un moltiplicatore di difficolta'** *(misurato
+  v1.66)*. Il fendente che colpiva tutti a piena potenza faceva **300-640 uccisioni** per partita contro le
+  ~50 dei due tiratori; le ondate avanzavano al doppio della velocita' e la squadra moriva prima. Il numero da
+  guardare non e' il danno al secondo ma le **uccisioni per partita a testa**: se una classe ne fa sei volte le
+  altre, il problema non e' la sua potenza, e' il ritmo che impone a tutti. Rimedio classico: il bersaglio piu'
+  vicino incassa tutto, gli altri una quota (55%), e un tetto di bersagli per colpo (`C.MELEE_MAX_TARGETS`).
+
 - **⚠️ MAPPE — `widenForBoss` e' un regolatore di densita', non un correttore di corridoi** *(misurato v1.62)*.
   Fa 4 passate e allarga a 3 tessere ogni corridoio piu' stretto. Effetto collaterale: **azzera qualunque
   differenza di densita' in ingresso**. Misurato su 60 mappe con la stessa posa forzata a densita' diverse —
@@ -501,8 +528,10 @@ git tag vX.Y.Z
     di quella dell'ondata 1. In piu' la posa **satura a ~15 blob** perche' `areaFree` pretende 2 tessere
     libere attorno a ogni masso, e i 700 tentativi finiscono sempre.
   - **Qualunque archetipo di pianta con corridoi stretti (catacombe, labirinto) va in conflitto con questa
-    funzione**: e' la prima cosa da rifare quando si affrontano gli archetipi. La direzione e' garantire il
-    passaggio dei boss **lungo un percorso** (spawn → uscita) invece che su tutta la mappa.
+    funzione**: sarebbe la prima cosa da rifare. La direzione sarebbe garantire il passaggio dei boss
+    **lungo un percorso** (spawn → uscita) invece che su tutta la mappa. **Non e' un lavoro pianificato**:
+    gli archetipi di pianta sono stati valutati e accantonati. Questa nota serve solo a chi in futuro si
+    chiedesse perche' le mappe hanno tutte la stessa forma — la risposta e' qui, non e' un caso.
 - **⚠️ MAPPE — non dare per scontato che vicino al giocatore ci sia pavimento libero** *(v1.62)*. Fino alla
   1.61 la partenza era il centro geometrico, di fatto sempre sgombro, e diversi test piazzavano il nemico a
   un offset fisso (+90, +260px) contando su quello. Con la partenza variabile la garanzia non c'e' piu':

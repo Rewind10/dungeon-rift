@@ -18,19 +18,19 @@
   // Armi raccoglibili (3 tipi × 3 livelli). A Lv.3 + statistica richiesta → EVOLUZIONE.
   const WEAPONS = {
     scatter: { id: 'scatter', name: 'Dispersore', icon: '🔫', color: '#ffb020',
-      evo: { stat: 'st_dmg', need: 3, id: 'scatter_evo', name: 'Uragano d\'Acciaio', desc: 'Ventaglio di 12 pallini con onda d\'urto', color: '#ffe45e' },
+      evo: { stat: 'st_for', need: 3, id: 'scatter_evo', name: 'Uragano d\'Acciaio', desc: 'Ventaglio di 12 pallini con onda d\'urto', color: '#ffe45e' },
       tiers: [
         { pellets: 4, dmg: 0.55, spread: 0.24, knock: 2.2, rate: 0.85, range: 340 },
         { pellets: 6, dmg: 0.58, spread: 0.22, knock: 2.6, rate: 0.9, range: 380 },
         { pellets: 8, dmg: 0.62, spread: 0.20, knock: 3.0, rate: 1.0, range: 420 }] },
     burst: { id: 'burst', name: 'Raffica', icon: '⚡', color: '#00f0c8',
-      evo: { stat: 'st_rate', need: 3, id: 'burst_evo', name: 'Tempesta di Piombo', desc: 'Cadenza estrema, proiettili perforanti', color: '#7dffea' },
+      evo: { stat: 'st_des', need: 3, id: 'burst_evo', name: 'Tempesta di Piombo', desc: 'Cadenza estrema, proiettili perforanti', color: '#7dffea' },
       tiers: [
         { pellets: 1, dmg: 0.80, spread: 0.05, rate: 1.8, pierce: 0, range: 560, speed: 900 },
         { pellets: 2, dmg: 0.80, spread: 0.07, rate: 2.1, pierce: 0, range: 580, speed: 940 },
         { pellets: 3, dmg: 0.82, spread: 0.08, rate: 2.4, pierce: 1, range: 600, speed: 980 }] },
     beam: { id: 'beam', name: 'Cannone a Fascio', icon: '🔷', color: '#3aa0ff',
-      evo: { stat: 'st_power', need: 3, id: 'beam_evo', name: 'Lancia del Giudizio', desc: 'Fascio devastante che perfora e rimbalza', color: '#b061ff' },
+      evo: { stat: 'st_int', need: 3, id: 'beam_evo', name: 'Lancia del Giudizio', desc: 'Fascio devastante che perfora e rimbalza', color: '#b061ff' },
       tiers: [
         { pellets: 1, dmg: 1.7, spread: 0.0, rate: 0.65, pierce: 3, range: 720, speed: 1000, big: 3, knock: 1.6 },
         { pellets: 1, dmg: 2.1, spread: 0.0, rate: 0.7, pierce: 5, range: 760, speed: 1050, big: 4, knock: 1.9 },
@@ -48,44 +48,44 @@
     { id: 'i_health', name: 'Pozione di Salute', icon: '❤️', color: '#ff5a7a', rarity: 'common', weight: 42, kind: 'heal', heal: 0.35, glyph: '+' },
     { id: 'i_shoes', name: 'Stivali Alati', icon: '👟', color: '#8bd6ff', rarity: 'uncommon', weight: 16, kind: 'buff', buff: 'i_speed', dur: 16, glyph: '»' },
     { id: 'i_armor', name: 'Corazza Rinforzata', icon: '🛡️', color: '#7dffea', rarity: 'uncommon', weight: 16, kind: 'buff', buff: 'i_armor', dur: 16, glyph: '▣' },
-    { id: 'i_weapon', name: 'Cassa Armi', icon: '🔫', color: '#ffb020', rarity: 'uncommon', weight: 12, kind: 'weapon', glyph: '★' },
     { id: 'i_power', name: 'Nucleo Instabile', icon: '🔺', color: '#b061ff', rarity: 'rare', weight: 7, kind: 'buff', buff: 'i_power', dur: 12, glyph: '△' },
     { id: 'i_rage', name: 'Ira Berserk', icon: '💥', color: '#ff3b3b', rarity: 'epic', weight: 2.6, kind: 'buff', buff: 'i_rage', dur: 8, glyph: '‼' },
     { id: 'i_invuln', name: 'Egida Divina', icon: '✨', color: '#ffd24a', rarity: 'legendary', weight: 1.1, kind: 'buff', buff: 'i_invuln', dur: 5, glyph: '◈' },
     { id: 'i_life', name: 'Cuore Fenice', icon: '💗', color: '#ff77cc', rarity: 'legendary', weight: 0.8, kind: 'life', glyph: '♥' },
   ];
 
+  // v1.66 — le sei statistiche "da sparatutto" (Vitalità/Potenza/Cadenza/Abilità/Agilità/Precisione) sono
+  // sostituite dalle quattro classiche da gioco di ruolo. Ogni statistica ha una scuola d'elezione
+  // (weapon.school in shared/heroes.js): FORZA muove il melee, INTELLIGENZA la magia, DESTREZZA il tiro.
+  // Chi compra fuori scuola non spreca: le classi miste previste in progressione useranno quelle scuole.
   const XP_STATS = [
-    { id: 'st_hp', name: 'Vitalità', icon: '❤️', color: '#ff5a7a', base: 8, desc: '+22 PV massimi' },
-    { id: 'st_dmg', name: 'Potenza', icon: '⚔️', color: '#ff8a5b', base: 10, desc: '+9% danno' },
-    { id: 'st_rate', name: 'Cadenza', icon: '⚡', color: '#ffd24a', base: 10, desc: '+8% cadenza di fuoco' },
-    { id: 'st_power', name: 'Abilità', icon: '🌀', color: '#b061ff', base: 12, desc: '+14% potenza mosse speciali, -4% ricariche' },
-    { id: 'st_speed', name: 'Agilità', icon: '💨', color: '#8bd6ff', base: 8, desc: '+5% velocità' },
-    { id: 'st_crit', name: 'Precisione', icon: '🎯', color: '#4bd66b', base: 12, desc: '+4% critico' },
+    { id: 'st_for', name: 'Forza', icon: '💪', color: '#ff8a5b', base: 10, school: 'melee',
+      desc: '+9% danno in mischia, +3% rinculo' },
+    { id: 'st_cos', name: 'Costituzione', icon: '❤️', color: '#ff5a7a', base: 10, school: null,
+      desc: '+20 PV massimi, -1.2% danni subiti' },
+    { id: 'st_int', name: 'Intelligenza', icon: '🔮', color: '#b061ff', base: 10, school: 'magic',
+      desc: '+9% danno magico, +7% cadenza delle magie' },
+    { id: 'st_des', name: 'Destrezza', icon: '🏹', color: '#4bd66b', base: 10, school: 'ranged',
+      desc: '+8% danno dei dardi, +6% cadenza, +2.5% velocità' },
   ];
-  // v1.51 — La curva era 1.55^n con livelli ILLIMITATI: con ~7.500 XP raccolti in una run intera e 3.526 XP
-  // per portare TUTTE e sei le statistiche a Lv.8, il negozio non era una scelta ma un rubinetto (compravi
-  // tutto, l'ordine non contava). Ora 2.05^n con TETTO a 8: maxare l'intero albero costa ~17.700 XP, cioe'
-  // molto piu' di quanto se ne raccolga. Si specializza, e la COMBO (moltiplicatore XP fino a x2.5) e i boon
-  // di raccolta diventano finalmente una leva reale su quanto puoi permetterti.
-  // v1.55 — il costo di ogni livello e' ora una TABELLA esplicita di moltiplicatori su `base`, un valore
-  // per livello. La taratura procede per interventi diretti sui numeri ("triplica i primi sei, raddoppia gli
-  // ultimi due") e nessuna formula unica riesce a seguirli senza distorcere il resto della curva: con una
-  // tabella si tocca esattamente il livello che si vuole toccare, e i costi sono leggibili a colpo d'occhio.
+  // v1.51 — La curva era 1.55^n con livelli ILLIMITATI: con ~7.500 XP raccolti in una run intera il negozio
+  // non era una scelta ma un rubinetto. Da allora il costo di ogni livello e' una TABELLA esplicita di
+  // moltiplicatori su `base`, un valore per livello: la taratura procede per interventi diretti sui numeri
+  // e nessuna formula unica riesce a seguirli senza distorcere il resto della curva.
   //
-  //   livello        1     2     3     4     5      6      7      8
-  //   base 10       90   144   198   555  1551   4347   4926   8374
-  //   salto          —  +60%  +38% +180% +179%  +180%   +13%   +70%
+  // v1.66 — tetto portato da 8 a 12 e curva ricalcolata su una regola sola, chiesta esplicitamente:
+  // *con l'XP di una run intera si deve poter cappare esattamente UNA statistica*. Una run vale nell'ordine
+  // dei 18.000 XP (misurato su partita vera). Con base 10:
   //
-  // NOTA sul 7° livello: costa solo il 13% piu' del 6°, perche' il tronco e' stato triplicato e la coda
-  // raddoppiata — la discontinuita' e' voluta ma crea un gradino piatto li' in mezzo. Se il 7° dovesse
-  // sembrare "regalato" dopo il muro del 6°, e' il primo numero da alzare.
+  //   livello     1    2    3    4    5    6    7     8     9    10    11    12
+  //   costo      60  100  160  250  380  560  820  1200  1750  2600  4000  6100   → totale 17.980
+  //   salto       —  +67% +60% +56% +52% +47% +46%  +46%  +46%  +49%  +54%  +53%
   //
-  // Reddito reale: una run vale nell'ordine dei 18.000 XP (misurato su partita vera, ~240 XP alla sola
-  // ondata 2; il vecchio modello senza combo ne stimava 99 e sottostimava di ~2.4x). Portare UNA statistica
-  // al tetto costa 20.185 XP, quindi piu' di una run intera; l'albero completo 121.110, cioe' fuori portata.
-  const STAT_MAX_LEVEL = 8;
-  const STAT_COST_STEPS = [9, 14.4, 19.8, 55.5, 155.1, 434.7, 492.6, 837.4];
+  // Il gradino piatto del 7° livello della vecchia tabella (+13%) e' sparito: la crescita non scende mai
+  // sotto il +46%, quindi ogni livello successivo e' sempre una rinuncia sentita. Cappare UNA statistica
+  // consuma la run per intero; portarne quattro al tetto costerebbe 71.920 XP, cioe' quattro run pulite.
+  const STAT_MAX_LEVEL = 12;
+  const STAT_COST_STEPS = [6, 10, 16, 25, 38, 56, 82, 120, 175, 260, 400, 610];
   function statCost(base, bought) {
     const k = STAT_COST_STEPS[Math.max(0, Math.min(bought, STAT_COST_STEPS.length - 1))];
     return Math.round(base * k);

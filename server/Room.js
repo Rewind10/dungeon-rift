@@ -50,17 +50,20 @@ class Room {
       this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, market: 1 });
       return;
     }
-    this.spawnCrates(); this.spawnWeapons();
+    this.spawnCrates();
     this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave });
     // v1.13 — UN SOLO mercante per round: il Nero SOSTITUISCE casualmente l'ufficiale (mai entrambi).
     if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
     else this.spawnMerchant();
   }
   spawnCrates() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; this.crates.push({ eid: NEXT++, x: c.x, y: c.y, r: 16, mimic: Math.random() < 0.30, opened: false }); } }
-  spawnWeapons() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; if (this.crates.some(x => MU.dist(x.x, x.y, c.x, c.y) < 40)) { i--; continue; } const wt = Loot.WEAPON_ORDER[(Math.random() * Loot.WEAPON_ORDER.length) | 0]; this.weaponDrops.push({ eid: NEXT++, x: c.x, y: c.y, r: 14, wt, level: 1 + (Math.random() < 0.3 ? 1 : 0), taken: false }); } }
+  // v1.66 — le armi non si raccolgono piu' dalla mappa: saranno disponibili SOLO dal negozio, e l'acquisto
+  // e' a sua volta sospeso finche' l'arsenale non viene ripensato attorno alle nuove scuole (melee/magic/
+  // ranged). La funzione resta come stub perche' `weaponDrops` e il suo canale di rete restino validi.
+  spawnWeapons() { /* disattivata in v1.66 */ }
 
   addPlayer(pid, conn, name, heroId) {
-    const hero = Heroes.HEROES[heroId] || Heroes.HEROES.enforcer;
+    const hero = Heroes.HEROES[heroId] || Heroes.HEROES.guerriero;
     const p = {
       id: pid, conn, connected: true, name: (name || 'Eroe').slice(0, 16), heroId: hero.id, hero,
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
@@ -68,7 +71,12 @@ class Room {
       input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
       lives: C.START_LIVES, xpPool: 0, buys: {}, weapon2: null, coins: 0, gear: { armor: 0, boots: 0, weapon: 0 },
       boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
-      stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: hero.id === 'glitch' ? 0.05 : 0.03, critMult: 2.0, pierce: hero.weapon.pierce || 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0 },
+      stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0, pierce: hero.weapon.pierce || 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0,
+        // v1.66 — le quattro statistiche da gioco di ruolo non agiscono su un danno generico ma sulla SCUOLA
+        // dell'arma (shared/heroes.js -> weapon.school): Forza sul melee, Intelligenza sulla magia, Destrezza
+        // sul tiro. Cosi' le classi miste previste in progressione hanno gia' il binario giusto: un guerriero
+        // che compra Intelligenza non guadagna nulla sulla spada, ma tutto sulla prima magia che imbraccia.
+        schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } },
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
     this.players.set(pid, p); return p;
@@ -87,7 +95,7 @@ class Room {
     this.mode = Waves.modeForWave(this.wave); this.surviveT = this.mode.survive || 0; this.treasure = null;
     this.phase = Waves.isBossWave(this.wave) ? C.PHASE_BOSS : C.PHASE_COMBAT;
     if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }  // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella stanza del mercante
-    else { if (!this.crates.length) this.spawnCrates(); if (!this.weaponDrops.length) this.spawnWeapons(); }
+    else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
     this.spawnTimer = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
@@ -219,7 +227,6 @@ class Room {
     return [
       { id: 'heal', name: 'Bende del Viandante', icon: '❤️', color: '#ff5a7a', cost: 45, kind: 'heal', desc: 'Ripristina il 55% dei PV' },
       { id: 'maxhp', name: 'Talismano Vitale', icon: '🧿', color: '#4bd66b', cost: 130, kind: 'maxhp', val: 30, desc: '+30 PV massimi (permanente)' },
-      { id: 'weapon', name: 'Cassa Armi', icon: '🔫', color: '#ffb020', cost: 100, kind: 'weapon', desc: 'Un\'arma casuale' },
       { id: 'boon', name: 'Reliquia Arcana', icon: '🎴', color: '#b061ff', cost: 120, kind: 'boon', desc: 'Scegli subito un Potere' },
       { id: 'life', name: 'Cuore di Fenice', icon: '💗', color: '#ff77cc', cost: 180, kind: 'life', desc: '+1 vita' },
       { id: 'dmg', name: 'Olio Affilante', icon: '⚔️', color: '#ff8a5b', cost: 110, kind: 'dmg', val: 0.12, desc: '+12% danno (permanente)' },
@@ -256,7 +263,6 @@ class Room {
     p.coins -= w.cost;
     if (w.kind === 'heal') { p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * 0.55)); }
     else if (w.kind === 'maxhp') { p.stats.maxHpFlat += w.val; p.hp += w.val; }
-    else if (w.kind === 'weapon') { const wt = Loot.WEAPON_ORDER[(Math.random() * Loot.WEAPON_ORDER.length) | 0]; this._giveWeapon(p, wt); }
     else if (w.kind === 'life') { p.lives += 1; }
     else if (w.kind === 'dmg') { p.stats.dmgMult += w.val; }
     else if (w.kind === 'speed') { p.stats.speedMult += w.val; }
@@ -324,7 +330,7 @@ class Room {
       return;
     }
     let d = dmg;
-    if (p.heroId === 'enforcer') d *= 0.82;
+    if (p.heroId === 'guerriero') d *= 0.88;  // v1.66 — passiva Piastra: -12% danni subiti
     if (p.buffs.phase) d *= 0.7;
     if (p.buffs.b_shield) d *= 0.5;
     if (p.buffs.i_armor) d *= 0.45;
@@ -368,10 +374,13 @@ class Room {
   victory() { this.phase = C.PHASE_VICTORY; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'victory', wave: this.wave, stats: this.buildRunStats(), dur: Math.round(this.time - (this.runStart || 0)) } }); }
 
   effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat; }
-  effSpeed(p) { let s = p.hero.speed * p.stats.speedMult * 1.05; if (p.heroId === 'recon' && p.hp / this.effMaxHp(p) < 0.5) s *= 1.2; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * p.stats.speedMult * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
-  effFireDelay(p) { let base = p.hero.weapon.fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult; if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
-  effDamage(p) { let d = (p.hero.weapon.dmg + p.stats.dmgFlat) * p.stats.dmgMult; if (p.heroId === 'recon' && p.hp / this.effMaxHp(p) < 0.5) d *= 1.15; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
+  effFireDelay(p) { let base = p.hero.weapon.fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
+  effDamage(p) { let d = (p.hero.weapon.dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p); if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
+  // v1.66 — moltiplicatori della scuola dell'arma impugnata (1 se l'arma non ne dichiara una).
+  schoolDmg(p) { const k = p.hero.weapon.school; return (k && p.stats.schoolDmg && p.stats.schoolDmg[k]) || 1; }
+  schoolRate(p) { const k = p.hero.weapon.school; return (k && p.stats.schoolRate && p.stats.schoolRate[k]) || 1; }
   abilPow(p) { return p.stats.abilityMult; }
   comboMult(p) { if (!p || (p.combo || 0) < C.COMBO_MIN) return 1; return 1 + Math.min(C.COMBO_CAP, (p.combo - C.COMBO_MIN + 1) * C.COMBO_STEP); }
   // Ricompense combo a soglie (v1.7): scattano esattamente al raggiungimento della soglia.
@@ -398,11 +407,14 @@ class Room {
     const w = p.hero.weapon; if (p.fireCd > 0) return; p.fireCd = this.effFireDelay(p);
     const base = p.aim; let pc = 1 + p.stats.extraProjectiles + (p.buffs.b_quad ? 2 : 0);
     let dmg = this.effDamage(p); let crit = MU.chance(p.stats.critChance);
-    if (p.heroId === 'glitch') { p.shotCount++; if (p.shotCount % 5 === 0) crit = true; }
     if (crit) dmg *= p.stats.critMult; dmg = Math.round(dmg);
+    // v1.66 — il GUERRIERO non spara: descrive un semicerchio davanti a se'. Raggio e apertura vengono
+    // dall'arma (arcRadius/arcHalf), non dall'eroe, perche' spada corta, spada lunga e alabarda dovranno
+    // dare tre archi diversi allo stesso personaggio.
+    if (w.melee) { this._meleeSwing(p, w, dmg, crit); return; }
     // colpo esplosivo periodico (boon)
     let explosive = false; if (p.boon.explodeEvery > 0) { p.boonShot++; if (p.boonShot % p.boon.explodeEvery === 0) explosive = true; }
-    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed), vy: Math.sin(a) * (ov.speed || w.bulletSpeed), r: (ov.r || C.BULLET_RADIUS) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: p.heroId === 'recon' ? 1 : 0, explosive, chain: p.boon.chain, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing }, {}));
+    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed), vy: Math.sin(a) * (ov.speed || w.bulletSpeed), r: (ov.r || w.r || C.BULLET_RADIUS) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive, chain: p.boon.chain, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing }, {}));
     const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
@@ -414,32 +426,55 @@ class Room {
       for (let i = 0; i < pellets; i++) { const off = pellets > 1 ? (i - (pellets - 1) / 2) * (tr.spread || 0.1) : 0; const a = base + off + MU.rand(-(tr.spread || 0) * 0.4, (tr.spread || 0) * 0.4); mkBullet(a, { speed, range, r: C.BULLET_RADIUS + (tr.big || 0), dmg: pd, color: col, pierce: tr.pierce || 0, knock: kn, bounce: tr.bounce || 0 }); }
       if (tr.nova) { for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; mkBullet(a, { speed: 480, range: 220, dmg: Math.round(pd * 0.5), color: col }); } }
     } else {
-      for (let i = 0; i < pc; i++) { const sb = w.spread + (pc > 1 ? 0.09 * (i - (pc - 1) / 2) : 0); let a = base + sb + MU.rand(-w.spread, w.spread); if (p.heroId === 'enforcer') { const near = this._coneNear(p.x, p.y, base, 0.5, w.range); if (near) { const ta = Math.atan2(near.y - p.y, near.x - p.x); a = MU.turnToward(a, ta, 0.06); } } mkBullet(a); }
+      for (let i = 0; i < pc; i++) { const sb = w.spread + (pc > 1 ? 0.09 * (i - (pc - 1) / 2) : 0); const a = base + sb + MU.rand(-w.spread, w.spread); mkBullet(a); }
     }
     };
     volley();
     // v1.51 — ECO ARCANA: una quota dei colpi parte una seconda volta, gratis (stesso danno, stessa mira).
     if (p.boon.echo > 0 && MU.chance(0.20 * p.boon.echo)) { volley(); this.events.push({ t: 'echo', x: p.x, y: p.y, a: base }); }
-    this.events.push({ t: 'shot', x: p.x, y: p.y, a: base, hero: p.heroId, wt: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null });
+    this.events.push({ t: 'shot', x: p.x, y: p.y, a: base, who: p.id, hero: p.heroId, wt: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null });
   }
-  _coneNear(x, y, ang, ha, range) { let best = null, bd = Infinity; for (const m of this.monsters) { const d = MU.dist(x, y, m.x, m.y); if (d > range) continue; const a = Math.atan2(m.y - y, m.x - x); let diff = Math.abs(((a - ang + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff <= ha && d < bd) { bd = d; best = m; } } return best; }
-
+  // v1.66 — FENDENTE. Colpisce i mostri il cui centro cade nel settore [aim ± arcHalf] entro arcRadius,
+  // con la tolleranza del raggio del bersaglio: un mostro grosso viene preso anche se il centro e' appena
+  // fuori dall'arco, altrimenti i tank sembrano schivare la spada restando fermi. Un solo colpo per bersaglio
+  // per fendente. L'evento porta raggio e apertura perche' il client disegni ESATTAMENTE l'area che ferisce.
+  _meleeSwing(p, w, dmg, crit) {
+    const rad = w.arcRadius || 100, half = w.arcHalf || 0.95;
+    const hit = [];
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      // NOTA: il raggio del mostro e' m.radius, NON m.r (m.r non esiste). Scriverlo sbagliato non da'
+      // errore: 'd > rad + undefined' e 'diff > half + NaN' sono entrambi FALSE, quindi il fendente
+      // colpiva TUTTI i mostri della mappa, anche alle spalle. Se ne e' accorto il test del bersaglio dietro.
+      const mr = m.radius || 12;
+      const d = MU.dist(p.x, p.y, m.x, m.y); if (d > rad + mr) continue;
+      const a = Math.atan2(m.y - p.y, m.x - p.x);
+      const diff = Math.abs(((a - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI);
+      const tol = d > 1 ? Math.atan2(mr * 0.8, d) : Math.PI;
+      if (diff > half + tol) continue;
+      hit.push({ m, d });
+    }
+    // MISURATO: senza limiti, il fendente che colpisce TUTTI a piena potenza faceva 300-640 uccisioni per
+    // partita contro le ~50 a testa dei tiratori, e la squadra si autodistruggeva perche' le ondate
+    // avanzavano al doppio della velocita'. Il colpo resta ad area, ma con la regola classica: il bersaglio
+    // piu' vicino incassa tutto, gli altri il 55%, e non piu' di MELEE_MAX_TARGETS per fendente.
+    hit.sort((x, y) => x.d - y.d);
+    const cap = C.MELEE_MAX_TARGETS || 5;
+    for (let i = 0; i < hit.length && i < cap; i++) {
+      const m = hit[i].m, d = i === 0 ? dmg : Math.max(1, Math.round(dmg * (C.MELEE_SPLASH || 0.55)));
+      const kn = (w.knockback || 0) * p.stats.knockMult;
+      this.damageMonster(m, d, p.x, p.y, kn, p, { crit: crit && i === 0, poison: p.boon.poison, slow: p.boon.slow });
+      if (p.boon.chain > 0) this._chain(m, p, p.boon.chain);
+    }
+    this.events.push({ t: 'swing', x: p.x, y: p.y, a: p.aim, rad, half, crit, hits: Math.min(hit.length, cap), who: p.id });
+  }
   useDash(p) { if (p.cdDash > 0 || p.buffs.dash > 0) return; p.cdDash = C.DASH_CD * p.stats.cdrMult; p.buffs.dash = C.DASH_TIME; p.buffs.iframe = C.DASH_IFRAME; const n = MU.norm(p.input.mx, p.input.my); p.dashDir = (n.x || n.y) ? n : { x: Math.cos(p.aim), y: Math.sin(p.aim) }; this.events.push({ t: 'ability', k: 'dash', x: p.x, y: p.y }); }
-  useQ(p) {
-    if (p.cdQ > 0) return; const ap = this.abilPow(p);
-    if (p.heroId === 'enforcer') { p.cdQ = 6 * p.stats.cdrMult; for (let k = -3; k <= 3; k++) { const a = p.aim + k * 0.10; this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, r: 7, dmg: Math.round(this.effDamage(p) * 2.2 * ap), color: '#9fe0ff', life: 0.6, pierce: 3, knock: 140, stun: 0.7 }); } this.events.push({ t: 'ability', k: 'justice', x: p.x, y: p.y }); }
-    else if (p.heroId === 'recon') { p.cdQ = 7 * p.stats.cdrMult; this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, grenade: true, x: p.x, y: p.y, vx: Math.cos(p.aim) * 420, vy: Math.sin(p.aim) * 420, r: 6, dmg: 0, color: '#c7f06a', life: 0.8, fuse: 0.8, boomR: 120, boomDmg: Math.round(this.effDamage(p) * 3.2 * ap) }); this.events.push({ t: 'ability', k: 'grenade', x: p.x, y: p.y }); }
-    else if (p.heroId === 'glitch') { let dur = 4; p.cdQ = 16 * p.stats.cdrMult; this.bulletTime = { t: dur, factor: 0.35, owner: p.id }; this.events.push({ t: 'ability', k: 'bullettime', x: p.x, y: p.y }); }
-  }
-  useE(p) {
-    if (p.cdE > 0) return; const ap = this.abilPow(p);
-    // ENFORCER — Torretta Schierabile (v1.9): piazza una torretta che spara ai nemici per 8s.
-    if (p.heroId === 'enforcer') { p.cdE = 15 * p.stats.cdrMult; const tx = p.x, ty = p.y; this.orbs.push({ eid: NEXT++, turret: true, x: tx, y: ty, r: 14, t: 8, fireCd: 0.3, aim: p.aim, dmg: Math.round(this.effDamage(p) * 0.9 * ap), range: 340, owner: p.id }); this.events.push({ t: 'ability', k: 'turret', x: tx, y: ty }); }
-    // RECON — Colpo del Cecchino (v1.9): proiettile perforante devastante a lunga gittata.
-    else if (p.heroId === 'recon') { p.cdE = 8 * p.stats.cdrMult; const a = p.aim; this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, sniper: true, x: p.x, y: p.y, vx: Math.cos(a) * 1700, vy: Math.sin(a) * 1700, r: 8, dmg: Math.round(this.effDamage(p) * 5.5 * ap), color: '#c7f06a', life: 0.7, pierce: 99, hitSet: new Set(), knock: 160, crit: true }); this.events.push({ t: 'ability', k: 'sniper', x: p.x, y: p.y, a }); }
-    // GLITCH — Frattura di Dati (invariata): rift che risucchia e danneggia.
-    else if (p.heroId === 'glitch') { p.cdE = 9 * p.stats.cdrMult; const rx = p.x + Math.cos(p.aim) * 200, ry = p.y + Math.sin(p.aim) * 200; this.orbs.push({ eid: NEXT++, rift: true, x: rx, y: ry, r: 140, t: 1.6, dmg: this.effDamage(p) * 0.5 * ap, owner: p.id }); this.events.push({ t: 'ability', k: 'rift', x: rx, y: ry }); }
-  }
+
+  // v1.66 — le abilita' Q/E sono SOSPESE: erano cucite sui tre eroi rimossi (enforcer/recon/glitch) e vanno
+  // ripensate sulle nuove classi, dove i poteri arriveranno dall'evoluzione dopo il boss e non da uno slot
+  // fisso. Le funzioni restano come stub perche' input, rete e HUD non abbiano bisogno di rami condizionali.
+  useQ(p) { /* nessuna abilita' in v1.66 */ }
+  useE(p) { /* nessuna abilita' in v1.66 */ }
 
   damageMonster(m, dmg, sx, sy, kn, src, opts = {}) {
     if (m.dead) return; if (m.shielded > 0) { this.events.push({ t: 'block', x: m.x, y: m.y }); return; }
@@ -525,7 +560,7 @@ class Room {
     const coinPieces = Loot.coinsFor(coinVal, C.COINS);
     for (const cp of coinPieces) { const a = Math.random() * Math.PI * 2, r = (m.boss || m.treasure) ? MU.rand(12, 66) : MU.rand(4, 20); this.groundCoins.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: cp.v, cid: cp.id, t: 30 }); }
     const dropChance = m.treasure ? 1 : (m.boss ? 1 : (m.elite ? 0.35 : 0.09));
-    if (MU.chance(dropChance)) { const it = Loot.pickWeighted(Loot.ITEMS); this.items.push({ eid: NEXT++, x: m.x, y: m.y, r: 13, id: it.id, t: 30 }); if (m.treasure) { const wt = Loot.WEAPON_ORDER[(Math.random() * 3) | 0]; this.weaponDrops.push({ eid: NEXT++, x: m.x + 20, y: m.y, r: 14, wt, level: 2, taken: false }); } }
+    if (MU.chance(dropChance)) { const it = Loot.pickWeighted(Loot.ITEMS); this.items.push({ eid: NEXT++, x: m.x, y: m.y, r: 13, id: it.id, t: 30 }); }
     if (m.treasure) { this.treasure = null; this.events.push({ t: 'treasure_dead', x: m.x, y: m.y }); }
     if (m.boss) this.bossAlive = false;
   }
@@ -533,7 +568,6 @@ class Room {
   applyItem(p, it) {
     if (it.kind === 'heal') { p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * it.heal)); }
     else if (it.kind === 'life') { p.lives += 1; }
-    else if (it.kind === 'weapon') { const wt = Loot.WEAPON_ORDER[(Math.random() * Loot.WEAPON_ORDER.length) | 0]; this._giveWeapon(p, wt); }
     else if (it.kind === 'buff') { p.buffs[it.buff] = it.dur; }
     this.events.push({ t: 'item_pickup', x: p.x, y: p.y, id: it.id, name: it.name, icon: it.icon, color: it.color, who: p.id, name2: p.name });
   }
@@ -577,12 +611,13 @@ class Room {
     if ((p.buys[statId] || 0) >= Loot.STAT_MAX_LEVEL) return;  // v1.51 — tetto di livello per statistica
     const cost = Loot.statCost(s.base, p.buys[statId] || 0); if (p.xpPool < cost) return;
     p.xpPool -= cost; p.buys[statId] = (p.buys[statId] || 0) + 1;
-    if (statId === 'st_hp') { p.stats.maxHpFlat += 22; p.hp += 22; }
-    else if (statId === 'st_dmg') p.stats.dmgMult += 0.09;
-    else if (statId === 'st_rate') p.stats.fireRateMult += 0.08;
-    else if (statId === 'st_power') { p.stats.abilityMult += 0.14; p.stats.cdrMult *= 0.96; }
-    else if (statId === 'st_speed') p.stats.speedMult += 0.05;
-    else if (statId === 'st_crit') p.stats.critChance += 0.04;
+    // v1.66 — quattro statistiche da gioco di ruolo. FORZA e COSTITUZIONE reggono il guerriero,
+    // INTELLIGENZA il mago (danno E cadenza delle magie), DESTREZZA il ladro (danno, cadenza e passo).
+    // Nessuna e' riservata a una classe: chiunque puo' comprarle tutte, ma agiscono sulla scuola dell'arma.
+    if (statId === 'st_for') { p.stats.schoolDmg.melee += 0.09; p.stats.knockMult += 0.03; }
+    else if (statId === 'st_cos') { p.stats.maxHpFlat += 20; p.hp += 20; p.stats.dmgReduce = Math.min(0.85, (p.stats.dmgReduce || 0) + 0.012); }
+    else if (statId === 'st_int') { p.stats.schoolDmg.magic += 0.09; p.stats.schoolRate.magic += 0.07; }
+    else if (statId === 'st_des') { p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06; p.stats.speedMult += 0.025; }
     this._checkEvo(p);
     this.offerShop(p); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bought', id: statId } });
   }
@@ -700,7 +735,6 @@ class Room {
         continue;
       }
       if (p.dead) continue;
-      if (p.heroId === 'glitch') { if (Math.abs(p.input.mx) < 0.01 && Math.abs(p.input.my) < 0.01) { p.stillT = (p.stillT || 0) + dt; if (p.stillT > 1.2) p.buffs.phase = 0.2; } else p.stillT = 0; }
       const sp = this.effSpeed(p); let mx = p.input.mx, my = p.input.my; const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l; }
       let dvx = mx * sp, dvy = my * sp; if (p.buffs.dash > 0 && p.dashDir) { dvx = p.dashDir.x * sp; dvy = p.dashDir.y * sp; }
       p.vx *= 0.86; p.vy *= 0.86; this.moveCircle(p, (dvx + p.vx) * dt, (dvy + p.vy) * dt);
@@ -804,7 +838,7 @@ class Room {
     // v1.59 — per il Beholder si manda anche gt: quanto manca al cambio di sguardo (0 = sta per cambiare).
     // Serve al client per ANTICIPARE il telegrafo sul corpo invece di limitarsi a reagire dopo.
     const mon = []; for (const m of this.monsters) { const o = { e: m.eid, t: m.type, x: Math.round(m.x), y: Math.round(m.y), f: +m.facing.toFixed(2), hp: Math.round(m.hp), mhp: m.maxHp, el: m.elite ? 1 : 0, b: m.boss ? 1 : 0, mg: m.mega ? 1 : 0, tr: m.treasure ? 1 : 0, fl: m.hitFlash > 0 ? 1 : 0, sh: m.shielded > 0 ? 1 : 0, ps: m.poison > 0 && m.poisonT > 0 ? 1 : 0 }; if (m.type === 'occhio') { o.gk = m.gazeKind; o.gt = +Math.max(0, Math.min(1, (m.gazeCycleT || 0) / (m.def.gazeCycle || 4))).toFixed(2); if (m.gazeActive) { o.gz = 1; o.gtx = Math.round(m.gazeTx); o.gty = Math.round(m.gazeTy); } } if (m.type === 'darkmage') { o.al = m.alert ? 1 : 0; } mon.push(o); }
-    const bul = []; for (const b of this.bullets) bul.push({ e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 });
+    const bul = []; for (const b of this.bullets) { const o = { e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 }; if (b.bubble) o.bb = 1; if (b.arrow) { o.ar = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } bul.push(o); }
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });
     const zones = []; for (const z of this.zones) zones.push({ x: Math.round(z.x), y: Math.round(z.y), r: z.r, p: +(1 - z.t / z.max).toFixed(2), c: z.col });
