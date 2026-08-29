@@ -26,9 +26,13 @@
     if (m.near) HUD.showGear(m, (id) => Net.buyGear(id));
     else if (C.SHOP_GEAR_ENABLED) HUD.setGear(m, (id) => Net.buyGear(id));
   };
+  // v1.71 — il banco dell'Erborista: stesso schema del fabbro, 'near' distingue l'aggiornamento
+  // silenzioso (mentre sei lontano) dall'apertura vera.
+  Net.onOfferPotion = (m) => { G.potData = m; if (m.near) HUD.showPotions(m, potCb); };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
+  const potCb = { pick: (slot, id) => Net.pickPotion(slot, id), buy: (slot) => Net.buyPotion(slot) };
   Net.onChat = (m) => { const log = $('chatLog'); const el = document.createElement('div'); el.className = 'cm'; el.innerHTML = `<b>${esc(m.from)}:</b> ${esc(m.text)}`; log.appendChild(el); setTimeout(() => el.remove(), 8000); while (log.children.length > 6) log.removeChild(log.firstChild); };
   Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev); };
   Net.onEvent = (ev) => onEv(ev);
@@ -80,6 +84,14 @@
       case 'market': HUD.modeBanner('\uD83C\uDFEA MERCATO', '#ffcf4a', 'Nessun nemico \u00b7 potenzia l\'equipaggiamento e prosegui dal portale EXIT'); HUD.killfeed('\uD83C\uDFEA <b style="color:#ffcf4a">MERCATO</b> \u2014 il portale <b>EXIT</b> porta all\'ondata ' + ev.next); break;
       case 'market_exit': HUD.killfeed('\uD83D\uDEAA <b>' + esc(ev.name || 'Qualcuno') + '</b> ha varcato il portale EXIT'); break;
       case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
+      case 'herb_leave': G._herbOpen = false; HUD.hidePotions(); break;
+      // v1.71 — bevuta: fiala che si svuota, alone del colore della pozione e il gorgoglio. La cura
+      // dice anche quanti PV ha reso, perche' quel numero dipende dalla Costituzione e va visto.
+      case 'potion': R.ring(ev.x, ev.y, ev.color || '#9fe06a', 5, 54, 0.42); R.burst(ev.x, ev.y - 8, ev.color || '#9fe06a', 14, 130, 0.5);
+        if (ev.who === Net.id) { A.drink && A.drink(); R.floater(ev.x, ev.y - 34, ev.heal ? ('+' + ev.heal + ' PV') : ev.name, ev.color || '#9fe06a'); }
+        break;
+      case 'potion_buy': A.item && A.item(false); break;
+      case 'potion_set': if (ev.back) HUD.killfeed('\uD83C\uDF3F rimborsate <b style="color:#ffcf4a">' + ev.back + '</b> \uD83E\uDE99 delle cariche rimaste'); break;
       case 'spore': if (ev.e != null) R.hitAttack(ev.e, 0.9); R.ring(ev.x, ev.y - 6, ev.c || '#a6ff3a', 4, 34, 0.45); R.burst(ev.x, ev.y - 8, ev.c || '#a6ff3a', 12, 120, 0.6); break;  // v1.58 — il fungo sbuffa
       case 'roll_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.62); R.ring(ev.x, ev.y, '#ff7a3b', 3, 26, 0.35); break;  // v1.58 — la sfera si carica
       case 'roll_go': A.kill && A.kill(false); R.burst(ev.x, ev.y, '#cfc7b0', 10, 150, 0.35); break;
@@ -143,6 +155,8 @@
       if (w.me.nm && !G._merchOpen && G.merchWares) { G._merchOpen = true; HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), null, false); } else if (!w.me.nm && G._merchOpen) { G._merchOpen = false; HUD.hideMerchant(false); }
       if (w.me.nmd && !G._darkOpen && G.darkWares) { G._darkOpen = true; HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), null, true); } else if (!w.me.nmd && G._darkOpen) { G._darkOpen = false; HUD.hideMerchant(true); }
       if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
+      if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
+      HUD.updateBelt(w.me);
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
     w.mon = next.mon.map(nm => { const p = mm[nm.e] || nm; return Object.assign({}, nm, { x: lerp(p.x, nm.x, a), y: lerp(p.y, nm.y, a), f: lerpA(p.f, nm.f, a) }); });

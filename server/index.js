@@ -34,6 +34,8 @@ attach(server, (conn) => {
       case C.MSG.BUY_MERCHANT: if (room) { if (m.dark) room.buyDark(pid, m.id); else room.buyMerchant(pid, m.id); } break;
       case C.MSG.PICK_BOON: if (room) room.pickBoon(pid, m.id); break;
       case C.MSG.PICK_RANK: if (room) room.pickRank(pid, m.id); break;
+      case C.MSG.PICK_POTION: if (room) room.pickPotion(pid, m.slot, m.id); break;
+      case C.MSG.BUY_POTION: if (room) room.buyPotion(pid, m.slot); break;
       case C.MSG.SHOP_READY: if (room) room.shopReady(pid, m.dest); break;
       case 'sethero': if (room) { const p = room.players.get(pid); if (p && room.phase === C.PHASE_LOBBY) { const H = require('../shared/heroes.js').HEROES; if (H[m.hero]) { p.heroId = m.hero; p.hero = H[m.hero]; p.maxHp = p.hero.hp; p.hp = p.hero.hp; room.broadcast({ t: C.MSG.EVENT, ev: { t: 'herochange', id: pid, hero: m.hero } }); } } } break;
       case C.MSG.CHAT: if (room) room.broadcast({ t: C.MSG.CHAT, from: (room.players.get(pid) || {}).name || '???', text: String(m.text || '').slice(0, 120) }); break;

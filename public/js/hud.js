@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const HERO = window.GAME.Heroes.HEROES, HORDER = window.GAME.Heroes.ORDER, MON = window.GAME.Monsters.MONSTERS, BOSSES = window.GAME.Monsters.BOSSES, LOOT = window.GAME.Loot, RAR = window.GAME.Constants.RARITY;
+  const POT = window.GAME.Potions;
   const $ = (id) => document.getElementById(id); const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { guerriero: '🛡️', mago: '🔮', ladro: '🏹' };
   const EVO_NAME = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; if (w.evo) EVO_NAME[w.evo.id] = { name: w.evo.name, icon: w.icon, color: w.evo.color }; }
@@ -229,6 +230,111 @@
       panel.classList.remove('hidden'); this._renderGearNpc();
     },
     hideGear() { const panel = $('gearPanel'); if (panel) panel.classList.add('hidden'); this._gearNpcSig = null; },
+
+    // ===== v1.71 — LA CINTURA =====
+    // Tre riquadri accanto alla barra abilita'. Si ricostruiscono SOLO quando cambia qualcosa (firma):
+    // ridisegnarli 20 volte al secondo farebbe ripartire l'animazione dei pallini a ogni snapshot.
+    // Il velo del cooldown, invece, si muove ogni frame — ma e' un'altezza in CSS, non HTML nuovo.
+    buildBelt() {
+      const bar = $('beltBar'); if (!bar) return;
+      let html = '';
+      for (let i = 0; i < POT.SLOTS; i++) {
+        html += '<div class="pot-slot empty" id="pot' + i + '"><span class="key">' + (i + 1) + '</span>' +
+                '<span class="ic">\uD83E\uDDEA</span><div class="pips"></div><div class="cdveil hidden"></div></div>';
+      }
+      bar.innerHTML = html; this._beltSig = null;
+    },
+    updateBelt(me) {
+      const bar = $('beltBar'); if (!bar) return;
+      if (!me) { bar.classList.add('hidden'); return; }
+      if (!bar.children.length) this.buildBelt();
+      const bt = me.bt || [];
+      const sig = JSON.stringify(bt);
+      if (sig !== this._beltSig) {
+        this._beltSig = sig;
+        for (let i = 0; i < POT.SLOTS; i++) {
+          const el = $('pot' + i); if (!el) continue;
+          const s = bt[i]; const it = s ? POT.POTIONS[s[0]] : null; const n = s ? s[1] : 0;
+          el.classList.toggle('has', !!it);
+          el.classList.toggle('empty', !it || !n);
+          el.style.setProperty('--c', it ? it.color : '#2c3350');
+          el.title = it ? (it.name + ' — ' + it.desc) : 'Slot vuoto — assegnalo dall\'Erborista';
+          el.querySelector('.ic').textContent = it ? it.icon : '\uD83E\uDDEA';
+          let pips = ''; for (let k = 0; k < POT.MAX_CHARGES; k++) pips += '<i class="' + (k < n ? 'on' : '') + '"></i>';
+          el.querySelector('.pips').innerHTML = pips;
+        }
+      }
+      // il cooldown e' CONDIVISO: il velo scende su tutti e tre insieme, come la regola che rappresenta
+      const f = me.pcd || 0;
+      for (let i = 0; i < POT.SLOTS; i++) {
+        const el = $('pot' + i); if (!el) continue; const v = el.querySelector('.cdveil');
+        if (f > 0.01) { v.classList.remove('hidden'); v.style.height = Math.round(f * 100) + '%'; }
+        else v.classList.add('hidden');
+      }
+      bar.classList.remove('hidden');
+    },
+
+    // ===== v1.71 — IL BANCO DELL'ERBORISTA =====
+    // Sopra i tre slot con dentro cio' che porti, sotto il catalogo. Si clicca uno slot per selezionarlo,
+    // poi una pozione del catalogo per assegnarla: due gesti, nessun trascinamento, nessun menu' annidato.
+    showPotions(data, cb) {
+      if (data) this._pot = data; if (cb) this._potCb = cb;
+      const panel = $('potionPanel'); if (!panel || !this._pot) return;
+      panel.classList.remove('hidden'); this._renderPotions();
+    },
+    hidePotions() { const panel = $('potionPanel'); if (panel) panel.classList.add('hidden'); this._potSig = null; },
+    _renderPotions() {
+      const d = this._pot; if (!d) return;
+      const hd = $('potionHead');
+      if (hd) hd.innerHTML = '\uD83C\uDF3F <b>Erborista</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
+      if (this._potSel == null) this._potSel = 0;
+      const sig = JSON.stringify(d.belt) + '|' + (d.coins || 0) + '|' + this._potSel;
+      if (sig === this._potSig) return; this._potSig = sig;
+      const cb = this._potCb || {};
+      // --- i tre slot ---
+      const row = $('potionBelt'); row.innerHTML = '';
+      d.belt.forEach((s, i) => {
+        const it = s ? POT.BY_ID[s.id] : null;
+        const el = document.createElement('div');
+        el.className = 'bs' + (i === this._potSel ? ' sel' : '');
+        if (it) el.style.setProperty('--c', it.color);
+        let html = '<span class="slotno">SLOT ' + (i + 1) + ' \u2014 TASTO ' + (i + 1) + '</span>';
+        if (!it) html += '<div class="vuoto">\u2014 vuoto \u2014<br>scegli una pozione</div>';
+        else {
+          let pips = ''; for (let k = 0; k < POT.MAX_CHARGES; k++) pips += '<i class="' + (k < s.n ? 'on' : '') + '"></i>';
+          const pieno = s.n >= POT.MAX_CHARGES, caro = (d.coins || 0) < it.cost;
+          html += '<div class="ic">' + it.icon + '</div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
+                  '<div class="ds">' + esc(it.desc) + '<br><span class="dur">' + esc(it.durTxt) + '</span></div>' +
+                  '<div class="pips">' + pips + '</div><div class="row">' +
+                  '<button class="buy' + (pieno || caro ? ' off' : '') + '" data-buy="' + i + '">' +
+                  (pieno ? 'piena' : '+1 carica <b>\uD83E\uDE99' + it.cost + '</b>') + '</button>' +
+                  '<button data-sel="' + i + '">cambia</button></div>';
+        }
+        el.innerHTML = html;
+        el.onclick = (e) => {
+          const b = e.target.closest('button');
+          if (b && b.dataset.buy != null) { if (cb.buy) cb.buy(+b.dataset.buy); return; }
+          this._potSel = i; this._potSig = null; this._renderPotions();
+        };
+        row.appendChild(el);
+      });
+      // --- il catalogo ---
+      const sub = $('potionCatSub');
+      if (sub) sub.textContent = 'Clicca una pozione per metterla nello slot ' + (this._potSel + 1) + '. Un tipo per slot: quelle già in cintura sono spente.';
+      const cat = $('potionCat'); cat.innerHTML = '';
+      d.list.forEach(it => {
+        const dove = d.belt.findIndex(s => s && s.id === it.id);
+        const suo = dove === this._potSel;
+        const el = document.createElement('div');
+        el.className = 'pc' + (dove >= 0 && !suo ? ' in' : '') + (suo ? ' pick' : '');
+        el.innerHTML = '<div class="ic">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
+          '<div class="ds">' + esc(it.desc) + ' \u00b7 ' + esc(it.dur) + '</div>' +
+          (dove >= 0 && !suo ? '<span class="tag">\u2014 già nello slot ' + (dove + 1) + '</span>' : '') +
+          '</div><div class="cost">\uD83E\uDE99' + it.cost + '</div>';
+        if (dove < 0) el.onclick = () => { if (cb.pick) cb.pick(this._potSel, it.id); };
+        cat.appendChild(el);
+      });
+    },
     _renderGearNpc() {
       const d = this._gearNpc; if (!d) return;
       const hd = $('gearHead');

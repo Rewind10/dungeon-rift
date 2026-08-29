@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.70.0',
+    VERSION: '1.71.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -71,6 +71,7 @@
       OFFER_SHOP: 'offer_shop', PICK_BOON: 'pick_boon', OFFER_BOON: 'offer_boon',
       BUY_GEAR: 'buy_gear', OFFER_GEAR: 'offer_gear',
       PICK_RANK: 'pick_rank', OFFER_RANK: 'offer_rank',   // v1.69 — carte di rango e bivio finale
+      PICK_POTION: 'pick_potion', BUY_POTION: 'buy_potion', OFFER_POTION: 'offer_potion',  // v1.71 — cintura
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)

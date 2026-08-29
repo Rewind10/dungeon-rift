@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.70.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.71.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -18,10 +18,22 @@ Test: `npm test`
 | Mira | Mouse |
 | Spara | Click sinistro / Spazio |
 | **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
+| **Pozioni della cintura** | 1 / 2 / 3 — il tipo di ogni slot lo scegli dall'Erborista |
 | ~~Abilità 1 / 2~~ | *sospese in v1.66 — torneranno con l'evoluzione delle classi* |
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.71 (l'Erborista apre bottega)
+- **🧪 La cintura**: tre slot, tasti **1 2 3**, massimo **3 cariche** per slot. Si beve all'istante mentre
+  corri e spari — nessun menu' da aprire.
+- **🌿 Il tipo di ogni slot lo scegli tu** all'Erborista, e li' sta la strategia: 3 slot su 6 pozioni, e
+  **un tipo per slot** (niente cintura di sole cure).
+- **📊 Le statistiche cambiano le pozioni**: Costituzione quanto curano, Intelligenza quanto durano, Forza
+  quanto picchiano le offensive, Destrezza quanto in fretta ribevi.
+- **🚦 Cooldown di 6s condiviso** dai tre slot e **nessun cumulo** dello stesso effetto.
+- **💰 Le cariche si comprano, non si ricaricano.** Cambiare tipo rimborsa meta'; le cariche restano anche
+  se muori.
 
 ## 🆕 Novita v1.70 (piu' morbido all'inizio, senza tetto alla fine)
 - **🔢 Il numero dei nemici e' progressivo**: il tetto dei vivi non e' piu' fisso a 30 ma una curva —

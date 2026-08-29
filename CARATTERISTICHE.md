@@ -6,6 +6,26 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ---
 
+## 🧪 L'ERBORISTA e la CINTURA *(novita v1.71)*
+- Il secondo mestiere del villaggio apre bottega. Vende l'unica cosa del gioco che si **consuma**.
+- **Tre slot** in cintura, tasti **1 2 3**, **massimo 3 cariche** per slot. Si beve all'istante mentre corri
+  e spari: nessun menu', nessuna finestra, nessuna animazione bloccante. `Q` ed `E` restano liberi per le
+  abilita' di classe che arriveranno.
+- **Il tipo di ogni slot lo scegli tu** all'Erborista, e li' sta la strategia: 3 slot su 6 pozioni. **Un tipo
+  per slot** — niente cintura di sole cure.
+- **Sei pozioni**: Cura (40% dei PV, istantanea, 45), Pelle di Pietra (-50% danni, 5s, 40), Fretta (+45%
+  velocita', 6s, 30), Furia (+50% danno, 6s, 35), Frenesia (+60% cadenza, 5s, 35), Rigenerazione (10 PV/s,
+  8s, 40).
+- **Le statistiche contano, una per aspetto**: **Costituzione** quanto curano (al 12 la Cura passa dal 40%
+  al 64% dei PV), **Intelligenza** quanto durano (Furia da 6 a 8,9s), **Forza** quanto picchiano Furia e
+  Frenesia (+50% -> +68%), **Destrezza** quanto in fretta ribevi (cooldown da 6 a 3,84s).
+- **Due freni**: cooldown di 6s **condiviso dai tre slot** (uno per slot si aggirerebbe alternandoli) e
+  **nessun cumulo** — la seconda dose fa ripartire il timer, non raddoppia l'effetto.
+- **Le cariche si comprano, non si ricaricano.** Cambiare il tipo di uno slot **rimborsa meta'** delle
+  cariche rimaste. Le cariche **sopravvivono alla morte**.
+- Restano chiusi **Cartomante, Banditore e Ostessa**. Il quarto banchetto, che nel codice si chiamava
+  Rigattiere e nei documenti Banditore, ora e' **Banditore** ovunque.
+
 ## 🔮 Il fascio della Faglia *(novita v1.65)*
 - L'effetto che segnalava il danno del bordo era troppo discreto: si vedeva appena. Ora e' un **fascio** che
   esce dalla roccia piu' vicina a te, con filamenti che ti **arrivano addosso** e un nucleo che pulsa — la
@@ -108,8 +128,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - **Buio, e la luce nasce dal falo'** al centro: un unico grande alone circolare scopre i cinque banchetti e
   si spegne contro le pareti. Le lanterne appese ai pali dei banchi fanno da luci di appoggio.
 - **Cinque banchetti** a ferro di cavallo attorno al fuoco — bancone, tendone a strisce, lanterna e merce
-  diversa per mestiere — **piu' grandi dei mercanti**. Il **Fabbro** e' l'unico che vende; **Rigattiere,
-  Ostessa, Cartomante ed Erborista** sono ancora chiusi.
+  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.71 **Fabbro** ed **Erborista** vendono; **Banditore,
+  Ostessa e Cartomante** sono ancora chiusi.
 - I **mercanti** sono al doppio della taglia e piu' dettagliati (mantellina, cintura, pieghe, mani, occhi
   accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
 - Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
@@ -119,8 +139,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
 - **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della
   Gilda**, ognuna con tetto, finestre illuminate, insegna sopra la porta, lanterna e targa col nome.
-- **Cinque abitanti**: il **Fabbro** e' l'unico che vende (i 3 slot dell'equipaggiamento). **Erborista,
-  Locandiere, Cartomante e Banditore** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
+- **Cinque abitanti**: **Fabbro** (equipaggiamento) ed **Erborista** (pozioni, dalla v1.71) vendono. **Ostessa,
+  Cartomante e Banditore** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
   le prossime destinazioni.
 - Il villaggio e' **illuminato**: niente torcia, niente buio. La piazza e' ripulita dai detriti da caverna;
   restano pozzo, lampioni, banchi, casse, barili, alberi, staccionate e il cartello MERCATO.

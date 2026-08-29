@@ -7,6 +7,7 @@ const Mon = require('../shared/monsters.js');
 const Loot = require('../shared/loot.js');
 const Gear = require('../shared/gear.js');
 const Lv = require('../shared/levels.js');
+const Pot = require('../shared/potions.js');
 const MapGen = require('../shared/mapgen.js');
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
@@ -85,7 +86,10 @@ class Room {
       id: pid, conn, connected: true, name: (name || 'Eroe').slice(0, 16), heroId: hero.id, hero,
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
       hp: hero.hp, maxHp: hero.hp, dead: false, down: false, downT: 0, fireCd: 0, facing: 0,
-      input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
+      input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false, pot: 0 }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
+      // v1.71 — LA CINTURA: tre slot, ognuno null oppure { id, n }. Il cooldown e' UNO SOLO per tutti e
+      // tre (potCd), altrimenti basterebbe alternare gli slot per bere tre volte di fila.
+      belt: Pot.newBelt(), potCd: 0, potCdMax: Pot.COOLDOWN,
       lives: C.START_LIVES, buys: {}, weapon2: null, coins: 0,
       // v1.69 — la XP non e' piu' una valuta da spendere ma una barra che sale: `xpPool` e' il TOTALE
       // raccolto nella run e non cala mai. Cio' che si spende sono i PUNTI, uno per livello piu' uno
@@ -109,12 +113,12 @@ class Room {
     this._recomputeGear(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
-  setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; }
+  setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
 
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -229,7 +233,19 @@ class Room {
     const v = this.map && this.map.village;
     const pos = (v && v.smith) || { x: this.map.spawn.x, y: this.map.spawn.y };
     this.gearMerchant = { x: pos.x, y: pos.y, r: 18 };
-    for (const p of this.players.values()) p._nearGear = false;
+    // v1.71 — l'ERBORISTA e' la seconda bottega che apre. Sta gia' nel villaggio disegnato da mapgen:
+    // qui si aggancia solo la sua posizione, esattamente come si fa col fabbro.
+    const erb = (v && v.npcs) ? v.npcs.find(n => n.pot) : null;
+    this.herbalist = erb ? { x: erb.x, y: erb.y, r: 18 } : null;
+    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; }
+  }
+  updateHerbalist() {
+    if (!this.herbalist) return; const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this.herbalist.x, this.herbalist.y) <= RANGE;
+      if (near && !p._nearHerb) { p._nearHerb = true; this.offerPotions(p, 1); }
+      else if (!near && p._nearHerb) { p._nearHerb = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'herb_leave' } }); }
+    }
   }
   updateGearMerchant() {
     if (!this.gearMerchant) return; const RANGE = C.MARKET_MERCH_RANGE;
@@ -243,7 +259,7 @@ class Room {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
-    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; this.offerGear(p, 0); }
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; this.offerGear(p, 0); this.offerPotions(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
@@ -252,8 +268,8 @@ class Room {
     const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
     for (const p of this.alivePlayers) {
       if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
-      this.gearMerchant = null;
-      for (const q of this.players.values()) q._nearGear = false;
+      this.gearMerchant = null; this.herbalist = null;
+      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true; this.nextWave(); return;
     }
@@ -395,6 +411,7 @@ class Room {
     if (p.buffs.phase) d *= 0.7;
     if (p.buffs.b_shield) d *= 0.5;
     if (p.buffs.i_armor) d *= 0.45;
+    if (p.buffs.po_armor) d *= Pot.EFF.armor;
     const dr = (p.stats.dmgReduce || 0) + (p.gearBonus ? p.gearBonus.dmgReduce : 0);
     if (dr > 0) d *= (1 - Math.min(0.85, dr));
     if (p.buffs.gz_sunder > 0) d *= (C.GAZE_SUNDER_MULT || 1.32); // v1.34 — "meno difesa": danni subiti aumentati dallo sguardo
@@ -459,12 +476,12 @@ class Room {
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
   effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0); }
-  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
-  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
+  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
     if (p.perk.sangueFreddo && this.effWeapon(p).melee && p.hp / this.effMaxHp(p) < 0.40) d *= 1.25;
-    if (p.perk.convergenza > 0 && (this.time - (p.lastShotT || 0)) >= p.perk.convergenza) d *= 3; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
+    if (p.perk.convergenza > 0 && (this.time - (p.lastShotT || 0)) >= p.perk.convergenza) d *= 3; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.po_dmg) d *= (1 + Pot.EFF.dmg * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
   // v1.66 — moltiplicatori della scuola dell'arma impugnata (1 se l'arma non ne dichiara una).
   schoolDmg(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolDmg && p.stats.schoolDmg[k]) || 1; }
   schoolRate(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolRate && p.stats.schoolRate[k]) || 1; }
@@ -595,6 +612,67 @@ class Room {
   // v1.66 — le abilita' Q/E sono SOSPESE: erano cucite sui tre eroi rimossi (enforcer/recon/glitch) e vanno
   // ripensate sulle nuove classi, dove i poteri arriveranno dall'evoluzione dopo il boss e non da uno slot
   // fisso. Le funzioni restano come stub perche' input, rete e HUD non abbiano bisogno di rami condizionali.
+  // ===== v1.71 — LA CINTURA =====
+  // Bere e' istantaneo: nessuna finestra, nessuna animazione bloccante, il personaggio continua a muoversi
+  // e sparare. Cio' che regola l'abuso e' il COOLDOWN CONDIVISO fra i tre slot, ridotto dalla Destrezza.
+  usePotion(p, slot) {
+    if (!p || p.dead || p.down) return false;
+    if (p.potCd > 0) return false;
+    const s = p.belt[slot]; if (!s || s.n <= 0) return false;
+    const it = Pot.BY_ID[s.id]; if (!it) return false;
+    s.n--;
+    if (it.kind === 'heal') {
+      const mx = this.effMaxHp(p);
+      const cura = Math.round(mx * it.heal * Pot.healMult(p.buys.st_cos || 0));
+      p.hp = Math.min(mx, p.hp + cura);
+      this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon, heal: cura });
+    } else {
+      // ASSEGNA, non somma: bere la seconda Furia fa ripartire il timer, non raddoppia l'effetto.
+      p.buffs[it.buff] = it.dur * Pot.durMult(p.buys.st_int || 0);
+      this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon });
+    }
+    p.potCdMax = Pot.COOLDOWN * Pot.cdMult(p.buys.st_des || 0);
+    p.potCd = p.potCdMax;
+    return true;
+  }
+  // Il banco. Come per il fabbro, si manda l'intero catalogo con dentro lo stato della cintura: il client
+  // non ricalcola nulla, disegna quello che riceve.
+  offerPotions(p, near) {
+    const belt = p.belt.map(s => s ? { id: s.id, n: s.n } : null);
+    const list = Pot.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost,
+      desc: it.desc, dur: it.durTxt, slot: p.belt.findIndex(s => s && s.id === it.id) }));
+    this.sendTo(p.id, { t: C.MSG.OFFER_POTION, coins: p.coins, belt, list, max: Pot.MAX_CHARGES, near: near ? 1 : 0 });
+  }
+  _alBanco(p) {
+    return this.phase === C.PHASE_MARKET && !!this.herbalist &&
+      MU.dist(p.x, p.y, this.herbalist.x, this.herbalist.y) <= C.MARKET_MERCH_RANGE + 12;
+  }
+  // Assegnare un TIPO a uno slot. Le cariche rimaste del tipo vecchio tornano a meta' prezzo: cambiare
+  // idea deve costare, ma non azzerare la spesa (regola scelta da Paolo).
+  pickPotion(pid, slot, potId) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanco(p)) return;
+    slot = slot | 0; if (slot < 0 || slot >= Pot.SLOTS) return;
+    const it = Pot.BY_ID[potId]; if (!it) return;
+    const cur = p.belt[slot];
+    if (cur && cur.id === potId) return;                 // gia' quello: niente da fare
+    if (Pot.altrove(p.belt, slot, potId)) return;        // un tipo per slot
+    let rimborso = 0;
+    if (cur && cur.n > 0) { rimborso = Pot.refundFor(cur.id, cur.n); p.coins += rimborso; }
+    p.belt[slot] = { id: potId, n: 0 };
+    this.offerPotions(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'potion_set', x: p.x, y: p.y, slot, id: it.id, name: it.name, color: it.color, icon: it.icon, back: rimborso } });
+  }
+  buyPotion(pid, slot) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanco(p)) return;
+    slot = slot | 0; const s = p.belt[slot]; if (!s) return;
+    if (s.n >= Pot.MAX_CHARGES) return;
+    const it = Pot.BY_ID[s.id]; if (!it || p.coins < it.cost) return;
+    p.coins -= it.cost; s.n++;
+    this.offerPotions(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'potion_buy', x: p.x, y: p.y, slot, id: it.id, name: it.name, color: it.color, icon: it.icon, n: s.n } });
+  }
   useQ(p) { /* nessuna abilita' in v1.66 */ }
   useE(p) { /* nessuna abilita' in v1.66 */ }
 
@@ -883,7 +961,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -954,6 +1032,7 @@ class Room {
     for (const p of this.players.values()) {
       if (!p.connected) continue;
       p.fireCd = Math.max(0, p.fireCd - dt); p.cdQ = Math.max(0, p.cdQ - dt); p.cdE = Math.max(0, p.cdE - dt); p.cdDash = Math.max(0, p.cdDash - dt);
+      p.potCd = Math.max(0, p.potCd - dt);
       if (p.comboT > 0) { p.comboT -= dt; if (p.comboT <= 0) { p.comboT = 0; p.combo = 0; } }
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
       for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; } }
@@ -989,6 +1068,7 @@ class Room {
         }
       }
       if (p.buffs.b_regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + 8 * dt);
+      if (p.buffs.po_regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + Pot.EFF.regen * Pot.healMult(p.buys.st_cos || 0) * dt);
       if (p.down) {
         p.downT -= dt; p.vx *= 0.8; p.vy *= 0.8;
         for (const a of this.alivePlayers) { if (a === p) continue; if (MU.dist(a.x, a.y, p.x, p.y) < 46) { p.reviveProg = (p.reviveProg || 0) + dt; break; } }
@@ -1046,7 +1126,9 @@ class Room {
       p.aim = p.input.aim; p.facing = p.input.aim;
       if (p.input.shoot && !p.buffs.dash) this.firePlayerWeapon(p);
       if (p.input.q && !p._qH) this.useQ(p); if (p.input.e && !p._eH) this.useE(p); if (p.input.dash && !p._dH) this.useDash(p);
-      p._qH = p.input.q; p._eH = p.input.e; p._dH = p.input.dash;
+      // v1.71 — il tasto della cintura vale sul FRONTE di salita: tenerlo premuto beve una volta sola.
+      if (p.input.pot && p.input.pot !== p._potH) this.usePotion(p, p.input.pot - 1);
+      p._qH = p.input.q; p._eH = p.input.e; p._dH = p.input.dash; p._potH = p.input.pot;
     }
   }
   updateMonsters(dt) {
@@ -1120,7 +1202,7 @@ class Room {
   snapshot(slim) {
     const players = [];
     for (const p of this.players.values()) {
-      const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln']) if (p.buffs[k] > 0) tb.push(k);
+      const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln', 'po_dmg', 'po_rate', 'po_speed', 'po_armor', 'po_regen']) if (p.buffs[k] > 0) tb.push(k);
       const nuovo = !slim || !p._sent; if (slim) p._sent = 1;
       const pr = Lv.progress(p.xpPool);
       const o = { i: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), lv: p.lives, cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, co: p.coins || 0, cmx: +this.comboMult(p).toFixed(2), lvl: p.level, prg: +pr.frac.toFixed(2), pt: p.points };
@@ -1143,6 +1225,10 @@ class Room {
       if (p._nearMerch) o.nm = 1;
       if (p._nearDark) o.nmd = 1;
       if (p._nearGear) o.ng = 1;
+      if (p._nearHerb) o.nh = 1;
+      // v1.71 — la cintura viaggia compatta: uno 0 per lo slot vuoto, [indice, cariche] per gli altri.
+      if (p.belt.some(s => s)) o.bt = p.belt.map(s => s ? [Pot.BY_ID[s.id].idx, s.n] : 0);
+      if (p.potCd > 0) o.pcd = +(p.potCd / (p.potCdMax || Pot.COOLDOWN)).toFixed(2);
       const gz = p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0;
       if (gz) o.gz = gz;
       players.push(o);

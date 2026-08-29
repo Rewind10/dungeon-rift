@@ -24,7 +24,10 @@
     _typing() { const el = document.activeElement; return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'); },
     _touch(e) { e.preventDefault(); const r = this.canvas.getBoundingClientRect(); for (const t of e.touches) { const x = t.clientX - r.left, y = t.clientY - r.top; if (x >= r.width * 0.4) { this.mouse.x = x; this.mouse.y = y; this.mouse.down = true; } } },
     moveVec() { let x = 0, y = 0; if (this.keys['KeyW'] || this.keys['ArrowUp']) y -= 1; if (this.keys['KeyS'] || this.keys['ArrowDown']) y += 1; if (this.keys['KeyA'] || this.keys['ArrowLeft']) x -= 1; if (this.keys['KeyD'] || this.keys['ArrowRight']) x += 1; return { x, y }; },
-    build(px, py) { if (this._typing()) { this.dashEdge = false; return { mx: 0, my: 0, aim: Math.atan2(this.mouse.y - py, this.mouse.x - px), shoot: false, q: false, e: false, dash: false }; } const mv = this.moveVec(); const aim = Math.atan2(this.mouse.y - py, this.mouse.x - px); const shoot = this.mouse.down || !!this.keys['Space']; const dash = this.dashEdge; this.dashEdge = false; return { mx: mv.x, my: mv.y, aim, shoot, q: !!this.keys['KeyQ'], e: !!this.keys['KeyE'], dash }; },
+    build(px, py) { if (this._typing()) { this.dashEdge = false; return { mx: 0, my: 0, aim: Math.atan2(this.mouse.y - py, this.mouse.x - px), shoot: false, q: false, e: false, dash: false, pot: 0 }; } const mv = this.moveVec(); const aim = Math.atan2(this.mouse.y - py, this.mouse.x - px); const shoot = this.mouse.down || !!this.keys['Space']; const dash = this.dashEdge; this.dashEdge = false; // v1.71 — la cintura: 1 2 3. Si manda QUALE slot e' premuto (0 = nessuno); il fronte di salita lo
+    // riconosce il server, cosi' tenere premuto non svuota lo slot.
+    const pot = this.keys['Digit1'] ? 1 : (this.keys['Digit2'] ? 2 : (this.keys['Digit3'] ? 3 : 0));
+    return { mx: mv.x, my: mv.y, aim, shoot, q: !!this.keys['KeyQ'], e: !!this.keys['KeyE'], dash, pot }; },
   };
   window.Input = Input;
 })();

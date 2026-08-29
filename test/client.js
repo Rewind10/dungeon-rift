@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'mapgen']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -233,6 +233,59 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   R.render(1 / 60, solo); const without = counters.rad + counters.lin;
   ok(withFar === without, 'un nemico fuori inquadratura non viene disegnato affatto (' + withFar + ' = ' + without + ')');
   document.createElement = prevCreate;
+})();
+
+
+// ===== v1.71 — LA CINTURA E IL BANCO DELL'ERBORISTA =====
+// La cintura si disegna dallo STESSO oggetto `me` che arriva nello snapshot: se cambia il formato di
+// `bt` lato server, questo test se ne accorge prima che se ne accorga Paolo guardando lo schermo.
+(function () {
+  const P = window.GAME.Potions;
+  HUD.updateBelt({ bt: [[0, 3], [3, 2], [2, 1]], pcd: 0 });
+  const belt = document.getElementById('beltBar');
+  ok(!belt.classList.contains('hidden'), 'la cintura si mostra quando il giocatore esiste');
+  ok((belt.innerHTML.match(/pot-slot/g) || []).length === P.SLOTS, 'tre slot, quanti ne dichiara il catalogo');
+  const s0 = document.getElementById('pot0');
+  ok(s0.classList.contains('has'), 'lo slot con dentro una pozione e acceso');
+  ok(!s0.classList.contains('empty'), 'e non e marcato vuoto');
+  ok(String(s0.title).indexOf('Cura') === 0, 'il suggerimento porta il nome della pozione');
+  // slot esaurito: assegnato ma senza cariche
+  HUD._beltSig = null; HUD.updateBelt({ bt: [[0, 0], 0, 0], pcd: 0 });
+  ok(document.getElementById('pot0').classList.contains('empty'), 'lo slot esaurito si spegne pur restando assegnato');
+  ok(document.getElementById('pot1').classList.contains('empty'), 'e lo slot mai assegnato pure');
+  // senza giocatore la cintura sparisce (schermata di fine partita, lobby)
+  HUD.updateBelt(null);
+  ok(belt.classList.contains('hidden'), 'senza giocatore la cintura si nasconde');
+
+  // --- il banco ---
+  const bel = [{ id: 'p_cura', n: 2 }, { id: 'p_furia', n: 3 }, null];
+  const offerta = { coins: 310, max: P.MAX_CHARGES, near: 1, belt: bel,
+    list: P.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost, desc: it.desc, dur: it.durTxt,
+      slot: bel.findIndex(x => x && x.id === it.id) })) };
+  let scelto = null, comprato = null;
+  HUD._potSel = 1;
+  HUD.showPotions(offerta, { pick: (slot, id) => { scelto = [slot, id]; }, buy: (slot) => { comprato = slot; } });
+  const panel = document.getElementById('potionPanel');
+  ok(!panel.classList.contains('hidden'), 'il banco si apre');
+  ok(String(document.getElementById('potionHead').innerHTML).indexOf('310') > 0, 'e dice quante monete hai');
+  const row = document.getElementById('potionBelt');
+  ok(row.children.length === P.SLOTS, 'tre slot nel banco');
+  ok(String(row.children[2].innerHTML).indexOf('vuoto') > 0, 'lo slot senza tipo dice di essere vuoto');
+  ok(String(row.children[1].innerHTML).indexOf('piena') > 0, 'lo slot con 3 cariche non offre di comprarne una quarta');
+  ok(String(row.children[0].innerHTML).indexOf('+1 carica') > 0, 'quello a meta strada si');
+  const cat = document.getElementById('potionCat');
+  ok(cat.children.length === P.POTIONS.length, 'il catalogo mostra tutte le pozioni');
+  const cura = cat.children[0];
+  ok(String(cura.className).indexOf('in') >= 0, 'quella gia in cintura e spenta');
+  ok(String(cura.innerHTML).indexOf('slot 1') > 0, 'e dice in quale slot sta');
+  ok(!cura.onclick, 'e non si puo cliccare: un tipo per slot');
+  const libera = cat.children[1];   // Pelle di Pietra: non e in cintura
+  ok(!!libera.onclick, 'una pozione libera si puo scegliere');
+  libera.onclick();
+  ok(scelto && scelto[0] === 1 && scelto[1] === 'p_pelle', 'e finisce nello slot selezionato');
+  ok(String(document.getElementById('potionCatSub').textContent).indexOf('slot 2') > 0, 'il sottotitolo dice a quale slot stai lavorando');
+  HUD.hidePotions();
+  ok(panel.classList.contains('hidden'), 'e il banco si chiude quando ti allontani');
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

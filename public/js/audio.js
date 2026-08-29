@@ -68,6 +68,13 @@
     },
     boon() { [440, 660, 990].forEach((f, i) => setTimeout(() => this._blip(f, 0.16, 'triangle', 0.24, f * 1.2), i * 80)); },
     crate() { [392, 523, 659].forEach((f, i) => setTimeout(() => this._blip(f, 0.12, 'triangle', 0.22), i * 60)); },
+    // v1.71 — BEVUTA. Un tonfo sordo (il tappo) e due note che salgono: si sente che qualcosa e'
+    // entrato in circolo, ma resta corto perche' si beve mentre i nemici arrivano.
+    drink() {
+      this._blip(150, 0.16, 'sine', 0.22, 90);
+      this._noise(0.14, 0.09, 900);
+      [520, 780].forEach((f, i) => setTimeout(() => this._blip(f, 0.16, 'triangle', 0.17, f * 1.25), 70 + i * 80));
+    },
     crateBad() { this._blip(300, 0.25, 'sawtooth', 0.3, 90); this._noise(0.3, 0.25, 700); },
     buy() { this._blip(880, 0.08, 'square', 0.2, 1320); this._blip(440, 0.12, 'sine', 0.14, 660); },
     lifeLost() { this._blip(220, 0.5, 'sawtooth', 0.3, 60); this._noise(0.4, 0.2, 500); },

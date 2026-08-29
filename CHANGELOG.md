@@ -2,6 +2,69 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.71.0] — 2026-08-29 · "L'Erborista apre bottega"
+
+Il villaggio aveva cinque banchetti e un solo mestiere che vendeva davvero. Apre il secondo: **l'Erborista**,
+e con lui l'unica cosa del gioco che si **consuma**.
+
+#### 🧪 La cintura: tre slot, tre tasti
+Tre slot, tasti **1 2 3**, massimo **3 cariche** per slot. Si beve all'istante mentre corri e spari: nessun
+menù da aprire, nessuna finestra, nessuna animazione che ti blocca. `Q` ed `E` restano liberi per le
+abilità di classe che arriveranno.
+
+Il tipo di pozione di ogni slot **lo scegli tu** all'Erborista, ed è lì la strategia: con 3 slot su 6
+pozioni ti porti dietro una decisione, non un magazzino. **Un tipo per slot** — niente cintura di sole cure.
+
+#### 🌿 Il catalogo
+
+| | Effetto | Durata | Costo a carica |
+|---|---|---|---:|
+| ❤️ Cura | ripristina il 40% dei PV massimi | istantanea | 45 |
+| 🪨 Pelle di Pietra | −50% danni subiti | 5 s | 40 |
+| 💨 Fretta | +45% velocità | 6 s | 30 |
+| ⚔️ Furia | +50% danno | 6 s | 35 |
+| ⚡ Frenesia | +60% cadenza | 5 s | 35 |
+| ➕ Rigenerazione | 10 PV/s | 8 s | 40 |
+
+#### 📊 Le statistiche contano, una per aspetto
+Nessuna sovrapposizione, così ogni classe usa le stesse boccette in modo diverso senza bisogno di cataloghi
+separati per eroe:
+
+| Statistica | Cosa cambia | Al livello 12 |
+|---|---|---|
+| **Costituzione** | quanto curano | Cura dal 40% al **64%** dei PV |
+| **Intelligenza** | quanto durano | Furia da 6 a **8,9 s** |
+| **Forza** | quanto picchiano Furia e Frenesia | +50% → **+68%** danno |
+| **Destrezza** | quanto in fretta ribevi | cooldown da 6 a **3,84 s** |
+
+#### 🚦 I due freni
+Un **cooldown globale** di 6 s **condiviso dai tre slot** (non uno per slot, altrimenti basterebbe alternarli
+per berne tre di fila), e **nessun cumulo**: la seconda Furia fa ripartire il timer, non raddoppia il danno.
+
+#### 💰 Le regole del banco
+- **Le cariche si comprano, non si ricaricano**: finite quelle, l'ondata la fai a secco.
+- **Cambiare il tipo di uno slot rimborsa metà** delle cariche rimaste: cambiare idea costa, ma non azzera.
+- **Le cariche sopravvivono alla morte**: quello che hai comprato è tuo finché non lo bevi.
+
+#### 🏘️ Villaggio
+- L'**Erborista** non è più una bottega chiusa. Restano chiusi Cartomante, Banditore e Ostessa.
+- Il quarto banchetto si chiamava **Rigattiere** nel codice e **Banditore** nei documenti: ora è Banditore
+  ovunque, che è anche il mestiere che il disegno rappresenta.
+
+#### 🔊 e 🎨
+Suono della bevuta (un tonfo sordo e due note che salgono), alone del colore della pozione attorno al
+personaggio, e per la Cura il numero di PV recuperati — che dipende dalla Costituzione e quindi va visto.
+
+#### ✅ Verificato
+**755 test, 0 falliti.** Fra gli altri: il tetto di 3 cariche, il rifiuto del doppione, il rimborso a metà
+esatto, il cooldown che blocca anche gli **altri** slot, la durata che riparte invece di raddoppiare, le
+cariche che restano dopo aver perso una vita, i quattro moltiplicatori misurati fino al **valore effettivo**
+(danno, cadenza, velocità, cura, durata, cooldown), e un controllo che nessuna chiave di buff del catalogo
+resti senza qualcuno che la legge in `Room.js` — un buff che nessuno legge non farebbe nulla e nessun test
+se ne accorgerebbe. Più 27 controlli sull'interfaccia con DOM finto.
+
+---
+
 ### [1.70.0] — 2026-08-29 · "Più morbido all'inizio, senza tetto alla fine"
 
 Quattro correzioni chieste dopo aver provato la 1.69.

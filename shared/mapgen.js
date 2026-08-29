@@ -247,10 +247,10 @@
     // banchetti a ferro di cavallo attorno al fuoco, aperti verso il varco sud
     stalls: [
       { x: 12, y: 5,  kind: 'seer',      name: 'Cartomante', soon: 1 },
-      { x: 8,  y: 6,  kind: 'crier',     name: 'Rigattiere', soon: 1 },
+      { x: 8,  y: 6,  kind: 'crier',     name: 'Banditore',  soon: 1 },
       { x: 16, y: 6,  kind: 'innkeeper', name: 'Ostessa',    soon: 1 },
       { x: 8,  y: 10, kind: 'smith',     name: 'Fabbro',     shop: 1 },
-      { x: 16, y: 10, kind: 'herbalist', name: 'Erborista',  soon: 1 },
+      { x: 16, y: 10, kind: 'herbalist', name: 'Erborista',  pot: 1, sub: 'pozioni' },
     ],
     stallScale: 1.7,   // il banchetto deve essere piu' grande del mercante
   };
@@ -291,7 +291,8 @@
         // il mercante sta DIETRO il suo banco (piu' lontano dal fuoco), non sopra
         const mk = (s) => { const dx = s.x - VILLAGE.fire.x, dy = s.y - VILLAGE.fire.y, d = Math.hypot(dx, dy) || 1;
           return { x: (s.x + dx / d * 2.1) * TILE + TILE / 2, y: (s.y + dy / d * 2.1) * TILE + TILE / 2,
-                   kind: s.kind, name: s.name, shop: s.shop || 0, soon: s.soon || 0, face: Math.atan2(-dy, -dx) }; };
+                   kind: s.kind, name: s.name, shop: s.shop || 0, pot: s.pot || 0, sub: s.sub || '',
+                   soon: s.soon || 0, face: Math.atan2(-dy, -dx) }; };
         const npcs = VILLAGE.stalls.map(mk);
         const sm = npcs.find(n => n.shop) || npcs[0];
         return { smith: { x: sm.x, y: sm.y }, npcs, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
