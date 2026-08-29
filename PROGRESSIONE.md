@@ -1,8 +1,9 @@
 # 🎚️ PROGRESSIONE.md — Livelli, ranghi e punti
 
-> **REALIZZATO nella v1.69.** Il codice implementa questa specifica per intero, tranne le abilita'
-> ATTIVE delle specializzazioni (i passivi ci sono), che arrivano con la barra delle abilita'.
-> Scritto originariamente come progetto: Descrive per intero come cresce il personaggio: la scala dei
+> **REALIZZATO nella v1.69, RIVISTO nella v1.70.** Quattro cose sono cambiate dopo la prova sul campo,
+> e il documento le riporta: **niente piu' tetto ai livelli**, **esperienza da piu' fonti**, **carte di
+> rango rimosse** (le sostituiranno le abilita' di classe) e **annuncio del LEVEL UP in partita**.
+> Restano da fare le abilita' attive delle specializzazioni. Descrive per intero come cresce il personaggio: la scala dei
 > livelli, i cinque ranghi di ogni classe, il costo in punti delle statistiche e tutte le carte di rango.
 > Lo sviluppo di nuove versioni resta fermo finche' questo impianto non e' approvato.
 >
@@ -16,12 +17,12 @@
 
 | | Regola |
 |---|---|
-| **Cap** | Livello **20** — uno per ondata, perche' la run finisce all'ondata 20 |
-| **XP per il cap** | **10.670**, contro gli ~11.000 che rende una run intera |
+| **Cap** | **nessuno** *(v1.70)* — si sale finche' si accumula esperienza |
+| **Esperienza** | da nemici, **casse aperte** e **potenziamenti raccolti** *(v1.70)* |
 | **Ranghi** | **5**, uno ogni 5 livelli, cioe' **su ogni boss** |
 | **Punti** | 1 per livello + 1 per rango = **23 in una run** |
 | **Statistica al tetto** | **22 punti su 23** — o ti specializzi, o ti distribuisci |
-| **Carte di rango** | 1 su 3 a scelta ai ranghi II, III, IV · al rango V si sceglie la **specializzazione** |
+| **Carte di rango** | **rimosse in v1.70** — al loro posto le abilita' di classe · al rango V resta la **specializzazione** |
 | **Fra una run e l'altra** | il livello riparte da 1; resta sbloccato solo il ramo del rango V raggiunto |
 
 ---
@@ -46,55 +47,46 @@ da 1. Serve un `localStorage` sul client, nessun salvataggio sul server.
 
 ## 2. La scala dei livelli
 
-Il cap e' **20** perche' la run finisce all'ondata 20 (`Waves.FINAL_WAVE`): **un livello per ondata**, e la
-crescita del personaggio e quella del dungeon diventano la stessa curva. Non ci si ferma mai a "livellare":
-si sale perche' si avanza.
+**Nessun tetto** *(deciso nella v1.70)*. Il cap a 20 coincideva con la fine della partita: gli ultimi
+livelli si prendevano sui titoli di coda invece di giocarli. Ora si sale finche' si accumula esperienza, e
+la curva `107 · L^1,54` continua all'infinito — i costi si calcolano man mano che servono.
 
-Curva: **`XP cumulata(L) = 107 · L^1,54`**, arrotondata a numeri leggibili.
+| Liv. | XP per salire | XP totale |
+|---:|---:|---:|
+| 2 | 200 | 200 |
+| 5 | 370 | 1.160 |
+| 10 | 560 | 3.590 |
+| 15 | 700 | 6.810 |
+| 20 | 820 | 10.670 |
+| 25 | 930 | 15.240 |
+| 30 | 1.020 | 20.040 |
 
-| Liv. | XP per salire | XP totale | Ondata in cui ci arrivi | Punti | Rango |
-|---:|---:|---:|---:|---:|---|
-| 1 | — | 0 | 1 | 0 | **I** |
-| 2 | 200 | 200 | 2 | 1 | |
-| 3 | 270 | 470 | 3 | 2 | |
-| 4 | 320 | 790 | 5 | 3 | |
-| 5 | 370 | 1.160 | 5 · 🐲 | 4 **+1** | **II** |
-| 6 | 410 | 1.570 | 6 | 6 | |
-| 7 | 450 | 2.020 | 7 | 7 | |
-| 8 | 490 | 2.510 | 9 | 8 | |
-| 9 | 520 | 3.030 | 10 | 9 | |
-| 10 | 560 | 3.590 | 11 · 🐲 | 10 **+1** | **III** |
-| 11 | 590 | 4.180 | 12 | 12 | |
-| 12 | 620 | 4.800 | 13 | 13 | |
-| 13 | 640 | 5.440 | 14 | 14 | |
-| 14 | 670 | 6.110 | 15 | 15 | |
-| 15 | 700 | 6.810 | 15 · 🐲 | 16 **+1** | **IV** |
-| 16 | 720 | 7.530 | 17 | 18 | |
-| 17 | 750 | 8.280 | 18 | 19 | |
-| 18 | 770 | 9.050 | 19 | 20 | |
-| 19 | 800 | 9.850 | 19 | 21 | |
-| 20 | 820 | **10.670** | 20 · 🐲 | 22 **+1** | **V** |
+La monotonia e' garantita nella generazione (`step[i] = max(arrotondato, step[i-1] + 10)`), non lasciata
+all'arrotondamento: **nessun livello costa quanto il precedente**, verificato fino al 500°.
 
-🐲 = ondata di boss. **Totale: 23 punti.**
+### Da dove arriva l'esperienza *(v1.70)*
 
-Una run intera rende **~11.000 XP** misurate, e fino a ~18.000 con combo alte e boon di raccolta. Quindi:
-chi arriva in fondo arriva al cap; chi gioca *bene* ci arriva due o tre ondate prima e si gode il rango
-massimo piu' a lungo. E' il modo giusto di dare finalmente un peso alla combo, che oggi conta poco.
+Non solo dai nemici uccisi:
 
-**Oltre il livello 20** l'XP si converte in monete: **8 XP = 1 moneta**. Le uccisioni dell'ultima ondata
-continuano a valere qualcosa, e la conversione finisce nell'unica cosa che a quel punto serve ancora
-(l'equipaggiamento dal fabbro).
+| Fonte | XP |
+|---|---|
+| Nemico ucciso | come prima, cresce con l'ondata |
+| **Cassa aperta** | 45 + 9 per ondata |
+| **Potenziamento raccolto** sulla mappa | 30 + 6 per ondata |
 
-**Chi entra a partita iniziata** parte al livello che avrebbe raggiunto a quell'ondata, meno uno: entrare
-all'ondata 12 significa cominciare al livello 10. Senza questa regola un nuovo arrivato sarebbe inutile,
-e con una regola troppo generosa converrebbe entrare tardi.
+I valori stanno in `shared/constants.js`, in chiaro: aggiungere una fonte e' una riga. **Misurato**: una run
+completa porta ora al **livello 30**, con Lv.10 all'ondata 9, Lv.20 alla 15, Lv.30 alla 19.
 
----
+### L'annuncio in partita *(v1.70)*
+
+Salire di livello non aspetta il pannello di fine ondata: la scritta **LEVEL UP** compare sopra la testa
+con il numero del livello, resta agganciata al personaggio mentre si muove e combatte, e svanisce in 1,6s.
+La vedono anche i compagni; a chi sale parte un **jingle** dedicato.
 
 ## 3. I cinque ranghi
 
-Un rango ogni 5 livelli, cioe' **su ogni boss**: la scala dei livelli e la struttura del gioco si
-incastrano da sole, e il rango arriva sempre in un momento che il giocatore ricorda.
+Un rango ogni 5 livelli. Con l'esperienza che arriva da piu' fonti (v1.70) i ranghi non cadono piu'
+esattamente sui boss come nella prima stesura: arrivano quando li hai guadagnati.
 
 | Rango | Liv. | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
 |---|---:|---|---|---|
@@ -104,14 +96,14 @@ incastrano da sole, e il rango arriva sempre in un momento che il giocatore rico
 | **IV** | 15 | Campione | Mago Anziano | Ombra |
 | **V** | 20 | **Paladino** *o* **Maestro d'Armi** | **Arcimago** *o* **Stregone** | **Assassino** *o* **Cacciatore di Teste** |
 
-Ogni rango da' **tre cose**:
+Ogni rango da' **due cose**:
 
 1. **+1 punto** (oltre a quello del livello);
-2. **una carta a scelta fra tre** — potenziamenti di classe, non generici (§5);
-3. **il nome nuovo** sotto la barra della vita, visibile anche ai compagni.
+2. **il nome nuovo** sotto la barra della vita, visibile anche ai compagni.
 
-Il **rango V** e' diverso: al posto delle tre carte c'e' un **bivio fra due specializzazioni** (§6), che e'
-anche l'unico rango che **si vede addosso al personaggio**. I primi quattro cambiano solo il nome: il
+Le carte di rango della v1.69 sono state **rimosse** (§5): al loro posto arriveranno le **abilita' di
+classe**, sbloccate a livelli specifici. Il **rango V** resta diverso: e' un **bivio fra due
+specializzazioni** (§6), ed e' l'unico rango che **si vede addosso al personaggio**. I primi quattro cambiano solo il nome: il
 lavoro grafico va concentrato dove c'e' una scelta da riconoscere a colpo d'occhio.
 
 ---
@@ -167,93 +159,15 @@ valute con tre scopi distinti, e nessuna che si converta nell'altra (tranne l'XP
 
 ---
 
-## 5. Le carte di rango
+## 5. Le carte di rango — RIMOSSE in v1.70
 
-Ai ranghi **II, III e IV** si sceglie **1 carta su 3**. Sono potenziamenti **di classe**, non generici: e'
-la differenza con i boon, che restano quelli di sempre e valgono per chiunque.
+Le 27 carte generiche (Parata, Sfondamento, Bolla Densa, Colpo alle Spalle…) sono state tolte. Al loro
+posto arriveranno le **abilita' di classe**, sbloccate a **livelli specifici** come in un gioco di ruolo:
+le magie del mago, i colpi del guerriero, i tiri del ladro.
 
-Le carte sono **cumulative**: a fine run ne hai tre addosso, piu' la specializzazione. Le combinazioni per
-classe sono 3 × 3 × 3 × 2 = **54**, abbastanza perche' due run non si somiglino.
-
-### 🛡️ GUERRIERO
-
-**Rango II — Guerriero Esperto** *(liv. 5)*
-
-| Carta | Effetto |
-|---|---|
-| **Parata** | Per 0,6s dopo ogni fendente, i danni che arrivano da davanti sono ridotti del 35% |
-| **Sfondamento** | Il fendente colpisce 2 bersagli in piu' (da 5 a 7) e il calo sui secondari passa dal 55% al 70% |
-| **Sangue Freddo** | Sotto il 40% dei PV, +25% danno in mischia |
-
-**Rango III — Veterano** *(liv. 10)*
-
-| Carta | Effetto |
-|---|---|
-| **Colpo Rotante** | Ogni 4° fendente e' a 360° invece che nel solo arco frontale |
-| **Sprone** | Lo scatto travolge: chi attraversi subisce il 60% del danno dell'arma e viene respinto |
-| **Seconda Pelle** | Rigenera 1,5 PV al secondo, sempre |
-
-**Rango IV — Campione** *(liv. 15)*
-
-| Carta | Effetto |
-|---|---|
-| **Esecuzione** | I nemici sotto il 15% dei PV muoiono al primo colpo (mai i boss) |
-| **Muro** | Mentre stai fermo, −30% danni subiti |
-| **Furia Crescente** | Ogni nemico colpito nello stesso fendente da' +8% danno al fendente successivo (max +40%) |
-
-### 🔮 MAGO
-
-**Rango II — Mago Giovane** *(liv. 5)*
-
-| Carta | Effetto |
-|---|---|
-| **Bolla Densa** | +35% raggio della bolla, e chi viene colpito rallenta del 30% per 1,5s |
-| **Eco Arcana** | Il 20% dei lanci parte doppio, gratis |
-| **Mente Lucida** | +12% cadenza e +8% velocita' delle bolle |
-
-**Rango III — Mago** *(liv. 10)*
-
-| Carta | Effetto |
-|---|---|
-| **Frattura** | Le bolle perforano 1 nemico in piu' |
-| **Scudo di Mana** | Assorbe 60 danni; si ricarica dopo 8s senza subire colpi |
-| **Runa Vagante** | Una runa ti orbita attorno e spara una bolla ogni 3s (50% del tuo danno) |
-
-**Rango IV — Mago Anziano** *(liv. 15)*
-
-| Carta | Effetto |
-|---|---|
-| **Detonazione** | Le bolle esplodono all'impatto: 40% del danno in un raggio di 70px |
-| **Passo del Vuoto** | Lo scatto diventa teletrasporto e attraversa i muri |
-| **Convergenza** | Se non lanci per 1,5s, la bolla successiva fa danno **triplo** |
-
-### 🏹 LADRO
-
-**Rango II — Furfante** *(liv. 5)*
-
-| Carta | Effetto |
-|---|---|
-| **Doppia Cocca** | Ogni 3° tiro parte con una seconda freccia a fianco |
-| **Passo Felpato** | +12% velocita' e +20% durata dello scatto |
-| **Punta Avvelenata** | Le frecce avvelenano: danno nel tempo cumulativo |
-
-**Rango III — Predone** *(liv. 10)*
-
-| Carta | Effetto |
-|---|---|
-| **Tiro Rapido** | +25% cadenza per 3s dopo ogni uccisione |
-| **Frecce Pesanti** | +30% danno, −15% cadenza |
-| **Ombra** | Dopo lo scatto sei invisibile ai nemici per 1,5s |
-
-**Rango IV — Ombra** *(liv. 15)*
-
-| Carta | Effetto |
-|---|---|
-| **Colpo alle Spalle** | +80% danno contro i nemici che non ti stanno guardando |
-| **Pioggia** | Ogni 5° tiro e' un ventaglio di 5 frecce |
-| **Elusione** | 15% di probabilita' di schivare del tutto un colpo |
-
----
+Il **rango resta** il momento in cui il personaggio evolve — da' il titolo nuovo e un punto in piu' — e nel
+codice il contenitore e' gia' pronto: `Levels.cardsFor()` risponde vuoto, quindi il server salta l'offerta
+senza rami condizionali. Quando le abilita' saranno definite, basta riempire quella tabella.
 
 ## 6. Il bivio del rango V
 

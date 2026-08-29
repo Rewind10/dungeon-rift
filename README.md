@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.69.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.70.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.70 (piu' morbido all'inizio, senza tetto alla fine)
+- **🔢 Il numero dei nemici e' progressivo**: il tetto dei vivi non e' piu' fisso a 30 ma una curva —
+  8 alla prima ondata, 12 alla terza, 18 alla sesta, 30 solo dalla decima. Prima si arrivava a 30 vivi
+  gia' alla terza ondata.
+- **🎚️ Niente piu' tetto ai livelli**: si sale finche' si accumula esperienza. Un cap che coincideva con
+  la fine della partita non aveva senso. Una run completa porta ora al **livello 30**.
+- **✦ L'esperienza arriva da piu' fonti**: non solo dai nemici uccisi, ma anche dalle **casse aperte**
+  (45 XP + 9 per ondata) e dai **potenziamenti raccolti** sulla mappa (30 + 6). Aggiungerne altre e' una
+  riga in `shared/constants.js`.
+- **🔔 LEVEL UP sopra la testa, con jingle**: salire di livello si vede e si sente subito, in mezzo
+  all'ondata, senza aspettare il pannello di fine round.
+- **🃏 Via le carte di rango**: al loro posto arriveranno le abilita' di classe sbloccate a livelli
+  specifici. Il rango resta (titolo e punto in piu') e il bivio finale pure.
 
 ## 🆕 Novita v1.69 (il personaggio cresce: livelli, ranghi e punti)
 - **🎚️ Venti livelli, uno per ondata**: la XP non si spende piu', sale. Il cap chiede 10.670 XP contro gli

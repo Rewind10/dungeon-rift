@@ -1598,99 +1598,119 @@ function testV168() {
   ok('novita v1.68 verificate');
 }
 function testV169() {
-  console.log('\n[TEST 39] Novita v1.69 — livelli, ranghi, punti e carte');
+  console.log('\n[TEST 39] Livelli, ranghi e punti (v1.69, rivisti in v1.70)');
   const Lv = require('../shared/levels.js');
-  // --- 1) la scala: 20 livelli tarati sull'XP misurata ---
-  assert(Lv.MAX_LEVEL === 20, 'il cap e il livello 20');
-  assert(Lv.XP_FOR_CAP === 10670, 'per il cap servono 10.670 XP (una run intera ne rende ~11.000)');
+  // --- 1) la scala NON ha piu un tetto: si sale finche si accumula esperienza ---
+  assert(Lv.MAX_LEVEL === undefined, 'il tetto ai livelli non esiste piu');
   assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(199) === 1, 'sotto la prima soglia si resta al livello 1');
   assert(Lv.levelForXp(200) === 2, 'a 200 XP si sale al 2');
-  assert(Lv.levelForXp(999999) === Lv.MAX_LEVEL, 'oltre il cap il livello non sale piu');
-  let cresce = true; for (let L = 3; L <= 20; L++) if (Lv.XP_STEP[L] <= Lv.XP_STEP[L - 1]) cresce = false;
-  assert(cresce, 'ogni livello costa piu del precedente');
-  const pr = Lv.progress(Lv.XP_CUM[7] + 100);
+  assert(Lv.levelForXp(10670) === 20, 'a 10.670 XP si e di livello 20');
+  assert(Lv.levelForXp(30000) > 20 && Lv.levelForXp(100000) > Lv.levelForXp(30000), 'oltre il 20 si continua a salire');
+  let cresce = true; for (let L = 3; L <= 40; L++) if (Lv.xpStep(L) <= Lv.xpStep(L - 1)) cresce = false;
+  assert(cresce, 'ogni livello costa piu del precedente, anche molto oltre il 20');
+  const pr = Lv.progress(Lv.xpForLevel(7) + 100);
   assert(pr.level === 7 && pr.frac > 0 && pr.frac < 1, 'il progresso fra due livelli e una frazione sensata');
-  // --- 2) i punti: 23 in una run, 22 per cappare una statistica ---
-  const totPunti = Lv.pointsForLevel(20) + 4 * Lv.POINTS_PER_RANK;
-  assert(totPunti === 23, 'una run intera da 23 punti (19 livelli + 4 ranghi): ' + totPunti);
+  // --- 2) i punti ---
+  assert(Lv.pointsForLevel(20) === 19, '19 punti dai primi 20 livelli');
   assert(Lv.statPointsTo(12) === 22, 'portare una statistica al tetto ne costa 22');
-  assert(Lv.statPointsTo(12) < totPunti, 'quindi si puo fare, ma consuma quasi tutto');
-  assert(Lv.statPointsTo(12) * 2 > totPunti, 'e due statistiche al tetto sono fuori portata');
   assert(Lv.statPointCost(0) === 1 && Lv.statPointCost(5) === 2 && Lv.statPointCost(11) === 3, 'il costo cresce a scaglioni');
-  // --- 3) i ranghi cadono ogni 5 livelli, cioe sui boss ---
-  assert(Lv.rankForLevel(1) === 1 && Lv.rankForLevel(4) === 1 && Lv.rankForLevel(5) === 2, 'il rango II arriva al livello 5');
-  assert(Lv.rankForLevel(10) === 3 && Lv.rankForLevel(15) === 4 && Lv.rankForLevel(20) === 5, 'poi 10, 15 e 20');
+  // --- 3) i ranghi restano, le carte NO ---
+  assert(Lv.rankForLevel(1) === 1 && Lv.rankForLevel(5) === 2 && Lv.rankForLevel(20) === 5, 'i ranghi cadono ogni 5 livelli');
+  assert(Object.keys(Lv.CARD_BY_ID).length === 0, 'le carte di rango sono state rimosse (le sostituiranno le abilita di classe)');
   for (const h of ['guerriero', 'mago', 'ladro']) {
-    assert(Lv.cardsFor(h, 2).length === 3 && Lv.cardsFor(h, 3).length === 3 && Lv.cardsFor(h, 4).length === 3, h + ' ha 3 carte per ognuno dei ranghi II-IV');
-    assert(Lv.specsFor(h).length === 2, h + ' ha due specializzazioni fra cui scegliere');
-    assert(Lv.specsFor(h).every(s => s.hero === h && s.name && s.desc && typeof s.apply === 'function'), h + ': le specializzazioni sono complete');
-    for (const r of [2, 3, 4]) for (const c of Lv.cardsFor(h, r)) {
-      assert(c.hero === h && c.name && c.desc && typeof c.apply === 'function', c.id + ' e una carta completa e della sua classe');
-    }
+    assert(Lv.cardsFor(h, 2).length === 0, h + ': nessuna carta da offrire');
+    assert(Lv.specsFor(h).length === 2, h + ' ha ancora due specializzazioni al rango V');
   }
-  assert(new Set(Object.keys(Lv.CARD_BY_ID)).size === 27, 'in tutto le carte sono 27 (3 classi x 3 ranghi x 3)');
-  // --- 4) a runtime: si sale, si prende un punto, e al rango arriva l'offerta ---
+  // --- 4) a runtime: si sale, si prende un punto, il rango NON offre carte ---
   const room = new Room('v169'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
   assert(p.level === 1 && p.points === 0 && p.xpPool === 0, 'si parte al livello 1 senza punti');
   room.addXp(p, 199); assert(p.level === 1 && p.points === 0, 'sotto soglia non succede niente');
   room.addXp(p, 1); assert(p.level === 2 && p.points === 1, 'alla soglia si sale e arriva il punto');
-  assert(p.xpPool === 200, 'la XP non si consuma piu: e una barra, non una valuta');
-  room.addXp(p, Lv.XP_CUM[5] - p.xpPool);
+  assert(p.xpPool === 200, 'la XP non si consuma: e una barra, non una valuta');
+  room.addXp(p, Lv.xpForLevel(5) - p.xpPool);
   assert(p.level === 5 && Lv.rankForLevel(p.level) === 2, 'si arriva al rango II');
   assert(p.points === 5, 'quattro punti dai livelli piu uno dal rango');
-  assert(p.rankOffer && p.rankOffer.length === 3, 'e le tre carte sono in attesa');
+  assert(p.rankOffer === null, 'ma nessuna carta viene offerta: non ce ne sono piu');
   // saltare piu' livelli in un colpo solo non deve perdere ne punti ne ranghi
   const r2 = new Room('v169b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'mago'); r2.startGame();
-  r2.addXp(q, Lv.XP_CUM[11]);
+  r2.addXp(q, Lv.xpForLevel(11));
   assert(q.level === 11, 'una botta di XP fa salire di piu livelli in un colpo');
   assert(q.points === 10 + 2, 'e i punti dei ranghi attraversati ci sono tutti (10 livelli + 2 ranghi)');
-  // --- 5) le carte: solo della tua classe, una volta sola, e fanno effetto ---
-  const carta = Lv.cardsFor('guerriero', 2).find(c => c.id === 'gue_sfondamento');
-  p.rankOffer = ['gue_sfondamento'];
-  room.pickRank('b', 'mag_densa'); assert(!p.cards.length, 'una carta di un altra classe non si prende');
-  room.phase = C.PHASE_SHOP; room.pickRank('b', 'gue_sfondamento');
-  assert(p.cards.includes('gue_sfondamento') && p.perk.sfondamento === 1, 'la carta scelta viene applicata');
-  assert(p.rankOffer === null, 'e l offerta si chiude');
-  p.rankOffer = ['gue_sfondamento']; room.pickRank('b', 'gue_sfondamento');
-  assert(p.cards.filter(x => x === 'gue_sfondamento').length === 1, 'la stessa carta non si prende due volte');
-  // --- 6) il bivio del rango V ---
+  // --- 5) il bivio del rango V c'e' ancora ---
   const r3 = new Room('v169c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'ladro'); r3.startGame();
-  r3.addXp(z, Lv.XP_FOR_CAP);
-  assert(z.level === 20 && z.specOffer && z.specOffer.length === 2, 'al livello 20 arriva il bivio, non le carte');
-  assert(!z.rankOffer, 'e le carte di rango non vengono offerte al V');
+  r3.addXp(z, Lv.xpForLevel(20));
+  assert(z.level === 20 && z.specOffer && z.specOffer.length === 2, 'al livello 20 arriva il bivio');
   r3.phase = C.PHASE_SHOP;
   const crit0 = z.stats.critChance;
   r3.pickRank('d', 'assassino');
   assert(z.spec === 'assassino' && z.stats.critChance > crit0, 'la specializzazione viene applicata');
   const snapZ = r3.snapshot().players.find(x => x.i === 'd');
-  assert(snapZ && snapZ.sp === 'assassino' && snapZ.lvl === 20, 'lo snapshot la porta al client (serve a disegnarla)');
-  // --- 7) oltre il cap la XP diventa monete ---
-  const co0 = z.coins, xp0 = z.xpPool;
-  r3.addXp(z, 800);
-  assert(z.level === 20 && z.coins === co0 + Math.floor(800 / Lv.XP_TO_COIN), 'oltre il cap la XP si converte in monete');
-  assert(z.xpPool === xp0 + 800, 'ma continua a essere contata, per le statistiche di fine partita');
-  // --- 8) le statistiche si pagano in PUNTI, e la XP non cala mai ---
+  assert(snapZ && snapZ.sp === 'assassino' && snapZ.lvl === 20, 'lo snapshot la porta al client');
+  // e oltre il 20 si continua a salire, senza conversioni in monete
+  const co0 = z.coins;
+  r3.addXp(z, 20000);
+  assert(z.level > 20, 'oltre il rango V il livello continua a salire');
+  assert(z.coins === co0, 'e la XP non si converte piu in monete: non c e piu un tetto da superare');
+  // --- 6) le statistiche si pagano in PUNTI, e la XP non cala mai ---
   const r4 = new Room('v169d'); const w = r4.addPlayer('e', { send() {} }, 'E', 'guerriero'); r4.startGame();
-  r4.addXp(w, Lv.XP_CUM[6]); r4.phase = C.PHASE_SHOP;
+  r4.addXp(w, Lv.xpForLevel(6)); r4.phase = C.PHASE_SHOP;
   const punti0 = w.points, xpPrima = w.xpPool;
   r4.buyStat('e', 'st_for');
   assert(w.buys.st_for === 1 && w.points === punti0 - 1, 'il primo livello di una statistica costa 1 punto');
   assert(w.xpPool === xpPrima, 'e la XP resta dov era');
   w.points = 0; const b0 = w.buys.st_for;
   r4.buyStat('e', 'st_for'); assert(w.buys.st_for === b0, 'senza punti non si compra');
-  // --- 9) a fine ondata la carta di rango PRENDE IL POSTO del boon ---
-  const r5 = new Room('v169e'); const u = r5.addPlayer('f', { send() {} }, 'F', 'mago'); r5.startGame();
-  r5.addXp(u, Lv.XP_CUM[5]);
-  assert(u.rankOffer, 'il rango e in attesa');
-  r5.enterShop();
-  assert(u.boonOffer === null && u.boonPicked === true, 'con una carta in attesa il boon salta il giro');
+  // --- 7) senza carte in attesa il boon torna normale ---
   const r6 = new Room('v169f'); const v = r6.addPlayer('g', { send() {} }, 'G', 'mago'); r6.startGame();
   r6.addXp(v, 250); r6.enterShop();
-  assert(v.boonOffer && v.boonOffer.length, 'senza carte in attesa il boon torna normale');
-  ok('novita v1.69 verificate');
+  assert(v.boonOffer && v.boonOffer.length, 'a fine ondata il boon viene offerto');
+  ok('livelli e ranghi verificati');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.69)'); console.log('==================================================');
+function testV170() {
+  console.log('\n[TEST 40] Novita v1.70 — tetto progressivo, XP da piu fonti, LEVEL UP');
+  const Lv = require('../shared/levels.js');
+  // --- 1) il tetto dei nemici e' una CURVA, non un numero ---
+  const room = new Room('v170'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
+  const attesi = [8, 10, 12, 14, 16, 18, 21, 23, 26, 30];
+  for (let w = 1; w <= 10; w++) { room.wave = w; assert(room.tettoVivi() === attesi[w - 1], 'ondata ' + w + ': il tetto e ' + attesi[w - 1] + ' (letto ' + room.tettoVivi() + ')'); }
+  room.wave = 11; assert(room.tettoVivi() === C.MAX_ALIVE, 'dalla 10ª in poi resta il tetto massimo');
+  room.wave = 30; assert(room.tettoVivi() === C.MAX_ALIVE, 'e non lo supera mai');
+  let cresce = true; for (let w = 2; w <= 10; w++) { room.wave = w; const a = room.tettoVivi(); room.wave = w - 1; if (a <= room.tettoVivi()) cresce = false; }
+  assert(cresce, 'la curva cresce a ogni ondata');
+  // --- 2) alla terza ondata NON si arriva a 30 vivi ---
+  const r2 = new Room('v170b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
+  r2.wave = 3; r2.mode = Waves.modeForWave(3); r2.phase = C.PHASE_COMBAT;
+  const w3 = Waves.buildWave(3, 6, r2.mode); r2.waveList = w3.list; r2.waveScaling = w3.scaling; r2.pending = w3.list.length; r2._peakAlive = 0;
+  const dt = 1 / C.TICK_RATE; let picco = 0;
+  for (let i = 0; i < C.TICK_RATE * 45; i++) { q.hp = r2.effMaxHp(q); q.down = false; q.dead = false; r2.update(dt); let vivi = 0; for (const m of r2.monsters) if (!m.dead) vivi++; picco = Math.max(picco, vivi); }
+  assert(picco <= 12, 'alla terza ondata non se ne vedono mai piu di 12 (picco ' + picco + ')');
+  assert(picco >= 8, 'ma l arena si riempie comunque (picco ' + picco + ')');
+  // --- 3) l esperienza arriva da piu fonti ---
+  const r3 = new Room('v170c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'mago'); r3.startGame();
+  r3.wave = 4;
+  const xp0 = z.xpPool;
+  r3.applyItem(z, Loot.ITEMS.find(i => i.kind === 'buff'));
+  assert(z.xpPool > xp0, 'raccogliere un potenziamento da esperienza');
+  const xp1 = z.xpPool;
+  r3.crates.length = 0; r3.crates.push({ eid: 1, x: z.x, y: z.y, r: 16, mimic: false, opened: false });
+  r3.updatePickups(1 / C.TICK_RATE);
+  assert(z.xpPool > xp1, 'aprire una cassa da esperienza');
+  assert(C.XP_CASSA > 0 && C.XP_OGGETTO > 0, 'i valori delle fonti stanno nelle costanti, in chiaro');
+  // la fonte viene raccontata al client, ma non cambia il conto
+  const ev = r3.events.filter(e => e.t === 'xpfonte');
+  assert(ev.length >= 2 && ev.every(e => e.k && e.v > 0), 'ogni fonte manda al client quanta XP ha dato e da dove');
+  // --- 4) il LEVEL UP viene annunciato anche in mezzo all ondata ---
+  const r4 = new Room('v170d'); const u = r4.addPlayer('e', { send() {} }, 'E', 'guerriero'); r4.startGame();
+  r4.phase = C.PHASE_COMBAT; r4.events.length = 0;
+  r4.addXp(u, Lv.xpForLevel(3));
+  const lu = r4.events.filter(e => e.t === 'levelup');
+  assert(lu.length === 2, 'salendo di due livelli partono due annunci');
+  assert(lu[0].who === 'e' && lu[0].lv === 2 && lu[1].lv === 3, 'ognuno porta chi e salito e a che livello');
+  assert(lu[0].rank, 'e il titolo del rango, per la scritta sopra la testa');
+  ok('novita v1.70 verificate');
+}
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.70)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

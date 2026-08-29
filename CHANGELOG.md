@@ -2,6 +2,68 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.70.0] — 2026-08-29 · "Più morbido all'inizio, senza tetto alla fine"
+
+Quattro correzioni chieste dopo aver provato la 1.69.
+
+#### 🔢 Il numero dei nemici ora è progressivo
+Il tetto dei vivi era **fisso a 30** e, unito al rifornimento rapido della 1.68, riempiva l'arena di 30
+nemici **già alla terza ondata** — misurato — anche se l'ondata ne prevedeva 10. Il tetto era diventato il
+numero, invece di essere un limite. Ora è una **curva**:
+
+| Ondata | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10+ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Vivi al massimo | 8 | 10 | 12 | 14 | 16 | 18 | 21 | 23 | 26 | **30** |
+
+Misurato dopo la modifica, il picco reale di nemici in campo segue la curva senza mai superarla: 7 alla
+prima, **12 alla terza**, 18 alla sesta, 30 solo dall'undicesima.
+
+Nel farlo è saltato fuori che la modalità **Sopravvivenza** rifornit fino a un **14 scritto a mano** che
+scavalcava il tetto: all'ondata 2 (tetto 10) si arrivava davvero a 14 vivi. Ora passa dalla stessa porta
+di tutti gli altri.
+
+#### 🎚️ Niente più tetto ai livelli
+Il cap al livello 20 coincideva con la fine della partita: gli ultimi livelli si prendevano sui titoli di
+coda invece di giocarli. **Il tetto non esiste più**: si sale finché si accumula esperienza, la curva
+(`107 · L^1,54`) continua all'infinito e i costi si calcolano man mano. `MAX_LEVEL` non esiste più nel
+codice, e la conversione dell'XP in monete oltre il cap è sparita con lui (non c'è più un cap da superare).
+
+#### ✦ L'esperienza arriva da più fonti
+Non solo dai nemici uccisi. Ora anche:
+
+| Fonte | XP |
+|---|---|
+| **Cassa aperta** | 45 + 9 per ondata |
+| **Potenziamento raccolto** sulla mappa | 30 + 6 per ondata |
+
+I valori stanno in `shared/constants.js`, in chiaro: aggiungere una fonte è una riga. Il termine per ondata
+tiene il passo con l'XP dei mostri, che cresce anche lei. Ogni raccolta manda al client quanta esperienza
+ha dato e da dove, e la si vede salire sopra il personaggio.
+
+Misurato dopo il cambio: una run completa porta ora al **livello 30** invece del 20, con le tappe a
+Lv.10 all'ondata 9, Lv.20 alla 15, Lv.30 alla 19.
+
+#### 🔔 LEVEL UP sopra la testa, con jingle
+Salire di livello non aspetta più il pannello di fine ondata: la scritta **LEVEL UP** compare sopra la
+testa del personaggio con sotto il numero del livello, resta agganciata a lui mentre si muove e combatte,
+sale piano e svanisce in 1,6 secondi. La vedono anche i compagni. A chi sale parte un **jingle** dedicato:
+un arpeggio maggiore do-mi-sol-do con la fondamentale tenuta sotto — una frase, non un effetto.
+
+#### 🃏 Via le carte di rango
+Le 27 carte generiche introdotte in v1.69 sono state rimosse: al loro posto arriveranno le **abilità di
+classe**, sbloccate a livelli specifici come in un gioco di ruolo. Il **rango resta** (titolo nuovo e punto
+in più a ogni scatto) e il contenitore è già pronto: `cardsFor()` risponde vuoto, quindi l'offerta
+semplicemente non parte — quando le abilità arriveranno basta riempire la tabella, senza toccare il resto.
+Il **bivio del rango V** (Paladino / Maestro d'Armi e i suoi gemelli) resta com'era.
+
+#### 🧪 Test
+- **692 passati, 0 falliti**, più 45 controlli sull'interfaccia.
+- Il test nuovo verifica la curva del tetto ondata per ondata, che alla terza non si superino i 12 vivi in
+  una partita vera, che l'esperienza arrivi davvero da casse e oggetti, e che l'annuncio del livello parta
+  anche in mezzo al combattimento — uno per ogni livello salito, anche saltandone più in un colpo.
+- La monotonia della curva XP è ora garantita a mano e non lasciata all'arrotondamento: verificato che
+  nessun livello, fino al 500°, costi quanto il precedente.
+
 ### [1.69.0] — 2026-08-29 · "Guerriero, Guerriero Esperto, Veterano…"
 
 Fino alla 1.68 la XP era una **valuta**: la raccoglievi e la spendevi al negozio di fine ondata. Da questa

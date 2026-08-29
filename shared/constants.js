@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.69.0',
+    VERSION: '1.70.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -36,7 +36,16 @@
     // v1.64 — TETTO AI NEMICI VIVI. Non riduce la dimensione dell'ondata: la RITMA. I mostri in eccesso
     // restano in coda (pending) ed entrano man mano che gli altri muoiono, quindi il totale da uccidere
     // non cambia — cambia quanti ne hai addosso insieme, che e' cio' che costava frame e leggibilita'.
+    // v1.70 — il tetto dei vivi non e' piu' un numero fisso ma una CURVA: all'ondata 1 se ne vedono 8,
+    // al tetto pieno di 30 si arriva solo alla 10ª. Il tetto fisso della 1.68, unito al rifornimento
+    // rapido, riempiva l'arena di 30 nemici gia' alla terza ondata (misurato) anche se l'ondata ne
+    // prevedeva 10: il tetto diventava il numero, invece di essere un limite.
+    // v1.70 — l'esperienza non arriva piu' solo dai nemici: le fonti stanno tutte qui, in chiaro, cosi'
+    // aggiungerne una e' una riga sola. Il termine per ondata tiene il passo con l'XP dei mostri, che cresce.
+    XP_CASSA: 45, XP_CASSA_ONDATA: 9,
+    XP_OGGETTO: 30, XP_OGGETTO_ONDATA: 6,
     MAX_ALIVE: 30,
+    MAX_ALIVE_CURVE: [8, 10, 12, 14, 16, 18, 21, 23, 26, 30],
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
     // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).
     // v1.56 — le distanze di fabbro e portale non si calcolano piu' a runtime: il villaggio e' disegnato

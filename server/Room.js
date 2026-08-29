@@ -200,7 +200,15 @@ class Room {
   // nascosti si torna a considerarli, altrimenti i mostri resterebbero fermi a fissare il vuoto.
   // v1.69 — quanti posti restano sotto il tetto dei vivi. I mostri morti sono ancora nell'array finche'
   // non viene filtrato, quindi contarli farebbe rifiutare comparse che invece ci starebbero.
-  _postiLiberi() { let vivi = 0; for (const m of this.monsters) if (!m.dead) vivi++; return (C.MAX_ALIVE || 30) - vivi; }
+  _postiLiberi() { let vivi = 0; for (const m of this.monsters) if (!m.dead) vivi++; return this.tettoVivi() - vivi; }
+  // v1.70 — quanti nemici possono stare in campo a QUESTA ondata. La curva sta in constants.js e finisce
+  // sul tetto massimo: da li' in poi resta piatta.
+  tettoVivi() {
+    const cur = C.MAX_ALIVE_CURVE;
+    if (!cur || !cur.length) return C.MAX_ALIVE || 30;
+    const w = Math.max(1, this.wave | 0);
+    return w >= cur.length ? (C.MAX_ALIVE || 30) : cur[w - 1];
+  }
   _nearestPlayer(x, y) {
     let best = null, bd = Infinity;
     for (const p of this.alivePlayers) { if (p.buffs.hidden > 0) continue; const d = MU.dist2(x, y, p.x, p.y); if (d < bd) { bd = d; best = p; } }
@@ -650,7 +658,7 @@ class Room {
     // di 30" tornava a essere un auspicio. La melma che muore libera il proprio posto, quindi non conta.
     if (m.def.splitInto && !m.minion && !m.treasure) {
       let vivi = 0; for (const x of this.monsters) if (!x.dead) vivi++;
-      const spazio = (C.MAX_ALIVE || 30) - vivi;
+      const spazio = this.tettoVivi() - vivi;
       const n = Math.max(0, Math.min(m.def.splitCount || 2, spazio));
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + Math.random(), r = 16 + Math.random() * 14;
@@ -698,6 +706,8 @@ class Room {
     if (it.kind === 'heal') { p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * it.heal)); }
     else if (it.kind === 'life') { p.lives += 1; }
     else if (it.kind === 'buff') { p.buffs[it.buff] = it.dur; }
+    // v1.70 — anche raccogliere un potenziamento sulla mappa da' esperienza
+    this.addXp(p, C.XP_OGGETTO + this.wave * C.XP_OGGETTO_ONDATA, 'oggetto');
     this.events.push({ t: 'item_pickup', x: p.x, y: p.y, id: it.id, name: it.name, icon: it.icon, color: it.color, who: p.id, name2: p.name });
   }
   _giveWeapon(p, wt) { if (p.weapon2 && p.weapon2.type === wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, p.weapon2.level + 1); else if (!p.weapon2 || p.weapon2.type !== wt) p.weapon2 = { type: wt, level: 1, evolved: null }; this._checkEvo(p); }
@@ -706,30 +716,34 @@ class Room {
   // ===== v1.69 — LIVELLI, PUNTI, RANGHI ========================================================
   // La XP raccolta entra da qui e da nessun'altra parte: e' l'unico punto in cui si sale di livello,
   // cosi' non esiste il caso "ho aggiunto XP e il livello non e' cambiato".
-  addXp(p, v) {
+  // v1.70 — NESSUN TETTO ai livelli: si sale finche' si accumula esperienza. E l'esperienza non arriva
+  // piu' solo dai nemici: casse aperte e oggetti raccolti sulla mappa ne danno, e altre fonti si
+  // agganciano qui. `fonte` serve solo a raccontarlo a schermo, non cambia il conto.
+  addXp(p, v, fonte) {
     if (!p || v <= 0) return;
-    // oltre il cap la XP diventa monete: le uccisioni dell'ultima ondata devono valere ancora qualcosa
-    if (p.level >= Lv.MAX_LEVEL) {
-      p.xpPool += v;
-      const m = Math.floor(v / Lv.XP_TO_COIN); if (m > 0) p.coins += m;
-      return;
-    }
     p.xpPool += v;
     const nuovo = Lv.levelForXp(p.xpPool);
     while (p.level < nuovo) {
       p.level++; p.points += Lv.POINTS_PER_LEVEL;
       const r = Lv.rankForLevel(p.level);
       if (r > Lv.rankForLevel(p.level - 1)) this._rankUp(p, r);
+      // l'evento parte SEMPRE, anche in mezzo alla battaglia: il "LEVEL UP" sopra la testa e il suo
+      // jingle sono il momento in cui il giocatore sente di essere cresciuto.
       this.events.push({ t: 'levelup', x: p.x, y: p.y, who: p.id, lv: p.level, name: p.name, rank: Lv.rankName(p.heroId, p.level, p.spec) });
     }
+    if (fonte) this.events.push({ t: 'xpfonte', x: p.x, y: p.y, who: p.id, v, k: fonte });
   }
   // Salire di rango da' un punto in piu' e mette in coda una SCELTA: tre carte ai ranghi II-IV, il
   // bivio fra due specializzazioni al V. L'offerta e' in coda, non immediata, perche' va presentata
   // nel pannello di fine ondata: in mezzo alla battaglia nessuno legge tre carte.
+  // v1.70 — il rango da' il titolo e un punto. Le CARTE generiche sono state tolte: al loro posto
+  // arriveranno le abilita' di classe, sbloccate a livelli specifici. `cardsFor` oggi risponde vuoto,
+  // quindi l'offerta semplicemente non parte — nessun ramo da aggiungere quando le abilita' ci saranno.
   _rankUp(p, r) {
-    p.points += Lv.POINTS_PER_RANK;   // il punto in piu' del rango: 19 dai livelli + 4 dai ranghi = 23
+    p.points += Lv.POINTS_PER_RANK;
+    const carte = Lv.cardsFor(p.heroId, r).map(c => c.id);
     if (r >= 5) { p.specOffer = Lv.specsFor(p.heroId).map(x => x.id); p.rankOffer = null; }
-    else { p.rankOffer = Lv.cardsFor(p.heroId, r).map(c => c.id); p.specOffer = null; }
+    else { p.rankOffer = carte.length ? carte : null; p.specOffer = null; }
     this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec) });
   }
 
@@ -863,7 +877,9 @@ class Room {
     if (inCombat && this.monsters.length > (this._peakAlive || 0)) this._peakAlive = this.monsters.length;
     if (inCombat && this.pending > 0 && this._postiLiberi() > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
-    if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this.monsters.length < 14) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
+    // v1.70 — il rifornimento della SOPRAVVIVENZA aveva un 14 scritto a mano che scavalcava il tetto:
+    // all ondata 2 (tetto 10) si arrivava a 14 vivi. Ora passa dalla stessa porta di tutti gli altri.
+    if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this._postiLiberi() > 0) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
@@ -926,7 +942,9 @@ class Room {
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
     for (const it of this.items) { if (it.dead) continue; it.t -= dt; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.alivePlayers) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
-    for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); } break; } } }
+    for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
+        // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
+        this.addXp(p, C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa'); break; } } }
     if (this.crates.some(c => c.opened)) this.crates = this.crates.filter(c => !c.opened);
     for (const d of this.weaponDrops) { if (d.taken) continue; for (const p of this.alivePlayers) { if (MU.dist(d.x, d.y, p.x, p.y) < p.radius + d.r + 6) { d.taken = true; this._giveWeapon(p, d.wt); if (d.level >= 2 && p.weapon2 && p.weapon2.type === d.wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, Math.max(p.weapon2.level, d.level)); const w = Loot.WEAPONS[d.wt]; this.events.push({ t: 'weapon_pickup', x: d.x, y: d.y, wt: d.wt, name: w.name, icon: w.icon, color: w.color, level: p.weapon2.level, name2: p.name }); this._checkEvo(p); break; } } }
     if (this.weaponDrops.some(d => d.taken)) this.weaponDrops = this.weaponDrops.filter(d => !d.taken);

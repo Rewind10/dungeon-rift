@@ -44,6 +44,28 @@
     item(rare) { if (rare) { [660, 880, 1170, 1560].forEach((f, i) => setTimeout(() => this._blip(f, 0.14, 'triangle', 0.22), i * 55)); } else { this._blip(720, 0.12, 'sine', 0.2, 1080); } },
     weapon() { [523, 784, 1046].forEach((f, i) => setTimeout(() => this._blip(f, 0.13, 'square', 0.22, f * 1.2), i * 55)); this._blip(160, 0.2, 'sawtooth', 0.2, 60); },
     evo() { [523, 659, 880, 1174, 1568].forEach((f, i) => setTimeout(() => this._blip(f, 0.16, 'triangle', 0.25, f * 1.3), i * 70)); this._noise(0.5, 0.2, 3000, 'highpass'); },
+    // v1.70 — JINGLE DEL LIVELLO. Un arpeggio maggiore che sale (do-mi-sol-do) con la fondamentale
+    // tenuta sotto: e' un traguardo, non un effetto, quindi deve suonare come una frase e non come un
+    // colpo. Piu' lento e piu' pieno di quello dell'evoluzione, che e' un lampo.
+    levelUp() {
+      if (!this.sfxOn) return; this.resume(); if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [[523.25, 0], [659.25, 0.09], [783.99, 0.18], [1046.5, 0.27]].forEach(([f, d]) => {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(f, t + d);
+        g.gain.setValueAtTime(0.0001, t + d);
+        g.gain.exponentialRampToValueAtTime(0.30, t + d + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.55);
+        o.connect(g); g.connect(this.sfxGain); o.start(t + d); o.stop(t + d + 0.6);
+      });
+      // fondamentale tenuta sotto: da' corpo all'accordo senza coprire l'arpeggio
+      const b = this.ctx.createOscillator(), bg = this.ctx.createGain();
+      b.type = 'sine'; b.frequency.setValueAtTime(130.81, t);
+      bg.gain.setValueAtTime(0.0001, t); bg.gain.exponentialRampToValueAtTime(0.22, t + 0.05);
+      bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+      b.connect(bg); bg.connect(this.sfxGain); b.start(t); b.stop(t + 1);
+      this._noise(0.7, 0.10, 4200, 'highpass');
+    },
     boon() { [440, 660, 990].forEach((f, i) => setTimeout(() => this._blip(f, 0.16, 'triangle', 0.24, f * 1.2), i * 80)); },
     crate() { [392, 523, 659].forEach((f, i) => setTimeout(() => this._blip(f, 0.12, 'triangle', 0.22), i * 60)); },
     crateBad() { this._blip(300, 0.25, 'sawtooth', 0.3, 90); this._noise(0.3, 0.25, 700); },

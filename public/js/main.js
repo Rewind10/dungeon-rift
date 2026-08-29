@@ -36,8 +36,9 @@
   function onEv(ev) {
     switch (ev.t) {
       // v1.69 — la progressione deve VEDERSI mentre giochi, non solo nel pannello di fine ondata.
-      case 'levelup': R.ring(ev.x, ev.y, '#ffd27a', 6, 70, 0.5); R.burst(ev.x, ev.y, '#ffe9a8', 18, 180, 0.6);
-        if (ev.who === Net.id) { R.floater(ev.x, ev.y - 26, 'LIVELLO ' + ev.lv, '#ffd27a', true); A.evo && A.evo(); }
+      case 'levelup': R.ring(ev.x, ev.y, '#ffd27a', 6, 80, 0.55); R.burst(ev.x, ev.y, '#ffe9a8', 22, 200, 0.7);
+        R.levelUp(ev.who, ev.lv);                       // la scritta sopra la testa vale per tutti, anche per i compagni
+        if (ev.who === Net.id) { A.levelUp && A.levelUp(); R.addShake(2); }
         break;
       case 'rankup': R.ring(ev.x, ev.y, '#ffd27a', 9, 130, 0.8); R.burst(ev.x, ev.y, '#ffd27a', 30, 260, 0.9); R.addShake(5);
         HUD.killfeed('★ <b style="color:#ffd27a">' + esc(ev.name || '') + '</b> è ora <b>' + esc(ev.title || '') + '</b>');
@@ -47,7 +48,7 @@
         HUD.killfeed((ev.icon || '★') + ' <b style="color:' + (ev.color || '#ffd27a') + '">' + esc(ev.name || '') + '</b> ha scelto: <b>' + esc(ev.title || '') + '</b>');
         break;
       case 'card': R.floater(ev.x, ev.y - 22, (ev.icon || '★') + ' ' + ev.name, '#ffd27a', true); break;
-      case 'bosspoint': if (ev.x != null) R.floater(ev.x, ev.y - 30, '+1 PUNTO', '#ffd27a', true); break;
+      case 'xpfonte': if (ev.who === Net.id) R.floater(ev.x, ev.y - 30, '+' + ev.v + ' XP', '#8bd6ff'); break;
       case 'dodge': R.floater(ev.x, ev.y - 18, 'schivata', '#9ef0b0'); R.burst(ev.x, ev.y, '#9ef0b0', 6, 120, 0.3); break;
       case 'manahit': R.ring(ev.x, ev.y, '#7dffea', 4, 34, 0.25); break;
       case 'manafull': R.ring(ev.x, ev.y, '#7dffea', 3, 42, 0.4); break;

@@ -1,6 +1,6 @@
 {
   "name": "dungeon-rift",
-  "version": "1.69.0",
+  "version": "1.70.0",
   "description": "Roguelike co-op multiplayer 2D — motore custom a dipendenze zero. Icone equipaggiamento generate e uniche per eroe, emporio a 3 slot piu costoso, catalogo poteri ampliato (scelta tra 2), mappe piu tetre (tombe/ragnatele/cadaveri/tortura/catene), fix input, PAUSA nel negozio, abilita Torretta/Cecchino, MONETE, statistiche di fine partita, combo, sinergie, minimappa, boon (stile Hades), evoluzione armi, 20 livelli con MEGA boss.",
   "main": "server/index.js",
   "scripts": { "start": "node server/index.js", "test": "node test/simulate.js && node test/client.js" },

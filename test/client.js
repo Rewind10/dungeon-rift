@@ -121,29 +121,23 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
 }
 
 
-// 5) v1.69 — pannello del RANGO: carte di classe ai ranghi II-IV, bivio al V
+// 5) v1.70 — pannello del RANGO: le carte generiche non ci sono piu', resta il bivio del rango V
 {
   const LV = window.GAME.Levels;
+  ok(Object.keys(LV.CARD_BY_ID).length === 0, 'non ci sono piu carte di rango da mostrare');
   let scelto = null;
-  HUD.setRank({ spec: 0, rank: 2, title: 'GUERRIERO ESPERTO',
-    cards: LV.cardsFor('guerriero', 2).map(c => ({ id: c.id, name: c.name, icon: c.icon, desc: c.desc })) }, (id) => { scelto = id; });
-  const rsec = document.getElementById('rankSection'), rrow = document.getElementById('rankCards');
-  ok(!rsec.classList.contains('hidden'), 'la sezione del rango compare quando c e una carta da scegliere');
-  ok(rrow.children.length === 3, 'ai ranghi II-IV le carte sono tre');
-  ok(document.getElementById('rankTitle').textContent === 'GUERRIERO ESPERTO', 'il titolo e il nome del rango raggiunto');
-  ok(rrow.children[0].innerHTML.includes('CARTA DI RANGO'), 'le carte sono marcate come carte di rango');
-  rrow.children[1].onclick();
-  ok(scelto === LV.cardsFor('guerriero', 2)[1].id, 'il clic manda l id della carta');
-  HUD.setRank({ spec: 0, rank: 2, title: 'x', cards: [], picked: true }, () => {});
-  ok(document.getElementById('rankSection').classList.contains('hidden'), 'scelta la carta, la sezione sparisce');
-  // il bivio del rango V: due carte, piu grandi, con l abilita in fondo
   HUD.setRank({ spec: 1, rank: 5, title: 'SCEGLI LA TUA STRADA',
-    cards: LV.specsFor('mago').map(s => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, abilita: s.abilita })) }, () => {});
-  const rrow2 = document.getElementById('rankCards');
-  ok(rrow2.children.length === 2, 'al rango V le strade sono due');
-  ok(rrow2.className === 'spec', 'e il pannello usa la disposizione a due colonne');
-  ok(rrow2.children[0].innerHTML.includes('SPECIALIZZAZIONE'), 'sono marcate come specializzazione');
-  ok(rrow2.children[0].innerHTML.includes('Meteora') || rrow2.children[1].innerHTML.includes('Meteora'), 'e mostrano anche l abilita che arrivera');
+    cards: LV.specsFor('mago').map(s => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, abilita: s.abilita })) }, (id) => { scelto = id; });
+  const rsec = document.getElementById('rankSection'), rrow = document.getElementById('rankCards');
+  ok(!rsec.classList.contains('hidden'), 'al rango V il pannello compare');
+  ok(rrow.children.length === 2, 'le strade sono due');
+  ok(rrow.className === 'spec', 'e usa la disposizione a due colonne');
+  ok(rrow.children[0].innerHTML.includes('SPECIALIZZAZIONE'), 'sono marcate come specializzazione');
+  ok(rrow.children[0].innerHTML.includes('Meteora') || rrow.children[1].innerHTML.includes('Meteora'), 'e mostrano l abilita che arrivera');
+  rrow.children[0].onclick();
+  ok(scelto === LV.specsFor('mago')[0].id, 'il clic manda l id della specializzazione');
+  HUD.setRank({ spec: 0, rank: 2, title: 'x', cards: [] }, () => {});
+  ok(document.getElementById('rankSection').classList.contains('hidden'), 'senza carte da offrire il pannello resta nascosto');
   // il negozio parla di PUNTI, non piu di XP
   HUD.setStats({ points: 3, level: 7, rankName: 'Veterano', xp: 2500,
     stats: L.XP_STATS.map((s, i) => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, lvl: i, max: 12, maxed: false, cost: i < 4 ? 1 : 2 })) }, () => {}, () => {});
@@ -152,7 +146,6 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(document.getElementById('shopRank').textContent === 'Veterano', 'e il nome del rango');
   const uc = document.getElementById('upgradeCards').children;
   ok(uc[0].innerHTML.includes('1 punto') && !uc[0].innerHTML.includes('XP'), 'il prezzo e in punti e non nomina piu la XP');
-  ok(uc[3].className.includes('disabled') === false, 'con 3 punti una statistica da 2 resta acquistabile');
 }
 
 // ============================================================================================

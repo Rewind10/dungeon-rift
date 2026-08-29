@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.69.0`
+**Versione attuale:** `1.70.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -22,8 +22,9 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - Il **Nugolo di Pipistrelli** era da solo il nemico piu' costoso del gioco: le pose del battito d'ali sono
   ora disegnate una volta sola e poi ricopiate. Costa **un quarto** di prima.
 - Non viene piu' disegnato quello che sta **fuori dallo schermo**.
-- **Massimo 30 nemici alla volta** *(era 50, sceso in v1.68)*: l'ondata non diventa piu' corta, i nemici in
-  eccesso aspettano il turno ed entrano appena si fa posto — quasi subito, se l'arena e' gia' stata piena.
+- **Nemici in campo: da 8 a 30, secondo l'ondata** *(curva, dalla v1.70)*: l'ondata non diventa piu' corta,
+  i nemici in eccesso aspettano il turno ed entrano appena si fa posto — quasi subito, se l'arena e' gia'
+  stata piena.
   Si combatte meglio e si capisce meglio cosa sta succedendo.
 - La **Faglia** ora si vede anche nel mondo e non solo a schermo: il bordo della mappa e' tinto di viola sulla
   roccia — piu' carico negli angoli — e quando la carica sale ne escono **tentacoli**, dal lato piu' vicino a te.
@@ -523,19 +524,19 @@ A fine ondata il gioco va in **pausa**: durante la scelta dei poteri, il negozio
 è **congelato**. In singolo giocatore si riparte **solo** col tasto **Continua** (in multiplayer c'è un timeout
 anti-AFK). I drop rimasti a terra (XP e monete) vengono **raccolti automaticamente**.
 
-## 🎚️ Livelli, ranghi e punti *(v1.69)*
+## 🎚️ Livelli, ranghi e punti *(v1.69, rivisti in v1.70)*
 
-La XP non e' piu' una valuta da spendere ma una **barra che sale**. Il progetto completo — la curva, tutte le
-carte, i sei rami finali e i numeri da cui escono — sta in **`PROGRESSIONE.md`**.
+La XP non e' una valuta da spendere ma una **barra che sale**, e arriva da piu' fonti.
 
 | | Regola |
 |---|---|
-| **Cap** | Livello **20** — uno per ondata, perche' la run finisce all'ondata 20 |
-| **XP per il cap** | **10.670**, contro gli ~11.000 che rende una run intera |
-| **Ranghi** | **5**, uno ogni 5 livelli, cioe' **su ogni boss** |
-| **Punti** | 1 per livello + 1 per rango = **23 in una run** |
-| **Statistica al tetto** | **22 punti su 23** — o ti specializzi, o ti distribuisci |
-| **Oltre il cap** | la XP diventa monete (8 XP = 1 moneta) |
+| **Tetto ai livelli** | **nessuno**: si sale finche' si accumula esperienza |
+| **Curva** | `107 · L^1,54` — 10.670 XP per il livello 20, 20.040 per il 30 |
+| **Fonti dell'esperienza** | nemici uccisi · **casse aperte** (45 + 9/ondata) · **potenziamenti raccolti** (30 + 6/ondata) |
+| **Ranghi** | **5**, uno ogni 5 livelli: danno il titolo nuovo e un punto in piu' |
+| **Punti** | 1 per livello + 1 per rango |
+| **Statistica al tetto** | **22 punti** — o ti specializzi, o ti distribuisci |
+| **Livello raggiunto in una run** | ~30, misurato |
 
 **I cinque ranghi**
 
@@ -547,16 +548,20 @@ carte, i sei rami finali e i numeri da cui escono — sta in **`PROGRESSIONE.md`
 | IV | 15 | Campione | Mago Anziano | Ombra |
 | V | 20 | **Paladino** / **Maestro d'Armi** | **Arcimago** / **Stregone** | **Assassino** / **Cacciatore di Teste** |
 
-Ai ranghi II, III e IV si sceglie **1 carta su 3** (27 in tutto, tutte di classe); al rango V c'e' il
-**bivio** fra due specializzazioni, che e' anche l'unico rango che **si vede addosso al personaggio**.
+Il rango V e' un **bivio** fra due specializzazioni ed e' l'unico che **si vede addosso al personaggio**.
+Le **carte di rango** della v1.69 sono state rimosse: al loro posto arriveranno le **abilita' di classe**,
+sbloccate a livelli specifici. Il contenitore nel codice e' gia' pronto.
 
-**I punti** si spendono sulle quattro statistiche, con costo a scaglioni: 1 punto fino al 4° livello, 2 fino
-al 10°, 3 per gli ultimi due. Le tre strade che 23 punti permettono davvero sono una statistica a 12, una a
-8 piu' una a 7, oppure tre a 5 e una a 4 — tutte da 22 punti, quindi scelte vere e non una la versione
-peggiore dell'altra.
+**Salire di livello si vede e si sente**: la scritta LEVEL UP compare sopra la testa del personaggio con il
+numero del livello, resta agganciata a lui mentre combatte, e a chi sale parte un jingle dedicato.
 
-**Una scelta alla volta:** se c'e' una carta di rango in attesa, il boon salta quel giro. In pratica alle
-ondate di boss si sceglie la carta di classe e nelle altre il boon generico.
+## 🔢 Quanti nemici in campo *(curva, dalla v1.70)*
+
+| Ondata | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10+ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Vivi al massimo | 8 | 10 | 12 | 14 | 16 | 18 | 21 | 23 | 26 | **30** |
+
+L'ondata non perde nessuno: i nemici in eccesso restano in coda ed entrano appena si fa posto.
 
 ## 🔨 Il fabbro e l'equipaggiamento *(rifatto in v1.67)*
 

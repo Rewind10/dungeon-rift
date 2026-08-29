@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.69.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.70.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -491,6 +491,26 @@ git tag vX.Y.Z
   di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
   test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
 
+- **⚠️ Un tetto fisso, con un rifornimento veloce, DIVENTA il numero** *(misurato v1.70)*. Il cap di 30
+  nemici vivi della 1.68 non era un limite raro: unito al rimpiazzo rapido, l'arena ci arrivava **alla
+  terza ondata**, quando l'ondata ne prevedeva 10. Un limite superiore ha senso solo se il gioco lo tocca
+  di rado: se lo tocca sempre, non e' un limite, e' la difficolta'. La cura e' una **curva** (8 alla prima
+  ondata, 30 dalla decima), non un numero.
+- **⚠️ Le costanti scritte a mano nei rami secondari sfuggono a ogni regola** *(v1.70)*. La modalita'
+  Sopravvivenza rifornit fino a `this.monsters.length < 14`, un numero scritto direttamente nel ramo:
+  scavalcava il tetto dell'ondata e all'ondata 2 (tetto 10) portava a 14 vivi in campo. Quando una regola
+  ha piu' porte, cercarle TUTTE — anche quelle di una modalita' che si presenta di rado. Il modo per non
+  ripetere l'errore e' non avere numeri liberi: una sola funzione (`_postiLiberi()`) e tutti che passano
+  di li'.
+- **⚠️ Un tetto che coincide con la fine della partita non lo gioca nessuno** *(v1.70)*. Il livello massimo
+  della 1.69 arrivava esattamente all'ultima ondata: gli ultimi livelli si prendevano sui titoli di coda.
+  Quando si progetta un cap, la domanda giusta non e' "quanto e' raggiungibile" ma "**quanto tempo lo
+  giochi dopo averlo raggiunto**". Qui la risposta e' stata togliere il tetto del tutto.
+- **⚠️ Arrotondare non basta a garantire la monotonia** *(v1.70)*. La curva dell'esperienza cresce di ~20
+  XP a livello oltre il 30: arrotondando i costi a 25 due livelli vicini finivano allo **stesso prezzo**.
+  Un livello non deve mai costare quanto il precedente. La correzione non e' scegliere un arrotondamento
+  piu' fine (che rompe piu' avanti lo stesso) ma **imporre la monotonia nella generazione**:
+  `step[i] = max(arrotondato, step[i-1] + 10)`. Verificato fino al livello 500.
 - **⚠️ Due sorgenti per la stessa ricompensa fanno il doppio della ricompensa** *(v1.69)*. Il progetto
   diceva "+1 punto per livello, +1 per ogni boss", e i ranghi cadono proprio sui boss: nel codice erano
   diventati **due** eventi distinti (il rango che assegna un punto e il boss che ne assegna un altro), cioe'
