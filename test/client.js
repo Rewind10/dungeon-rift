@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'mapgen']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -286,6 +286,68 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(String(document.getElementById('potionCatSub').textContent).indexOf('slot 2') > 0, 'il sottotitolo dice a quale slot stai lavorando');
   HUD.hidePotions();
   ok(panel.classList.contains('hidden'), 'e il banco si chiude quando ti allontani');
+})();
+
+
+// ===== v1.72 — LA TAGLIA IN PARTITA E IL BANCO DEL BANDITORE =====
+(function () {
+  const B = window.GAME.Bounties, G = window.GAME.Gear;
+  // la riga in alto a sinistra
+  const b = B.istanza('caccia', 6); b.have = 23;
+  HUD.updateBounty({ bo: { k: b.k, h: b.have, n: b.n, i: b.icon, c: b.color, t: b.testo } });
+  const hud = document.getElementById('bountyHud');
+  ok(!hud.classList.contains('hidden'), 'la taglia in corso si vede in partita');
+  ok(String(hud.innerHTML).indexOf(String(b.n)) > 0, 'e mostra il bersaglio');
+  ok(String(hud.innerHTML).indexOf('23/') > 0, 'e a che punto sei');
+  HUD.updateBounty({});
+  ok(hud.classList.contains('hidden'), 'senza taglia la riga sparisce');
+
+  // --- il banco, senza taglia accettata ---
+  const tre = [B.istanza('specie', 6, 'slime', 'Melma Corrosiva'), B.istanza('elite', 6), B.istanza('casse', 6)];
+  const owned = ['gue_spada', 'gue_spadone', 'gue_alabarda'];
+  const worn = { weapon: 'gue_alabarda' };
+  const stock = owned.map(id => { const it = G.BY_ID[id]; return { id: it.id, name: it.name, color: it.color, slot: it.slot,
+    slotName: G.SLOT_NAME[it.slot], icon: G.SLOT_ICON[it.slot], rank: it.rank, cost: it.cost,
+    pay: Math.floor(it.cost * 0.5), worn: worn[it.slot] === id ? 1 : 0 }; });
+  let presa = null, venduto = null;
+  HUD.showBandit({ coins: 180, near: 1, bounty: null, stock,
+    offers: tre.map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })) },
+    { take: (i) => { presa = i; }, sell: (id) => { venduto = id; } });
+  const panel = document.getElementById('banditPanel');
+  ok(!panel.classList.contains('hidden'), 'il banco si apre');
+  ok(String(document.getElementById('banditHead').innerHTML).indexOf('180') > 0, 'e dice quante monete hai');
+  const tg = document.getElementById('banditBounty').children[0];
+  ok(tg.children.length === 3, 'tre taglie fra cui scegliere');
+  ok(String(tg.children[0].innerHTML).indexOf('Melma Corrosiva') > 0, 'il contratto mirato nomina la specie');
+  ok(String(tg.children[0].innerHTML).indexOf('alla consegna') > 0, 'e ognuna dice quanto paga');
+  tg.children[2].onclick();
+  ok(presa === 2, 'cliccarne una la accetta, per indice');
+  // magazzino
+  const mag = document.getElementById('banditStock');
+  ok(mag.children.length === 3, 'il magazzino elenca cio che possiedi');
+  ok(String(mag.children[2].className).indexOf('on') >= 0, 'quello addosso e marcato');
+  ok(String(mag.children[2].innerHTML).indexOf('addosso') > 0, 'e lo dice a parole');
+  ok(String(mag.children[0].innerHTML).indexOf('di partenza') > 0, "quello di partenza non ha il bottone: vale zero");
+  ok(String(mag.children[1].innerHTML).indexOf('vendi') > 0, 'quello posseduto e non addosso si vende');
+  ok(String(mag.children[1].innerHTML).indexOf('115') > 0, 'a meta prezzo');
+
+  // --- il banco, con la taglia gia accettata ---
+  const att = B.istanza('caccia', 6); att.have = 12;
+  HUD._bndSig = null;
+  HUD.showBandit({ coins: 400, near: 1, offers: [], stock,
+    bounty: { k: att.k, n: att.n, have: att.have, pay: att.pay, nome: att.nome, icon: att.icon, color: att.color, testo: att.testo } },
+    { take: () => {}, sell: () => {} });
+  const riga = document.getElementById('banditBounty').children[0];
+  ok(String(riga.className).indexOf('att') >= 0, 'con una taglia aperta il banco mostra quella, non le offerte');
+  ok(String(riga.innerHTML).indexOf('12 / ') > 0, 'con il conteggio');
+  HUD.hideBandit();
+  ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
+
+  // --- il Fabbro deve dire cosa e gia tuo ---
+  const card = HUD._gearCard({ id: 'gue_spadone', name: 'Spadone', desc: 'x', color: '#e0a52c', rank: 2, cost: 230,
+    rarity: 'uncommon', owned: 0, have: 1 }, 0, () => {});
+  ok(String(card.innerHTML).indexOf('GIÀ TUO') > 0, 'un oggetto in magazzino si riequipaggia gratis, e il Fabbro lo scrive');
+  ok(String(card.className).indexOf('disabled') < 0, 'e non e spento anche se non hai monete');
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

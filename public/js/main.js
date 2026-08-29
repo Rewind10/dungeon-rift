@@ -29,10 +29,13 @@
   // v1.71 — il banco dell'Erborista: stesso schema del fabbro, 'near' distingue l'aggiornamento
   // silenzioso (mentre sei lontano) dall'apertura vera.
   Net.onOfferPotion = (m) => { G.potData = m; if (m.near) HUD.showPotions(m, potCb); };
+  // v1.72 — il banco del Banditore: taglie sopra, magazzino sotto.
+  Net.onOfferBandit = (m) => { G.bndData = m; if (m.near) HUD.showBandit(m, bndCb); };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
   const potCb = { pick: (slot, id) => Net.pickPotion(slot, id), buy: (slot) => Net.buyPotion(slot) };
+  const bndCb = { take: (i) => Net.takeBounty(i), sell: (id) => Net.sellGear(id) };
   Net.onChat = (m) => { const log = $('chatLog'); const el = document.createElement('div'); el.className = 'cm'; el.innerHTML = `<b>${esc(m.from)}:</b> ${esc(m.text)}`; log.appendChild(el); setTimeout(() => el.remove(), 8000); while (log.children.length > 6) log.removeChild(log.firstChild); };
   Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev); };
   Net.onEvent = (ev) => onEv(ev);
@@ -85,6 +88,14 @@
       case 'market_exit': HUD.killfeed('\uD83D\uDEAA <b>' + esc(ev.name || 'Qualcuno') + '</b> ha varcato il portale EXIT'); break;
       case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
       case 'herb_leave': G._herbOpen = false; HUD.hidePotions(); break;
+      case 'bnd_leave': G._bndOpen = false; HUD.hideBandit(); break;
+      case 'bounty_take': HUD.killfeed('\uD83E\uDEA7 taglia accettata \u2014 <b style="color:' + (ev.color || '#ff9a8a') + '">' + esc(ev.nome) + '</b>: ' + esc(ev.testo)); break;
+      // la consegna e' il momento che ripaga tutte le ondate passate a contare: si vede e si sente
+      case 'bounty_done': A.item && A.item(true); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 6, 90, 0.6); R.burst(ev.x, ev.y, '#ffcf4a', 24, 210, 0.75);
+        if (ev.who === Net.id) R.floater(ev.x, ev.y - 32, '+' + ev.pay + ' \uD83E\uDE99', '#ffcf4a');
+        HUD.killfeed((ev.icon || '\uD83E\uDEA7') + ' <b>' + esc(ev.name || '') + '</b> ha chiuso la taglia <b style="color:' + (ev.color || '#ffcf4a') + '">' + esc(ev.nome) + '</b> \u2014 <b style="color:#ffcf4a">' + ev.pay + '</b> \uD83E\uDE99');
+        break;
+      case 'gear_sold': A.item && A.item(false); HUD.killfeed('\uD83E\uDEA7 venduto <b style="color:' + (ev.color || '#c9d2e6') + '">' + esc(ev.name) + '</b> \u2014 <b style="color:#ffcf4a">' + ev.pay + '</b> \uD83E\uDE99'); break;
       // v1.71 — bevuta: fiala che si svuota, alone del colore della pozione e il gorgoglio. La cura
       // dice anche quanti PV ha reso, perche' quel numero dipende dalla Costituzione e va visto.
       case 'potion': R.ring(ev.x, ev.y, ev.color || '#9fe06a', 5, 54, 0.42); R.burst(ev.x, ev.y - 8, ev.color || '#9fe06a', 14, 130, 0.5);
@@ -156,7 +167,8 @@
       if (w.me.nmd && !G._darkOpen && G.darkWares) { G._darkOpen = true; HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), null, true); } else if (!w.me.nmd && G._darkOpen) { G._darkOpen = false; HUD.hideMerchant(true); }
       if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
       if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
-      HUD.updateBelt(w.me);
+      if (w.me.nb && G.bndData) { if (!G._bndOpen) G._bndOpen = true; HUD.showBandit(G.bndData, bndCb); } else if (!w.me.nb && G._bndOpen) { G._bndOpen = false; HUD.hideBandit(); }
+      HUD.updateBelt(w.me); HUD.updateBounty(w.me);
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
     w.mon = next.mon.map(nm => { const p = mm[nm.e] || nm; return Object.assign({}, nm, { x: lerp(p.x, nm.x, a), y: lerp(p.y, nm.y, a), f: lerpA(p.f, nm.f, a) }); });

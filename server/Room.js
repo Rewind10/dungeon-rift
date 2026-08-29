@@ -8,6 +8,7 @@ const Loot = require('../shared/loot.js');
 const Gear = require('../shared/gear.js');
 const Lv = require('../shared/levels.js');
 const Pot = require('../shared/potions.js');
+const Bnt = require('../shared/bounties.js');
 const MapGen = require('../shared/mapgen.js');
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
@@ -90,6 +91,9 @@ class Room {
       // v1.71 — LA CINTURA: tre slot, ognuno null oppure { id, n }. Il cooldown e' UNO SOLO per tutti e
       // tre (potCd), altrimenti basterebbe alternare gli slot per bere tre volte di fila.
       belt: Pot.newBelt(), potCd: 0, potCdMax: Pot.COOLDOWN,
+      // v1.72 — MAGAZZINO: cio' che hai comprato resta tuo anche quando lo togli. Rimetterlo addosso e'
+      // gratis (l'hai gia' pagato); il Banditore lo ricompra a meta'. E la TAGLIA accettata, una sola.
+      owned: {}, bounty: null, bountyOffer: null, noLifeLost: true,
       lives: C.START_LIVES, buys: {}, weapon2: null, coins: 0,
       // v1.69 — la XP non e' piu' una valuta da spendere ma una barra che sale: `xpPool` e' il TOTALE
       // raccolto nella run e non cala mai. Cio' che si spende sono i PUNTI, uno per livello piu' uno
@@ -110,6 +114,7 @@ class Room {
         schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } },
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
+    for (const k in p.gear) p.owned[p.gear[k]] = 1;   // v1.72 — l'equipaggiamento di partenza e' gia' tuo
     this._recomputeGear(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
@@ -118,7 +123,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -129,6 +134,7 @@ class Room {
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
+    for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
     this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
   }
   spawnTreasure() { const pos = this.randomSpawnPos(); const m = this.spawnMonster('mimic', pos.x, pos.y, { scaling: this.waveScaling }); m.treasure = true; m.awake = true; m.maxHp = Math.round(m.maxHp * 2.4); m.hp = m.maxHp; m.speed = 210; m.escapeT = 26; this.treasure = m; this.events.push({ t: 'treasure_spawn', x: m.x, y: m.y }); }
@@ -237,7 +243,18 @@ class Room {
     // qui si aggancia solo la sua posizione, esattamente come si fa col fabbro.
     const erb = (v && v.npcs) ? v.npcs.find(n => n.pot) : null;
     this.herbalist = erb ? { x: erb.x, y: erb.y, r: 18 } : null;
-    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; }
+    // v1.72 — il BANDITORE: terza bottega ad aprire. Ricompra l'usato e appende le taglie.
+    const bnd = (v && v.npcs) ? v.npcs.find(n => n.bnd) : null;
+    this.bandit = bnd ? { x: bnd.x, y: bnd.y, r: 18 } : null;
+    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; }
+  }
+  updateBandit() {
+    if (!this.bandit) return; const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this.bandit.x, this.bandit.y) <= RANGE;
+      if (near && !p._nearBnd) { p._nearBnd = true; this.offerBandit(p, 1); }
+      else if (!near && p._nearBnd) { p._nearBnd = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'bnd_leave' } }); }
+    }
   }
   updateHerbalist() {
     if (!this.herbalist) return; const RANGE = C.MARKET_MERCH_RANGE;
@@ -259,7 +276,7 @@ class Room {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
-    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; this.offerGear(p, 0); this.offerPotions(p, 0); }
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
@@ -268,8 +285,8 @@ class Room {
     const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
     for (const p of this.alivePlayers) {
       if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
-      this.gearMerchant = null; this.herbalist = null;
-      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; }
+      this.gearMerchant = null; this.herbalist = null; this.bandit = null;
+      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true; this.nextWave(); return;
     }
@@ -673,6 +690,71 @@ class Room {
     this.offerPotions(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'potion_buy', x: p.x, y: p.y, slot, id: it.id, name: it.name, color: it.color, icon: it.icon, n: s.n } });
   }
+  // ===== v1.72 — IL BANDITORE: l'usato e le taglie =====
+  // Le tre offerte si generano UNA VOLTA e restano quelle finche' non ne accetti una: rigenerarle a ogni
+  // avvicinamento trasformerebbe la scelta in una slot machine da ripescare finche' non esce quella comoda.
+  _offerteTaglie(p) {
+    if (p.bounty || p.bountyOffer) return p.bountyOffer;
+    const pool = Waves.poolForWave(this.wave).map(x => ({ id: x.id, nome: (Mon.MONSTERS[x.id] || {}).name || x.id }));
+    p.bountyOffer = Bnt.offerte(this.wave, pool);
+    return p.bountyOffer;
+  }
+  // Il magazzino: tutto cio' che possiedi della TUA classe, con dentro cosa hai addosso e quanto rende.
+  _magazzino(p) {
+    const out = [];
+    for (const id of Object.keys(p.owned)) {
+      const it = Gear.BY_ID[id]; if (!it || it.hero !== p.heroId) continue;
+      out.push({ id: it.id, name: it.name, color: it.color, slot: it.slot, slotName: Gear.SLOT_NAME[it.slot] || it.slot,
+        icon: Gear.SLOT_ICON[it.slot] || '⚔️', rank: it.rank, cost: it.cost,
+        pay: Math.floor(it.cost * C.SELL_BACK), worn: p.gear[it.slot] === it.id ? 1 : 0 });
+    }
+    out.sort((a, b) => a.slot === b.slot ? a.rank - b.rank : (a.slot < b.slot ? -1 : 1));
+    return out;
+  }
+  offerBandit(p, near) {
+    const b = p.bounty;
+    this.sendTo(p.id, { t: C.MSG.OFFER_BANDIT, coins: p.coins, near: near ? 1 : 0,
+      bounty: b ? { k: b.k, n: b.n, have: b.have, pay: b.pay, nome: b.nome, icon: b.icon, color: b.color, testo: b.testo } : null,
+      offers: b ? [] : this._offerteTaglie(p).map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })),
+      stock: this._magazzino(p) });
+  }
+  _alBanditore(p) {
+    return this.phase === C.PHASE_MARKET && !!this.bandit &&
+      MU.dist(p.x, p.y, this.bandit.x, this.bandit.y) <= C.MARKET_MERCH_RANGE + 12;
+  }
+  takeBounty(pid, i) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanditore(p) || p.bounty) return;
+    const off = this._offerteTaglie(p); const scelta = off && off[i | 0]; if (!scelta) return;
+    p.bounty = scelta; p.bountyOffer = null;
+    this.offerBandit(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bounty_take', x: p.x, y: p.y, nome: scelta.nome, testo: scelta.testo, color: scelta.color, icon: scelta.icon } });
+  }
+  // Vendere: solo cio' che NON hai addosso e che e' costato qualcosa. L'oggetto di partenza vale zero e
+  // toglierlo dal magazzino lascerebbe uno slot senza fondo a cui tornare.
+  sellGear(pid, itemId) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanditore(p)) return;
+    const it = Gear.BY_ID[itemId]; if (!it || !p.owned[itemId]) return;
+    if (it.hero !== p.heroId || !it.cost) return;
+    if (p.gear[it.slot] === itemId) return;                 // quello che hai addosso non si vende
+    const pay = Math.floor(it.cost * C.SELL_BACK);
+    delete p.owned[itemId]; p.coins += pay;
+    this.offerBandit(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'gear_sold', x: p.x, y: p.y, id: itemId, name: it.name, color: it.color, pay } });
+  }
+  // Il contatore. Un tipo che nessuno incrementa resta a zero per sempre: ogni tipo di bounties.js ha una
+  // chiamata a questo metodo da qualche parte, e il test lo verifica.
+  bountyTick(p, kind, quanti, extra) {
+    const b = p && p.bounty; if (!b || b.k !== kind) return;
+    if (kind === 'specie' && extra !== b.tipo) return;
+    if (kind === 'combo') b.have = Math.max(b.have, quanti);   // la combo e' un RECORD, non una somma
+    else b.have += quanti;
+    if (b.have >= b.n) {
+      p.coins += b.pay; p.bounty = null; p.bountyOffer = null;
+      this.events.push({ t: 'bounty_done', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, testo: b.testo, pay: b.pay, color: b.color, icon: b.icon });
+    }
+  }
   useQ(p) { /* nessuna abilita' in v1.66 */ }
   useE(p) { /* nessuna abilita' in v1.66 */ }
 
@@ -751,6 +833,12 @@ class Room {
     if (src) {
       src.kills++;
       src.combo = (src.combo || 0) + 1; src.comboT = C.COMBO_TIME; if (src.combo > (src.comboBest || 0)) src.comboBest = src.combo;
+      // v1.72 — le taglie contano qui, dove le uccisioni gia' accadono: caccia grossa, contratto mirato
+      // (solo se e' la specie giusta) e teste grosse (solo elite, boss esclusi: hanno gia' la loro ricompensa).
+      this.bountyTick(src, 'caccia', 1);
+      this.bountyTick(src, 'specie', 1, m.type);
+      if (m.elite && !m.boss) this.bountyTick(src, 'elite', 1);
+      this.bountyTick(src, 'combo', src.combo);
       if (src.combo >= C.COMBO_MIN && src.combo % 5 === 0) this.events.push({ t: 'combo', x: m.x, y: m.y, n: src.combo, mult: +this.comboMult(src).toFixed(2), who: src.id });
       this._comboReward(src, m);
       if (src.boon.killHaste) { src.killHasteStacks = Math.min(6, (src.killHasteStacks || 0) + 1); src.buffs.killHaste = 3; }
@@ -875,7 +963,7 @@ class Room {
       slot, name: Gear.SLOT_NAME[slot] || slot, icon: Gear.SLOT_ICON[slot] || '⚔️',
       items: Gear.itemsFor(p.heroId, slot).map(it => ({
         id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost,
-        rarity: Gear.rarityOf(it), owned: p.gear[slot] === it.id ? 1 : 0,
+        rarity: Gear.rarityOf(it), owned: p.gear[slot] === it.id ? 1 : 0, have: p.owned[it.id] ? 1 : 0,
       })),
     }));
     this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0 });
@@ -890,11 +978,16 @@ class Room {
     const it = Gear.BY_ID[itemId]; if (!it) return;
     if (it.hero !== p.heroId) return;                       // la roba di un'altra classe non si compra
     if (p.gear[it.slot] === it.id) return;                  // gia' addosso
-    if (p.coins < it.cost) return;
-    p.coins -= it.cost; p.gear[it.slot] = it.id;            // cambio LIBERO: il vecchio viene rimpiazzato
+    // v1.72 — se l'oggetto e' gia' nel MAGAZZINO l'hai gia' pagato: rimetterlo addosso non costa nulla.
+    // Il vecchio non sparisce piu' nel nulla, resta tuo — e il Banditore lo ricompra a meta'.
+    const posseduto = !!p.owned[it.id];
+    if (!posseduto && p.coins < it.cost) return;
+    if (!posseduto) p.coins -= it.cost;
+    p.owned[it.id] = 1; p.gear[it.slot] = it.id;
     this._recomputeGear(p);
     this.offerGear(p, atMarket ? 1 : 0);
-    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank } });
+    if (p._nearBnd) this.offerBandit(p, 1);                 // il magazzino e' cambiato: il banco si aggiorna
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: posseduto ? 1 : 0 } });
   }
   offerBoon(p) {
     const choices = Loot.offerBoons(C.RARITY, p.boonsOwned);
@@ -961,7 +1054,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -984,7 +1077,11 @@ class Room {
     if (this.mode.treasure) { const treasureGone = !this.treasure; if (treasureGone && this.pending <= 0 && this.monsters.length === 0) return this._waveDone(); return; }
     if (this.pending <= 0 && this.monsters.length === 0) return this._waveDone();
   }
-  _waveDone() { if (this.wave >= Waves.FINAL_WAVE) this.victory(); else this.enterShop(); }
+  _waveDone() {
+    // v1.72 — l'ondata e' finita: chi non ha perso vite chiude la taglia "Nessun caduto".
+    for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
+    if (this.wave >= Waves.FINAL_WAVE) this.victory(); else this.enterShop();
+  }
   enterShop() {
     this.phase = C.PHASE_SHOP; this.shopTimer = 45; this.shopDest = null;
     // v1.9 — raccolta automatica dei drop rimasti a terra (la pausa non fa perdere nulla).
@@ -1022,7 +1119,9 @@ class Room {
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
     for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
         // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
-        this.addXp(p, C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa'); break; } } }
+        this.addXp(p, C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa');
+        this.bountyTick(p, 'casse', 1);
+        break; } } }
     if (this.crates.some(c => c.opened)) this.crates = this.crates.filter(c => !c.opened);
     for (const d of this.weaponDrops) { if (d.taken) continue; for (const p of this.alivePlayers) { if (MU.dist(d.x, d.y, p.x, p.y) < p.radius + d.r + 6) { d.taken = true; this._giveWeapon(p, d.wt); if (d.level >= 2 && p.weapon2 && p.weapon2.type === d.wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, Math.max(p.weapon2.level, d.level)); const w = Loot.WEAPONS[d.wt]; this.events.push({ t: 'weapon_pickup', x: d.x, y: d.y, wt: d.wt, name: w.name, icon: w.icon, color: w.color, level: p.weapon2.level, name2: p.name }); this._checkEvo(p); break; } } }
     if (this.weaponDrops.some(d => d.taken)) this.weaponDrops = this.weaponDrops.filter(d => !d.taken);
@@ -1074,8 +1173,8 @@ class Room {
         for (const a of this.alivePlayers) { if (a === p) continue; if (MU.dist(a.x, a.y, p.x, p.y) < 46) { p.reviveProg = (p.reviveProg || 0) + dt; break; } }
         if ((p.reviveProg || 0) > 2.2) { p.down = false; p.hp = Math.round(this.effMaxHp(p) * 0.5); p.reviveProg = 0; p.buffs.iframe = C.REVIVE_IFRAME; this.events.push({ t: 'revive', x: p.x, y: p.y }); }
         if (p.downT <= 0) {
-          if (p.lives > 1) { p.lives -= 1; p.down = false; p.hp = Math.round(this.effMaxHp(p) * 0.6); p.buffs.iframe = C.REVIVE_IFRAME; p.reviveProg = 0; this.events.push({ t: 'life_lost', x: p.x, y: p.y, name: p.name, lives: p.lives }); }
-          else { p.lives = 0; p.dead = true; p.down = false; this.events.push({ t: 'dead', x: p.x, y: p.y, name: p.name }); if (!this.anyRevivable) this.gameOver(); }
+          if (p.lives > 1) { p.lives -= 1; p.noLifeLost = false; p.down = false; p.hp = Math.round(this.effMaxHp(p) * 0.6); p.buffs.iframe = C.REVIVE_IFRAME; p.reviveProg = 0; this.events.push({ t: 'life_lost', x: p.x, y: p.y, name: p.name, lives: p.lives }); }
+          else { p.lives = 0; p.noLifeLost = false; p.dead = true; p.down = false; this.events.push({ t: 'dead', x: p.x, y: p.y, name: p.name }); if (!this.anyRevivable) this.gameOver(); }
         }
         continue;
       }
@@ -1226,6 +1325,9 @@ class Room {
       if (p._nearDark) o.nmd = 1;
       if (p._nearGear) o.ng = 1;
       if (p._nearHerb) o.nh = 1;
+      if (p._nearBnd) o.nb = 1;
+      // v1.72 — la taglia in corso viaggia sempre: senza vederla in partita te ne dimentichi.
+      if (p.bounty) o.bo = { k: p.bounty.k, h: p.bounty.have, n: p.bounty.n, i: p.bounty.icon, c: p.bounty.color, t: p.bounty.testo };
       // v1.71 — la cintura viaggia compatta: uno 0 per lo slot vuoto, [indice, cariche] per gli altri.
       if (p.belt.some(s => s)) o.bt = p.belt.map(s => s ? [Pot.BY_ID[s.id].idx, s.n] : 0);
       if (p.potCd > 0) o.pcd = +(p.potCd / (p.potCdMax || Pot.COOLDOWN)).toFixed(2);

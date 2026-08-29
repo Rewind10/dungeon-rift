@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const HERO = window.GAME.Heroes.HEROES, HORDER = window.GAME.Heroes.ORDER, MON = window.GAME.Monsters.MONSTERS, BOSSES = window.GAME.Monsters.BOSSES, LOOT = window.GAME.Loot, RAR = window.GAME.Constants.RARITY;
-  const POT = window.GAME.Potions;
+  const POT = window.GAME.Potions, BNT = window.GAME.Bounties;
   const $ = (id) => document.getElementById(id); const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { guerriero: '🛡️', mago: '🔮', ladro: '🏹' };
   const EVO_NAME = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; if (w.evo) EVO_NAME[w.evo.id] = { name: w.evo.name, icon: w.icon, color: w.evo.color }; }
@@ -104,7 +104,7 @@
     // portano il prezzo. Il cambio e' libero, quindi non si "sblocca" niente — si sceglie.
     _gearCard(it, coins, onBuy) {
       const rar = RAR[it.rarity] || RAR.common;
-      const inUso = !!it.owned, afford = coins >= it.cost;
+      const inUso = !!it.owned, tuo = !inUso && !!it.have, afford = tuo || coins >= it.cost;
       const el = document.createElement('div');
       el.className = 'gc' + (inUso ? ' maxed' : (afford ? '' : ' disabled'));
       el.style.borderColor = it.color;
@@ -113,6 +113,8 @@
       // di partenza. Si scrive DI BASE, che e' l'informazione vera.
       const foot = inUso
         ? '<div class="cost maxed" style="color:' + it.color + '">IN USO ★</div>'
+        : tuo
+        ? '<div class="cost" style="color:#9fe06a">GIÀ TUO · GRATIS</div>'
         : (it.cost > 0
           ? '<div class="cost" style="color:' + (afford ? it.color : '#ff8a8a') + '">🪙 ' + it.cost + '</div>'
           : '<div class="cost" style="color:#8d97ab">DI BASE</div>');
@@ -272,6 +274,74 @@
         else v.classList.add('hidden');
       }
       bar.classList.remove('hidden');
+    },
+
+    updateBounty(me) {
+      const el = $('bountyHud'); if (!el) return;
+      const b = me && me.bo;
+      if (!b) { el.classList.add('hidden'); this._boSig = null; return; }
+      const sig = b.k + '|' + b.h + '|' + b.n;
+      if (sig !== this._boSig) {
+        this._boSig = sig;
+        const f = Math.max(0, Math.min(1, b.h / b.n));
+        el.style.setProperty('--c', b.c || '#ff9a8a');
+        el.innerHTML = '<span class="ic">' + b.i + '</span><span class="tx">' + esc(b.t) + '</span>' +
+                       '<span class="cnt">' + b.h + '/' + b.n + '</span>' +
+                       '<div class="bar"><i style="width:' + Math.round(f * 100) + '%"></i></div>';
+      }
+      el.classList.remove('hidden');
+    },
+
+    // ===== v1.72 — IL BANCO DEL BANDITORE: taglie sopra, magazzino sotto =====
+    showBandit(data, cb) {
+      if (data) this._bnd = data; if (cb) this._bndCb = cb;
+      const panel = $('banditPanel'); if (!panel || !this._bnd) return;
+      panel.classList.remove('hidden'); this._renderBandit();
+    },
+    hideBandit() { const panel = $('banditPanel'); if (panel) panel.classList.add('hidden'); this._bndSig = null; },
+    _renderBandit() {
+      const d = this._bnd; if (!d) return;
+      const hd = $('banditHead');
+      if (hd) hd.innerHTML = '\uD83E\uDEA7 <b>Banditore</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
+      const sig = JSON.stringify([d.coins, d.bounty, d.offers, d.stock]);
+      if (sig === this._bndSig) return; this._bndSig = sig;
+      const cb = this._bndCb || {};
+      // --- taglie ---
+      const sub = $('banditSub'), tg = $('banditBounty');
+      tg.innerHTML = '';
+      if (d.bounty) {
+        const b = d.bounty; const f = Math.max(0, Math.min(1, b.have / b.n));
+        if (sub) sub.textContent = 'Nessuna scadenza — il conto continua ondata dopo ondata.';
+        const el = document.createElement('div'); el.className = 'att'; el.style.setProperty('--c', b.color);
+        el.innerHTML = '<div class="ic">' + b.icon + '</div><div class="mid"><div class="nm">' + esc(b.nome) + '</div>' +
+          '<div class="ds">' + esc(b.testo) + '</div><div class="bar"><i style="width:' + Math.round(f * 100) + '%"></i></div></div>' +
+          '<div class="cnt">' + b.have + ' / ' + b.n + '<b>\uD83E\uDE99 ' + b.pay + '</b></div>';
+        tg.appendChild(el);
+      } else {
+        if (sub) sub.textContent = 'Clicca quella che vuoi accettare. Vale finché non la completi, senza scadenza.';
+        const row = document.createElement('div'); row.className = 'tg';
+        (d.offers || []).forEach((o, i) => {
+          const el = document.createElement('div'); el.className = 'tc'; el.style.borderColor = o.color + '55';
+          el.innerHTML = '<div class="ic">' + o.icon + '</div><div class="nm" style="color:' + o.color + '">' + esc(o.nome) + '</div>' +
+            '<div class="ds">' + esc(o.testo) + '</div><div class="pay">\uD83E\uDE99 ' + o.pay + '<span>alla consegna</span></div>';
+          el.onclick = () => { if (cb.take) cb.take(i); };
+          row.appendChild(el);
+        });
+        tg.appendChild(row);
+      }
+      // --- magazzino ---
+      const mag = $('banditStock'); mag.innerHTML = '';
+      (d.stock || []).forEach(it => {
+        const el = document.createElement('div'); el.className = 'mi' + (it.worn ? ' on' : '');
+        el.innerHTML = '<div class="sl">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
+          '<div class="ds">' + esc(it.slotName) + ' \u00b7 rango ' + it.rank + '</div></div>' +
+          (it.worn ? '<span class="add">addosso</span>'
+                   : (it.cost ? '<button data-sell="' + it.id + '">vendi <b>\uD83E\uDE99' + it.pay + '</b></button>'
+                              : '<span class="add" style="color:#6f7890">di partenza</span>'));
+        const b = el.querySelector('button');
+        if (b) el.onclick = (e) => { const t = e.target.closest('button'); if (t && cb.sell) cb.sell(t.dataset.sell); };
+        mag.appendChild(el);
+      });
     },
 
     // ===== v1.71 — IL BANCO DELL'ERBORISTA =====

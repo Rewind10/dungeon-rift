@@ -6,6 +6,26 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ---
 
+## 🪧 IL BANDITORE: magazzino e taglie *(novita v1.72)*
+- Terza bottega ad aprire, e fa due mestieri.
+- **MAGAZZINO.** Fino alla 1.71 comprare l'alabarda faceva **sparire nel nulla** lo spadone gia' pagato.
+  Ora tutto cio' che compri **resta tuo**: dal **Fabbro** lo rimetti addosso **gratis** (e il negozio lo
+  dichiara, *GIA' TUO - GRATIS*), dal **Banditore** lo vendi a **meta' prezzo**.
+- Vendere diventa una scelta e non un automatismo: incassi 235 per l'alabarda adesso, ma per riaverla la
+  ripaghi 470. **Non si vende** cio' che si ha addosso, ne' l'equipaggiamento di partenza (vale zero e
+  toglierlo lascerebbe lo slot senza un fondo a cui tornare).
+- **TAGLIE.** Al banco ne trovi **tre**, sempre di tipo diverso, e ne accetti **una**. Vale finche' non la
+  completi: **nessuna scadenza**. Le offerte si generano una volta e restano quelle — riavvicinarsi non le
+  rimescola, altrimenti sarebbe una slot machine da ripescare finche' non esce quella comoda.
+- **Sei tipi**: Caccia grossa (N nemici), Contratto mirato (N di una specie), Teste grosse (N elite),
+  Saccheggio (N casse), Catena di sangue (una combo di N), Nessun caduto (un'ondata senza perdere vite).
+  Bersagli e paga crescono con l'ondata: all'ondata 6 si va da 91 a 172 monete.
+- Una taglia vale circa **due o tre ondate di guadagno** e ne richiede altrettante. Sono **personali**: in
+  co-op ognuno ha la sua.
+- La taglia accettata resta **visibile in partita**, in alto a sinistra, con la barra di avanzamento: una
+  taglia senza scadenza che non si vede mentre giochi e' una taglia che si dimentica.
+- Restano chiusi solo **Cartomante** e **Ostessa**.
+
 ## 🧪 L'ERBORISTA e la CINTURA *(novita v1.71)*
 - Il secondo mestiere del villaggio apre bottega. Vende l'unica cosa del gioco che si **consuma**.
 - **Tre slot** in cintura, tasti **1 2 3**, **massimo 3 cariche** per slot. Si beve all'istante mentre corri
@@ -23,7 +43,7 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   **nessun cumulo** — la seconda dose fa ripartire il timer, non raddoppia l'effetto.
 - **Le cariche si comprano, non si ricaricano.** Cambiare il tipo di uno slot **rimborsa meta'** delle
   cariche rimaste. Le cariche **sopravvivono alla morte**.
-- Restano chiusi **Cartomante, Banditore e Ostessa**. Il quarto banchetto, che nel codice si chiamava
+- Restano chiusi **Cartomante, Banditore e Ostessa** (il Banditore apre in v1.72). Il quarto banchetto, che nel codice si chiamava
   Rigattiere e nei documenti Banditore, ora e' **Banditore** ovunque.
 
 ## 🔮 Il fascio della Faglia *(novita v1.65)*
@@ -128,8 +148,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - **Buio, e la luce nasce dal falo'** al centro: un unico grande alone circolare scopre i cinque banchetti e
   si spegne contro le pareti. Le lanterne appese ai pali dei banchi fanno da luci di appoggio.
 - **Cinque banchetti** a ferro di cavallo attorno al fuoco — bancone, tendone a strisce, lanterna e merce
-  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.71 **Fabbro** ed **Erborista** vendono; **Banditore,
-  Ostessa e Cartomante** sono ancora chiusi.
+  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.72 **Fabbro**, **Erborista** e **Banditore** vendono;
+  **Ostessa e Cartomante** sono ancora chiusi.
 - I **mercanti** sono al doppio della taglia e piu' dettagliati (mantellina, cintura, pieghe, mani, occhi
   accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
 - Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
@@ -139,8 +159,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
 - **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della
   Gilda**, ognuna con tetto, finestre illuminate, insegna sopra la porta, lanterna e targa col nome.
-- **Cinque abitanti**: **Fabbro** (equipaggiamento) ed **Erborista** (pozioni, dalla v1.71) vendono. **Ostessa,
-  Cartomante e Banditore** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
+- **Cinque abitanti**: **Fabbro** (equipaggiamento), **Erborista** (pozioni, v1.71) e **Banditore** (usato e
+  taglie, v1.72) vendono. **Ostessa e Cartomante** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
   le prossime destinazioni.
 - Il villaggio e' **illuminato**: niente torcia, niente buio. La piazza e' ripulita dai detriti da caverna;
   restano pozzo, lampioni, banchi, casse, barili, alberi, staccionate e il cartello MERCATO.

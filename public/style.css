@@ -318,3 +318,57 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .pc.pick{border-color:#9fe06a;box-shadow:0 0 0 1px rgba(159,224,106,.3),0 10px 24px rgba(80,180,60,.2);cursor:default}
 .pc.pick:hover{transform:none}
 @media (max-width:900px){#beltBar{right:auto;left:16px;bottom:150px}#potionCat{grid-template-columns:1fr 1fr}}
+
+/* ===== v1.72 — LA TAGLIA IN CORSO, in partita =====
+   Una riga sola in alto a sinistra, sotto il contatore dell'ondata. Una taglia senza scadenza che non si
+   vede mentre giochi e' una taglia che si dimentica: per questo sta a schermo, non solo al banco. */
+#bountyHud{position:absolute;top:96px;left:16px;z-index:24;pointer-events:none;min-width:230px;max-width:330px;
+  background:linear-gradient(180deg,rgba(20,14,12,.86),rgba(10,8,7,.9));border:1.5px solid var(--c,#ff9a8a);
+  border-radius:12px;padding:7px 11px 9px;backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.5);
+  display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center}
+#bountyHud.hidden{display:none}
+#bountyHud .ic{font-size:19px;line-height:1}
+#bountyHud .tx{font-size:12px;color:#e0d6cf;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#bountyHud .cnt{font-size:12.5px;font-weight:800;color:var(--c,#ff9a8a)}
+#bountyHud .bar{grid-column:1/-1;height:5px;background:rgba(0,0,0,.55);border-radius:3px;overflow:hidden;margin-top:1px}
+#bountyHud .bar i{display:block;height:100%;background:var(--c,#ff9a8a);border-radius:3px;transition:width .25s}
+
+/* ===== v1.72 — IL BANCO DEL BANDITORE ===== */
+#banditPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;
+  background:linear-gradient(180deg,rgba(36,23,21,.97),rgba(16,11,10,.97));border:2px solid #8a4a3a;border-radius:16px;
+  padding:12px 14px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(860px,94vw);
+  max-height:78vh;overflow:auto}
+#banditPanel.hidden{display:none}
+#banditPanel .merch-head b{color:#ff9a8a}
+#banditPanel .sez{color:#ff9a8a;font:800 11px var(--font);letter-spacing:1.6px;text-align:center;margin:14px 0 3px;text-transform:uppercase}
+#banditPanel .sez-s{color:#8b93a7;font-size:12px;text-align:center;margin:0 0 10px}
+/* le tre taglie fra cui scegliere */
+.tg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tc{background:linear-gradient(180deg,#26201c,#120e0c);border:2px solid #3d3028;border-radius:14px;padding:14px 12px 13px;text-align:center;cursor:pointer;transition:.15s}
+.tc:hover{transform:translateY(-4px)}
+.tc .ic{font-size:32px;line-height:1}
+.tc .nm{font-weight:800;font-size:13.5px;margin-top:4px;letter-spacing:.3px}
+.tc .ds{font-size:12px;color:#d8cfc6;line-height:1.35;margin-top:5px;min-height:34px}
+.tc .pay{margin-top:7px;font-weight:800;font-size:14px;color:#ffcf4a}
+.tc .pay span{font-size:11px;color:#8b93a7;font-weight:600;display:block;margin-top:1px}
+/* la taglia accettata */
+.att{background:linear-gradient(180deg,#26201c,#120e0c);border:2px solid var(--c);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:14px}
+.att .ic{font-size:30px;flex:none}
+.att .mid{flex:1;text-align:left}
+.att .nm{font-weight:800;font-size:14px;color:var(--c)}
+.att .ds{font-size:12.5px;color:#d8cfc6;margin-top:1px}
+.att .bar{height:9px;background:rgba(0,0,0,.5);border-radius:5px;overflow:hidden;margin-top:7px}
+.att .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--c),rgba(255,255,255,.4));border-radius:5px}
+.att .cnt{font-weight:800;font-size:15px;color:#e8edf7;flex:none;text-align:right;min-width:82px}
+.att .cnt b{color:#ffcf4a;display:block;font-size:13px;margin-top:2px}
+/* il magazzino */
+#banditStock{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mi{background:linear-gradient(180deg,#1c2230,#0e1120);border:2px solid var(--line);border-radius:13px;padding:10px 11px;display:flex;align-items:center;gap:10px}
+.mi .sl{font-size:22px;flex:none;width:28px;text-align:center}
+.mi .nm{font-weight:800;font-size:13px}
+.mi .ds{font-size:11px;color:#8b93a7;margin-top:1px}
+.mi button{margin-left:auto;flex:none;padding:7px 11px;font-size:11.5px;border-radius:9px;background:linear-gradient(180deg,#6b3a34,#3f211d);border:1px solid #8a4a3a;color:#f5ded8}
+.mi button b{color:#ffcf4a}
+.mi.on{border-color:#c8a23a;background:linear-gradient(180deg,#241f14,#12100a)}
+.mi .add{margin-left:auto;flex:none;font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#c8a23a;text-transform:uppercase}
+@media (max-width:900px){.tg,#banditStock{grid-template-columns:1fr}#bountyHud{max-width:200px}}

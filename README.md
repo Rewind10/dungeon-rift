@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.71.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.72.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.72 (il Banditore: niente si butta)
+- **📦 Magazzino**: l'equipaggiamento sostituito non sparisce piu'. Cio' che hai comprato resta tuo e dal
+  **Fabbro** lo rimetti addosso **gratis**.
+- **💰 Il Banditore ricompra** cio' che non usi a **meta' prezzo** (non cio' che hai addosso, ne' quello di
+  partenza).
+- **🪧 Taglie**: tre al banco, tutte di tipo diverso, ne accetti **una**. Nessuna scadenza — il conto
+  prosegue ondata dopo ondata, e la taglia resta visibile in partita in alto a sinistra.
+- **🎯 Sei tipi**: N nemici, N di una specie, N elite, N casse, una combo di N, un'ondata senza cadute.
+  Paga dai 91 ai 172 all'ondata 6, e cresce con le ondate.
 
 ## 🆕 Novita v1.71 (l'Erborista apre bottega)
 - **🧪 La cintura**: tre slot, tasti **1 2 3**, massimo **3 cariche** per slot. Si beve all'istante mentre

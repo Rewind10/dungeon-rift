@@ -2,6 +2,58 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.72.0] — 2026-08-29 · "Il Banditore: niente si butta"
+
+Terza bottega ad aprire, e fa due mestieri.
+
+#### 📦 Il magazzino — l'equipaggiamento non sparisce più
+Fino alla 1.71, comprare l'alabarda faceva **svanire nel nulla** lo spadone che avevi pagato 230 monete.
+Adesso tutto quello che compri resta **tuo**:
+- dal **Fabbro** lo rimetti addosso **gratis** — l'hai già pagato, e il negozio ora lo dichiara (*GIÀ TUO ·
+  GRATIS*) invece di richiedere il prezzo pieno;
+- dal **Banditore** lo vendi a **metà prezzo**.
+
+Così vendere diventa una scelta e non un automatismo: incassi 235 per l'alabarda adesso, ma se poi la
+rivuoi la ripaghi 470. Gli oggetti di partenza non si vendono — valgono zero e toglierli lascerebbe lo
+slot senza un fondo a cui tornare. Nemmeno quello che hai addosso si vende.
+
+#### 🪧 Le taglie
+Al banco trovi **tre incarichi**, sempre di **tipo diverso**, e ne accetti **uno**. Vale finché non lo
+completi: **nessuna scadenza**, il conto prosegue ondata dopo ondata. Le offerte si generano una volta e
+restano quelle finché non ne prendi una — riavvicinarsi non le rimescola, altrimenti sarebbe una slot
+machine da ripescare finché non esce quella comoda.
+
+| Taglia | Cosa chiede | All'ondata 6 | Paga |
+|---|---|---|---:|
+| 💀 Caccia grossa | uccidi N nemici | 38 nemici | 108 |
+| 🎯 Contratto mirato | uccidi N di una specie | 11 × Melma Corrosiva | 124 |
+| 👑 Teste grosse | uccidi N élite | 3 élite | 156 |
+| 📦 Saccheggio | apri N casse | 4 casse | 91 |
+| 🔥 Catena di sangue | raggiungi una combo di N | combo 24 | 129 |
+| 🛡️ Nessun caduto | supera un'ondata senza perdere una vita | — | 172 |
+
+Bersagli e paga crescono con l'ondata. Una taglia vale circa **due o tre ondate di guadagno** e ne richiede
+altrettante: paga bene senza scavalcare la progressione. Le taglie sono **personali**: in co-op ognuno ha
+la sua.
+
+La taglia accettata resta **visibile in partita**, in alto a sinistra, con la barra di avanzamento — una
+taglia senza scadenza che non si vede mentre giochi è una taglia che si dimentica.
+
+#### 🏘️ Villaggio
+Restano chiusi solo **Cartomante** e **Ostessa**.
+
+#### ✅ Verificato
+**809 test, 0 falliti.** Fra gli altri: il magazzino che parte con l'equipaggiamento iniziale, il
+riequipaggiamento a costo zero, la rivendita a metà esatta, il rifiuto di vendere ciò che si ha addosso o
+ciò che è di partenza, il banco che non risponde da lontano, le tre offerte tutte di tipo diverso che **non
+si rigenerano**, la taglia unica, **ognuno dei sei tipi portato a compimento** con la paga dichiarata, il
+contratto mirato che ignora la specie sbagliata, la combo contata come **record** e non come somma, gli
+agganci veri (uccidere, aprire una cassa, perdere una vita) verificati sul gioco e non sul contatore, e un
+controllo che nessun tipo del catalogo resti senza qualcuno che lo incrementa in `Room.js`. Più 21
+controlli sull'interfaccia con DOM finto.
+
+---
+
 ### [1.71.0] — 2026-08-29 · "L'Erborista apre bottega"
 
 Il villaggio aveva cinque banchetti e un solo mestiere che vendeva davvero. Apre il secondo: **l'Erborista**,

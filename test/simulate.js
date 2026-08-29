@@ -8,6 +8,8 @@ const MapGen = require('../shared/mapgen.js');
 const Loot = require('../shared/loot.js');
 const Waves = require('../shared/waves.js');
 const Pot = require('../shared/potions.js');
+const Bnt = require('../shared/bounties.js');
+const Gear = require('../shared/gear.js');
 const fs = require('fs');
 let PASS = 0, FAIL = 0;
 function assert(c, m) { if (c) PASS++; else { FAIL++; console.log('  ❌ FAIL:', m); } }
@@ -806,8 +808,9 @@ function testV157() {
   assert(stalls.every(s => s.s > 1.4), 'i banchetti sono piu grandi dei mercanti (scala ' + stalls[0].s + ')');
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
   assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende: il fabbro');
-  // v1.71 — l'Erborista ha aperto: i mestieri ancora chiusi sono tre (Cartomante, Banditore, Ostessa).
-  assert(m.village.npcs.filter(n => n.soon).length === 3, 'gli altri 3 sono ancora chiusi');
+  // v1.72 — hanno aperto Erborista e Banditore: restano chiusi Cartomante e Ostessa.
+  assert(m.village.npcs.filter(n => n.soon).length === 2, 'gli altri 2 sono ancora chiusi');
+  assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   // ogni mercante sta DIETRO il suo banco: piu' lontano dal fuoco
   let behind = true;
@@ -1838,8 +1841,137 @@ function testV171() {
   ok('novita v1.71 verificate');
 }
 
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.71)'); console.log('==================================================');
+
+// ===================== v1.72 — IL BANDITORE: magazzino e taglie =====================
+// Due mestieri in uno, e ognuno cambia una regola che c'era prima: l'equipaggiamento sostituito non
+// sparisce piu' (magazzino, riequipaggiabile gratis) e la partita ha per la prima volta un obiettivo
+// che sopravvive alla singola ondata (la taglia).
+function testV172() {
+  console.log('\n[TEST 42] Novita v1.72 — Banditore: magazzino, ricompra, taglie');
+  const conn = { send() {} };
+
+  // --- 1) il magazzino ---
+  const r = new Room('v172a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+  const partenza = Object.keys(p.owned);
+  assert(partenza.length === Object.keys(p.gear).length, "l'equipaggiamento di partenza e gia nel magazzino");
+  assert(partenza.every(id => Gear.BY_ID[id]), 'e sono oggetti veri');
+  r.enterMarket();
+  assert(!!r.bandit, 'il Banditore ha un posto nel villaggio');
+  assert(!r.map.village.npcs.find(n => n.bnd).soon, "e la sua bottega non e piu chiusa");
+  p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; p.coins = 1000;
+  r.buyGear('a', 'gue_spadone'); r.buyGear('a', 'gue_alabarda');
+  assert(p.gear.weapon === 'gue_alabarda', "l'ultima comprata e quella addosso");
+  assert(p.owned.gue_spadone && p.owned.gue_alabarda, 'ma la precedente resta TUA: non sparisce piu nel nulla');
+  const c1 = p.coins;
+  r.buyGear('a', 'gue_spadone');
+  assert(p.coins === c1, 'rimettersi addosso un oggetto posseduto non costa nulla');
+  assert(p.gear.weapon === 'gue_spadone', 'ed e davvero tornato addosso');
+
+  // --- 2) la ricompra ---
+  p.x = r.bandit.x; p.y = r.bandit.y;
+  const c2 = p.coins;
+  r.sellGear('a', 'gue_alabarda');
+  assert(p.coins - c2 === Math.floor(Gear.BY_ID.gue_alabarda.cost * C.SELL_BACK), 'venduta a meta prezzo esatto');
+  assert(!p.owned.gue_alabarda, 'e non e piu nel magazzino');
+  r.sellGear('a', 'gue_spadone');
+  assert(!!p.owned.gue_spadone, 'quello che hai ADDOSSO non si vende');
+  r.sellGear('a', 'gue_spada');
+  assert(!!p.owned.gue_spada, "e nemmeno quello di partenza: vale zero e lascerebbe lo slot senza fondo");
+  const lontano = c2; p.x = r.bandit.x + 900;
+  const c3 = p.coins; r.sellGear('a', 'gue_alabarda');
+  assert(p.coins === c3, 'da lontano il banco non risponde');
+  p.x = r.bandit.x;
+  // riaverla dopo averla venduta costa di nuovo intero
+  const c4 = p.coins; p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; r.buyGear('a', 'gue_alabarda');
+  assert(c4 - p.coins === Gear.BY_ID.gue_alabarda.cost, 'ricomprare cio che hai venduto costa di nuovo intero');
+
+  // --- 3) le tre offerte ---
+  p.x = r.bandit.x; p.y = r.bandit.y;
+  const off = r._offerteTaglie(p);
+  assert(off.length === Bnt.OFFERTE, 'il banco appende ' + Bnt.OFFERTE + ' taglie');
+  assert(new Set(off.map(o => o.k)).size === off.length, 'tutte di tipo diverso: si sceglie fra tre cose diverse');
+  assert(off.every(o => o.n > 0 && o.pay > 0 && o.testo), 'ognuna ha bersaglio, paga e una frase leggibile');
+  const stesse = r._offerteTaglie(p);
+  assert(JSON.stringify(stesse) === JSON.stringify(off), 'riavvicinarsi NON rigenera le offerte (niente slot machine)');
+  r.takeBounty('a', 1);
+  assert(p.bounty && p.bounty.k === off[1].k, 'si accetta quella che si clicca');
+  assert(p.bountyOffer === null, 'e le altre due spariscono');
+  const tenuta = p.bounty.k;
+  r.takeBounty('a', 0);
+  assert(p.bounty.k === tenuta, 'una taglia alla volta: la seconda non entra');
+
+  // --- 4) ogni tipo di taglia si completa DAVVERO e paga il dichiarato ---
+  for (const kind of Bnt.KINDS.map(k => k.id)) {
+    const rr = new Room('v172_' + kind); const q = rr.addPlayer('b', conn, 'B', 'guerriero'); rr.startGame(); rr.phase = C.PHASE_COMBAT;
+    q.bounty = Bnt.istanza(kind, 4, 'skeleton', 'Zombie Putrido');
+    const bers = q.bounty.n, paga = q.bounty.pay, c0 = q.coins;
+    for (let i = 1; i <= bers; i++) {
+      if (kind === 'combo') rr.bountyTick(q, 'combo', i);
+      else if (kind === 'specie') rr.bountyTick(q, 'specie', 1, 'skeleton');
+      else rr.bountyTick(q, kind, 1);
+    }
+    assert(q.bounty === null, 'la taglia "' + kind + '" si chiude al bersaglio');
+    assert(q.coins - c0 === paga, 'e paga esattamente quello che aveva promesso (' + kind + ')');
+  }
+  // la specie sbagliata non conta
+  const rs = new Room('v172s'); const z = rs.addPlayer('c', conn, 'C', 'mago'); rs.startGame();
+  z.bounty = Bnt.istanza('specie', 4, 'slime', 'Melma');
+  for (let i = 0; i < 60; i++) rs.bountyTick(z, 'specie', 1, 'skeleton');
+  assert(z.bounty && z.bounty.have === 0, 'il contratto mirato conta SOLO la specie giusta');
+  // la combo e un record, non una somma
+  z.bounty = Bnt.istanza('combo', 4);
+  rs.bountyTick(z, 'combo', 5); rs.bountyTick(z, 'combo', 3);
+  assert(z.bounty.have === 5, 'la combo tiene il RECORD, non somma i colpi');
+
+  // --- 5) gli agganci veri: uccidere e aprire casse fanno salire il contatore da soli ---
+  const rk = new Room('v172k'); const k = rk.addPlayer('d', conn, 'D', 'guerriero'); rk.startGame(); rk.phase = C.PHASE_COMBAT;
+  k.bounty = Bnt.istanza('caccia', 3);
+  const m1 = rk.spawnMonster('skeleton', k.x + 60, k.y); rk.killMonster(m1, k);
+  assert(k.bounty.have === 1, 'uccidere un nemico fa salire la caccia grossa');
+  k.bounty = Bnt.istanza('specie', 3, 'slime', 'Melma');
+  const m2 = rk.spawnMonster('skeleton', k.x + 60, k.y); rk.killMonster(m2, k);
+  assert(k.bounty.have === 0, 'ma non il contratto su un altro tipo');
+  const m3 = rk.spawnMonster('slime', k.x + 60, k.y); rk.killMonster(m3, k);
+  assert(k.bounty.have === 1, 'quello giusto si');
+  k.bounty = Bnt.istanza('elite', 3);
+  const m4 = rk.spawnMonster('skeleton', k.x + 60, k.y); m4.elite = true; rk.killMonster(m4, k);
+  assert(k.bounty.have === 1, 'un elite conta per le teste grosse');
+  k.bounty = Bnt.istanza('casse', 3);
+  rk.crates.length = 0; rk.crates.push({ eid: 1, x: k.x, y: k.y, r: 16, mimic: false, opened: false });
+  rk.updatePickups(1 / C.TICK_RATE);
+  assert(k.bounty.have === 1, 'aprire una cassa conta per il saccheggio');
+
+  // --- 6) "nessun caduto": si azzera se cade qualcuno, si chiude se l'ondata finisce pulita ---
+  const rn = new Room('v172n'); const w = rn.addPlayer('e', conn, 'E', 'guerriero'); rn.startGame(); rn.phase = C.PHASE_COMBAT;
+  w.bounty = Bnt.istanza('illeso', 3);
+  assert(w.noLifeLost === true, "a inizio ondata la lavagna e pulita");
+  w.down = true; w.downT = -1; w.lives = 2; rn.updatePlayers(1 / C.TICK_RATE);
+  assert(w.noLifeLost === false, 'perdere una vita la sporca');
+  rn.monsters.length = 0; rn.pending = 0; rn._checkWaveClear();
+  assert(w.bounty && w.bounty.have === 0, "e l'ondata finita non chiude la taglia");
+  // ondata nuova, questa volta pulita
+  const rn2 = new Room('v172n2'); const w2 = rn2.addPlayer('f', conn, 'F', 'guerriero'); rn2.startGame(); rn2.phase = C.PHASE_COMBAT;
+  w2.bounty = Bnt.istanza('illeso', 3); const c5 = w2.coins;
+  rn2.monsters.length = 0; rn2.pending = 0; rn2._checkWaveClear();
+  assert(w2.bounty === null && w2.coins > c5, "un'ondata senza cadute la chiude e la paga");
+
+  // --- 7) la taglia arriva al client, e si vede in partita ---
+  const rc = new Room('v172c'); const y = rc.addPlayer('g', conn, 'G', 'ladro'); rc.startGame();
+  y.bounty = Bnt.istanza('caccia', 5); y.bounty.have = 7;
+  const me = rc.snapshot().players.find(x => x.i === 'g');
+  assert(me.bo && me.bo.h === 7 && me.bo.n === y.bounty.n, 'lo snapshot porta avanzamento e bersaglio');
+  assert(me.bo.t && me.bo.i, 'con la frase e l icona, per la riga in alto a sinistra');
+  y.bounty = null;
+  assert(rc.snapshot().players.find(x => x.i === 'g').bo === undefined, 'senza taglia non si spende un byte');
+
+  // --- 8) ogni tipo del catalogo e DAVVERO agganciato a qualcosa in Room.js ---
+  const room = fs.readFileSync(require('path').join(__dirname, '..', 'server', 'Room.js'), 'utf8');
+  for (const kk of Bnt.KINDS) assert(room.includes("'" + kk.id + "'"), 'il tipo ' + kk.id + ' e agganciato in Room.js');
+  ok('novita v1.72 verificate');
+}
+
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.72)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
