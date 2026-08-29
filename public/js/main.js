@@ -18,6 +18,7 @@
 
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), (dest) => Net.shopReady(dest || 'wave')); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
+  Net.onOfferRank = (m) => { HUD.setRank(m, (id) => Net.pickRank(id)); };
   // v1.52 — l'offerta arriva sia dal pannello di fine ondata (se riabilitato) sia dal mercante del MERCATO:
   // 'near' distingue i due casi.
   Net.onOfferGear = (m) => {
@@ -34,6 +35,24 @@
 
   function onEv(ev) {
     switch (ev.t) {
+      // v1.69 — la progressione deve VEDERSI mentre giochi, non solo nel pannello di fine ondata.
+      case 'levelup': R.ring(ev.x, ev.y, '#ffd27a', 6, 70, 0.5); R.burst(ev.x, ev.y, '#ffe9a8', 18, 180, 0.6);
+        if (ev.who === Net.id) { R.floater(ev.x, ev.y - 26, 'LIVELLO ' + ev.lv, '#ffd27a', true); A.evo && A.evo(); }
+        break;
+      case 'rankup': R.ring(ev.x, ev.y, '#ffd27a', 9, 130, 0.8); R.burst(ev.x, ev.y, '#ffd27a', 30, 260, 0.9); R.addShake(5);
+        HUD.killfeed('★ <b style="color:#ffd27a">' + esc(ev.name || '') + '</b> è ora <b>' + esc(ev.title || '') + '</b>');
+        if (ev.who === Net.id) HUD.modeBanner('★ ' + (ev.title || '').toUpperCase(), '#ffd27a', 'Scegli la tua carta di rango a fine ondata');
+        break;
+      case 'spec': R.ring(ev.x, ev.y, ev.color || '#ffd27a', 10, 180, 1); R.burst(ev.x, ev.y, ev.color || '#ffd27a', 40, 320, 1); R.addShake(8);
+        HUD.killfeed((ev.icon || '★') + ' <b style="color:' + (ev.color || '#ffd27a') + '">' + esc(ev.name || '') + '</b> ha scelto: <b>' + esc(ev.title || '') + '</b>');
+        break;
+      case 'card': R.floater(ev.x, ev.y - 22, (ev.icon || '★') + ' ' + ev.name, '#ffd27a', true); break;
+      case 'bosspoint': if (ev.x != null) R.floater(ev.x, ev.y - 30, '+1 PUNTO', '#ffd27a', true); break;
+      case 'dodge': R.floater(ev.x, ev.y - 18, 'schivata', '#9ef0b0'); R.burst(ev.x, ev.y, '#9ef0b0', 6, 120, 0.3); break;
+      case 'manahit': R.ring(ev.x, ev.y, '#7dffea', 4, 34, 0.25); break;
+      case 'manafull': R.ring(ev.x, ev.y, '#7dffea', 3, 42, 0.4); break;
+      case 'blink': R.burst(ev.x, ev.y, '#b061ff', 14, 200, 0.4); R.burst(ev.x2, ev.y2, '#b061ff', 14, 200, 0.4); R.ring(ev.x2, ev.y2, '#b061ff', 5, 40, 0.35); break;
+      case 'runa': R.burst(ev.x + Math.cos(ev.a) * 16, ev.y + Math.sin(ev.a) * 16, '#c48cff', 3, 80, 0.2); break;
       case 'shot': A.shoot(ev.hero, ev.wt); R.heroAtk(ev.who); R.burst(ev.x + Math.cos(ev.a) * 14, ev.y + Math.sin(ev.a) * 14, ev.hero === 'mago' ? '#7ffbe4' : '#ffe', 2, 60, 0.15); break;
       // v1.66 — FENDENTE del guerriero: l'arco disegnato e' esattamente l'area che ha ferito.
       case 'swing': R.heroAtk(ev.who); R.swing(ev.x, ev.y, ev.a, ev.rad, ev.half, ev.crit); A.shoot('guerriero', null); if (ev.hits > 1) R.addShake(2); break;

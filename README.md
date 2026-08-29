@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.68.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.69.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,21 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.69 (il personaggio cresce: livelli, ranghi e punti)
+- **🎚️ Venti livelli, uno per ondata**: la XP non si spende piu', sale. Il cap chiede 10.670 XP contro gli
+  ~11.000 che rende una run intera — chi arriva in fondo arriva al cap, chi gioca bene ci arriva prima.
+- **★ Cinque ranghi, uno ogni cinque livelli (cioe' su ogni boss)**: Guerriero → Esperto → Veterano →
+  Campione → **Paladino o Maestro d'Armi**. Apprendista → Mago Giovane → Mago → Mago Anziano → **Arcimago o
+  Stregone**. Ladro → Furfante → Predone → Ombra → **Assassino o Cacciatore di Teste**.
+- **🃏 27 carte di rango**: a ogni rango scegli 1 carta su 3, e sono potenziamenti *di classe*. 54
+  combinazioni per classe: due run non si somigliano.
+- **⚔️ Il bivio del rango V si vede addosso**: aura del Paladino, cresta del Maestro d'Armi, rune
+  dell'Arcimago, nucleo rosso dello Stregone, pugnale dell'Assassino, seconda faretra del Cacciatore.
+- **💠 23 punti in una run**, e portare una statistica al tetto ne costa 22: o ti specializzi, o ti
+  distribuisci. Il pannello dice "Livello 7 · Veterano — hai 3 punti", non piu' "hai 4.435 XP".
+- **🐛 Il tetto dei 30 nemici era ancora aggirabile** dalla scissione della Melma (con 29 in campo si finiva
+  a 31): ora tutte le porte contano i vivi.
 
 ## 🆕 Novita v1.68 (trenta in campo, il resto in coda)
 - **🔢 Tetto di 30 nemici vivi** (era 50). L'ondata **non perde nessuno**: gli altri restano in coda ed

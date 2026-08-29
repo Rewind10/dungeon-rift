@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.68.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.69.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -491,6 +491,28 @@ git tag vX.Y.Z
   di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
   test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
 
+- **⚠️ Due sorgenti per la stessa ricompensa fanno il doppio della ricompensa** *(v1.69)*. Il progetto
+  diceva "+1 punto per livello, +1 per ogni boss", e i ranghi cadono proprio sui boss: nel codice erano
+  diventati **due** eventi distinti (il rango che assegna un punto e il boss che ne assegna un altro), cioe'
+  27 punti invece di 23. Quando due meccaniche descrivono lo stesso momento con parole diverse, in codice
+  vanno unificate su UNA sorgente — qui il rango, perche' e' legato al livello e non all'ondata.
+- **⚠️ Un tetto va contato sui VIVI, e va chiuso a ogni porta** *(v1.69)*. Il cap dei nemici della 1.68
+  guardava `monsters.length`, che comprende i morti non ancora filtrati, e soprattutto **la scissione della
+  Melma controllava che ci fosse UN posto libero prima di generarne DUE**: con 29 in campo si finiva a 31.
+  Un limite ha tante porte quante sono le cose che possono farlo comparire (ondata, evocazione, scissione,
+  mimic delle casse): se una sola non lo controlla, il limite non esiste. Ora tutte passano da
+  `_postiLiberi()`. Il test che se n'e' accorto non cercava questo: cercava un picco, e il picco era 31.
+- **⚠️ Trasformare una valuta in una barra tocca tutto cio' che la trattava come soldi** *(v1.69)*. L'XP
+  passava da "si raccoglie e si spende" a "si raccoglie e basta". Punti toccati, in ordine: la raccolta
+  (ora tutta dentro `addXp`, che e' l'unico posto in cui si sale di livello — cosi' non esiste il caso "ho
+  aggiunto XP e il livello non e' cambiato"), il negozio (che ora parla di punti), i test che davano XP a
+  palate prima di comprare, e il pannello di fine ondata. La regola che ha tenuto insieme il cambio: **un
+  solo punto d'ingresso** per la risorsa, e tutto il resto lo chiama.
+- **⚠️ Un effetto nuovo va scritto dove il gioco lo GUARDA, non dove sembra logico** *(v1.69)*. Il "colpo
+  alle spalle" del ladro non poteva stare in `effDamage` (che non sa contro chi stai tirando) ma in
+  `damageMonster`, l'unico posto che ha sotto mano sia il colpo sia il verso del mostro. Stessa cosa per la
+  Parata, che vive in `damagePlayer` perche' li' si sa da dove arriva il colpo. Prima di aggiungere una
+  bandiera, trovare la funzione che ha gia' tutti i dati: se non c'e', il progetto dell'effetto e' sbagliato.
 - **⚠️ Prima di ottimizzare, MISURARE dove sta il costo — spesso non e' dove sembra** *(v1.68)*. Con 80
   mostri in campo il tick del server costa **0,38 ms su 33,3 disponibili: l'1%**. Non c'era niente da
   ottimizzare li', e limarlo sarebbe stato lavoro buttato. Il costo vero era la **banda**: 10 KB di

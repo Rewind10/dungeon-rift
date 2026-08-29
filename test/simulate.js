@@ -84,7 +84,7 @@ function testBoons() {
 }
 function testWeaponEvo() {
   console.log('\n[TEST 4] Evoluzione armi');
-  const room = new Room('evo'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP; p.xpPool = 100000;
+  const room = new Room('evo'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP; p.points = 100000;
   p.weapon2 = { type: 'scatter', level: 3, evolved: null };
   // richiede st_for >= 3
   room.buyStat('b', 'st_for'); room.buyStat('b', 'st_for'); assert(!p.weapon2.evolved, 'non evolve prima della soglia');
@@ -125,13 +125,13 @@ function testXpItems() {
   assert(room.groundXp.length > before, 'uccisione lascia XP');
   const dt = 1 / C.TICK_RATE; const xp0 = p.xpPool; for (let i = 0; i < 60; i++) room.update(dt); assert(p.xpPool > xp0, 'XP raccolta');
   room.items = [{ eid: 1, x: p.x + 8, y: p.y, r: 13, id: 'i_life', t: 30 }]; const l0 = p.lives; room.updatePickups(dt); assert(p.lives === l0 + 1, 'Cuore Fenice +1 vita');
-  p.xpPool = 500; room.phase = C.PHASE_SHOP; const hp0 = room.effMaxHp(p); room.buyStat('b', 'st_cos'); assert(room.effMaxHp(p) > hp0, 'negozio: Vitalità aumenta PV'); ok('XP/item/negozio OK');
+  p.points = 20; room.phase = C.PHASE_SHOP; const hp0 = room.effMaxHp(p); room.buyStat('b', 'st_cos'); assert(room.effMaxHp(p) > hp0, 'negozio: Vitalità aumenta PV'); ok('XP/item/negozio OK');
 }
 function testFullRun(n, label) {
   console.log(`\n[TEST 8] Partita completa — ${n} bot (${label})`);
   const room = new Room('r' + n); for (let i = 0; i < n; i++) room.addPlayer('b' + i, { send() {} }, 'B' + i, Heroes.ORDER[i % 3]); room.startGame();
   const dt = 1 / C.TICK_RATE; let ticks = 0, maxMs = 0, tot = 0, nan = null, pWall = 0, maxMon = 0;
-  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (Math.random() < 0.3) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
+  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (p.points > 0) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
   console.log(`  fase: ${room.phase} · ondata: ${room.wave} · ~${(ticks / C.TICK_RATE) | 0}s · perf avg ${(tot / ticks).toFixed(3)}ms max ${maxMs.toFixed(2)}ms · picco ${maxMon} mostri`);
   assert(nan === null, 'nessun NaN (' + (nan || 'ok') + ')'); assert(maxMs < (1000 / C.TICK_RATE) * 3, 'no tick catastrofico'); assert((tot / ticks) < (1000 / C.TICK_RATE), 'perf media OK'); assert(pWall === 0, 'giocatori mai nei muri'); assert(room.wave >= 1, 'run progredita');
 }
@@ -598,7 +598,7 @@ function testV151() {
   room.offerBoon(pl);
   assert(pl.boonOffer && pl.boonOffer.length === 3, 'a fine ondata arrivano 3 carte (una sola selezionabile)');
   // tetto: comprando all infinito ci si ferma a 8
-  room.phase = C.PHASE_SHOP; pl.xpPool = 9999999;
+  room.phase = C.PHASE_SHOP; pl.points = 9999999;
   for (let i = 0; i < 25; i++) room.buyStat('b', 'st_for');
   assert((pl.buys.st_for || 0) === Loot.STAT_MAX_LEVEL, 'la statistica si ferma al tetto di 8 livelli (arrivata a ' + (pl.buys.st_for || 0) + ')');
   // Emporio NASCOSTO: entrando nel negozio non arriva piu l offerta di equipaggiamento
@@ -1390,7 +1390,7 @@ function testV166() {
   const gue = room.addPlayer('g', { send() {} }, 'G', 'guerriero');
   const mag = room.addPlayer('m', { send() {} }, 'M', 'mago');
   const lad = room.addPlayer('l', { send() {} }, 'L', 'ladro');
-  for (const p of [gue, mag, lad]) p.xpPool = 9999999;
+  for (const p of [gue, mag, lad]) p.points = 9999999;
   const d0 = { g: room.effDamage(gue), m: room.effDamage(mag), l: room.effDamage(lad) };
   const c0 = { m: room.effFireDelay(mag), l: room.effFireDelay(lad), g: room.effFireDelay(gue) };
   room.buyStat('g', 'st_for');
@@ -1597,8 +1597,100 @@ function testV168() {
   assert(m0.fl === undefined && m0.el === undefined, 'i flag che valgono 0 non occupano spazio');
   ok('novita v1.68 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.68)'); console.log('==================================================');
+function testV169() {
+  console.log('\n[TEST 39] Novita v1.69 — livelli, ranghi, punti e carte');
+  const Lv = require('../shared/levels.js');
+  // --- 1) la scala: 20 livelli tarati sull'XP misurata ---
+  assert(Lv.MAX_LEVEL === 20, 'il cap e il livello 20');
+  assert(Lv.XP_FOR_CAP === 10670, 'per il cap servono 10.670 XP (una run intera ne rende ~11.000)');
+  assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(199) === 1, 'sotto la prima soglia si resta al livello 1');
+  assert(Lv.levelForXp(200) === 2, 'a 200 XP si sale al 2');
+  assert(Lv.levelForXp(999999) === Lv.MAX_LEVEL, 'oltre il cap il livello non sale piu');
+  let cresce = true; for (let L = 3; L <= 20; L++) if (Lv.XP_STEP[L] <= Lv.XP_STEP[L - 1]) cresce = false;
+  assert(cresce, 'ogni livello costa piu del precedente');
+  const pr = Lv.progress(Lv.XP_CUM[7] + 100);
+  assert(pr.level === 7 && pr.frac > 0 && pr.frac < 1, 'il progresso fra due livelli e una frazione sensata');
+  // --- 2) i punti: 23 in una run, 22 per cappare una statistica ---
+  const totPunti = Lv.pointsForLevel(20) + 4 * Lv.POINTS_PER_RANK;
+  assert(totPunti === 23, 'una run intera da 23 punti (19 livelli + 4 ranghi): ' + totPunti);
+  assert(Lv.statPointsTo(12) === 22, 'portare una statistica al tetto ne costa 22');
+  assert(Lv.statPointsTo(12) < totPunti, 'quindi si puo fare, ma consuma quasi tutto');
+  assert(Lv.statPointsTo(12) * 2 > totPunti, 'e due statistiche al tetto sono fuori portata');
+  assert(Lv.statPointCost(0) === 1 && Lv.statPointCost(5) === 2 && Lv.statPointCost(11) === 3, 'il costo cresce a scaglioni');
+  // --- 3) i ranghi cadono ogni 5 livelli, cioe sui boss ---
+  assert(Lv.rankForLevel(1) === 1 && Lv.rankForLevel(4) === 1 && Lv.rankForLevel(5) === 2, 'il rango II arriva al livello 5');
+  assert(Lv.rankForLevel(10) === 3 && Lv.rankForLevel(15) === 4 && Lv.rankForLevel(20) === 5, 'poi 10, 15 e 20');
+  for (const h of ['guerriero', 'mago', 'ladro']) {
+    assert(Lv.cardsFor(h, 2).length === 3 && Lv.cardsFor(h, 3).length === 3 && Lv.cardsFor(h, 4).length === 3, h + ' ha 3 carte per ognuno dei ranghi II-IV');
+    assert(Lv.specsFor(h).length === 2, h + ' ha due specializzazioni fra cui scegliere');
+    assert(Lv.specsFor(h).every(s => s.hero === h && s.name && s.desc && typeof s.apply === 'function'), h + ': le specializzazioni sono complete');
+    for (const r of [2, 3, 4]) for (const c of Lv.cardsFor(h, r)) {
+      assert(c.hero === h && c.name && c.desc && typeof c.apply === 'function', c.id + ' e una carta completa e della sua classe');
+    }
+  }
+  assert(new Set(Object.keys(Lv.CARD_BY_ID)).size === 27, 'in tutto le carte sono 27 (3 classi x 3 ranghi x 3)');
+  // --- 4) a runtime: si sale, si prende un punto, e al rango arriva l'offerta ---
+  const room = new Room('v169'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
+  assert(p.level === 1 && p.points === 0 && p.xpPool === 0, 'si parte al livello 1 senza punti');
+  room.addXp(p, 199); assert(p.level === 1 && p.points === 0, 'sotto soglia non succede niente');
+  room.addXp(p, 1); assert(p.level === 2 && p.points === 1, 'alla soglia si sale e arriva il punto');
+  assert(p.xpPool === 200, 'la XP non si consuma piu: e una barra, non una valuta');
+  room.addXp(p, Lv.XP_CUM[5] - p.xpPool);
+  assert(p.level === 5 && Lv.rankForLevel(p.level) === 2, 'si arriva al rango II');
+  assert(p.points === 5, 'quattro punti dai livelli piu uno dal rango');
+  assert(p.rankOffer && p.rankOffer.length === 3, 'e le tre carte sono in attesa');
+  // saltare piu' livelli in un colpo solo non deve perdere ne punti ne ranghi
+  const r2 = new Room('v169b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'mago'); r2.startGame();
+  r2.addXp(q, Lv.XP_CUM[11]);
+  assert(q.level === 11, 'una botta di XP fa salire di piu livelli in un colpo');
+  assert(q.points === 10 + 2, 'e i punti dei ranghi attraversati ci sono tutti (10 livelli + 2 ranghi)');
+  // --- 5) le carte: solo della tua classe, una volta sola, e fanno effetto ---
+  const carta = Lv.cardsFor('guerriero', 2).find(c => c.id === 'gue_sfondamento');
+  p.rankOffer = ['gue_sfondamento'];
+  room.pickRank('b', 'mag_densa'); assert(!p.cards.length, 'una carta di un altra classe non si prende');
+  room.phase = C.PHASE_SHOP; room.pickRank('b', 'gue_sfondamento');
+  assert(p.cards.includes('gue_sfondamento') && p.perk.sfondamento === 1, 'la carta scelta viene applicata');
+  assert(p.rankOffer === null, 'e l offerta si chiude');
+  p.rankOffer = ['gue_sfondamento']; room.pickRank('b', 'gue_sfondamento');
+  assert(p.cards.filter(x => x === 'gue_sfondamento').length === 1, 'la stessa carta non si prende due volte');
+  // --- 6) il bivio del rango V ---
+  const r3 = new Room('v169c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'ladro'); r3.startGame();
+  r3.addXp(z, Lv.XP_FOR_CAP);
+  assert(z.level === 20 && z.specOffer && z.specOffer.length === 2, 'al livello 20 arriva il bivio, non le carte');
+  assert(!z.rankOffer, 'e le carte di rango non vengono offerte al V');
+  r3.phase = C.PHASE_SHOP;
+  const crit0 = z.stats.critChance;
+  r3.pickRank('d', 'assassino');
+  assert(z.spec === 'assassino' && z.stats.critChance > crit0, 'la specializzazione viene applicata');
+  const snapZ = r3.snapshot().players.find(x => x.i === 'd');
+  assert(snapZ && snapZ.sp === 'assassino' && snapZ.lvl === 20, 'lo snapshot la porta al client (serve a disegnarla)');
+  // --- 7) oltre il cap la XP diventa monete ---
+  const co0 = z.coins, xp0 = z.xpPool;
+  r3.addXp(z, 800);
+  assert(z.level === 20 && z.coins === co0 + Math.floor(800 / Lv.XP_TO_COIN), 'oltre il cap la XP si converte in monete');
+  assert(z.xpPool === xp0 + 800, 'ma continua a essere contata, per le statistiche di fine partita');
+  // --- 8) le statistiche si pagano in PUNTI, e la XP non cala mai ---
+  const r4 = new Room('v169d'); const w = r4.addPlayer('e', { send() {} }, 'E', 'guerriero'); r4.startGame();
+  r4.addXp(w, Lv.XP_CUM[6]); r4.phase = C.PHASE_SHOP;
+  const punti0 = w.points, xpPrima = w.xpPool;
+  r4.buyStat('e', 'st_for');
+  assert(w.buys.st_for === 1 && w.points === punti0 - 1, 'il primo livello di una statistica costa 1 punto');
+  assert(w.xpPool === xpPrima, 'e la XP resta dov era');
+  w.points = 0; const b0 = w.buys.st_for;
+  r4.buyStat('e', 'st_for'); assert(w.buys.st_for === b0, 'senza punti non si compra');
+  // --- 9) a fine ondata la carta di rango PRENDE IL POSTO del boon ---
+  const r5 = new Room('v169e'); const u = r5.addPlayer('f', { send() {} }, 'F', 'mago'); r5.startGame();
+  r5.addXp(u, Lv.XP_CUM[5]);
+  assert(u.rankOffer, 'il rango e in attesa');
+  r5.enterShop();
+  assert(u.boonOffer === null && u.boonPicked === true, 'con una carta in attesa il boon salta il giro');
+  const r6 = new Room('v169f'); const v = r6.addPlayer('g', { send() {} }, 'G', 'mago'); r6.startGame();
+  r6.addXp(v, 250); r6.enterShop();
+  assert(v.boonOffer && v.boonOffer.length, 'senza carte in attesa il boon torna normale');
+  ok('novita v1.69 verificate');
+}
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.69)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

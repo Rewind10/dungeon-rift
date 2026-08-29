@@ -1593,7 +1593,20 @@
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }
-      ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(p.n + (p.dn ? ' (a terra ' + p.dt + 's)' : ''), x, y - r - 32); ctx.textAlign = 'left';
+      // v1.69 — sotto il nome ci sono LIVELLO e RANGO: e' l'unico posto in cui, guardando un compagno,
+      // si capisce a che punto e' della sua progressione.
+      const LV = window.GAME && window.GAME.Levels;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 11px Segoe UI';
+      ctx.fillText(p.n + (p.dn ? ' (a terra ' + p.dt + 's)' : ''), x, y - r - 32);
+      if (LV && p.lvl) {
+        const rk = LV.rankName(p.h, p.lvl, p.sp || null), spec = LV.rankForLevel(p.lvl) >= 5;
+        ctx.font = '10px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
+        ctx.fillText('Lv.' + p.lvl + ' · ' + rk, x, y - r - 44);
+        // barra dell'XP: sottile, sotto quella della vita, e sparisce al cap
+        if ((p.prg || 0) < 1) { const bw2 = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
+      }
+      ctx.textAlign = 'left';
       if (p.dn) { ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 8 + Math.sin(this.time * 6) * 3, 0, 7); ctx.stroke(); }
       if (p.bf) { ctx.fillStyle = 'rgba(255,60,80,.35)'; ctx.beginPath(); ctx.arc(x, y, r + 3, 0, 7); ctx.fill(); }
     },
@@ -1611,10 +1624,68 @@
     _hero(ctx, id, r, t, dashing, atk, eq) {
       const a = Math.max(0, Math.min(1, atk || 0));
       eq = eq || {};
+      // v1.69 — il rango V si vede addosso: e' l'unico che cambia una scelta, quindi e' l'unico che
+      // merita di essere riconoscibile a colpo d'occhio anche dai compagni.
+      if (eq.sp) this._specSotto(ctx, r, t, eq.sp);
       if (id === 'mago') this._heroMago(ctx, r, t, a, eq);
       else if (id === 'ladro') this._heroLadro(ctx, r, t, a, eq);
       else this._heroGuerriero(ctx, r, t, a, eq);
+      if (eq.sp) this._specSopra(ctx, r, t, eq.sp);
       if (dashing) { const h = HERO[id] || HERO.guerriero; ctx.strokeStyle = h.accent || '#9fe0ff'; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+    },
+    // v1.69 — i due strati della specializzazione: cio' che sta SOTTO il personaggio (aure, mantelli
+    // che strisciano a terra) e cio' che sta SOPRA (elmi, bagliori). Disegnarli come strati separati
+    // evita di dover riscrivere i tre eroi per sei varianti.
+    _specSotto(ctx, r, t, sp) {
+      if (sp === 'paladino') {                      // l'aura e' un'informazione di gioco: e' il raggio vero
+        const R = 220 * ((C.VIS_SCALE || 1.45) / 1.45), pu = 0.5 + 0.5 * Math.sin(t * 2);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        // alone tenue SOLO attorno ai piedi: l'informazione utile e' il bordo, non la superficie
+        ctx.globalAlpha = 0.16 + 0.06 * pu;
+        const g = this._grad('sp_pal|' + Math.round(R), () => { const q = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.42); q.addColorStop(0, 'rgba(255,233,168,.5)'); q.addColorStop(1, 'rgba(255,233,168,0)'); return q; });
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 0.42, 0, 7); ctx.fill();
+        // il cerchio del raggio: tratteggiato e sottile, si legge senza coprire il campo di battaglia
+        ctx.globalAlpha = 0.30 + 0.18 * pu; ctx.strokeStyle = 'rgba(255,233,168,.85)'; ctx.lineWidth = 1.6;
+        ctx.setLineDash([10, 9]); ctx.lineDashOffset = -t * 14;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+      } else if (sp === 'stregone') {               // ombra che si allarga sotto i piedi
+        ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#1a0a14';
+        ctx.beginPath(); ctx.ellipse(-r * 0.2, 0, r * 1.5, r * 1.1, 0, 0, 7); ctx.fill(); ctx.restore();
+      }
+    },
+    _specSopra(ctx, r, t, sp) {
+      ctx.save();
+      if (sp === 'paladino') {                      // aureola dorata sopra l'elmo
+        ctx.strokeStyle = 'rgba(255,220,120,.9)'; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.ellipse(r * 0.05, 0, r * 0.62, r * 0.30, 0, 0, 7); ctx.stroke();
+      } else if (sp === 'maestro') {                // cresta rossa e lama di luce sull arco
+        ctx.fillStyle = '#c0332b'; ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-r * 0.1, -r * 0.06); ctx.lineTo(-r * 0.95, -r * 0.02); ctx.lineTo(-r * 0.95, r * 0.02); ctx.lineTo(-r * 0.1, r * 0.06); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,210,122,.55)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.25, -0.95, 0.95); ctx.stroke();
+      } else if (sp === 'arcimago') {               // rune dorate in orbita larga
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 5; i++) { const a = t * 0.9 + i * 1.257; ctx.fillStyle = 'rgba(255,214,120,.75)';
+          ctx.beginPath(); ctx.arc(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.35, r * 0.09, 0, 7); ctx.fill(); }
+      } else if (sp === 'stregone') {               // nucleo rosso al posto dell orbe
+        ctx.globalCompositeOperation = 'lighter';
+        const g = this._grad('sp_str|' + r, () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * 0.62); q.addColorStop(0, 'rgba(255,255,255,.9)'); q.addColorStop(0.3, 'rgba(255,90,122,.85)'); q.addColorStop(1, 'rgba(255,45,107,0)'); return q; });
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * 0.62, 0, 7); ctx.fill();
+      } else if (sp === 'assassino') {              // scia scura e lama alla cintura
+        ctx.globalAlpha = 0.55; ctx.fillStyle = '#120a1e';
+        ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.5); ctx.quadraticCurveTo(-r * 1.7, 0, -r * 0.2, r * 0.5); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1; ctx.lineCap = 'round';
+        ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = r * 0.16; ctx.beginPath(); ctx.moveTo(-r * 0.02, r * 0.6); ctx.lineTo(r * 0.36, r * 0.72); ctx.stroke();
+        ctx.strokeStyle = '#d8d2c8'; ctx.lineWidth = r * 0.08; ctx.beginPath(); ctx.moveTo(-r * 0.02, r * 0.6); ctx.lineTo(r * 0.36, r * 0.72); ctx.stroke();
+        ctx.lineCap = 'butt';
+      } else if (sp === 'cacciatore') {             // seconda faretra e punte accese
+        ctx.strokeStyle = '#9ef0b0'; ctx.lineWidth = 1.8;
+        for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(-r * 0.75, r * (0.1 + k * 0.22)); ctx.lineTo(-r * 1.15, r * (0.02 + k * 0.3)); ctx.stroke(); }
+        ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(158,240,176,.5)';
+        ctx.beginPath(); ctx.arc(-r * 1.18, 0, r * 0.16, 0, 7); ctx.fill();
+      }
+      ctx.restore();
     },
     // ---- MAGO: il mantello e' la sagoma. La massa della stoffa la fa il VALORE, non il contorno: il
     // primo tentativo aveva panno quasi nero e filo ciano tutt'intorno e da sopra leggeva come un anello.

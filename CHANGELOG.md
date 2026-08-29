@@ -2,6 +2,102 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.69.0] — 2026-08-29 · "Guerriero, Guerriero Esperto, Veterano…"
+
+Fino alla 1.68 la XP era una **valuta**: la raccoglievi e la spendevi al negozio di fine ondata. Da questa
+versione la XP e' una **barra**: sale, ti fa salire di livello, e a ogni livello ti da' un punto da spendere.
+E' la differenza fra comprare un potenziamento e diventare qualcosa. Il progetto completo, con le misure da
+cui escono tutti i numeri, sta in **`PROGRESSIONE.md`**.
+
+#### 🎚️ Venti livelli, uno per ondata
+Il cap e' **20** perche' la run finisce all'ondata 20: la crescita del personaggio e quella del dungeon sono
+la stessa curva, e non ci si ferma mai a "livellare". La curva (`107 · L^1,54`) e' tarata sull'XP **misurata**:
+il cap chiede **10.670 XP** contro gli ~11.000 che rende una run intera. Chi arriva in fondo arriva al cap;
+chi gioca bene, con le combo, ci arriva due o tre ondate prima.
+
+Misurato dopo il cambio, con un giocatore tenuto in vita per misurare l'ondata e non il bot:
+
+| | livello 5 | livello 10 | livello 15 | livello 20 |
+|---|---|---|---|---|
+| Guerriero | ondata 5 | ondata 9 | ondata 14 | ondata 18 |
+| Ladro | ondata 5 | ondata 9 | ondata 14 | ondata 15 |
+
+**Oltre il cap** la XP si converte in monete (8 XP = 1 moneta): le uccisioni dell'ultima ondata continuano a
+valere qualcosa, e finiscono nell'unica cosa che a quel punto serve ancora, l'equipaggiamento.
+
+#### ★ Cinque ranghi, uno ogni cinque livelli
+Cadono **sui boss**, cosi' il rango arriva sempre in un momento che il giocatore ricorda.
+
+| Rango | Liv. | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
+|---|---:|---|---|---|
+| I | 1 | Guerriero | Apprendista | Ladro |
+| II | 5 | Guerriero Esperto | Mago Giovane | Furfante |
+| III | 10 | Veterano | Mago | Predone |
+| IV | 15 | Campione | Mago Anziano | Ombra |
+| V | 20 | **Paladino** / **Maestro d'Armi** | **Arcimago** / **Stregone** | **Assassino** / **Cacciatore di Teste** |
+
+Ogni rango da' **un punto in piu'** e **una carta a scelta fra tre** — potenziamenti *di classe*, non
+generici: e' la differenza con i boon, che restano quelli di sempre. Sono **27 carte** in tutto (3 classi ×
+3 ranghi × 3), tutte implementate: Parata, Sfondamento, Colpo Rotante, Sprone, Esecuzione, Muro, Furia
+Crescente per il guerriero; Bolla Densa, Eco Arcana, Frattura, Scudo di Mana, Runa Vagante, Detonazione,
+Passo del Vuoto, Convergenza per il mago; Doppia Cocca, Passo Felpato, Punta Avvelenata, Tiro Rapido,
+Frecce Pesanti, Ombra, Colpo alle Spalle, Pioggia, Elusione per il ladro.
+
+Le combinazioni per classe sono 3 × 3 × 3 × 2 = **54**: due run non si somigliano.
+
+#### ⚔️ Il bivio del rango V
+Al livello 20 non arrivano tre carte ma **due strade**, e non sono lo stesso personaggio piu' forte. In ogni
+coppia una rende **subito** e una rende **di piu' ma chiede qualcosa** — una squadra, un bersaglio grosso,
+il posizionamento:
+
+- **Paladino** (aura che cura i compagni e taglia il 18% dei danni, a te e a loro) / **Maestro d'Armi**
+  (+35% cadenza del fendente, +20% apertura dell'arco, rinculo ×1,5)
+- **Arcimago** (ogni bolla esplode) / **Stregone** (la bolla rimbalza su 3 nemici a danno pieno)
+- **Assassino** (critico al 35%, ×3, colpi alle spalle sempre critici) / **Cacciatore di Teste** (ogni tiro
+  e' un ventaglio di 3 frecce che perforano 3 nemici)
+
+**E' l'unico rango che si vede addosso**: cerchio dell'aura del Paladino (tratteggiato, col raggio vero),
+cresta rossa e lama di luce del Maestro d'Armi, rune dorate dell'Arcimago, nucleo rosso dello Stregone,
+scia scura e pugnale dell'Assassino, seconda faretra del Cacciatore. I primi quattro ranghi cambiano solo il
+nome sotto la barra della vita: il lavoro grafico va dove c'e' una scelta da riconoscere.
+
+#### 💠 I punti: 23 in una run, 22 per una statistica al tetto
+Un punto per livello (19) piu' uno per rango (4). Il costo di una statistica cresce a scaglioni — **1 punto**
+fino al 4° livello, **2** fino al 10°, **3** per gli ultimi due — quindi portarne una al tetto costa **22
+punti su 23**. E' la regola della v1.66 ("con l'XP di una run si cappa una sola statistica") tradotta da
+valuta a punti, e questa volta si legge a colpo d'occhio invece di stare nascosta in una tabella di costi a
+sei cifre. Le tre strade che 23 punti permettono davvero: una statistica a 12; una a 8 e una a 7; tre a 5 e
+una a 4.
+
+Il pannello di fine ondata non dice piu' "hai 4.435 XP" ma **"Livello 7 · Veterano — hai 3 punti"**.
+
+#### 🃏 Una scelta alla volta
+Se c'e' una carta di rango in attesa, il **boon salta quel giro**. Siccome i ranghi cadono sui boss, in
+pratica alle ondate 5/10/15/20 si sceglie la carta di classe e nelle altre il boon generico: mai due mazzi
+aperti nello stesso istante.
+
+#### 🐛 Il tetto dei nemici era ancora un auspicio
+Cercando altro e' saltata fuori una falla della v1.68: il tetto dei vivi contava `monsters.length`, che
+comprende i **morti non ancora filtrati**, e soprattutto la **scissione** della Melma controllava solo che
+ci fosse *un* posto libero prima di generarne *due*. Con 29 in campo si finiva a 31. Ora tutte le porte
+(ondata, evocazioni, scissione, mimic delle casse) passano da `_postiLiberi()`, che conta i vivi e dice
+quanti ne stanno ancora: "mai piu' di 30" e' tornata una promessa.
+
+#### 🧪 Test
+- **710 passati, 0 falliti** (+76), piu' 48 controlli sull'interfaccia.
+- Il test dei livelli verifica la curva, i punti (23 in una run, 22 per il tetto), i ranghi che cadono ogni
+  5 livelli, le 27 carte complete e della loro classe, e i casi cattivi: una carta di un'altra classe non si
+  prende, la stessa carta non si prende due volte, saltare piu' livelli in un colpo non perde ne' punti ne'
+  ranghi, al rango V arriva il bivio e non le carte.
+- Bilanciamento rimisurato: ondata media 3/4/4 per guerriero/mago/ladro, **identica alla v1.68**. Il
+  passaggio da negozio-a-XP a punti non ha reso il gioco ne' piu' facile ne' piu' difficile.
+
+#### ➖ Cosa NON c'e' ancora
+Le **abilita' attive** delle specializzazioni (Giuramento, Turbine, Meteora, Catena Nera, Marchio, Salva)
+sono descritte nel pannello ma non ancora giocabili: arrivano con la barra delle abilita', insieme al
+ritorno dei tasti Q/E. Di ogni specializzazione e' implementato il **passivo**, che e' la parte che cambia
+davvero come si combatte.
+
 ### [1.68.0] — 2026-08-28 · "Trenta in campo, il resto in coda"
 
 Prima di toccare qualsiasi cosa ho **profilato server e client separatamente**, come nella 1.64, per non

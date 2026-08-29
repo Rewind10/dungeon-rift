@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>DUNGEON RIFT v1.68.0 — Roguelike Co-op</title>
+<title>DUNGEON RIFT v1.69.0 — Roguelike Co-op</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -51,7 +51,7 @@
 </div>
 <div id="menu">
   <div class="menu-card">
-    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.68.0</small></h1>
+    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.69.0</small></h1>
     <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori</p>
     <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
     <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
@@ -86,6 +86,11 @@
 </div>
 <div id="upgradeScreen" class="hidden">
   <div class="upgrade-inner">
+    <div id="rankSection" class="hidden">
+      <h2 id="rankTitle">RANGO</h2>
+      <div class="rank-sub" id="rankSub"></div>
+      <div id="rankCards"></div>
+    </div>
     <div id="boonSection" class="hidden">
       <h2>🎴 SCEGLI UN POTERE</h2>
       <div id="boonCards"></div>
@@ -95,8 +100,8 @@
       <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
       <div id="gearCards"></div>
     </div>
-    <h2>NEGOZIO — spendi la tua esperienza</h2>
-    <div class="shop-xp">Hai <b id="shopXp">0</b> ✦ XP disponibile</div>
+    <h2>PUNTI — dove metti quello che hai imparato</h2>
+    <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
     <div id="upgradeCards"></div>
     <p class="shop-hint">Scegli <b>1 potere fra 3</b>, poi investi la XP: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Poi scegli dove andare: <b>avanti</b> con l'ondata successiva, oppure dal <b>fabbro</b> a potenziare l'equipaggiamento con le monete. <b>Spazio</b> = prossima ondata.</p>
     <div id="shopActions">
@@ -128,6 +133,7 @@
 <script src="/shared/heroes.js"></script>
 <script src="/shared/loot.js"></script>
 <script src="/shared/gear.js"></script>
+<script src="/shared/levels.js"></script>
 <script src="/js/audio.js"></script>
 <script src="/js/net.js"></script>
 <script src="/js/input.js"></script>

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.68.0`
+**Versione attuale:** `1.69.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -522,6 +522,41 @@ ufficiale, altrimenti l'ufficiale. **Mai entrambi insieme.**
 A fine ondata il gioco va in **pausa**: durante la scelta dei poteri, il negozio a XP e l'emporio a monete il mondo
 è **congelato**. In singolo giocatore si riparte **solo** col tasto **Continua** (in multiplayer c'è un timeout
 anti-AFK). I drop rimasti a terra (XP e monete) vengono **raccolti automaticamente**.
+
+## 🎚️ Livelli, ranghi e punti *(v1.69)*
+
+La XP non e' piu' una valuta da spendere ma una **barra che sale**. Il progetto completo — la curva, tutte le
+carte, i sei rami finali e i numeri da cui escono — sta in **`PROGRESSIONE.md`**.
+
+| | Regola |
+|---|---|
+| **Cap** | Livello **20** — uno per ondata, perche' la run finisce all'ondata 20 |
+| **XP per il cap** | **10.670**, contro gli ~11.000 che rende una run intera |
+| **Ranghi** | **5**, uno ogni 5 livelli, cioe' **su ogni boss** |
+| **Punti** | 1 per livello + 1 per rango = **23 in una run** |
+| **Statistica al tetto** | **22 punti su 23** — o ti specializzi, o ti distribuisci |
+| **Oltre il cap** | la XP diventa monete (8 XP = 1 moneta) |
+
+**I cinque ranghi**
+
+| Rango | Liv. | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
+|---|---:|---|---|---|
+| I | 1 | Guerriero | Apprendista | Ladro |
+| II | 5 | Guerriero Esperto | Mago Giovane | Furfante |
+| III | 10 | Veterano | Mago | Predone |
+| IV | 15 | Campione | Mago Anziano | Ombra |
+| V | 20 | **Paladino** / **Maestro d'Armi** | **Arcimago** / **Stregone** | **Assassino** / **Cacciatore di Teste** |
+
+Ai ranghi II, III e IV si sceglie **1 carta su 3** (27 in tutto, tutte di classe); al rango V c'e' il
+**bivio** fra due specializzazioni, che e' anche l'unico rango che **si vede addosso al personaggio**.
+
+**I punti** si spendono sulle quattro statistiche, con costo a scaglioni: 1 punto fino al 4° livello, 2 fino
+al 10°, 3 per gli ultimi due. Le tre strade che 23 punti permettono davvero sono una statistica a 12, una a
+8 piu' una a 7, oppure tre a 5 e una a 4 — tutte da 22 punti, quindi scelte vere e non una la versione
+peggiore dell'altra.
+
+**Una scelta alla volta:** se c'e' una carta di rango in attesa, il boon salta quel giro. In pratica alle
+ondate di boss si sceglie la carta di classe e nelle altre il boon generico.
 
 ## 🔨 Il fabbro e l'equipaggiamento *(rifatto in v1.67)*
 

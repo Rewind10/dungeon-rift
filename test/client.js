@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'mapgen']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -118,6 +118,41 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(Net._reidrata(room.snapshot(true)).mon.find(m => m.e === vivo.eid).fl === 1, 'un flag acceso arriva');
   vivo.hitFlash = 0;
   ok(Net._reidrata(room.snapshot(true)).mon.find(m => m.e === vivo.eid).fl === 0, 'e quando si spegne torna 0, non resta acceso');
+}
+
+
+// 5) v1.69 — pannello del RANGO: carte di classe ai ranghi II-IV, bivio al V
+{
+  const LV = window.GAME.Levels;
+  let scelto = null;
+  HUD.setRank({ spec: 0, rank: 2, title: 'GUERRIERO ESPERTO',
+    cards: LV.cardsFor('guerriero', 2).map(c => ({ id: c.id, name: c.name, icon: c.icon, desc: c.desc })) }, (id) => { scelto = id; });
+  const rsec = document.getElementById('rankSection'), rrow = document.getElementById('rankCards');
+  ok(!rsec.classList.contains('hidden'), 'la sezione del rango compare quando c e una carta da scegliere');
+  ok(rrow.children.length === 3, 'ai ranghi II-IV le carte sono tre');
+  ok(document.getElementById('rankTitle').textContent === 'GUERRIERO ESPERTO', 'il titolo e il nome del rango raggiunto');
+  ok(rrow.children[0].innerHTML.includes('CARTA DI RANGO'), 'le carte sono marcate come carte di rango');
+  rrow.children[1].onclick();
+  ok(scelto === LV.cardsFor('guerriero', 2)[1].id, 'il clic manda l id della carta');
+  HUD.setRank({ spec: 0, rank: 2, title: 'x', cards: [], picked: true }, () => {});
+  ok(document.getElementById('rankSection').classList.contains('hidden'), 'scelta la carta, la sezione sparisce');
+  // il bivio del rango V: due carte, piu grandi, con l abilita in fondo
+  HUD.setRank({ spec: 1, rank: 5, title: 'SCEGLI LA TUA STRADA',
+    cards: LV.specsFor('mago').map(s => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, abilita: s.abilita })) }, () => {});
+  const rrow2 = document.getElementById('rankCards');
+  ok(rrow2.children.length === 2, 'al rango V le strade sono due');
+  ok(rrow2.className === 'spec', 'e il pannello usa la disposizione a due colonne');
+  ok(rrow2.children[0].innerHTML.includes('SPECIALIZZAZIONE'), 'sono marcate come specializzazione');
+  ok(rrow2.children[0].innerHTML.includes('Meteora') || rrow2.children[1].innerHTML.includes('Meteora'), 'e mostrano anche l abilita che arrivera');
+  // il negozio parla di PUNTI, non piu di XP
+  HUD.setStats({ points: 3, level: 7, rankName: 'Veterano', xp: 2500,
+    stats: L.XP_STATS.map((s, i) => ({ id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, lvl: i, max: 12, maxed: false, cost: i < 4 ? 1 : 2 })) }, () => {}, () => {});
+  ok(String(document.getElementById('shopXp').textContent) === '3', 'la cifra grande sono i punti, non la XP');
+  ok(String(document.getElementById('shopLevel').textContent) === '7', 'accanto c e il livello');
+  ok(document.getElementById('shopRank').textContent === 'Veterano', 'e il nome del rango');
+  const uc = document.getElementById('upgradeCards').children;
+  ok(uc[0].innerHTML.includes('1 punto') && !uc[0].innerHTML.includes('XP'), 'il prezzo e in punti e non nomina piu la XP');
+  ok(uc[3].className.includes('disabled') === false, 'con 3 punti una statistica da 2 resta acquistabile');
 }
 
 // ============================================================================================

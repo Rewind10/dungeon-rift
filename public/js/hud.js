@@ -70,6 +70,33 @@
     // NEGOZIO (statistiche XP) + BOON
     showShop() { $('upgradeScreen').classList.remove('hidden'); this._render(); },
     setStats(data, onBuy, onReady) { this._stats = data; this._buy = onBuy; this._ready = onReady; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    // v1.69 — CARTE DI RANGO. Stesso pannello dei boon, mazzo diverso: qui si sceglie cio' che rende
+    // la classe *tua*, non un potenziamento generico. Al rango V le carte sono due e piu' grandi:
+    // e' un bivio, non una scelta fra tre pari.
+    setRank(data, onPick) { this._rank = data; this._pickRank = onPick; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    _renderRank() {
+      const sec = $('rankSection'), row = $('rankCards');
+      if (!sec || !row) return;
+      const d = this._rank;
+      if (!d || !d.cards || !d.cards.length || d.picked) { sec.classList.add('hidden'); row.innerHTML = ''; return; }
+      sec.classList.remove('hidden');
+      $('rankTitle').textContent = (d.spec ? '★ ' : '') + (d.title || 'RANGO');
+      $('rankSub').textContent = d.spec
+        ? 'La scelta vale per questa partita e si vede addosso al tuo personaggio'
+        : 'Rango ' + ['I', 'II', 'III', 'IV', 'V'][(d.rank || 1) - 1] + ' — scegli una carta, resta per tutta la partita';
+      row.className = d.spec ? 'spec' : '';
+      row.innerHTML = '';
+      d.cards.forEach(c => {
+        const el = document.createElement('div'); el.className = 'bc';
+        el.style.borderColor = c.color || '#c8a23a';
+        el.innerHTML = '<span class="rar">' + (d.spec ? 'SPECIALIZZAZIONE' : 'CARTA DI RANGO') + '</span>'
+          + '<div class="icon">' + (c.icon || '★') + '</div><div class="nm">' + esc(c.name) + '</div>'
+          + '<div class="ds">' + esc(c.desc) + '</div>'
+          + (c.abilita ? '<div class="ab">' + esc(c.abilita) + '</div>' : '');
+        el.onclick = () => { if (this._pickRank) this._pickRank(c.id); this._rank.picked = true; this._render(); };
+        row.appendChild(el);
+      });
+    },
     setBoons(data, onPick) { this._boons = data; this._pick = onPick; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     // v1.67 — il pannello del fabbro non mostra piu' tre barre da riempire ma il CATALOGO della classe,
     // una riga per slot. Ogni carta e' un oggetto con un nome: quello indosso e' marcato IN USO, gli altri
@@ -108,6 +135,7 @@
     },
     setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     _render() {
+      this._renderRank();
       // BOON row (top)
       const brow = $('boonCards'); brow.innerHTML = '';
       if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
@@ -125,15 +153,20 @@
       // v1.51 — le statistiche hanno un TETTO di livello e costi molto piu' ripidi: la carta mostra Lv.x/max
       // e diventa MAX quando e' esaurita, cosi' si vede a colpo d'occhio dove hai gia' investito.
       if (this._stats) {
-        $('shopXp').textContent = this._stats.xp;
+        // v1.69 — la cifra grande non e' piu' l'XP ma i PUNTI, e accanto ci sono livello e rango: e' li'
+        // che il giocatore capisce a che punto e' della sua storia, non nel totale di esperienza raccolta.
+        $('shopXp').textContent = this._stats.points != null ? this._stats.points : this._stats.xp;
+        const sl = $('shopLevel'); if (sl) sl.textContent = this._stats.level || 1;
+        const sr = $('shopRank'); if (sr) sr.textContent = this._stats.rankName || '';
         const cont = $('upgradeCards'); cont.innerHTML = '';
         this._stats.stats.forEach(s => {
-          const maxed = !!s.maxed, afford = !maxed && this._stats.xp >= s.cost;
+          const punti = this._stats.points != null ? this._stats.points : this._stats.xp;
+          const maxed = !!s.maxed, afford = !maxed && punti >= s.cost;
           const el = document.createElement('div');
           el.className = 'uc' + (maxed ? ' maxed' : (afford ? '' : ' disabled'));
           el.style.borderColor = s.color;
           const lvlTxt = s.max ? 'Lv.' + s.lvl + '/' + s.max : 'Lv.' + s.lvl;
-          const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">✦ ${s.cost} XP</div>`;
+          const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">◆ ${s.cost} ${s.cost === 1 ? 'punto' : 'punti'}</div>`;
           el.innerHTML = `<span class="rar" style="color:${s.color}">${lvlTxt}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div>${foot}`;
           el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
           cont.appendChild(el);
@@ -156,7 +189,7 @@
       }).join('');
     },
     onBoonPicked() { if (this._boons) { this._boons.picked = true; this._render(); } },
-    hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; },
+    hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; this._rank = null; },
     // v1.11 — pannello NPC mercante (compare quando sei vicino)
     showMerchant(wares, onBuy, coins, dark) { this._merchBuy = onBuy; this._merchWares = wares || this._merchWares; this._merchDark = !!dark; const panel = $('merchantPanel'); if (!panel || !this._merchWares) return; panel.classList.remove('hidden'); panel.classList.toggle('dark', !!dark); const hd = $('merchHead'); if (hd) hd.innerHTML = dark ? '\uD83D\uDC80 <b>Mercante Nero</b> \u2014 patti a caro prezzo \u00b7 hai <b id="merchCoins">' + (coins != null ? coins : (this._coins||0)) + '</b> \uD83E\uDE99' : '\uD83E\uDDD9 <b>Mercante Errante</b> \u2014 hai <b id="merchCoins">' + (coins != null ? coins : (this._coins||0)) + '</b> \uD83E\uDE99'; if (coins != null) this._coins = coins; this._renderMerchant(); },
     updateMerchantCoins(coins, dark) { if (coins != null) this._coins = coins; this._renderMerchant(); },
