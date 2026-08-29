@@ -17,11 +17,47 @@
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
     setHero(h) { this.send({ t: 'sethero', hero: h }); },
     chat(text) { this.send({ t: C.MSG.CHAT, text }); },
+    // v1.68 — SNAPSHOT MAGRO: il server manda la parte immutabile di mostri e giocatori (tipo, PV massimi,
+    // nome, eroe, flag elite/boss/tesoro) SOLO nel primo snapshot in cui l'entita' compare, e omette del
+    // tutto i flag che valgono 0. Qui la si rimette a posto, cosi' il resto del client continua a vedere
+    // record completi e non sa nulla di questa compressione.
+    // La cache si svuota da sola: cio' che non e' nell'ultimo snapshot e' morto o sparito.
+    _statMon: new Map(), _statPla: new Map(),
+    _reidrata(s) {
+      const M = this._statMon, P = this._statPla;
+      if (Array.isArray(s.mon)) {
+        const vivi = new Set();
+        for (const m of s.mon) {
+          vivi.add(m.e);
+          if (m.t !== undefined) M.set(m.e, { t: m.t, mhp: m.mhp, el: m.el || 0, b: m.b || 0, mg: m.mg || 0, tr: m.tr || 0 });
+          const st = M.get(m.e);
+          if (st) { m.t = st.t; m.mhp = st.mhp; m.el = st.el; m.b = st.b; m.mg = st.mg; m.tr = st.tr; }
+          m.fl = m.fl || 0; m.sh = m.sh || 0; m.ps = m.ps || 0; m.al = m.al || 0;
+        }
+        if (M.size > vivi.size) for (const k of [...M.keys()]) if (!vivi.has(k)) M.delete(k);
+      }
+      if (Array.isArray(s.players)) {
+        const vivi = new Set();
+        for (const p of s.players) {
+          vivi.add(p.i);
+          if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h });
+          const st = P.get(p.i);
+          if (st) { p.n = st.n; p.h = st.h; }
+          p.d = p.d || 0; p.dn = p.dn || 0; p.dt = p.dt || 0; p.bf = p.bf || 0; p.bar = p.bar || 0;
+          p.dash = p.dash || 0; p.ph = p.ph || 0; p.iv = p.iv || 0; p.cu = p.cu || 0;
+          p.tb = p.tb || []; p.w2 = p.w2 || null; p.w2l = p.w2l || 0; p.evo = p.evo || 0;
+          p.cmb = p.cmb || 0; p.cmt = p.cmt || 0; p.eg = p.eg || 0;
+          p.nm = p.nm || 0; p.nmd = p.nmd || 0; p.ng = p.ng || 0; p.gz = p.gz || 0;
+        }
+        if (P.size > vivi.size) for (const k of [...P.keys()]) if (!vivi.has(k)) P.delete(k);
+      }
+      return s;
+    },
     _ping() { setInterval(() => this.send({ t: C.MSG.PING, ts: performance.now() }), 2000); },
     _recv(data) { let m; try { m = JSON.parse(data); } catch (_) { return; } switch (m.t) {
       case C.MSG.WELCOME: this.id = m.id; this.room = m.room; this.connected = true; if (this.onWelcome) this.onWelcome(m); break;
       case C.MSG.MAP: if (this.onMap) this.onMap(m); break;
-      case C.MSG.SNAPSHOT: m._recv = performance.now(); this.snaps.push(m); while (this.snaps.length > this.maxSnaps + 1) this.snaps.shift(); if (this.onSnapshot) this.onSnapshot(m); break;
+      case C.MSG.SNAPSHOT: this._reidrata(m); m._recv = performance.now(); this.snaps.push(m); while (this.snaps.length > this.maxSnaps + 1) this.snaps.shift(); if (this.onSnapshot) this.onSnapshot(m); break;
       case C.MSG.EVENT: if (this.onEvent) this.onEvent(m.ev); break;
       case C.MSG.OFFER_SHOP: if (this.onOfferShop) this.onOfferShop(m); break;
       case C.MSG.OFFER_BOON: if (this.onOfferBoon) this.onOfferBoon(m); break;

@@ -43,5 +43,23 @@ attach(server, (conn) => {
 });
 const TICK = 1000 / C.TICK_RATE, SNAP = 1000 / C.SNAPSHOT_RATE; let last = Date.now();
 setInterval(() => { const now = Date.now(); let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; for (const r of rooms.values()) { if (!r.anyConnected) continue; r.update(dt); } }, TICK);
-setInterval(() => { for (const r of rooms.values()) { if (!r.anyConnected) continue; const s = JSON.stringify(r.snapshot()); for (const p of r.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} } }, SNAP);
+// v1.68 — lo snapshot continuo e' MAGRO (la parte immutabile dei mostri viaggia una volta sola). Chi entra
+// adesso non ha ancora nessuna cache, quindi riceve uno snapshot PIENO: una sola serializzazione in piu',
+// e solo nel tick in cui qualcuno si collega.
+setInterval(() => {
+  for (const r of rooms.values()) {
+    if (!r.anyConnected) continue;
+    const magro = JSON.stringify(r.snapshot(true)); let pieno = null;
+    for (const p of r.players.values()) {
+      if (!p.conn) continue;
+      try {
+        // NB: snapshot() svuota la coda degli eventi, e la svuota il PRIMO che la chiama — cioe' quello
+        // magro, che va a tutti. Chi riceve il pieno in questo tick vede quindi ev vuoto: e' appena entrato,
+        // e gli eventi di quel singolo tick sono scintille e righe di killfeed, non stato di gioco.
+        if (p._needFull) { pieno = pieno || JSON.stringify(r.snapshot()); p.conn.send(pieno); p._needFull = false; }
+        else p.conn.send(magro);
+      } catch (_) {}
+    }
+  }
+}, SNAP);
 server.listen(PORT, () => { console.log('=================================================='); console.log('  ⚔️  DUNGEON RIFT — http://localhost:' + PORT); console.log('=================================================='); });

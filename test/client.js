@@ -71,6 +71,55 @@ HUD.hideGear();
 HUD.showGear(gearPayload('mago', 1000, G.startingGear('mago')), () => {});
 ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede due soli slot: niente scudo, niente calzature');
 
+
+// 4) v1.68 — SNAPSHOT MAGRO: il giro completo server → rete → client.
+// E' il controllo che conta davvero su questa modifica: se la ricostruzione lato client perde un campo,
+// in partita si vedrebbero mostri senza tipo o barre della vita sbagliate, e nessun test del server
+// se ne accorgerebbe. Qui si prende una stanza VERA, le si chiede la sequenza di snapshot magri che
+// manderebbe in rete, li si passa a Net._reidrata e si confronta record per record con lo snapshot PIENO
+// dello stesso identico istante.
+{
+  const { Room } = require(ROOT + 'server/Room.js');
+  const Waves = require(ROOT + 'shared/waves.js');
+  new Function('window', 'performance', 'WebSocket', 'location', 'setInterval',
+    fs.readFileSync(ROOT + 'public/js/net.js', 'utf8'))(window, { now: () => 0 }, function () {}, { protocol: 'http:', host: 'x' }, () => {});
+  const Net = window.Net;
+  const room = new Room('rete'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
+  room.startGame(); room.phase = C.MSG ? 'combat' : 'combat'; room.wave = 9;
+  for (let i = 0; i < 12; i++) { const q = room.randomSpawnPos(); room.spawnMonster(i % 3 === 0 ? 'darkmage' : 'skeleton', q.x, q.y, { scaling: Waves.scaling(9, 1) }); }
+  const confronta = (etichetta) => {
+    const pieno = room.snapshot();                       // la verita'
+    const magro = Net._reidrata(room.snapshot(true));    // cio' che il client ricostruisce
+    let differenze = [];
+    for (const atteso of pieno.mon) {
+      const avuto = magro.mon.find(m => m.e === atteso.e);
+      if (!avuto) { differenze.push('mostro ' + atteso.e + ' mancante'); continue; }
+      for (const k of Object.keys(atteso)) if (JSON.stringify(atteso[k]) !== JSON.stringify(avuto[k])) differenze.push('mostro ' + atteso.e + '.' + k + ': ' + atteso[k] + ' != ' + avuto[k]);
+    }
+    for (const atteso of pieno.players) {
+      const avuto = magro.players.find(x => x.i === atteso.i);
+      if (!avuto) { differenze.push('giocatore ' + atteso.i + ' mancante'); continue; }
+      for (const k of Object.keys(atteso)) if (JSON.stringify(atteso[k]) !== JSON.stringify(avuto[k])) differenze.push('giocatore ' + atteso.i + '.' + k + ': ' + atteso[k] + ' != ' + avuto[k]);
+    }
+    ok(differenze.length === 0, etichetta + (differenze.length ? ' → ' + differenze.slice(0, 3).join(' · ') : ''));
+  };
+  confronta('primo snapshot: il client ricostruisce tutto');
+  for (let i = 0; i < 20; i++) room.update(1 / C.TICK_RATE);
+  confronta('dopo 20 tick: la parte immutabile e ancora quella giusta');
+  // un mostro nuovo entra in scena
+  const q = room.randomSpawnPos(); room.spawnMonster('occhio', q.x, q.y, { scaling: Waves.scaling(9, 1) });
+  confronta('un mostro comparso dopo viene ricostruito');
+  // un mostro muore: la cache non deve trattenerlo
+  const vittima = room.monsters[0]; room.killMonster(vittima, null); room.monsters = room.monsters.filter(m => !m.dead);
+  Net._reidrata(room.snapshot(true));
+  ok(!Net._statMon.has(vittima.eid), 'la cache lascia andare i mostri morti');
+  // i flag transitori NON devono restare accesi da un frame all'altro
+  const vivo = room.monsters[0]; vivo.hitFlash = 0.1;
+  ok(Net._reidrata(room.snapshot(true)).mon.find(m => m.e === vivo.eid).fl === 1, 'un flag acceso arriva');
+  vivo.hitFlash = 0;
+  ok(Net._reidrata(room.snapshot(true)).mon.find(m => m.e === vivo.eid).fl === 0, 'e quando si spegne torna 0, non resta acceso');
+}
+
 // ============================================================================================
 // v1.64 — GUARDIA DI PRESTAZIONE SUL RENDERER
 // Il gioco singhiozzava con molti nemici. Profilato: il frame MEDIANO stava bene (6,5ms) ma il

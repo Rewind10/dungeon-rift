@@ -85,7 +85,7 @@ class Room {
         schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } },
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
-    this._recomputeGear(p); this.players.set(pid, p); return p;
+    this._recomputeGear(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
   setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; }
@@ -104,7 +104,7 @@ class Room {
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
-    this.spawnTimer = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
+    this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
   }
   spawnTreasure() { const pos = this.randomSpawnPos(); const m = this.spawnMonster('mimic', pos.x, pos.y, { scaling: this.waveScaling }); m.treasure = true; m.awake = true; m.maxHp = Math.round(m.maxHp * 2.4); m.hp = m.maxHp; m.speed = 210; m.escapeT = 26; this.treasure = m; this.events.push({ t: 'treasure_spawn', x: m.x, y: m.y }); }
   randomSpawnPos() { const sp = this.map.enemySpawns; if (sp && sp.length) { const c = sp[(Math.random() * sp.length) | 0]; return { x: c.x * C.TILE + C.TILE / 2, y: c.y * C.TILE + C.TILE / 2 }; } return { x: this.map.spawn.x, y: this.map.spawn.y }; }
@@ -161,9 +161,9 @@ class Room {
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
       isWallAt: (x, y) => self.isWallAt(x, y),
       shoot(m, dx, dy, spd, dmg, color) { self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: dx * spd, vy: dy * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); },
-      summon(id, x, y) { if (self.monsters.length >= (C.MAX_ALIVE || 50)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
+      summon(id, x, y) { if (self.monsters.length >= (C.MAX_ALIVE || 30)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
       // v1.39 — evocazione OWNED (con proprietario) per il tetto di minion del Negromante
-      summonMinion(id, x, y, owner) { if (self.monsters.length >= (C.MAX_ALIVE || 50)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
+      summonMinion(id, x, y, owner) { if (self.monsters.length >= (C.MAX_ALIVE || 30)) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
       countMinions(owner) { let c = 0; for (const mm of self.monsters) { if (!mm.dead && mm.owner === owner) c++; } return c; },
       melee(m, p, dmg, kn) { self.damagePlayer(p, dmg, m.x, m.y, kn || 1); if (p.boon && p.boon.thorns > 0 && !m.dead) self.damageMonster(m, p.boon.thorns, p.x, p.y, 0, p); },
       areaDamage(x, y, r, dmg, color, kn) { self.events.push({ t: 'area', x, y, r, c: color }); for (const p of self.alivePlayers) if (MU.dist(x, y, p.x, p.y) <= r + p.radius) self.damagePlayer(p, dmg, x, y, kn || 1); },
@@ -543,7 +543,7 @@ class Room {
     // v1.58 — DIVISIONE: la Melma alla morte lascia due melme minori (che non si dividono a loro volta).
     // v1.64 — anche la divisione rispetta il tetto: e' l'unico modo perche' "mai piu' di N in campo" sia
     // una promessa vera e non un auspicio. Il mostro che si divide libera comunque il proprio posto.
-    if (m.def.splitInto && !m.minion && !m.treasure && this.monsters.length < (C.MAX_ALIVE || 50)) {
+    if (m.def.splitInto && !m.minion && !m.treasure && this.monsters.length < (C.MAX_ALIVE || 30)) {
       const n = m.def.splitCount || 2;
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + Math.random(), r = 16 + Math.random() * 14;
@@ -680,7 +680,13 @@ class Room {
     const inCombat = (this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS);
     // MODALITÀ sopravvivenza: timer + respawn continuo
     if (inCombat && this.surviveT > 0) { this.surviveT -= dt; }
-    if (inCombat && this.pending > 0 && this.monsters.length < (C.MAX_ALIVE || 50)) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
+    // v1.68 — il tetto dei vivi e' sceso da 50 a 30 e i nemici in eccesso restano in CODA: l'ondata non
+    // perde nessuno, cambia solo quanti se ne vedono insieme. Perche' il tetto non si trasformi in
+    // un'ondata piu' lenta, il rifornimento ha due velocita': mentre l'arena si riempie per la prima volta
+    // resta il ritmo di sempre (0,25-0,6s, e' la salita che da' il senso di ondata che monta), ma quando
+    // e' gia' stata piena e si sono aperti dei buchi il rimpiazzo e' quasi immediato (0,10-0,22s).
+    if (inCombat && this.monsters.length > (this._peakAlive || 0)) this._peakAlive = this.monsters.length;
+    if (inCombat && this.pending > 0 && this.monsters.length < (C.MAX_ALIVE || 30)) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this.monsters.length < 14) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
@@ -860,15 +866,65 @@ class Room {
   updateMeteors(dt) { for (const mt of this.meteors) { mt.t -= dt; if (mt.t <= 0 && !mt.done) { mt.done = true; this.events.push({ t: 'explosion', x: mt.x, y: mt.y, r: mt.r }); for (const p of this.alivePlayers) if (MU.dist(mt.x, mt.y, p.x, p.y) <= mt.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, mt.dmg, mt.x, mt.y, 2); } } this.meteors = this.meteors.filter(m => !m.done); }
   updateZones(dt) { for (const z of this.zones) { if (z.done) continue; z.t -= dt; if (z.t <= 0) { z.done = true; this.events.push({ t: 'zone_hit', x: z.x, y: z.y, r: z.r, c: z.col }); for (const p of this.alivePlayers) if (MU.dist(z.x, z.y, p.x, p.y) <= z.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, z.dmg, z.x, z.y, 2.4); } } if (this.zones.some(z => z.done)) this.zones = this.zones.filter(z => !z.done); }
 
-  snapshot() {
+  // v1.68 — SNAPSHOT MAGRO. I mostri erano il 90% del traffico (120 byte l'uno, 20 volte al secondo), ma
+  // due terzi di quei byte non cambiavano MAI dopo la comparsa: il tipo, i PV massimi, i flag elite/boss/
+  // mega/tesoro. Ora la parte immutabile viaggia UNA VOLTA SOLA, nel primo snapshot in cui il mostro
+  // compare, e il client se la tiene (net.js -> _reidrata). I flag che valgono 0 non si mandano affatto:
+  // "assente" e "0" sono la stessa cosa e il client li rimette a 0.
+  //
+  //   modalita' `slim`  → per la trasmissione continua: parte immutabile solo per i mostri nuovi
+  //   modalita' piena   → per chi ENTRA adesso (non ha nessuna cache) e per i test: tutto, sempre
+  //
+  // Il default e' PIENO di proposito: chiamare snapshot() senza argomenti deve dare un oggetto completo
+  // e autosufficiente, altrimenti un test o un futuro chiamante otterrebbe record monchi senza accorgersene.
+  snapshot(slim) {
     const players = [];
     for (const p of this.players.values()) {
       const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln']) if (p.buffs[k] > 0) tb.push(k);
-      players.push({ i: p.id, n: p.name, h: p.heroId, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), d: p.dead ? 1 : 0, dn: p.down ? 1 : 0, dt: p.down ? +Math.max(0, p.downT).toFixed(1) : 0, lv: p.lives, cq: +p.cdQ.toFixed(1), ce: +p.cdE.toFixed(1), cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, bf: p.hitFlash > 0 ? 1 : 0, bar: p.buffs.barrier > 0 ? 1 : 0, dash: p.buffs.dash > 0 ? 1 : 0, ph: p.buffs.phase > 0 ? 1 : 0, iv: (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) ? 1 : 0, cu: p.buffs.curse > 0 ? 1 : 0, tb, wp: p.gear ? p.gear.weapon : null, sh: p.gear ? p.gear.shield : null, w2: p.weapon2 ? (p.weapon2.evolved || p.weapon2.type) : null, w2l: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 && p.weapon2.evolved ? 1 : 0, cmb: p.combo || 0, cmt: p.comboT > 0 ? +(p.comboT / C.COMBO_TIME).toFixed(2) : 0, cmx: +this.comboMult(p).toFixed(2), co: p.coins || 0, eg: +(p.edgeLv || 0).toFixed(2), nm: p._nearMerch ? 1 : 0, nmd: p._nearDark ? 1 : 0, ng: p._nearGear ? 1 : 0, gz: (p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0) });
+      const nuovo = !slim || !p._sent; if (slim) p._sent = 1;
+      const o = { i: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), lv: p.lives, cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, co: p.coins || 0, cmx: +this.comboMult(p).toFixed(2) };
+      if (nuovo) { o.n = p.name; o.h = p.heroId; }                       // nome ed eroe: immutabili in partita
+      o.wp = p.gear ? p.gear.weapon : null; o.sh = p.gear ? p.gear.shield : null;
+      if (p.dead) o.d = 1;
+      if (p.down) { o.dn = 1; o.dt = +Math.max(0, p.downT).toFixed(1); }
+      if (p.hitFlash > 0) o.bf = 1;
+      if (p.buffs.barrier > 0) o.bar = 1;
+      if (p.buffs.dash > 0) o.dash = 1;
+      if (p.buffs.phase > 0) o.ph = 1;
+      if (p.buffs.i_invuln > 0 || p.buffs.iframe > 0) o.iv = 1;
+      if (p.buffs.curse > 0) o.cu = 1;
+      if (tb.length) o.tb = tb;
+      if (p.weapon2) { o.w2 = p.weapon2.evolved || p.weapon2.type; o.w2l = p.weapon2.level; if (p.weapon2.evolved) o.evo = 1; }
+      if (p.combo) o.cmb = p.combo;
+      if (p.comboT > 0) o.cmt = +(p.comboT / C.COMBO_TIME).toFixed(2);
+      if (p.edgeLv > 0.001) o.eg = +p.edgeLv.toFixed(2);
+      if (p._nearMerch) o.nm = 1;
+      if (p._nearDark) o.nmd = 1;
+      if (p._nearGear) o.ng = 1;
+      const gz = p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0;
+      if (gz) o.gz = gz;
+      players.push(o);
     }
     // v1.59 — per il Beholder si manda anche gt: quanto manca al cambio di sguardo (0 = sta per cambiare).
     // Serve al client per ANTICIPARE il telegrafo sul corpo invece di limitarsi a reagire dopo.
-    const mon = []; for (const m of this.monsters) { const o = { e: m.eid, t: m.type, x: Math.round(m.x), y: Math.round(m.y), f: +m.facing.toFixed(2), hp: Math.round(m.hp), mhp: m.maxHp, el: m.elite ? 1 : 0, b: m.boss ? 1 : 0, mg: m.mega ? 1 : 0, tr: m.treasure ? 1 : 0, fl: m.hitFlash > 0 ? 1 : 0, sh: m.shielded > 0 ? 1 : 0, ps: m.poison > 0 && m.poisonT > 0 ? 1 : 0 }; if (m.type === 'occhio') { o.gk = m.gazeKind; o.gt = +Math.max(0, Math.min(1, (m.gazeCycleT || 0) / (m.def.gazeCycle || 4))).toFixed(2); if (m.gazeActive) { o.gz = 1; o.gtx = Math.round(m.gazeTx); o.gty = Math.round(m.gazeTy); } } if (m.type === 'darkmage') { o.al = m.alert ? 1 : 0; } mon.push(o); }
+    const mon = [];
+    for (const m of this.monsters) {
+      const nuovo = !slim || !m._sent; if (slim) m._sent = 1;
+      const o = { e: m.eid, x: Math.round(m.x), y: Math.round(m.y), f: +m.facing.toFixed(2), hp: Math.round(m.hp) };
+      if (nuovo) {                                                        // parte immutabile: una volta sola
+        o.t = m.type; o.mhp = m.maxHp;
+        if (m.elite) o.el = 1; if (m.boss) o.b = 1; if (m.mega) o.mg = 1; if (m.treasure) o.tr = 1;
+      }
+      if (m.hitFlash > 0) o.fl = 1;
+      if (m.shielded > 0) o.sh = 1;
+      if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
+      if (m.type === 'occhio') {
+        o.gk = m.gazeKind; o.gt = +Math.max(0, Math.min(1, (m.gazeCycleT || 0) / (m.def.gazeCycle || 4))).toFixed(2);
+        if (m.gazeActive) { o.gz = 1; o.gtx = Math.round(m.gazeTx); o.gty = Math.round(m.gazeTy); }
+      }
+      if (m.type === 'darkmage' && m.alert) o.al = 1;
+      mon.push(o);
+    }
     const bul = []; for (const b of this.bullets) { const o = { e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 }; if (b.bubble) o.bb = 1; if (b.arrow) { o.ar = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } bul.push(o); }
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });

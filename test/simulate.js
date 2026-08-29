@@ -1100,9 +1100,13 @@ function testV163() {
   } else assert(true, 'sala del mercato senza margine calpestabile');
 
   // ---------- lo snapshot porta la carica al client ----------
-  const snap = room.snapshot ? room.snapshot() : null;
-  if (snap && snap.players && snap.players.length) assert(snap.players[0].eg != null, 'lo snapshot espone la carica della faglia (eg) per la vignetta');
-  else assert(true, 'snapshot non ispezionabile da qui');
+  // v1.68 — `eg` viene omesso dallo snapshot quando vale 0 (il client lo rimette a 0): la prova non e' piu'
+  // "il campo esiste sempre" ma "quando la carica c'e', arriva".
+  const plEg = room.players.get('b'); plEg.edgeLv = 0.42;
+  const snap = room.snapshot();
+  assert(snap.players[0].eg === 0.42, 'lo snapshot espone la carica della faglia (eg) per la vignetta');
+  plEg.edgeLv = 0;
+  assert(room.snapshot().players[0].eg === undefined, 'a carica zero il campo non viene nemmeno mandato');
 
   // ---------- CASSE E ARMI SOLO AL CENTRO ----------
   let fuori = 0, mappe = 0, minCelle = 1e9;
@@ -1519,8 +1523,82 @@ function testV167() {
   assert(gg && gg.sh === 'gue_scudo', 'e lo scudo equipaggiato (lo scudo a torre si disegna piu grande)');
   ok('novita v1.67 verificate');
 }
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.67)'); console.log('==================================================');
+function testV168() {
+  console.log('\n[TEST 38] Novita v1.68 — tetto a 30 vivi con coda, e snapshot magro');
+  // --- 1) il tetto e' 30 e l'ondata NON perde nessuno: gli altri restano in coda ---
+  assert(C.MAX_ALIVE === 30, 'il tetto dei nemici vivi e 30');
+  const room = new Room('v168'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
+  room.wave = 17; room.mode = Waves.modeForWave(17); room.phase = C.PHASE_COMBAT;
+  const w = Waves.buildWave(20, 6, room.mode);      // ondata volutamente enorme: 80+ nemici
+  room.waveList = w.list; room.waveScaling = w.scaling; room.pending = w.list.length; room._peakAlive = 0;
+  const totale = w.list.length;
+  assert(totale > C.MAX_ALIVE * 2, 'la prova usa un ondata piu che doppia del tetto (' + totale + ')');
+  // il giocatore va tenuto in piedi: 30 nemici addosso a un fermo lo ammazzano, la partita finisce e con
+  // essa la generazione — misureremmo il gameover, non la coda.
+  const dt = 1 / C.TICK_RATE; let picco = 0;
+  for (let i = 0; i < C.TICK_RATE * 60; i++) { p.hp = room.effMaxHp(p); p.down = false; p.dead = false; room.update(dt); picco = Math.max(picco, room.monsters.length); }
+  assert(picco <= C.MAX_ALIVE, 'in campo non ce ne sono mai piu di ' + C.MAX_ALIVE + ' (picco ' + picco + ')');
+  // nessuno sta uccidendo, quindi l'arena resta piena e la coda NON puo' svuotarsi: la prova e' che il
+  // conto torni sempre — quelli che non entrano sono in coda, non spariti.
+  // NB: in campo possono essercene piu' di quanti ne ha versati la coda, perche' negromanti e melme ne
+  // aggiungono di loro (evocazioni e scissioni). L'invariante che conta e' un'altra: la coda e il contatore
+  // dei mancanti devono dire la stessa cosa, cioe' nessuno viene perso per strada.
+  assert(room.waveList.length === room.pending, 'coda e contatore coincidono: nessuno perso (' + room.waveList.length + ' vs ' + room.pending + ')');
+  assert(room.pending > 0, 'i nemici in eccesso stanno aspettando in coda (' + room.pending + ' di ' + totale + ')');
+  assert(totale - room.pending <= C.MAX_ALIVE, 'e ne e uscito solo quanti ne stanno in campo');
+  assert(room.monsters.length === C.MAX_ALIVE, 'l arena resta piena fino al tetto');
+  // ora si uccide: la coda deve ricominciare a versare
+  for (let k = 0; k < 12; k++) { const m = room.monsters.find(x => !x.dead); if (m) room.killMonster(m, null); }
+  room.monsters = room.monsters.filter(x => !x.dead);
+  const inCoda = room.pending;
+  for (let i = 0; i < C.TICK_RATE * 6; i++) { p.hp = room.effMaxHp(p); p.down = false; p.dead = false; room.update(dt); }
+  assert(room.pending < inCoda, 'uccidendo, la coda ricomincia a versare (da ' + inCoda + ' a ' + room.pending + ')');
+  assert(room.waveList.length === room.pending, 'e coda e contatore restano allineati anche dopo');
+  // --- 2) due velocita' di rifornimento: salita normale, rimpiazzo quasi immediato ---
+  // (si guarda il timer scelto, non il tempo reale: e' cio' che decide il ritmo)
+  const r2 = new Room('v168b'); r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
+  r2.wave = 17; r2.phase = C.PHASE_COMBAT; r2.mode = Waves.modeForWave(17);
+  const w2 = Waves.buildWave(20, 6, r2.mode); r2.waveList = w2.list; r2.waveScaling = w2.scaling; r2.pending = w2.list.length; r2._peakAlive = 0;
+  const q2 = r2.players.get('c');
+  for (let i = 0; i < C.TICK_RATE * 60 && r2.monsters.length < C.MAX_ALIVE; i++) { q2.hp = r2.effMaxHp(q2); q2.down = false; q2.dead = false; r2.update(dt); }
+  q2.hp = r2.effMaxHp(q2); q2.down = false; q2.dead = false; r2.update(dt);   // un tick in piu': il picco si registra a inizio update
+  assert(r2.monsters.length === C.MAX_ALIVE, 'l arena si riempie fino al tetto');
+  assert(r2._peakAlive === C.MAX_ALIVE, 'il picco raggiunto viene ricordato');
+  for (let k = 0; k < 8; k++) { const m = r2.monsters.find(x => !x.dead); if (m) r2.killMonster(m, null); }
+  r2.monsters = r2.monsters.filter(x => !x.dead);
+  r2.spawnTimer = 0; r2.update(dt);
+  assert(r2.spawnTimer <= 0.22, 'aperto un buco, il rimpiazzo e quasi immediato (' + r2.spawnTimer.toFixed(2) + 's)');
+  // --- 3) SNAPSHOT MAGRO: la parte immutabile viaggia una volta sola ---
+  const r3 = new Room('v168c'); const q = r3.addPlayer('d', { send() {} }, 'D', 'mago'); r3.startGame();
+  r3.phase = C.PHASE_COMBAT; r3.wave = 8;
+  for (let i = 0; i < 25; i++) { const pos = r3.randomSpawnPos(); r3.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(8, 1) }); }
+  const pieno = r3.snapshot();
+  assert(pieno.mon.every(m => m.t && m.mhp), 'lo snapshot PIENO porta sempre tipo e PV massimi');
+  assert(pieno.players.every(x => x.n && x.h), 'e nome ed eroe di ogni giocatore');
+  const primo = r3.snapshot(true);
+  assert(primo.mon.every(m => m.t && m.mhp), 'il primo snapshot magro presenta i mostri per intero');
+  const dopo = r3.snapshot(true);
+  assert(dopo.mon.every(m => m.t === undefined && m.mhp === undefined), 'nei successivi la parte immutabile non si ripete');
+  assert(dopo.mon.every(m => m.e != null && m.x != null && m.y != null && m.hp != null), 'ma posizione e PV ci sono sempre');
+  assert(dopo.players.every(x => x.n === undefined), 'idem per nome ed eroe del giocatore');
+  assert(JSON.stringify(dopo).length < JSON.stringify(pieno).length * 0.75, 'lo snapshot magro pesa almeno un quarto in meno');
+  // un mostro che compare DOPO va presentato lo stesso
+  const pos = r3.randomSpawnPos(); const nuovo = r3.spawnMonster('darkmage', pos.x, pos.y, { scaling: Waves.scaling(8, 1) });
+  const terzo = r3.snapshot(true);
+  const rec = terzo.mon.find(m => m.e === nuovo.eid);
+  assert(rec && rec.t === 'darkmage' && rec.mhp, 'un mostro comparso dopo viene presentato quando arriva');
+  assert(terzo.mon.filter(m => m.t !== undefined).length === 1, 'e solo lui: gli altri restano magri');
+  // chi ENTRA adesso non ha cache, quindi deve ricevere tutto
+  const nuovoGioc = r3.addPlayer('e', { send() {} }, 'E', 'ladro');
+  assert(nuovoGioc._needFull === true, 'chi si collega e marcato per ricevere uno snapshot pieno');
+  assert(r3.snapshot().mon.every(m => m.t), 'e lo snapshot pieno gliele ridice tutte');
+  // --- 4) i flag a zero non si mandano affatto ---
+  const m0 = dopo.mon[0];
+  assert(m0.fl === undefined && m0.el === undefined, 'i flag che valgono 0 non occupano spazio');
+  ok('novita v1.68 verificate');
+}
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.68)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

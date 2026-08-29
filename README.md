@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.67.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.68.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,6 +22,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.68 (trenta in campo, il resto in coda)
+- **🔢 Tetto di 30 nemici vivi** (era 50). L'ondata **non perde nessuno**: gli altri restano in coda ed
+  entrano man mano che si fa posto — alla 20ª in sei ne arrivano tutti e 86.
+- **⚡ Rimpiazzo immediato**: mentre l'arena si riempie la prima volta il ritmo e' quello di sempre, ma
+  quando e' gia' stata piena e si apre un buco il nemico successivo entra quasi subito (0,10-0,22s).
+- **📉 −52% di traffico** a parita' di nemici: la parte immutabile di ogni mostro (tipo, PV massimi, flag
+  elite/boss/tesoro) viaggia **una volta sola** invece di 20 volte al secondo, e i flag a zero non si
+  mandano affatto. Un record di mostro passa da 120 a **46 byte**. Con il tetto a 30, una partita in sei
+  passa da 834 a **295 KB/s** in uscita.
+- **📊 Misurato prima di toccare**: la CPU del server usa l'**1%** del tempo disponibile anche con 80 mostri
+  — non era li' il problema, e infatti non e' stata toccata.
 
 ## 🆕 Novita v1.67 (il fabbro vende oggetti, non livelli)
 - **🔨 Catalogo per classe**: l'Emporio a tre barre e' sostituito da **oggetti con un nome**, e ogni classe

@@ -6,7 +6,7 @@
 > **valori reali**, matematica del renderer, sistema di animazione con **tutte le costanti**, ombra a terra, overlay
 > vettoriale, integrazione dati, checklist di release, ricetta "aggiungi un nuovo puppet" e troubleshooting.
 
-**Versione di riferimento:** `1.67.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
+**Versione di riferimento:** `1.68.0` · **Motore:** JavaScript **Canvas 2D** puro, **zero dipendenze** runtime
 (gli script di preparazione asset usano **Python + Pillow + scipy**, solo offline).
 
 ---
@@ -490,6 +490,37 @@ git tag vX.Y.Z
 - **⚠️ PRESTAZIONI — disegnare cio' che e' fuori inquadratura non e' gratis.** La canvas ritaglia, ma il costo
   di costruire i tracciati e' gia' stato pagato. Il ciclo dei mostri e dei proiettili in `render()` ha ora un
   test di visibilita' (l'illuminazione ce l'aveva da sempre): vale l'11-15% del frame.
+
+- **⚠️ Prima di ottimizzare, MISURARE dove sta il costo — spesso non e' dove sembra** *(v1.68)*. Con 80
+  mostri in campo il tick del server costa **0,38 ms su 33,3 disponibili: l'1%**. Non c'era niente da
+  ottimizzare li', e limarlo sarebbe stato lavoro buttato. Il costo vero era la **banda**: 10 KB di
+  snapshot 20 volte al secondo per giocatore, di cui il **90% erano i mostri**. La domanda utile non e'
+  "cosa posso rendere piu' veloce" ma "quale numero e' grande e perche'".
+- **⚠️ In uno snapshot, la meta' dei byte di solito non cambia mai** *(v1.68)*. Il record di un mostro
+  pesava 120 byte e ne ripeteva 74 identici a ogni invio: tipo, PV massimi, flag elite/boss/tesoro —
+  tutta roba decisa alla comparsa e mai piu' toccata. Mandarla **una volta sola** (e ometterla poi) vale
+  il **−52%** sul traffico, senza cambiare una virgola di cio' che si vede. Regola pratica: dividere ogni
+  record in *immutabile* (una volta, quando l'entita' compare) e *variabile* (ogni frame), e **non mandare
+  affatto** i flag che valgono 0 — "assente" e "0" sono la stessa cosa se il ricevente sa cosa fare.
+- **⚠️ Chi si collega dopo non ha la cache: serve una via "piena"** *(v1.68)*. Ogni compressione a stato
+  condiviso ha questo tallone. Qui `snapshot()` senza argomenti resta **completo di proposito** (lo usano i
+  test e i nuovi arrivati) e solo `snapshot(true)` e' magro: il default sicuro e' quello autosufficiente,
+  cosi' un chiamante distratto non ottiene record monchi senza accorgersene.
+- **⚠️ Una compressione di rete si prova sul GIRO COMPLETO, non sul mittente** *(v1.68)*. I test del server
+  possono dire "ho mandato meno byte" mentre il client ricostruisce male, e in partita si vedrebbero mostri
+  senza tipo o barre della vita sbagliate. Il test giusto prende una stanza vera, genera la sequenza di
+  snapshot magri, la passa alla ricostruzione del client e confronta **campo per campo** con lo snapshot
+  pieno dello stesso istante — compresi i casi cattivi: un'entita' che compare dopo, una che muore (la
+  cache deve lasciarla andare) e un flag che si accende e poi si spegne (non deve restare acceso).
+- **⚠️ Un tetto ai nemici vivi cambia il RITMO, non solo il numero** *(v1.68)*. Abbassare il tetto senza
+  toccare la cadenza di ingresso allunga l'ondata: i posti liberi si ricoprono al ritmo lento pensato per
+  la salita iniziale. Servono **due velocita'**: quella lenta mentre l'arena si riempie la prima volta
+  (e' la salita che fa sentire l'ondata montare) e una quasi immediata per rimpiazzare i caduti quando
+  l'arena e' gia' stata piena. Il discrimine e' il **picco raggiunto nell'ondata**, non il numero assoluto.
+- **⚠️ Attenzione a dove si aggiorna un massimo** *(v1.68)*. Il picco dei vivi era aggiornato **dentro** il
+  ramo che genera i nemici, che pero' smette di girare proprio quando l'arena e' piena: il picco non
+  arrivava mai a 30 e il rimpiazzo veloce non si attivava. Un valore che descrive lo stato del mondo va
+  aggiornato dove il mondo si guarda, non dentro il ramo che lo modifica.
 
 - **⚠️ Un bonus ADDITIVO non sopravvive a un oggetto che si puo' TOGLIERE** *(v1.67)*. Finche' l'equipaggiamento
   saliva di livello e basta, sommare il delta a `p.stats` funzionava. Col cambio libero (si compra qualunque

@@ -2,6 +2,67 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.68.0] — 2026-08-28 · "Trenta in campo, il resto in coda"
+
+Prima di toccare qualsiasi cosa ho **profilato server e client separatamente**, come nella 1.64, per non
+ottimizzare a sensazione.
+
+#### 📊 Dove sta davvero il costo (misurato)
+| | 30 mostri | 50 mostri | 80 mostri |
+|---|---:|---:|---:|
+| **Tick del server** (budget 33,3 ms) | 0,31 ms | 0,33 ms | 0,38 ms |
+| **Snapshot** per giocatore | 4,5 KB | 6,5 KB | 10,1 KB |
+| **Banda in uscita** (6 giocatori, 20 Hz) | 554 KB/s | 834 KB/s | 1,3 MB/s |
+
+**La CPU del server non e' un problema e non lo e' mai stata**: usa l'1% del tempo che ha a disposizione,
+anche con 80 mostri e 4 giocatori. Il costo vero e' la **banda**, e i mostri sono il **90%** dello snapshot.
+
+#### 🔢 Tetto a 30 vivi, il resto in coda
+`C.MAX_ALIVE` scende da 50 a 30. L'ondata **non perde nessuno**: i nemici in eccesso restano in coda ed
+entrano man mano che si fa posto (alla 20ª ondata in sei l'ondata ne prevede 86, e tutti e 86 arrivano).
+
+Perche' il tetto non si traducesse in ondate piu' lente, il rifornimento ha **due velocita'**:
+- mentre l'arena si riempie **la prima volta**, il ritmo di sempre (0,25-0,6 s fra un ingresso e l'altro):
+  e' la salita che da' il senso dell'ondata che monta;
+- quando l'arena e' **gia' stata piena** e si aprono dei buchi, il rimpiazzo e' quasi immediato
+  (0,10-0,22 s). Uccidi, ne entra un altro.
+
+#### 📉 Snapshot magro: −52% di traffico a parita' di nemici
+Ogni mostro pesava **120 byte, 20 volte al secondo**, ma due terzi di quei byte **non cambiavano mai** dopo
+la comparsa: il tipo, i PV massimi, i flag elite/boss/mega/tesoro. Ora la parte immutabile viaggia **una
+volta sola**, nel primo snapshot in cui il mostro compare, e il client se la tiene. Stessa cosa per nome ed
+eroe dei giocatori. In piu', **i flag che valgono 0 non si mandano affatto**: "assente" e "0" sono la stessa
+cosa, e il client li rimette a 0. Un record di mostro passa da **120 a 46 byte** in regime.
+
+| a parita' di nemici in campo | prima | ora |
+|---|---:|---:|
+| 30 mostri, 1 giocatore | 80 KB/s | **37 KB/s** |
+| 30 mostri, 6 giocatori | 554 KB/s | **295 KB/s** |
+| 50 mostri, 6 giocatori | 834 KB/s | **402 KB/s** |
+
+Sommando le due cose — tetto a 30 **e** snapshot magro — una partita in sei passa da **834 KB/s a 295 KB/s
+in uscita: −65%**.
+
+Chi **entra adesso** non ha ancora nessuna cache, quindi riceve uno snapshot **pieno**: una serializzazione
+in piu', e solo nel tick in cui qualcuno si collega. `snapshot()` senza argomenti resta completo di
+proposito — un chiamante distratto (o un test) deve ottenere un oggetto autosufficiente, non record monchi.
+
+#### 🧪 Test
+- **634 passati, 0 falliti** (+24).
+- Il controllo che conta su una modifica del genere e' **il giro completo**: `test/client.js` prende una
+  stanza vera, le chiede la sequenza di snapshot magri che manderebbe in rete, la passa alla ricostruzione
+  di `net.js` e confronta **campo per campo** con lo snapshot pieno dello stesso istante. Verifica anche che
+  un mostro comparso dopo venga presentato, che la cache lasci andare i morti, e che un flag acceso in un
+  frame **torni a 0** nel successivo invece di restare acceso.
+- Lato server: il tetto regge (picco mai oltre 30), coda e contatore restano allineati (nessuno perso),
+  e dopo le uccisioni la coda ricomincia davvero a versare.
+
+#### 📝 Nota su cio' che NON e' stato fatto
+Restano sul tavolo due interventi piu' invasivi, misurati ma non applicati: **non mandare a ogni giocatore
+i mostri lontani da lui** (−50-70% con sei giocatori, ma la minimappa smetterebbe di vedere i nemici
+lontani) e **abbassare la frequenza degli snapshot da 20 a 15 Hz** (−25% gratis, il client gia' interpola).
+Vanno decisi quando la banda tornera' a essere un problema, non prima.
+
 ### [1.67.0] — 2026-08-28 · "Il fabbro vende oggetti, non livelli"
 
 L'Emporio erano **tre barre da riempire** — Armatura, Stivali, Arma, cinque livelli l'una, uguali per tutti e
