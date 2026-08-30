@@ -30,6 +30,25 @@ function newPerk() {
     aura: 0, auraCura: 0, auraDR: 0, arcoPiu: 0, catena: 0, catenaPiena: 0,
   };
 }
+// v1.73 — LE STATISTICHE BASE, in un posto solo. Prima erano un letterale dentro addPlayer: per poter
+// SPEGNERE una carta bisogna saper ricostruire il personaggio da zero, e ricostruirlo richiede sapere da
+// dove si parte. Stessa idea del ricalcolo dell'equipaggiamento (v1.67), estesa ai poteri.
+// v1.66 — le quattro statistiche da gioco di ruolo non agiscono su un danno generico ma sulla SCUOLA
+// dell'arma (shared/heroes.js -> weapon.school): Forza sul melee, Intelligenza sulla magia, Destrezza sul
+// tiro. Cosi' le classi miste previste in progressione hanno gia' il binario giusto.
+function newStats() {
+  return { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0,
+    pierce: 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1,
+    regen: 0, xpMult: 1, dmgReduce: 0,
+    schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } };
+}
+// L'effetto di UNA statistica comprata. Estratto da buyStat perche' il ricalcolo deve riapplicarle tutte.
+function applicaStat(p, statId) {
+  if (statId === 'st_for') { p.stats.schoolDmg.melee += 0.09; p.stats.knockMult += 0.03; }
+  else if (statId === 'st_cos') { p.stats.maxHpFlat += 20; p.stats.dmgReduce = Math.min(0.85, (p.stats.dmgReduce || 0) + 0.012); }
+  else if (statId === 'st_int') { p.stats.schoolDmg.magic += 0.09; p.stats.schoolRate.magic += 0.07; }
+  else if (statId === 'st_des') { p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06; p.stats.speedMult += 0.025; }
+}
 function newBoon() {
   return {
     bounce: 0, pierce: 0, chain: 0, poison: 0, explodeEvery: 0, killNova: 0, bulletSize: 0, slow: 0, thorns: 0,
@@ -106,12 +125,11 @@ class Room {
       // dell'oggetto sostituito.
       gear: Gear.startingGear(hero.id), gearBonus: { maxHpFlat: 0, dmgReduce: 0, speedMult: 0 },
       boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
-      stats: { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0, pierce: 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1, regen: 0, xpMult: 1, dmgReduce: 0,
-        // v1.66 — le quattro statistiche da gioco di ruolo non agiscono su un danno generico ma sulla SCUOLA
-        // dell'arma (shared/heroes.js -> weapon.school): Forza sul melee, Intelligenza sulla magia, Destrezza
-        // sul tiro. Cosi' le classi miste previste in progressione hanno gia' il binario giusto: un guerriero
-        // che compra Intelligenza non guadagna nulla sulla spada, ma tutto sulla prima magia che imbraccia.
-        schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } },
+      // v1.73 — LE CARTE SI SPENGONO. `boonsOwned` e' cio' che possiedi, `cardOn` cio' che e' ACCESO
+      // (al massimo C.MAX_CARDS carte diverse). `defianceUsed` tiene il conto delle cariche di Ultima
+      // Occasione gia' spese, altrimenti ogni ricalcolo te le regalerebbe di nuovo.
+      cardOn: {}, defianceUsed: 0,
+      stats: newStats(),
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
     for (const k in p.gear) p.owned[p.gear[k]] = 1;   // v1.72 — l'equipaggiamento di partenza e' gia' tuo
@@ -123,7 +141,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.cardOn = {}; p.defianceUsed = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -246,7 +264,19 @@ class Room {
     // v1.72 — il BANDITORE: terza bottega ad aprire. Ricompra l'usato e appende le taglie.
     const bnd = (v && v.npcs) ? v.npcs.find(n => n.bnd) : null;
     this.bandit = bnd ? { x: bnd.x, y: bnd.y, r: 18 } : null;
-    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; }
+    // v1.73 — la CARTOMANTE: quarta bottega. Non prevede il futuro e non ridistribuisce i punti (idee
+    // scartate da Paolo): decide quali carte tieni ACCESE, al massimo C.MAX_CARDS per volta.
+    const sgr = (v && v.npcs) ? v.npcs.find(n => n.crd) : null;
+    this.seer = sgr ? { x: sgr.x, y: sgr.y, r: 18 } : null;
+    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; }
+  }
+  updateSeer() {
+    if (!this.seer) return; const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this.seer.x, this.seer.y) <= RANGE;
+      if (near && !p._nearSeer) { p._nearSeer = true; this.offerSeer(p, 1); }
+      else if (!near && p._nearSeer) { p._nearSeer = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'seer_leave' } }); }
+    }
   }
   updateBandit() {
     if (!this.bandit) return; const RANGE = C.MARKET_MERCH_RANGE;
@@ -276,7 +306,7 @@ class Room {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
-    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); }
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
@@ -285,8 +315,8 @@ class Room {
     const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
     for (const p of this.alivePlayers) {
       if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
-      this.gearMerchant = null; this.herbalist = null; this.bandit = null;
-      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; }
+      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null;
+      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true; this.nextWave(); return;
     }
@@ -468,7 +498,7 @@ class Room {
   downPlayer(p) {
     // v1.51 — ULTIMA OCCASIONE: consuma una carica e rimette in piedi invece di far cadere.
     if ((p.defianceLeft || 0) > 0) {
-      p.defianceLeft--; p.hp = Math.round(this.effMaxHp(p) * 0.5); p.buffs.iframe = 2;
+      p.defianceLeft--; p.defianceUsed = (p.defianceUsed || 0) + 1; p.hp = Math.round(this.effMaxHp(p) * 0.5); p.buffs.iframe = 2;
       this.events.push({ t: 'defiance', x: p.x, y: p.y, who: p.id, name: p.name, left: p.defianceLeft });
       return;
     }
@@ -755,6 +785,35 @@ class Room {
       this.events.push({ t: 'bounty_done', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, testo: b.testo, pay: b.pay, color: b.color, icon: b.icon });
     }
   }
+  offerSeer(p, near) {
+    const carte = [];
+    for (const id in p.boonsOwned) {
+      const b = Loot.BOON_BY_ID[id]; const n = p.boonsOwned[id]; if (!b || n <= 0) continue;
+      carte.push({ id, name: b.name, icon: b.icon, rarity: b.rarity, n, on: p.cardOn[id] ? 1 : 0,
+        desc: b.desc.replace('{v}', b.v ? b.v(p) : '') });
+    }
+    const syn = [];
+    for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) syn.push({ id, name: sy.name, icon: sy.icon, desc: sy.desc }); }
+    this.sendTo(p.id, { t: C.MSG.OFFER_SEER, near: near ? 1 : 0, cards: carte, syn, max: C.MAX_CARDS, active: this._carteAccese(p) });
+  }
+  _dallaCartomante(p) {
+    return this.phase === C.PHASE_MARKET && !!this.seer &&
+      MU.dist(p.x, p.y, this.seer.x, this.seer.y) <= C.MARKET_MERCH_RANGE + 12;
+  }
+  // Accendere e spegnere. Spegnere e' sempre concesso; accendere solo se c'e' posto — il limite vive qui,
+  // non nel client, perche' il client puo' mentire.
+  toggleCard(pid, cardId) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._dallaCartomante(p)) return;
+    if (!(p.boonsOwned[cardId] > 0)) return;
+    const era = !!p.cardOn[cardId];
+    if (era) delete p.cardOn[cardId];
+    else { if (this._carteAccese(p) >= C.MAX_CARDS) return; p.cardOn[cardId] = 1; }
+    this._recomputeBoons(p);
+    const b = Loot.BOON_BY_ID[cardId];
+    this.offerSeer(p, 1); this.sendBoons(p);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'card_toggle', x: p.x, y: p.y, id: cardId, name: b ? b.name : cardId, icon: b ? b.icon : '', on: era ? 0 : 1 } });
+  }
   useQ(p) { /* nessuna abilita' in v1.66 */ }
   useE(p) { /* nessuna abilita' in v1.66 */ }
 
@@ -1005,32 +1064,63 @@ class Room {
     // v1.66 — quattro statistiche da gioco di ruolo. FORZA e COSTITUZIONE reggono il guerriero,
     // INTELLIGENZA il mago (danno E cadenza delle magie), DESTREZZA il ladro (danno, cadenza e passo).
     // Nessuna e' riservata a una classe: chiunque puo' comprarle tutte, ma agiscono sulla scuola dell'arma.
-    if (statId === 'st_for') { p.stats.schoolDmg.melee += 0.09; p.stats.knockMult += 0.03; }
-    else if (statId === 'st_cos') { p.stats.maxHpFlat += 20; p.hp += 20; p.stats.dmgReduce = Math.min(0.85, (p.stats.dmgReduce || 0) + 0.012); }
-    else if (statId === 'st_int') { p.stats.schoolDmg.magic += 0.09; p.stats.schoolRate.magic += 0.07; }
-    else if (statId === 'st_des') { p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06; p.stats.speedMult += 0.025; }
+    this._recomputeBoons(p);   // v1.73 — ricostruisce da zero: statistiche comprate + carte accese
     this._checkEvo(p);
     this.offerShop(p); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bought', id: statId } });
   }
+  // v1.73 — RICOSTRUISCE IL PERSONAGGIO DA ZERO: statistiche base, poi le statistiche comprate coi punti,
+  // poi le carte ACCESE (con i loro esemplari), poi le sinergie fra le sole carte accese. E' lo stesso
+  // principio del ricalcolo dell'equipaggiamento (v1.67): con effetti che si possono TOGLIERE, sommare i
+  // delta lascerebbe in giro il bonus della carta spenta, per sempre e senza che nulla se ne accorga.
+  //
+  // I due punti delicati, entrambi coperti dai test:
+  //  - i PV. Alcune carte alzano il massimo E curano di altrettanto. Al ricalcolo la cura non va rifatta,
+  //    ma se il massimo SALE quella differenza va data (e se scende, i PV vanno tagliati al nuovo tetto).
+  //  - Ultima Occasione. La carica si consuma giocando: si riparte da quante ne danno le carte accese,
+  //    meno quelle gia' spese, altrimenti spegnere e riaccendere sarebbe un modo per resuscitare gratis.
+  _recomputeBoons(p) {
+    const maxPrima = this.effMaxHp(p), hpPrima = p.hp;
+    p.stats = newStats(); p.boon = newBoon(); p.synActive = {}; p.defianceLeft = 0;
+    for (const id in p.buys) for (let i = 0; i < p.buys[id]; i++) applicaStat(p, id);
+    const accese = {};
+    for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
+    for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }
+    for (const sy of Loot.detectSynergies(accese, {})) { sy.apply(p); p.synActive[sy.id] = 1; }
+    if (p.spec) { const sp = Lv.SPEC_BY_ID[p.spec]; if (sp && sp.apply) sp.apply(p); }
+    p.defianceLeft = Math.max(0, p.defianceLeft - (p.defianceUsed || 0));
+    const maxDopo = this.effMaxHp(p);
+    p.hp = Math.min(maxDopo, hpPrima + Math.max(0, maxDopo - maxPrima));
+    if (p.hp < 1 && !p.dead && !p.down) p.hp = 1;
+  }
+  // Quante carte DIVERSE sono accese adesso.
+  _carteAccese(p) { let n = 0; for (const id in p.cardOn) if (p.cardOn[id] && (p.boonsOwned[id] || 0) > 0) n++; return n; }
   pickBoon(pid, boonId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP || !p.boonOffer) return;
     if (!p.boonOffer.includes(boonId)) return;
     const b = Loot.BOON_BY_ID[boonId]; if (!b) return;
     if ((p.boonsOwned[boonId] || 0) >= b.max) return;
-    b.apply(p); p.boonsOwned[boonId] = (p.boonsOwned[boonId] || 0) + 1; p.boonOffer = null; p.boonPicked = true;
-    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'boon_ok', id: boonId, name: b.name, icon: b.icon } });
-    // SINERGIE (v1.7): se il boon appena preso completa una coppia, attivala una sola volta.
-    const newSyn = Loot.detectSynergies(p.boonsOwned, p.synActive);
-    for (const sy of newSyn) { sy.apply(p); p.synActive[sy.id] = 1; this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'synergy', id: sy.id, name: sy.name, icon: sy.icon, desc: sy.desc } }); }
+    p.boonsOwned[boonId] = (p.boonsOwned[boonId] || 0) + 1; p.boonOffer = null; p.boonPicked = true;
+    // v1.73 — la carta e' TUA comunque, ma si accende solo se c'e' posto fra le ' + C.MAX_CARDS + ' attive.
+    // Con la cintura piena arriva SPENTA invece di bloccare la scelta: cosi' non ti ferma mai a fine ondata,
+    // e ti da' un motivo per passare dalla Cartomante.
+    const gia = !!p.cardOn[boonId];
+    const spenta = !gia && this._carteAccese(p) >= C.MAX_CARDS;
+    if (!spenta) p.cardOn[boonId] = 1;
+    const synPrima = Object.keys(p.synActive || {}).length;
+    this._recomputeBoons(p);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'boon_ok', id: boonId, name: b.name, icon: b.icon, off: spenta ? 1 : 0 } });
+    // SINERGIE (v1.7): se la carta appena presa completa una coppia, annunciala una sola volta.
+    if (Object.keys(p.synActive || {}).length > synPrima)
+      for (const id in p.synActive) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'synergy', id: sy.id, name: sy.name, icon: sy.icon, desc: sy.desc } }); }
     this.sendBoons(p);  // v1.51 — aggiorna la barra dei poteri attivi
   }
   // v1.51 — elenco dei poteri attivi, per la barra in basso nell'HUD. Inviato solo quando cambia qualcosa
   // (scelta di un boon, sinergia, inizio partita): non entra nello snapshot, che gira 20 volte al secondo.
   sendBoons(p) {
     const list = [];
-    for (const id in p.boonsOwned) { const b = Loot.BOON_BY_ID[id]; if (b && p.boonsOwned[id] > 0) list.push({ id, icon: b.icon, name: b.name, rarity: b.rarity, n: p.boonsOwned[id], desc: b.desc.replace('{v}', b.v ? b.v(p) : '') }); }
-    for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) list.push({ id, icon: sy.icon, name: sy.name, n: 1, syn: 1, desc: sy.desc }); }
-    this.sendTo(p.id, { t: C.MSG.BOONS, boons: list });
+    for (const id in p.boonsOwned) { const b = Loot.BOON_BY_ID[id]; if (b && p.boonsOwned[id] > 0) list.push({ id, icon: b.icon, name: b.name, rarity: b.rarity, n: p.boonsOwned[id], desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), on: p.cardOn[id] ? 1 : 0 }); }
+    for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) list.push({ id, icon: sy.icon, name: sy.name, n: 1, syn: 1, desc: sy.desc, on: 1 }); }
+    this.sendTo(p.id, { t: C.MSG.BOONS, boons: list, max: C.MAX_CARDS, active: this._carteAccese(p) });
   }
   shopReady(pid, dest) { const p = this.players.get(pid); if (!p) return; p.ready = true; if (dest && !this.shopDest) this.shopDest = dest; }
 
@@ -1054,7 +1144,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -1326,6 +1416,7 @@ class Room {
       if (p._nearGear) o.ng = 1;
       if (p._nearHerb) o.nh = 1;
       if (p._nearBnd) o.nb = 1;
+      if (p._nearSeer) o.ns = 1;
       // v1.72 — la taglia in corso viaggia sempre: senza vederla in partita te ne dimentichi.
       if (p.bounty) o.bo = { k: p.bounty.k, h: p.bounty.have, n: p.bounty.n, i: p.bounty.icon, c: p.bounty.color, t: p.bounty.testo };
       // v1.71 — la cintura viaggia compatta: uno 0 per lo slot vuoto, [indice, cariche] per gli altri.

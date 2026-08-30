@@ -1619,20 +1619,23 @@
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }
-      // v1.69 — sotto il nome ci sono LIVELLO e RANGO: e' l'unico posto in cui, guardando un compagno,
-      // si capisce a che punto e' della sua progressione.
+      // v1.73 — SOPRA LA TUA TESTA NON C'E' PIU' NULLA. Nome, livello, rango e barra dell'XP sono passati
+      // nel box dell'HUD (#heroBox): erano scritte fisse in mezzo all'azione, proprio dove serve vedere.
+      // Sopra i COMPAGNI restano: senza, in co-op tre sagome uguali diventano indistinguibili e non si
+      // capisce piu' a che punto sono della loro progressione.
       const LV = window.GAME && window.GAME.Levels;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 11px Segoe UI';
-      ctx.fillText(p.n + (p.dn ? ' (a terra ' + p.dt + 's)' : ''), x, y - r - 32);
-      if (LV && p.lvl) {
-        const rk = LV.rankName(p.h, p.lvl, p.sp || null), spec = LV.rankForLevel(p.lvl) >= 5;
-        ctx.font = '10px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
-        ctx.fillText('Lv.' + p.lvl + ' · ' + rk, x, y - r - 44);
-        // barra dell'XP: sottile, sotto quella della vita, e sparisce al cap
-        if ((p.prg || 0) < 1) { const bw2 = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
+      if (!isMe || p.dn) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 11px Segoe UI';
+        ctx.fillText(p.n + (p.dn ? ' (a terra ' + p.dt + 's)' : ''), x, y - r - 32);
+        if (LV && p.lvl && !isMe) {
+          const rk = LV.rankName(p.h, p.lvl, p.sp || null), spec = LV.rankForLevel(p.lvl) >= 5;
+          ctx.font = '10px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
+          ctx.fillText('Lv.' + p.lvl + ' · ' + rk, x, y - r - 44);
+          if ((p.prg || 0) < 1) { const bw2 = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
+        }
+        ctx.textAlign = 'left';
       }
-      ctx.textAlign = 'left';
       if (p.dn) { ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 8 + Math.sin(this.time * 6) * 3, 0, 7); ctx.stroke(); }
       if (p.bf) { ctx.fillStyle = 'rgba(255,60,80,.35)'; ctx.beginPath(); ctx.arc(x, y, r + 3, 0, 7); ctx.fill(); }
     },

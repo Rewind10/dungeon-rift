@@ -6,6 +6,30 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ---
 
+## 🔮 LA CARTOMANTE: cinque carte accese *(novita v1.73)*
+- Quarta bottega. Niente previsione delle ondate e niente respec: fa una cosa sola, decidere **quali carte
+  tieni accese**, al massimo **cinque**.
+- Il limite conta **carte diverse**: Rimbalzo x3 occupa un posto solo, cosi' approfondire una carta resta
+  una strategia e non una tassa.
+- Se ne scegli una a fine ondata con gia' cinque accese, **la prendi lo stesso ma arriva spenta**: non ti
+  blocca mai, e ti da' un motivo per passare dalla Cartomante. Le carte spente **restano tue**.
+- Le **sinergie** seguono le carte accese: spegnerne una spegne anche la sinergia che formava.
+- **Sotto il cofano.** Fino alla 1.72 le carte si sommavano dentro il personaggio e non uscivano piu'. Ora
+  tutto si **ricostruisce da zero** a ogni cambio (statistiche base -> statistiche comprate -> carte accese
+  -> sinergie), come gia' faceva l'equipaggiamento dalla 1.67: con effetti che si possono togliere,
+  sommare i delta lascerebbe in giro il bonus della carta spenta per sempre.
+- Due casi delicati, entrambi sotto test: i **PV** (alzare il massimo cura, abbassarlo taglia, e spegnere e
+  riaccendere non e' una pompa di vita) e **Ultima Occasione** (la carica spesa non torna).
+
+## 🧑 IL BOX DEL PERSONAGGIO *(novita v1.73)*
+- Fra la barra delle abilita' e la boccetta della vita c'era un vuoto: ora c'e' un box con **nome, livello,
+  rango, barra dell'esperienza** e le **cinque caselle delle carte**.
+- **Sopra la tua testa non c'e' piu' nulla.** Nome e livello erano scritte fisse in mezzo all'azione. Sopra
+  i **compagni** restano: senza, in co-op tre sagome uguali diventano indistinguibili.
+- Le caselle **vuote si vedono**: il tetto di cinque e' una regola, e una regola che non si vede non esiste.
+- La vecchia barra dei gettoni in basso e' stata **rimossa**: mostrava le stesse icone senza dire a chi
+  appartenessero ne' quante se ne potessero tenere accese.
+
 ## 🪧 IL BANDITORE: magazzino e taglie *(novita v1.72)*
 - Terza bottega ad aprire, e fa due mestieri.
 - **MAGAZZINO.** Fino alla 1.71 comprare l'alabarda faceva **sparire nel nulla** lo spadone gia' pagato.
@@ -148,8 +172,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - **Buio, e la luce nasce dal falo'** al centro: un unico grande alone circolare scopre i cinque banchetti e
   si spegne contro le pareti. Le lanterne appese ai pali dei banchi fanno da luci di appoggio.
 - **Cinque banchetti** a ferro di cavallo attorno al fuoco — bancone, tendone a strisce, lanterna e merce
-  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.72 **Fabbro**, **Erborista** e **Banditore** vendono;
-  **Ostessa e Cartomante** sono ancora chiusi.
+  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.73 lavorano **Fabbro**, **Erborista**,
+  **Banditore** e **Cartomante**; resta chiusa solo l'**Ostessa**.
 - I **mercanti** sono al doppio della taglia e piu' dettagliati (mantellina, cintura, pieghe, mani, occhi
   accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
 - Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
@@ -159,8 +183,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
 - **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della
   Gilda**, ognuna con tetto, finestre illuminate, insegna sopra la porta, lanterna e targa col nome.
-- **Cinque abitanti**: **Fabbro** (equipaggiamento), **Erborista** (pozioni, v1.71) e **Banditore** (usato e
-  taglie, v1.72) vendono. **Ostessa e Cartomante** sono botteghe **ancora chiuse** — e lo dichiarano — pronte a diventare
+- **Cinque abitanti**: **Fabbro** (equipaggiamento), **Erborista** (pozioni, v1.71), **Banditore** (usato e
+  taglie, v1.72) e **Cartomante** (carte, v1.73). Solo l'**Ostessa** e' una bottega **ancora chiusa** — e lo dichiarano — pronte a diventare
   le prossime destinazioni.
 - Il villaggio e' **illuminato**: niente torcia, niente buio. La piazza e' ripulita dai detriti da caverna;
   restano pozzo, lampioni, banchi, casse, barili, alberi, staccionate e il cartello MERCATO.

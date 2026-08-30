@@ -24,19 +24,19 @@ new Function('window', 'document', 'setTimeout', 'clearTimeout', fs.readFileSync
 const HUD = window.HUD, L = window.GAME.Loot, C = window.GAME.Constants;
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ FAIL ') + m); if (!c) fails++; };
 
-// 1) barra dei poteri attivi
+// 1) le carte attive — v1.73: non piu' una barra di gettoni ma le caselle del box del personaggio
 HUD.setActiveBoons([
-  { id: 'execute', icon: '🗡️', name: 'Colpo di Grazia', rarity: 'epic', n: 2, desc: 'esegue' },
-  { id: 'aegis', icon: '🧿', name: 'Egida Ostinata', rarity: 'rare', n: 1, desc: 'para' },
+  { id: 'execute', icon: '🗡️', name: 'Colpo di Grazia', rarity: 'epic', n: 2, desc: 'esegue', on: 1 },
+  { id: 'aegis', icon: '🧿', name: 'Egida Ostinata', rarity: 'rare', n: 1, desc: 'para', on: 1 },
   { id: 'headhunter', icon: '🎯', name: 'Cacciatore di Teste', n: 1, syn: 1, desc: 'sinergia' },
 ]);
-const bar = document.getElementById('boonBar');
-ok(!bar.classList.contains('hidden'), 'la barra poteri si mostra quando ci sono poteri');
-ok((bar.innerHTML.match(/bchip/g) || []).length === 3, 'tre gettoni renderizzati');
+const bar = document.getElementById('heroCards');
+ok((bar.innerHTML.match(/cchip/g) || []).length === window.GAME.Constants.MAX_CARDS, 'le caselle sono sempre ' + window.GAME.Constants.MAX_CARDS);
+ok((bar.innerHTML.match(/cchip empty/g) || []).length === 2, 'tre carte accese lasciano due caselle vuote');
 ok(bar.innerHTML.includes('×2'), 'il moltiplicatore ×2 compare');
 ok(bar.innerHTML.includes('syn'), 'la sinergia e evidenziata');
 HUD.setActiveBoons([]);
-ok(bar.classList.contains('hidden'), 'la barra si nasconde se non hai poteri');
+ok((bar.innerHTML.match(/cchip empty/g) || []).length === window.GAME.Constants.MAX_CARDS, 'senza carte le caselle restano, tutte vuote');
 
 // 2) negozio: 3 carte potere, statistiche con tetto, emporio assente
 const boons = L.offerBoons(C.RARITY, {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, desc: 'x', owned: 0, max: b.max }));
@@ -348,6 +348,61 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     rarity: 'uncommon', owned: 0, have: 1 }, 0, () => {});
   ok(String(card.innerHTML).indexOf('GIÀ TUO') > 0, 'un oggetto in magazzino si riequipaggia gratis, e il Fabbro lo scrive');
   ok(String(card.className).indexOf('disabled') < 0, 'e non e spento anche se non hai monete');
+})();
+
+
+// ===== v1.73 — IL BOX DEL PERSONAGGIO E IL TAVOLO DELLA CARTOMANTE =====
+(function () {
+  const L = window.GAME.Loot, MAXC = window.GAME.Constants.MAX_CARDS;
+  const carta = (id, n, on) => { const b = L.BOON_BY_ID[id]; return { id, icon: b.icon, name: b.name, rarity: b.rarity, n, desc: b.desc, on }; };
+  // --- il box ---
+  HUD.setActiveBoons([carta('ricochet', 3, 1), carta('crit', 2, 1), carta('execute', 1, 1)]);
+  HUD.updateHeroBox({ n: 'Paolo', h: 'guerriero', lvl: 12, prg: 0.62, sp: null });
+  const box = document.getElementById('heroBox');
+  ok(!box.classList.contains('hidden'), 'il box del personaggio si vede');
+  ok(String(document.getElementById('heroBoxName').textContent) === 'Paolo', 'con il nome, che non sta piu sopra la testa');
+  ok(String(document.getElementById('heroBoxLv').innerHTML).indexOf('Lv.12') >= 0, 'con il livello');
+  ok(String(document.getElementById('heroBoxLv').innerHTML).indexOf('Veterano') > 0, 'e il rango di quel livello');
+  const cards = document.getElementById('heroCards');
+  ok((String(cards.innerHTML).match(/cchip/g) || []).length === MAXC, 'e ' + MAXC + ' caselle: anche quelle vuote si vedono');
+  ok((String(cards.innerHTML).match(/empty/g) || []).length === 2, 'due caselle libere con tre carte accese');
+  ok(String(cards.innerHTML).indexOf('×3') > 0, 'gli esemplari multipli si vedono');
+  HUD.updateHeroBox(null);
+  ok(box.classList.contains('hidden'), 'senza giocatore il box sparisce');
+  // le carte spente NON entrano nel box
+  HUD.setActiveBoons([carta('ricochet', 1, 1), carta('giant', 1, 0)]);
+  HUD.updateHeroBox({ n: 'Paolo', h: 'guerriero', lvl: 3, prg: 0.1 });
+  ok((String(document.getElementById('heroCards').innerHTML).match(/empty/g) || []).length === MAXC - 1,
+     'una carta spenta non occupa una casella del box');
+
+  // --- il tavolo ---
+  let toccata = null;
+  const tutte = [carta('ricochet', 3, 1), carta('crit', 2, 1), carta('execute', 1, 1), carta('aegis', 1, 1), carta('thorns', 1, 1), carta('giant', 1, 0)];
+  HUD.showSeer({ near: 1, max: MAXC, active: 5, cards: tutte, syn: [{ id: 's', icon: '🔗', name: 'Tempesta', desc: 'x' }] }, (id) => { toccata = id; });
+  const panel = document.getElementById('seerPanel');
+  ok(!panel.classList.contains('hidden'), 'il tavolo si apre');
+  ok(String(document.getElementById('seerHead').innerHTML).indexOf('5') > 0, 'e dice quante ne hai accese');
+  ok(String(document.getElementById('seerSub').textContent).indexOf('limite') > 0, 'al limite lo dichiara');
+  const w = document.getElementById('seerCards');
+  ok(w.children.length === 6, 'elenca tutte le carte, accese e spente');
+  ok(String(w.children[0].className).indexOf('on') >= 0, 'le accese sono in cima e marcate');
+  const spenta = Array.prototype.slice.call(w.children).find(el => String(el.className).indexOf('lock') >= 0);
+  ok(!!spenta, 'con il tetto pieno la spenta e bloccata');
+  ok(!spenta.onclick, 'e non si puo cliccare');
+  const rim = Array.prototype.slice.call(w.children).find(el => String(el.innerHTML).indexOf('Rimbalzo') > 0);
+  ok(!!rim, 'le carte si trovano per nome');
+  rim.onclick();
+  ok(toccata === 'ricochet', 'cliccare una accesa la manda a spegnere');
+  ok(!document.getElementById('seerSyn').classList.contains('hidden'), 'le sinergie attive si vedono');
+  // con un posto libero la spenta torna cliccabile
+  HUD._seerSig = null;
+  HUD.showSeer({ near: 1, max: MAXC, active: 4, cards: tutte, syn: [] }, (id) => { toccata = id; });
+  const w2 = document.getElementById('seerCards');
+  const libera = Array.prototype.slice.call(w2.children).find(el => String(el.className).indexOf('lock') >= 0);
+  ok(!libera, 'con un posto libero nessuna carta e bloccata');
+  ok(String(document.getElementById('seerSub').textContent).indexOf('ancora 1') > 0, 'e dice quante ne puoi ancora accendere');
+  HUD.hideSeer();
+  ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

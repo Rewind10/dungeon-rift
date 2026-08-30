@@ -178,18 +178,86 @@
     },
     // v1.51 — barra dei POTERI ATTIVI, sopra la barra abilita'. Aggiornata solo quando il server manda
     // l'elenco (scelta di un potere / sinergia / inizio partita), non a ogni frame.
-    setActiveBoons(list) { this._active = list || []; this._renderBoonBar(); },
-    _renderBoonBar() {
-      const bar = $('boonBar'); if (!bar) return;
-      const list = this._active || [];
-      if (!list.length) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
-      bar.classList.remove('hidden');
-      bar.innerHTML = list.map(b => {
+    // v1.73 — la barra dei gettoni in basso e' stata SOSTITUITA dal box del personaggio (updateHeroBox):
+    // mostrava le stesse icone senza dire a chi appartenevano ne' quante ne potevi tenere accese.
+    setActiveBoons(list) { this._active = list || []; this._cardMax = 0; this._heroSig = null; this._renderHeroCards(); },
+    _renderHeroCards() {
+      const wrap = $('heroCards'); if (!wrap) return;
+      const max = window.GAME.Constants.MAX_CARDS || 5;
+      const on = (this._active || []).filter(b => b.on !== 0);   // le sinergie non hanno il flag: contano come accese
+      let html = '';
+      for (let i = 0; i < max; i++) {
+        const b = on[i];
+        if (!b) { html += '<span class="cchip empty"></span>'; continue; }
         const col = b.syn ? '#7dffea' : ((RAR[b.rarity] || RAR.common).color);
-        const n = (b.n || 1) > 1 ? `<i>×${b.n}</i>` : '';
-        const title = esc(b.name) + (b.desc ? ' — ' + esc(b.desc) : '');
-        return `<span class="bchip${b.syn ? ' syn' : ''}" style="border-color:${col};color:${col}" title="${title}">${b.icon}${n}</span>`;
-      }).join('');
+        const n = (b.n || 1) > 1 ? '<i>×' + b.n + '</i>' : '';
+        html += '<span class="cchip' + (b.syn ? ' syn' : '') + '" style="border-color:' + col + ';color:' + col + '" title="' +
+                esc(b.name) + (b.desc ? ' — ' + esc(b.desc) : '') + '">' + b.icon + n + '</span>';
+      }
+      if (on.length > max) html += '<span class="cmore">+' + (on.length - max) + '</span>';
+      wrap.innerHTML = html;
+    },
+    // ===== v1.73 — IL BOX DEL PERSONAGGIO =====
+    // Sta nel vuoto fra la barra abilita' e la boccetta della vita. Raccoglie le tre cose che prima erano
+    // sparse: il NOME e il LIVELLO (che stavano sopra la testa, dove coprivano il gioco) e le CARTE ATTIVE
+    // (che erano una fila di gettoni senza contesto). Gli slot vuoti si vedono: il tetto di 5 e' una regola,
+    // e una regola che non si vede non esiste.
+    updateHeroBox(me) {
+      const box = $('heroBox'); if (!box) return;
+      if (!me) { box.classList.add('hidden'); return; }
+      const LV = window.GAME.Levels, h = HERO[me.h] || HERO.guerriero;
+      const rk = (LV && me.lvl) ? LV.rankName(me.h, me.lvl, me.sp || null) : '';
+      const sig = [me.n, me.h, me.lvl, rk, (this._active || []).map(b => b.id + (b.on === 0 ? '-' : '+') + (b.n || 1)).join(',')].join('|');
+      if (sig !== this._heroSig) {
+        this._heroSig = sig;
+        $('heroBoxName').textContent = me.n || '';
+        $('heroBoxName').style.color = h.accent;
+        $('heroBoxLv').innerHTML = me.lvl ? ('<b>Lv.' + me.lvl + '</b> · ' + esc(rk)) : '';
+        this._renderHeroCards();
+      }
+      const xp = $('heroBoxXp'); if (xp) xp.style.width = Math.round((me.prg || 0) * 100) + '%';
+      box.classList.remove('hidden');
+    },
+
+    // ===== v1.73 — IL TAVOLO DELLA CARTOMANTE =====
+    showSeer(data, onToggle) {
+      if (data) this._seer = data; if (onToggle) this._seerCb = onToggle;
+      const panel = $('seerPanel'); if (!panel || !this._seer) return;
+      panel.classList.remove('hidden'); this._renderSeer();
+    },
+    hideSeer() { const panel = $('seerPanel'); if (panel) panel.classList.add('hidden'); this._seerSig = null; },
+    _renderSeer() {
+      const d = this._seer; if (!d) return;
+      const hd = $('seerHead');
+      if (hd) hd.innerHTML = '\uD83D\uDD2E <b>Cartomante</b> \u2014 <b>' + d.active + '</b> di <b>' + d.max + '</b> carte accese';
+      const sig = JSON.stringify([d.cards, d.syn, d.active]);
+      if (sig === this._seerSig) return; this._seerSig = sig;
+      const cb = this._seerCb;
+      const pieno = d.active >= d.max;
+      const sub = $('seerSub');
+      if (sub) sub.textContent = pieno
+        ? 'Sei al limite: per accenderne un\'altra devi prima spegnerne una.'
+        : 'Puoi accenderne ancora ' + (d.max - d.active) + '. Le carte spente restano tue.';
+      const wrap = $('seerCards'); wrap.innerHTML = '';
+      const ord = (d.cards || []).slice().sort((a, b) => (b.on - a.on) || a.name.localeCompare(b.name));
+      ord.forEach(c => {
+        const col = (RAR[c.rarity] || RAR.common).color;
+        const el = document.createElement('div');
+        const bloccata = !c.on && pieno;
+        el.className = 'sc' + (c.on ? ' on' : '') + (bloccata ? ' lock' : '');
+        el.style.setProperty('--c', col);
+        el.innerHTML = '<div class="ic">' + c.icon + '</div><div class="mid"><div class="nm" style="color:' + col + '">' +
+          esc(c.name) + ((c.n || 1) > 1 ? ' <i>×' + c.n + '</i>' : '') + '</div><div class="ds">' + esc(c.desc || '') + '</div></div>' +
+          '<span class="sw">' + (c.on ? 'ACCESA' : (bloccata ? 'LIMITE' : 'spenta')) + '</span>';
+        if (!bloccata) el.onclick = () => { if (cb) cb(c.id); };
+        wrap.appendChild(el);
+      });
+      if (!ord.length) wrap.innerHTML = '<div class="vuoto">Non hai ancora nessuna carta. Se ne guadagna una a fine ondata.</div>';
+      const sy = $('seerSyn');
+      if (sy) {
+        sy.innerHTML = (d.syn || []).map(s => '<span class="syn">' + s.icon + ' <b>' + esc(s.name) + '</b> — ' + esc(s.desc) + '</span>').join('');
+        sy.classList.toggle('hidden', !(d.syn || []).length);
+      }
     },
     onBoonPicked() { if (this._boons) { this._boons.picked = true; this._render(); } },
     hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; this._rank = null; },

@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.72.0',
+    VERSION: '1.73.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -52,6 +52,9 @@
     // a mano in mapgen (VILLAGE), quindi restano solo i raggi di interazione.
     MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84,
     SELL_BACK: 0.5,     // v1.72 — quanto rende un oggetto venduto al Banditore (meta', come il rimborso delle pozioni)
+    // v1.73 — quante CARTE possono essere attive insieme. Il limite conta carte DIVERSE: Rimbalzo x3 occupa
+    // un posto solo, cosi' approfondire una carta resta una strategia e non una tassa.
+    MAX_CARDS: 5,
     COMBO_TIME: 3.6, COMBO_STEP: 0.05, COMBO_CAP: 1.5, COMBO_MIN: 3,
     COIN_MAGNET: 130,
     COINS: [
@@ -74,6 +77,7 @@
       PICK_RANK: 'pick_rank', OFFER_RANK: 'offer_rank',   // v1.69 — carte di rango e bivio finale
       PICK_POTION: 'pick_potion', BUY_POTION: 'buy_potion', OFFER_POTION: 'offer_potion',  // v1.71 — cintura
       TAKE_BOUNTY: 'take_bounty', SELL_GEAR: 'sell_gear', OFFER_BANDIT: 'offer_bandit',      // v1.72 — Banditore
+      TOGGLE_CARD: 'toggle_card', OFFER_SEER: 'offer_seer',                                  // v1.73 — Cartomante
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)

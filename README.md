@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.72.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.73.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.73 (cinque carte, e un posto dove guardarle)
+- **🔮 La Cartomante**: decidi quali carte tenere **accese**, al massimo **cinque**. Il limite conta carte
+  diverse (Rimbalzo x3 occupa un posto solo).
+- **🃏 La sesta arriva spenta**: la prendi comunque, resta tua, la accendi quando fai spazio.
+- **⚙️ I bonus si ricostruiscono da zero** a ogni cambio: spegnere una carta ne toglie l'effetto davvero.
+- **🧑 Box del personaggio** fra la barra e la boccetta: nome, livello, rango, esperienza e le cinque
+  caselle delle carte. Sopra la tua testa non c'e' piu' nulla; sopra i compagni si', per riconoscerli.
 
 ## 🆕 Novita v1.72 (il Banditore: niente si butta)
 - **📦 Magazzino**: l'equipaggiamento sostituito non sparisce piu'. Cio' che hai comprato resta tuo e dal

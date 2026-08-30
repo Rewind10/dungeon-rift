@@ -2,6 +2,59 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.73.0] — 2026-08-30 · "Cinque carte, e un posto dove guardarle"
+
+Quarta bottega, e una riorganizzazione dell'HUD.
+
+#### 🔮 La Cartomante — cinque carte accese
+Niente previsione delle ondate e niente respec (idee scartate). Fa una cosa sola: decidere **quali carte
+tieni accese**, al massimo **cinque**.
+
+- Il limite conta **carte diverse**: Rimbalzo ×3 occupa un posto solo, così approfondire una carta resta
+  una strategia e non una tassa.
+- Quando ne scegli una a fine ondata e ne hai già cinque accese, **la prendi lo stesso ma arriva spenta** —
+  non ti blocca mai a fine ondata, e ti dà un motivo per passare dalla Cartomante.
+- Le carte spente **restano tue** per sempre. Spegnere è sempre concesso, accendere solo se c'è posto.
+- Le **sinergie** seguono le carte accese: spegnerne una spegne anche la sinergia che formava.
+
+#### ⚙️ Il pezzo rischioso: il ricalcolo da zero
+Fino alla 1.72 le carte, quando le sceglievi, **si sommavano dentro il personaggio e non uscivano più**.
+Per poterle spegnere, ora tutto si ricostruisce da zero a ogni cambio — statistiche base → statistiche
+comprate coi punti → carte accese → sinergie — esattamente come già faceva l'equipaggiamento dalla 1.67.
+Con effetti che si possono togliere, sommare i delta lascerebbe in giro il bonus della carta spenta per
+sempre, e nulla se ne accorgerebbe.
+
+Due punti delicati, entrambi coperti dai test:
+- **I PV.** Alcune carte alzano il massimo *e* curano di altrettanto. Al ricalcolo la cura non va rifatta,
+  ma se il massimo sale quella differenza va data, e se scende i PV vanno tagliati al nuovo tetto —
+  altrimenti spegnere e riaccendere sarebbe una pompa di vita infinita.
+- **Ultima Occasione.** La carica si consuma giocando: spegnere e riaccendere la carta non la resuscita.
+
+#### 🧑 Il box del personaggio
+Fra la barra delle abilità e la boccetta della vita c'era un vuoto. Ora c'è un box che raccoglie tre cose
+che prima erano sparse o invisibili:
+- **nome, livello e rango**, che stavano **sopra la testa** — in mezzo all'azione, proprio dove serve
+  vedere. Sopra la tua testa non c'è più nulla; sopra i **compagni** restano, altrimenti in co-op tre
+  sagome uguali diventano indistinguibili;
+- la **barra dell'esperienza**;
+- le **cinque caselle delle carte**, con quelle vuote ben visibili: il tetto di cinque è una regola, e una
+  regola che non si vede non esiste.
+
+La vecchia barra dei gettoni in basso (`#boonBar`) è stata **rimossa**: mostrava le stesse icone senza dire
+a chi appartenessero né quante se ne potessero tenere accese.
+
+#### 🏘️ Villaggio
+Resta chiusa solo l'**Ostessa**.
+
+#### ✅ Verificato
+**847 test, 0 falliti.** Il grosso è sul ricalcolo: spegnere toglie davvero il bonus (non resta attaccato),
+riaccendere riporta al valore **identico**, dieci giri di spegni/accendi non fanno derivare i numeri di un
+millesimo, le statistiche comprate coi punti sopravvivono, il tetto non si aggira dal client, i PV si
+comportano nei tre casi (sale, scende, pieni) e otto giri non regalano vita, la carica di Ultima Occasione
+spesa non torna, e le sinergie si accendono e si spengono con le carte. Più 22 controlli sull'interfaccia.
+
+---
+
 ### [1.72.0] — 2026-08-29 · "Il Banditore: niente si butta"
 
 Terza bottega ad aprire, e fa due mestieri.

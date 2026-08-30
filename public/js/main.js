@@ -31,6 +31,8 @@
   Net.onOfferPotion = (m) => { G.potData = m; if (m.near) HUD.showPotions(m, potCb); };
   // v1.72 — il banco del Banditore: taglie sopra, magazzino sotto.
   Net.onOfferBandit = (m) => { G.bndData = m; if (m.near) HUD.showBandit(m, bndCb); };
+  // v1.73 — il tavolo della Cartomante: quali carte tieni accese.
+  Net.onOfferSeer = (m) => { G.seerData = m; if (m.near) HUD.showSeer(m, (id) => Net.toggleCard(id)); };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
@@ -89,6 +91,8 @@
       case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
       case 'herb_leave': G._herbOpen = false; HUD.hidePotions(); break;
       case 'bnd_leave': G._bndOpen = false; HUD.hideBandit(); break;
+      case 'seer_leave': G._seerOpen = false; HUD.hideSeer(); break;
+      case 'card_toggle': A.ability && A.ability('barrier'); HUD.killfeed((ev.icon || '\uD83C\uDCCF') + ' <b>' + esc(ev.name) + '</b> ' + (ev.on ? '<b style="color:#9fe06a">accesa</b>' : '<b style="color:#8b93a7">spenta</b>')); break;
       case 'bounty_take': HUD.killfeed('\uD83E\uDEA7 taglia accettata \u2014 <b style="color:' + (ev.color || '#ff9a8a') + '">' + esc(ev.nome) + '</b>: ' + esc(ev.testo)); break;
       // la consegna e' il momento che ripaga tutte le ondate passate a contare: si vede e si sente
       case 'bounty_done': A.item && A.item(true); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 6, 90, 0.6); R.burst(ev.x, ev.y, '#ffcf4a', 24, 210, 0.75);
@@ -132,7 +136,7 @@
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;
       case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
-      case 'boon_ok': A.boon(); HUD.killfeed(`🎴 Potere ottenuto: ${ev.icon} <b>${esc(ev.name)}</b>`); HUD.onBoonPicked(); break;
+      case 'boon_ok': if (ev.off) HUD.killfeed('\uD83C\uDCCF <b>' + esc(ev.name) + '</b> \u2014 <b style="color:#ffcf4a">presa ma SPENTA</b>: hai gi\u00e0 5 carte attive, accendila dalla Cartomante'); A.boon(); HUD.killfeed(`🎴 Potere ottenuto: ${ev.icon} <b>${esc(ev.name)}</b>`); HUD.onBoonPicked(); break;
       case 'weapon_evo': A.evo(); R.ring(ev.x, ev.y, ev.color || '#b061ff', 10, 90, 0.7); R.burst(ev.x, ev.y, ev.color || '#b061ff', 26, 220, 0.7); R.addShake(8); HUD.killfeed(`✦ <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ARMA EVOLUTA: <b>${esc(ev.name)}</b>!`); break;
       case 'treasure_spawn': HUD.killfeed('👑 <b style="color:#ffd24a">Scrigno del Tesoro!</b> Uccidilo prima che fugga!'); break;
       case 'treasure_dead': R.burst(ev.x, ev.y, '#ffd24a', 30, 240, 0.8); R.ring(ev.x, ev.y, '#ffd24a', 8, 120, 0.6); HUD.killfeed('💰 <b style="color:#ffd24a">Tesoro conquistato!</b>'); break;
@@ -168,7 +172,8 @@
       if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
       if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
       if (w.me.nb && G.bndData) { if (!G._bndOpen) G._bndOpen = true; HUD.showBandit(G.bndData, bndCb); } else if (!w.me.nb && G._bndOpen) { G._bndOpen = false; HUD.hideBandit(); }
-      HUD.updateBelt(w.me); HUD.updateBounty(w.me);
+      if (w.me.ns && G.seerData) { if (!G._seerOpen) G._seerOpen = true; HUD.showSeer(G.seerData, (id) => Net.toggleCard(id)); } else if (!w.me.ns && G._seerOpen) { G._seerOpen = false; HUD.hideSeer(); }
+      HUD.updateBelt(w.me); HUD.updateBounty(w.me); HUD.updateHeroBox(w.me);
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
     w.mon = next.mon.map(nm => { const p = mm[nm.e] || nm; return Object.assign({}, nm, { x: lerp(p.x, nm.x, a), y: lerp(p.y, nm.y, a), f: lerpA(p.f, nm.f, a) }); });

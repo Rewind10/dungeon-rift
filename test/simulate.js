@@ -200,9 +200,15 @@ function testV17() {
   // frost_chain: chain + freeze
   p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); p.boonOffer = ['freeze']; room.pickBoon('b', 'freeze');
   assert(p.synActive.frost_chain === 1 && p.boon.frostChain === 1, 'chain + freeze attiva Catena Gelida');
-  // seeker: homing + pierce (boon Perforazione) aumenta la perforazione
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); const pierce0 = p.boon.pierce; p.boonOffer = ['homing']; room.pickBoon('b', 'homing');
+  // seeker: homing + pierce. v1.73 — qui si arriverebbe a SEI carte, una oltre il tetto: la sesta arriva
+  // spenta e la sinergia non scatta. Si libera un posto spegnendone una, che e' cio' che si fa giocando.
+  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); const pierce0 = p.boon.pierce;
+  p.boonOffer = ['homing']; room.pickBoon('b', 'homing');
+  assert(!p.cardOn.homing, 'la SESTA carta arriva spenta: il tetto vale anche a fine ondata');
+  assert(!p.synActive.seeker, 'e una carta spenta non completa la sinergia');
+  delete p.cardOn.poison; p.cardOn.homing = 1; room._recomputeBoons(p);   // faccio spazio, come dalla Cartomante
   assert(p.synActive.seeker === 1 && p.boon.pierce === pierce0 + 1, 'homing + pierce attiva Cercatore (+1 perforazione)');
+  assert(!p.synActive.toxic_burst, 'e spegnendo Tossina la sua sinergia si spegne con lei');
   // la sinergia gia attiva non si ri-applica: detectSynergies esclude quelle in synActive
   const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'seeker'), 'la sinergia gia attiva non viene rilevata di nuovo');
   // toxicBurst avvelena ad area
@@ -214,7 +220,7 @@ function testV17() {
   const stats = room.buildRunStats();
   assert(Array.isArray(stats) && stats.length >= 2, 'buildRunStats restituisce una riga per giocatore');
   assert(stats[0].k >= stats[1].k, 'la classifica e ordinata per uccisioni');
-  const row = stats.find(r => r.i === 'b'); assert(row && row.cb === 40 && row.dmg === 3400 && row.syn >= 3, 'le stats includono combo max, danni e sinergie');
+  const row = stats.find(r => r.i === 'b'); assert(row && row.cb === 40 && row.dmg === 3400 && row.syn >= 1, 'le stats includono combo max, danni e sinergie');
   // gameover porta stats e durata
   sent.length = 0; room.runStart = room.time - 90; room.gameOver();
   assert(sent.some(m => m.ev && m.ev.t === 'gameover' && Array.isArray(m.ev.stats) && m.ev.dur >= 90), 'il gameover include statistiche e durata');
@@ -809,7 +815,8 @@ function testV157() {
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
   assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende: il fabbro');
   // v1.72 — hanno aperto Erborista e Banditore: restano chiusi Cartomante e Ostessa.
-  assert(m.village.npcs.filter(n => n.soon).length === 2, 'gli altri 2 sono ancora chiusi');
+  assert(m.village.npcs.filter(n => n.soon).length === 1, "resta chiusa solo l'Ostessa");
+  assert(m.village.npcs.filter(n => n.crd).length === 1, 'e la Cartomante ha aperto in v1.73');
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   // ogni mercante sta DIETRO il suo banco: piu' lontano dal fuoco
@@ -1970,8 +1977,125 @@ function testV172() {
   ok('novita v1.72 verificate');
 }
 
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.72)'); console.log('==================================================');
+
+// ===================== v1.73 — LA CARTOMANTE: 5 carte accese =====================
+// La novita' rischiosa non e' il tetto: e' che per la prima volta un potere si puo' TOGLIERE. Fino alla
+// 1.72 le carte si sommavano dentro il personaggio e non uscivano piu'. Ora tutto si ricostruisce da zero
+// (statistiche base -> statistiche comprate -> carte accese -> sinergie), e questi test difendono proprio
+// quello: che spegnere e riaccendere riporti ESATTAMENTE al punto di prima, senza lasciare residui.
+function testV173() {
+  console.log('\n[TEST 43] Novita v1.73 — Cartomante: 5 carte accese, ricalcolo da zero');
+  const conn = { send() {} };
+  const prendi = (r, p, id) => { p.boonOffer = [id]; r.pickBoon(p.id, id); };
+
+  // --- 1) il tetto ---
+  const r = new Room('v173a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame(); r.phase = C.PHASE_SHOP;
+  assert(C.MAX_CARDS === 5, 'il tetto e cinque, e sta nelle costanti');
+  const sette = ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant', 'vampire'];
+  for (const id of sette) prendi(r, p, id);
+  assert(Object.keys(p.boonsOwned).length === 7, 'le carte si prendono tutte: restano tue');
+  assert(r._carteAccese(p) === C.MAX_CARDS, 'ma accese ce ne stanno cinque');
+  assert(!p.cardOn.giant && !p.cardOn.vampire, 'la sesta e la settima arrivano SPENTE, non bloccano la scelta');
+  assert(p.cardOn.ricochet && p.cardOn.thorns, 'le prime cinque restano accese');
+
+  // --- 2) lo stesso tipo preso due volte occupa UN posto solo ---
+  const r2 = new Room('v173b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame(); r2.phase = C.PHASE_SHOP;
+  prendi(r2, q, 'ricochet'); prendi(r2, q, 'ricochet'); prendi(r2, q, 'ricochet');
+  assert(q.boonsOwned.ricochet === 3, 'tre esemplari della stessa carta');
+  assert(r2._carteAccese(q) === 1, 'ma un solo posto occupato: il tetto conta carte DIVERSE');
+  assert(q.boon.bounce === 3, 'e i tre esemplari fanno effetto tutti e tre');
+
+  // --- 3) spegnere toglie DAVVERO l'effetto, riaccendere lo rimette identico ---
+  const r3 = new Room('v173c'); const g = r3.addPlayer('c', conn, 'C', 'guerriero'); r3.startGame(); r3.phase = C.PHASE_SHOP;
+  prendi(r3, g, 'crit'); prendi(r3, g, 'crit');
+  const critAcceso = g.stats.critChance, multAcceso = g.stats.critMult;
+  r3.enterMarket(); assert(!!r3.seer, 'la Cartomante ha un posto nel villaggio');
+  g.x = r3.seer.x + 900; r3.toggleCard('c', 'crit');
+  assert(g.cardOn.crit, 'da lontano il tavolo non risponde');
+  g.x = r3.seer.x; g.y = r3.seer.y;
+  r3.toggleCard('c', 'crit');
+  assert(!g.cardOn.crit, 'spenta');
+  assert(Math.abs(g.stats.critChance - 0.03) < 1e-9, "e il bonus e sparito davvero, non e rimasto attaccato");
+  r3.toggleCard('c', 'crit');
+  assert(Math.abs(g.stats.critChance - critAcceso) < 1e-9 && Math.abs(g.stats.critMult - multAcceso) < 1e-9,
+    'riaccesa: torna ESATTAMENTE come prima, senza raddoppiare ne perdere pezzi');
+  // dieci giri di spegni/accendi non devono derivare di un millesimo
+  for (let i = 0; i < 10; i++) { r3.toggleCard('c', 'crit'); r3.toggleCard('c', 'crit'); }
+  assert(Math.abs(g.stats.critChance - critAcceso) < 1e-9, 'dieci giri non fanno derivare i valori');
+
+  // --- 4) le statistiche comprate coi punti sopravvivono al ricalcolo ---
+  const r4 = new Room('v173d'); const h = r4.addPlayer('d', conn, 'D', 'ladro'); r4.startGame(); r4.phase = C.PHASE_SHOP;
+  h.points = 20; for (let i = 0; i < 4; i++) r4.buyStat('d', 'st_des');
+  const desPrima = h.stats.schoolDmg.ranged;
+  prendi(r4, h, 'swift');
+  r4.enterMarket(); h.x = r4.seer.x; h.y = r4.seer.y;
+  r4.toggleCard('d', 'swift'); r4.toggleCard('d', 'swift');
+  assert(Math.abs(h.stats.schoolDmg.ranged - desPrima) < 1e-9, 'la Destrezza comprata resta intatta dopo il ricalcolo');
+  assert(h.buys.st_des === 4, 'e i livelli comprati non si perdono');
+
+  // --- 5) il limite non si aggira dal client ---
+  const r5 = new Room('v173e'); const k = r5.addPlayer('e', conn, 'E', 'guerriero'); r5.startGame(); r5.phase = C.PHASE_SHOP;
+  for (const id of ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant']) prendi(r5, k, id);
+  r5.enterMarket(); k.x = r5.seer.x; k.y = r5.seer.y;
+  r5.toggleCard('e', 'giant');
+  assert(!k.cardOn.giant && r5._carteAccese(k) === C.MAX_CARDS, 'con cinque accese la sesta non entra');
+  r5.toggleCard('e', 'thorns'); r5.toggleCard('e', 'giant');
+  assert(k.cardOn.giant && !k.cardOn.thorns, 'ma liberando un posto entra');
+  r5.toggleCard('e', 'boon_inesistente');
+  assert(r5._carteAccese(k) === C.MAX_CARDS, 'una carta che non possiedi non si accende');
+
+  // --- 6) i PV: alzare il massimo cura, abbassarlo taglia, e non si guadagna vita a ogni giro ---
+  const r6 = new Room('v173f'); const v = r6.addPlayer('f', conn, 'F', 'guerriero'); r6.startGame(); r6.phase = C.PHASE_SHOP;
+  const max0 = r6.effMaxHp(v);
+  prendi(r6, v, 'juggernaut');
+  assert(r6.effMaxHp(v) === max0 + 45, 'Colosso alza il massimo di 45');
+  assert(v.hp === r6.effMaxHp(v), 'e prenderlo cura di altrettanto');
+  v.hp = 100;
+  r6.enterMarket(); v.x = r6.seer.x; v.y = r6.seer.y;
+  r6.toggleCard('f', 'juggernaut');
+  assert(r6.effMaxHp(v) === max0 && v.hp === 100, 'spegnendolo il massimo torna giu e i PV correnti restano');
+  r6.toggleCard('f', 'juggernaut');
+  assert(v.hp === 145, 'riaccendendolo si riprendono i 45 punti di massimo appena aggiunti');
+  v.hp = r6.effMaxHp(v); r6.toggleCard('f', 'juggernaut');
+  assert(v.hp === r6.effMaxHp(v) && v.hp === max0, 'con i PV pieni, spegnere li taglia al nuovo tetto');
+  const hpA = v.hp; for (let i = 0; i < 8; i++) { r6.toggleCard('f', 'juggernaut'); r6.toggleCard('f', 'juggernaut'); }
+  assert(v.hp <= r6.effMaxHp(v) && v.hp >= hpA, 'e otto giri non sono una pompa di vita infinita');
+
+  // --- 7) Ultima Occasione: la carica spesa non torna spegnendo e riaccendendo ---
+  const r7 = new Room('v173g'); const d = r7.addPlayer('g', conn, 'G', 'mago'); r7.startGame(); r7.phase = C.PHASE_SHOP;
+  prendi(r7, d, 'defiance');
+  assert(d.defianceLeft === 1, 'Ultima Occasione da una carica');
+  d.defianceLeft = 0; d.defianceUsed = 1;                     // consumata giocando
+  r7.enterMarket(); d.x = r7.seer.x; d.y = r7.seer.y;
+  r7.toggleCard('g', 'defiance'); r7.toggleCard('g', 'defiance');
+  assert(d.defianceLeft === 0, 'spegnere e riaccendere NON la resuscita');
+
+  // --- 8) le sinergie seguono le carte accese, in tutti e due i versi ---
+  const r8 = new Room('v173h'); const y = r8.addPlayer('h', conn, 'H', 'mago'); r8.startGame(); r8.phase = C.PHASE_SHOP;
+  prendi(r8, y, 'poison'); prendi(r8, y, 'explode');
+  assert(y.synActive.toxic_burst === 1 && y.boon.toxicBurst === 1, 'due carte accese formano la sinergia');
+  r8.enterMarket(); y.x = r8.seer.x; y.y = r8.seer.y;
+  r8.toggleCard('h', 'poison');
+  assert(!y.synActive.toxic_burst && !y.boon.toxicBurst, 'spegnerne una spegne anche la sinergia e il suo flag');
+  r8.toggleCard('h', 'poison');
+  assert(y.synActive.toxic_burst === 1, 'riaccenderla la rimette');
+
+  // --- 9) cio' che arriva al client ---
+  const inviati = []; const conn9 = { send(s) { inviati.push(JSON.parse(s)); } };
+  const r9 = new Room('v173i'); const z = r9.addPlayer('i', conn9, 'I', 'guerriero'); r9.startGame(); r9.phase = C.PHASE_SHOP;
+  for (const id of ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant']) prendi(r9, z, id);
+  const boons = inviati.filter(m => m.t === C.MSG.BOONS).pop();
+  assert(boons && boons.max === C.MAX_CARDS && boons.active === C.MAX_CARDS, 'il client sa quante ne stanno e quante ne hai accese');
+  assert(boons.boons.some(b => b.id === 'giant' && b.on === 0), 'e sa quale e spenta');
+  r9.enterMarket(); z.x = r9.seer.x; z.y = r9.seer.y; inviati.length = 0; r9.offerSeer(z, 1);
+  const off = inviati.filter(m => m.t === C.MSG.OFFER_SEER).pop();
+  assert(off && off.cards.length === 6, 'il tavolo elenca TUTTE le carte, accese e spente');
+  assert(off.cards.every(c => c.name && c.icon && c.desc !== undefined), 'ognuna con nome, icona e cosa fa');
+  ok('novita v1.73 verificate');
+}
+
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.73)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
