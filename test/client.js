@@ -405,6 +405,43 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
 })();
 
+
+// ===== v1.74 — IL FOCOLARE DELL'OSTESSA =====
+(function () {
+  const C = window.GAME.Constants;
+  const mostra = (hp, mx, coins) => {
+    const manca = Math.max(0, mx - hp), pieno = Math.ceil(manca * C.INN_PER_HP);
+    const curabili = Math.min(manca, Math.floor(coins / C.INN_PER_HP));
+    HUD._innSig = null;
+    HUD.showInn({ near: 1, coins, hp, mx, manca, pieno, curabili, spesa: Math.ceil(curabili * C.INN_PER_HP), perHp: C.INN_PER_HP }, () => { chiesto = true; });
+  };
+  let chiesto = false;
+  // ferito, monete a sufficienza
+  mostra(100, 275, 430);
+  const panel = document.getElementById('innPanel'), btn = document.getElementById('innBtn');
+  ok(!panel.classList.contains('hidden'), 'il focolare si apre');
+  ok(String(document.getElementById('innHp').innerHTML).indexOf('100') >= 0, 'mostra la vita che hai');
+  ok(String(document.getElementById('innText').innerHTML).indexOf('175') > 0, 'e quanti PV ti mancano');
+  ok(String(btn.innerHTML).indexOf('70') > 0, 'il bottone dice quanto costa la cura piena');
+  ok(String(btn.className).indexOf('off') < 0, 'ed e cliccabile');
+  btn.onclick(); ok(chiesto, 'cliccarlo chiede il riposo');
+  // monete corte: cura parziale
+  mostra(100, 275, 28);
+  ok(String(document.getElementById('innBtn').innerHTML).indexOf('+70 PV') > 0, 'con poche monete offre la cura parziale');
+  ok(String(document.getElementById('innBtn').className).indexOf('parz') >= 0, 'e si vede che e parziale');
+  // nessuna moneta
+  mostra(100, 275, 0);
+  ok(String(document.getElementById('innBtn').className).indexOf('off') >= 0, 'senza monete il bottone e spento');
+  ok(!document.getElementById('innBtn').onclick, 'e non risponde al clic');
+  ok(String(document.getElementById('innText').innerHTML).indexOf('70') > 0, 'ma dice comunque quanto servirebbe');
+  // gia al massimo
+  mostra(275, 275, 430);
+  ok(String(document.getElementById('innBtn').className).indexOf('off') >= 0, 'a PV pieni non c e niente da comprare');
+  ok(String(document.getElementById('innText').textContent).indexOf('niente da farti curare') > 0, 'e lo dice chiaramente');
+  HUD.hideInn();
+  ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
+})();
+
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');
 
 

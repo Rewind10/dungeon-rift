@@ -33,6 +33,8 @@
   Net.onOfferBandit = (m) => { G.bndData = m; if (m.near) HUD.showBandit(m, bndCb); };
   // v1.73 — il tavolo della Cartomante: quali carte tieni accese.
   Net.onOfferSeer = (m) => { G.seerData = m; if (m.near) HUD.showSeer(m, (id) => Net.toggleCard(id)); };
+  // v1.74 — il focolare dell'Ostessa: rimetterti in piedi a pagamento.
+  Net.onOfferInn = (m) => { G.innData = m; if (m.near) HUD.showInn(m, () => Net.rest()); };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
@@ -92,6 +94,11 @@
       case 'herb_leave': G._herbOpen = false; HUD.hidePotions(); break;
       case 'bnd_leave': G._bndOpen = false; HUD.hideBandit(); break;
       case 'seer_leave': G._seerOpen = false; HUD.hideSeer(); break;
+      case 'inn_leave': G._innOpen = false; HUD.hideInn(); break;
+      case 'rest': R.ring(ev.x, ev.y, '#ffd97a', 5, 62, 0.5); R.burst(ev.x, ev.y - 8, '#ffd97a', 18, 150, 0.6);
+        if (ev.who === Net.id) { A.item && A.item(true); R.floater(ev.x, ev.y - 34, '+' + ev.hp + ' PV', '#ff5a7a');
+          HUD.killfeed('\uD83C\uDF7A ' + (ev.pieno ? 'rimesso a nuovo' : 'un po\' di riposo') + ' \u2014 <b style="color:#ff5a7a">+' + ev.hp + ' PV</b> per <b style="color:#ffcf4a">' + ev.spesa + '</b> \uD83E\uDE99'); }
+        break;
       case 'card_toggle': A.ability && A.ability('barrier'); HUD.killfeed((ev.icon || '\uD83C\uDCCF') + ' <b>' + esc(ev.name) + '</b> ' + (ev.on ? '<b style="color:#9fe06a">accesa</b>' : '<b style="color:#8b93a7">spenta</b>')); break;
       case 'bounty_take': HUD.killfeed('\uD83E\uDEA7 taglia accettata \u2014 <b style="color:' + (ev.color || '#ff9a8a') + '">' + esc(ev.nome) + '</b>: ' + esc(ev.testo)); break;
       // la consegna e' il momento che ripaga tutte le ondate passate a contare: si vede e si sente
@@ -173,6 +180,7 @@
       if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
       if (w.me.nb && G.bndData) { if (!G._bndOpen) G._bndOpen = true; HUD.showBandit(G.bndData, bndCb); } else if (!w.me.nb && G._bndOpen) { G._bndOpen = false; HUD.hideBandit(); }
       if (w.me.ns && G.seerData) { if (!G._seerOpen) G._seerOpen = true; HUD.showSeer(G.seerData, (id) => Net.toggleCard(id)); } else if (!w.me.ns && G._seerOpen) { G._seerOpen = false; HUD.hideSeer(); }
+      if (w.me.ni && G.innData) { if (!G._innOpen) G._innOpen = true; HUD.showInn(G.innData, () => Net.rest()); } else if (!w.me.ni && G._innOpen) { G._innOpen = false; HUD.hideInn(); }
       HUD.updateBelt(w.me); HUD.updateBounty(w.me); HUD.updateHeroBox(w.me);
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;

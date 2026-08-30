@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = {
     ws: null, id: null, room: null, connected: false,
-    onWelcome: null, onMap: null, onSnapshot: null, onEvent: null, onOfferShop: null, onOfferBoon: null, onOfferRank: null, onOfferGear: null, onOfferMerchant: null, onOfferPotion: null, onOfferBandit: null, onOfferSeer: null, onChat: null,
+    onWelcome: null, onMap: null, onSnapshot: null, onEvent: null, onOfferShop: null, onOfferBoon: null, onOfferRank: null, onOfferGear: null, onOfferMerchant: null, onOfferPotion: null, onOfferBandit: null, onOfferSeer: null, onOfferInn: null, onChat: null,
     snaps: [], maxSnaps: 3, ping: 0,
     connect(name, hero, room) { const pr = location.protocol === 'https:' ? 'wss' : 'ws'; this.ws = new WebSocket(pr + '://' + location.host); this.ws.onopen = () => { this.send({ t: C.MSG.HELLO, name, hero, room: room || '' }); this._ping(); }; this.ws.onmessage = e => this._recv(e.data); this.ws.onclose = () => { this.connected = false; if (this.onClose) this.onClose(); }; this.ws.onerror = () => {}; },
     send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
@@ -20,6 +20,7 @@
     takeBounty(i) { this.send({ t: C.MSG.TAKE_BOUNTY, i }); },
     sellGear(id) { this.send({ t: C.MSG.SELL_GEAR, id }); },
     toggleCard(id) { this.send({ t: C.MSG.TOGGLE_CARD, id }); },
+    rest() { this.send({ t: C.MSG.REST }); },
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
     setHero(h) { this.send({ t: 'sethero', hero: h }); },
     chat(text) { this.send({ t: C.MSG.CHAT, text }); },
@@ -72,6 +73,7 @@
       case C.MSG.OFFER_POTION: if (this.onOfferPotion) this.onOfferPotion(m); break;
       case C.MSG.OFFER_BANDIT: if (this.onOfferBandit) this.onOfferBandit(m); break;
       case C.MSG.OFFER_SEER: if (this.onOfferSeer) this.onOfferSeer(m); break;
+      case C.MSG.OFFER_INN: if (this.onOfferInn) this.onOfferInn(m); break;
       case C.MSG.BOONS: if (this.onBoons) this.onBoons(m); break;  // v1.51 — poteri attivi
       case C.MSG.OFFER_MERCHANT: if (this.onOfferMerchant) this.onOfferMerchant(m); break;
       case C.MSG.CHAT: if (this.onChat) this.onChat(m); break;

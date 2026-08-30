@@ -6,6 +6,24 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ---
 
+## 🍺 L'OSTESSA e la regola sui PV *(novita v1.74)*
+- Il villaggio e' **completo**: tutte e cinque le botteghe lavorano. L'Ostessa per ora fa una cosa sola,
+  rimetterti in piedi; il resto verra'.
+- Si paga **a punto vita**: **0,4 monete per ogni PV mancante**. Un prezzo fisso sarebbe un affare quando
+  sei quasi morto e uno spreco quando ti manca poco — in nessuno dei due casi una scelta.
+- **Se le monete non bastano compri quello che puoi**: con 28 monete ti rende 70 PV. Da li' non si esce mai
+  a mani vuote.
+- Resta **piu' conveniente della pozione di Cura** (0,4 contro 0,54 a PV): la pozione pero' la bevi in mezzo
+  ai nemici, e quella differenza e' il prezzo della comodita'.
+- **ALZARE I PV MASSIMI NON CURA PIU'.** Un punto di Costituzione alza il massimo di 20 e non restituisce un
+  solo PV (prima ne curava 20); lo stesso vale per le carte **Colosso** (+45) e **Scudo Vitale** (+30).
+  Senza questa regola l'Ostessa non avrebbe mestiere. Ci si rimette in piedi in tre modi: pozione di Cura,
+  potenziamenti raccolti a terra, Ostessa.
+- **Il dettaglio che poteva rompersi.** Spegnere una carta dalla Cartomante abbassa il massimo e taglia i PV
+  in eccesso: se riaccendendola non tornassero, ogni giro costerebbe vita. Il taglio quindi non si perde, si
+  **segna**, e torna solo quando il massimo risale — mai piu' di quanto era stato tolto. Il riposo comprato
+  cancella il segno: quei PV sono gia' stati pagati.
+
 ## 🔮 LA CARTOMANTE: cinque carte accese *(novita v1.73)*
 - Quarta bottega. Niente previsione delle ondate e niente respec: fa una cosa sola, decidere **quali carte
   tieni accese**, al massimo **cinque**.
@@ -172,8 +190,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - **Buio, e la luce nasce dal falo'** al centro: un unico grande alone circolare scopre i cinque banchetti e
   si spegne contro le pareti. Le lanterne appese ai pali dei banchi fanno da luci di appoggio.
 - **Cinque banchetti** a ferro di cavallo attorno al fuoco — bancone, tendone a strisce, lanterna e merce
-  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.73 lavorano **Fabbro**, **Erborista**,
-  **Banditore** e **Cartomante**; resta chiusa solo l'**Ostessa**.
+  diversa per mestiere — **piu' grandi dei mercanti**. Dalla v1.74 lavorano **tutte e cinque**: **Fabbro**,
+  **Erborista**, **Banditore**, **Cartomante** e **Ostessa**.
 - I **mercanti** sono al doppio della taglia e piu' dettagliati (mantellina, cintura, pieghe, mani, occhi
   accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
 - Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
@@ -183,8 +201,8 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
 - **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della
   Gilda**, ognuna con tetto, finestre illuminate, insegna sopra la porta, lanterna e targa col nome.
-- **Cinque abitanti**: **Fabbro** (equipaggiamento), **Erborista** (pozioni, v1.71), **Banditore** (usato e
-  taglie, v1.72) e **Cartomante** (carte, v1.73). Solo l'**Ostessa** e' una bottega **ancora chiusa** — e lo dichiarano — pronte a diventare
+- **Cinque abitanti, tutti al lavoro**: **Fabbro** (equipaggiamento), **Erborista** (pozioni, v1.71),
+  **Banditore** (usato e taglie, v1.72), **Cartomante** (carte, v1.73) e **Ostessa** (riposo, v1.74) — e lo dichiarano — pronte a diventare
   le prossime destinazioni.
 - Il villaggio e' **illuminato**: niente torcia, niente buio. La piazza e' ripulita dai detriti da caverna;
   restano pozzo, lampioni, banchi, casse, barili, alberi, staccionate e il cartello MERCATO.

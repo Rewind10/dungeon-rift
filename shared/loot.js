@@ -107,7 +107,7 @@
     { id: 'freeze', name: 'Tocco Gelido', icon: '❄️', rarity: 'rare', max: 2, desc: 'I colpi rallentano brevemente i nemici', apply: p => p.boon.slow += 1 },
     { id: 'thorns', name: 'Aura di Spine', icon: '🌵', rarity: 'uncommon', max: 3, desc: 'Riflette danni a chi ti colpisce in mischia', apply: p => p.boon.thorns += 12 },
     { id: 'adrenaline', name: 'Adrenalina Pura', icon: '🔥', rarity: 'epic', max: 1, desc: 'Le uccisioni danno +cadenza per 3s (accumula)', apply: p => p.boon.killHaste = 1 },
-    { id: 'overheal', name: 'Scudo Vitale', icon: '💠', rarity: 'rare', max: 2, desc: '+30 PV massimi e rigeneri 2 PV/s', apply: p => { p.stats.maxHpFlat += 30; p.hp += 30; p.stats.regen += 2; } },
+    { id: 'overheal', name: 'Scudo Vitale', icon: '💠', rarity: 'rare', max: 2, desc: '+30 PV massimi (non curano) e rigeneri 2 PV/s', apply: p => { p.stats.maxHpFlat += 30; p.stats.regen += 2; } },
     // ===== NOVITA v1.6 =====
     { id: 'homing', name: 'Mira Guidata', icon: '🎯', rarity: 'epic', max: 2, desc: 'I proiettili curvano verso i nemici vicini', apply: p => p.boon.homing += 1 },
     { id: 'greed', name: 'Avidita', icon: '🪙', rarity: 'uncommon', max: 3, desc: '+30% XP raccolta (potenzia le combo)', apply: p => p.stats.xpMult += 0.30 },
@@ -116,7 +116,7 @@
     { id: 'berserk', name: 'Furia Cieca', icon: '😈', rarity: 'epic', max: 2, desc: '+22% danno ma +8% danni subiti', apply: p => { p.stats.dmgMult += 0.22; p.stats.dmgReduce = Math.max(-0.5, p.stats.dmgReduce - 0.08); } },
     { id: 'swift', name: 'Passo Rapido', icon: '🏃', rarity: 'uncommon', max: 3, desc: '+8% velocita e -6% ricarica scatto', apply: p => { p.stats.speedMult += 0.08; p.stats.cdrMult *= 0.94; } },
     { id: 'lucky', name: 'Fortuna Sfacciata', icon: '🍀', rarity: 'rare', max: 2, desc: '+10% critico e +20% XP raccolta', apply: p => { p.stats.critChance += 0.10; p.stats.xpMult += 0.20; } },
-    { id: 'juggernaut', name: 'Colosso', icon: '🧍', rarity: 'epic', max: 2, desc: '+45 PV massimi e +6% velocita', apply: p => { p.stats.maxHpFlat += 45; p.hp += 45; p.stats.speedMult += 0.06; } },
+    { id: 'juggernaut', name: 'Colosso', icon: '🧍', rarity: 'epic', max: 2, desc: '+45 PV massimi (non curano) e +6% velocita', apply: p => { p.stats.maxHpFlat += 45; p.stats.speedMult += 0.06; } },
     { id: 'executioner', name: 'Giustiziere', icon: '🪓', rarity: 'epic', max: 2, desc: '+35% danno critico e +5% critico', apply: p => { p.stats.critMult += 0.35; p.stats.critChance += 0.05; } },
     { id: 'artillery', name: 'Bombardiere', icon: '🚩', rarity: 'rare', max: 2, desc: '+1 proiettile e +10% danno', apply: p => { p.stats.extraProjectiles += 1; p.stats.dmgMult += 0.10; } },
     // ===== NOVITA v1.51 — dieci poteri nuovi, ispirati ad altri roguelike =====

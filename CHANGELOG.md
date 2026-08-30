@@ -2,6 +2,49 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.74.0] — 2026-08-30 · "L'Ostessa, e i PV massimi non curano più"
+
+Il villaggio è **completo**: tutte e cinque le botteghe lavorano.
+
+#### 🍺 L'Ostessa — il riposo a pagamento
+Per ora fa una cosa sola: ti rimette in piedi. Il resto verrà.
+
+- Si paga **a punto vita**, non a forfait: **0,4 monete per ogni PV** che ti manca. Un prezzo fisso sarebbe
+  un affare quando sei quasi morto e uno spreco quando ti manca poco — in entrambi i casi non una scelta.
+- **Se le monete non bastano compri quello che puoi**: con 28 monete ti rende 70 PV. Da lì non si esce mai
+  a mani vuote.
+- Resta **più conveniente della pozione di Cura** (0,4 contro 0,54 a PV): la pozione però la bevi in mezzo
+  ai nemici, e quella differenza è il prezzo della comodità.
+
+#### ❤️ La regola nuova: alzare i PV massimi non cura
+Questa tocca tutto il gioco, ed è la ragione per cui l'Ostessa ha un mestiere.
+
+- Un punto di **Costituzione** alza il massimo di 20 e **non restituisce un solo PV**. Prima ne curava 20:
+  con quella regola l'Ostessa sarebbe stata inutile dal primo giorno.
+- Stessa cosa per le carte **Colosso** (+45) e **Scudo Vitale** (+30): danno massimo, non salute. Le loro
+  descrizioni ora lo dicono.
+- Rimettersi in piedi resta possibile in tre modi: la **pozione di Cura**, i **potenziamenti** raccolti a
+  terra e l'**Ostessa**.
+
+**Il dettaglio che poteva rompersi.** Spegnere una carta dalla Cartomante abbassa il massimo e taglia i PV
+in eccesso; se riaccendendola non tornassero, ogni giro costerebbe vita e la Cartomante diventerebbe una
+tassa. Quindi il taglio non si perde, si **segna**, e viene restituito solo quando il massimo risale — mai
+più di quanto era stato tolto. Accendere e spegnere resta **neutro al punto**, e nessuna via cura di
+striscio. Il riposo comprato all'Ostessa **cancella il segno**: quei PV li hai già pagati.
+
+#### 🏘️ Villaggio
+**Nessuna bottega chiusa.** Fabbro, Erborista, Banditore, Cartomante e Ostessa.
+
+#### ✅ Verificato
+**879 test, 0 falliti.** Fra gli altri: sei punti di Costituzione di fila non curano di un PV, né lo fanno
+Colosso e Scudo Vitale; il prezzo del riposo è proporzionale e non forfettario; la cura parziale rende
+esattamente i PV pagati; a PV pieni non si paga; da lontano il focolare non risponde; il riposo è più
+economico a PV della pozione, come da taratura; e la sequenza completa spegni-carta → prendi-danni →
+paga-l'Ostessa → riaccendi-carta non regala neanche un punto vita. Più 15 controlli sull'interfaccia nei
+cinque stati del pannello.
+
+---
+
 ### [1.73.0] — 2026-08-30 · "Cinque carte, e un posto dove guardarle"
 
 Quarta bottega, e una riorganizzazione dell'HUD.

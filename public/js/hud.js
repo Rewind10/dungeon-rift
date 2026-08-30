@@ -219,6 +219,42 @@
       box.classList.remove('hidden');
     },
 
+    // ===== v1.74 — IL FOCOLARE DELL'OSTESSA =====
+    // Un pannello piccolo: una cosa sola da fare, e il prezzo che si legge senza calcoli. La barra mostra
+    // quanto ti manca, non quanto hai: e' quello che stai comprando.
+    showInn(data, onRest) {
+      if (data) this._inn = data; if (onRest) this._innCb = onRest;
+      const panel = $('innPanel'); if (!panel || !this._inn) return;
+      panel.classList.remove('hidden'); this._renderInn();
+    },
+    hideInn() { const panel = $('innPanel'); if (panel) panel.classList.add('hidden'); this._innSig = null; },
+    _renderInn() {
+      const d = this._inn; if (!d) return;
+      const hd = $('innHead');
+      if (hd) hd.innerHTML = '\uD83C\uDF7A <b>Ostessa</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
+      const sig = [d.hp, d.mx, d.coins].join('|');
+      if (sig === this._innSig) return; this._innSig = sig;
+      const bar = $('innBar'), txt = $('innText'), btn = $('innBtn');
+      const f = Math.max(0, Math.min(1, d.hp / (d.mx || 1)));
+      bar.style.width = Math.round(f * 100) + '%';
+      $('innHp').innerHTML = '<b>' + d.hp + '</b> / ' + d.mx;
+      if (!d.manca) {
+        txt.textContent = 'Sei a posto così: non hai niente da farti curare.';
+        btn.textContent = 'niente da curare'; btn.className = 'off'; btn.onclick = null;
+      } else if (d.curabili <= 0) {
+        txt.innerHTML = 'Ti mancano <b>' + d.manca + '</b> PV. Servono <b>' + d.pieno + '</b> \uD83E\uDE99 e non hai monete.';
+        btn.textContent = 'monete insufficienti'; btn.className = 'off'; btn.onclick = null;
+      } else if (d.curabili >= d.manca) {
+        txt.innerHTML = 'Ti mancano <b>' + d.manca + '</b> PV \u00b7 ' + d.perHp + ' \uD83E\uDE99 al punto vita.';
+        btn.innerHTML = 'rimettimi a nuovo \u2014 <b>\uD83E\uDE99' + d.pieno + '</b>'; btn.className = '';
+        btn.onclick = () => { if (this._innCb) this._innCb(); };
+      } else {
+        txt.innerHTML = 'Ti mancano <b>' + d.manca + '</b> PV, ma con quello che hai te ne rendo <b>' + d.curabili + '</b>.';
+        btn.innerHTML = 'quel che posso \u2014 <b>+' + d.curabili + ' PV</b> per <b>\uD83E\uDE99' + d.spesa + '</b>'; btn.className = 'parz';
+        btn.onclick = () => { if (this._innCb) this._innCb(); };
+      }
+    },
+
     // ===== v1.73 — IL TAVOLO DELLA CARTOMANTE =====
     showSeer(data, onToggle) {
       if (data) this._seer = data; if (onToggle) this._seerCb = onToggle;

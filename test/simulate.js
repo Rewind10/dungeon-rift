@@ -815,8 +815,9 @@ function testV157() {
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
   assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende: il fabbro');
   // v1.72 — hanno aperto Erborista e Banditore: restano chiusi Cartomante e Ostessa.
-  assert(m.village.npcs.filter(n => n.soon).length === 1, "resta chiusa solo l'Ostessa");
-  assert(m.village.npcs.filter(n => n.crd).length === 1, 'e la Cartomante ha aperto in v1.73');
+  assert(m.village.npcs.filter(n => n.soon).length === 0, 'in v1.74 il villaggio e completo: nessuna bottega chiusa');
+  assert(m.village.npcs.filter(n => n.crd).length === 1, 'la Cartomante ha aperto in v1.73');
+  assert(m.village.npcs.filter(n => n.inn).length === 1, "e l'Ostessa in v1.74");
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   // ogni mercante sta DIETRO il suo banco: piu' lontano dal fuoco
@@ -2047,19 +2048,21 @@ function testV173() {
   // --- 6) i PV: alzare il massimo cura, abbassarlo taglia, e non si guadagna vita a ogni giro ---
   const r6 = new Room('v173f'); const v = r6.addPlayer('f', conn, 'F', 'guerriero'); r6.startGame(); r6.phase = C.PHASE_SHOP;
   const max0 = r6.effMaxHp(v);
+  v.hp = 100;
   prendi(r6, v, 'juggernaut');
   assert(r6.effMaxHp(v) === max0 + 45, 'Colosso alza il massimo di 45');
-  assert(v.hp === r6.effMaxHp(v), 'e prenderlo cura di altrettanto');
-  v.hp = 100;
+  assert(v.hp === 100, 'ma NON cura (v1.74): rimettere in piedi e mestiere dell Ostessa');
   r6.enterMarket(); v.x = r6.seer.x; v.y = r6.seer.y;
   r6.toggleCard('f', 'juggernaut');
   assert(r6.effMaxHp(v) === max0 && v.hp === 100, 'spegnendolo il massimo torna giu e i PV correnti restano');
   r6.toggleCard('f', 'juggernaut');
-  assert(v.hp === 145, 'riaccendendolo si riprendono i 45 punti di massimo appena aggiunti');
+  assert(v.hp === 100, 'e riaccendendolo restano quelli: niente cura di striscio');
   v.hp = r6.effMaxHp(v); r6.toggleCard('f', 'juggernaut');
   assert(v.hp === r6.effMaxHp(v) && v.hp === max0, 'con i PV pieni, spegnere li taglia al nuovo tetto');
+  r6.toggleCard('f', 'juggernaut');
+  assert(v.hp === max0 + 45, 'ma riaccendendolo il taglio torna: la Cartomante non e una tassa sulla vita');
   const hpA = v.hp; for (let i = 0; i < 8; i++) { r6.toggleCard('f', 'juggernaut'); r6.toggleCard('f', 'juggernaut'); }
-  assert(v.hp <= r6.effMaxHp(v) && v.hp >= hpA, 'e otto giri non sono una pompa di vita infinita');
+  assert(v.hp === hpA, 'e otto giri non spostano di un punto, ne in su ne in giu');
 
   // --- 7) Ultima Occasione: la carica spesa non torna spegnendo e riaccendendo ---
   const r7 = new Room('v173g'); const d = r7.addPlayer('g', conn, 'G', 'mago'); r7.startGame(); r7.phase = C.PHASE_SHOP;
@@ -2094,8 +2097,108 @@ function testV173() {
   ok('novita v1.73 verificate');
 }
 
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.73)'); console.log('==================================================');
+
+// ===================== v1.74 — L'OSTESSA, e la regola sui PV =====================
+// Una bottega semplice e una regola che tocca tutto il gioco: ALZARE IL MASSIMO NON CURA MAI. Senza quella
+// regola l'Ostessa non avrebbe mestiere, perche' un punto di Costituzione la sostituirebbe gratis.
+function testV174() {
+  console.log('\n[TEST 44] Novita v1.74 — Ostessa: riposo a pagamento, e i PV massimi non curano');
+  const conn = { send() {} };
+  const prendi = (r, p, id) => { p.boonOffer = [id]; r.pickBoon(p.id, id); };
+
+  // --- 1) alzare il massimo non cura, da nessuna parte arrivi ---
+  const r = new Room('v174a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame(); r.phase = C.PHASE_SHOP;
+  p.hp = 100; p.points = 30; const mx0 = r.effMaxHp(p);
+  r.buyStat('a', 'st_cos');
+  assert(r.effMaxHp(p) === mx0 + 20, 'la Costituzione alza il massimo di 20');
+  assert(p.hp === 100, 'ma NON cura: altrimenti l Ostessa non servirebbe a niente');
+  for (let i = 0; i < 5; i++) r.buyStat('a', 'st_cos');
+  assert(p.hp === 100, 'nemmeno sei punti di fila curano di un solo PV');
+  prendi(r, p, 'juggernaut'); assert(p.hp === 100, 'e nemmeno Colosso');
+  prendi(r, p, 'overheal'); assert(p.hp === 100, 'e nemmeno Scudo Vitale');
+  assert(r.effMaxHp(p) > mx0 + 100, 'il massimo pero e cresciuto davvero');
+
+  // --- 2) il debito: spegnere e riaccendere resta neutro ---
+  const r2 = new Room('v174b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame(); r2.phase = C.PHASE_SHOP;
+  prendi(r2, q, 'juggernaut');
+  r2.enterMarket(); q.x = r2.seer.x; q.y = r2.seer.y;
+  q.hp = r2.effMaxHp(q); const pieno = q.hp;
+  r2.toggleCard('b', 'juggernaut');
+  assert(q.hpDebt === 45, 'spegnendo, i PV tagliati vengono SEGNATI, non persi');
+  r2.toggleCard('b', 'juggernaut');
+  assert(q.hp === pieno && q.hpDebt === 0, 'riaccendendo tornano, e il debito si chiude');
+  // ma il debito non restituisce piu' di quanto era stato tolto
+  q.hp = 40; r2.toggleCard('b', 'juggernaut'); r2.toggleCard('b', 'juggernaut');
+  assert(q.hp === 40, 'se non c era nulla da tagliare non c e nulla da rendere');
+
+  // --- 3) l'Ostessa ---
+  const r3 = new Room('v174c'); const g = r3.addPlayer('c', conn, 'C', 'guerriero'); r3.startGame();
+  r3.enterMarket();
+  assert(!!r3.innkeeper, "l'Ostessa ha un posto nel villaggio");
+  assert(!r3.map.village.npcs.find(n => n.inn).soon, 'e la sua bottega non e piu chiusa');
+  assert(r3.map.village.npcs.every(n => !n.soon), 'con lei il villaggio e completo: nessuna bottega chiusa');
+  const mx = r3.effMaxHp(g);
+  g.hp = 100; g.coins = 500;
+  // da lontano non risponde
+  g.x = r3.innkeeper.x + 900; g.y = r3.innkeeper.y;
+  r3.restAtInn('c');
+  assert(g.hp === 100 && g.coins === 500, 'da lontano il focolare non risponde');
+  g.x = r3.innkeeper.x; g.y = r3.innkeeper.y;
+  const conto = r3._contoOstessa(g);
+  assert(conto.manca === mx - 100, 'il conto sa quanti PV mancano');
+  assert(conto.pieno === Math.ceil((mx - 100) * C.INN_PER_HP), 'e il prezzo e proporzionale, non forfettario');
+  r3.restAtInn('c');
+  assert(g.hp === mx, 'pagando si torna al massimo');
+  assert(g.coins === 500 - conto.pieno, 'e si paga esattamente il conto');
+  // due volte non si paga
+  const c2 = g.coins; r3.restAtInn('c');
+  assert(g.coins === c2, 'a PV pieni non si paga nulla');
+  // cura parziale
+  g.hp = 100; g.coins = 20;
+  const conto2 = r3._contoOstessa(g);
+  assert(conto2.curabili > 0 && conto2.curabili < conto2.manca, 'con poche monete si compra una cura parziale');
+  r3.restAtInn('c');
+  assert(g.hp === 100 + conto2.curabili, 'e i PV comprati arrivano tutti');
+  assert(g.coins === 20 - conto2.spesa, 'pagando solo quelli');
+  // senza monete
+  g.coins = 0; const hp0 = g.hp; r3.restAtInn('c');
+  assert(g.hp === hp0, 'senza monete non si cura nulla');
+  // piu' conveniente della pozione di Cura, come da taratura
+  const Pot2 = require('../shared/potions.js');
+  const perPvPozione = Pot2.BY_ID.p_cura.cost / (mx * Pot2.EFF.heal);
+  assert(C.INN_PER_HP < perPvPozione, 'il riposo costa meno a PV della pozione, che pero si beve fra i nemici');
+
+  // --- 4) il riposo comprato cancella il debito, altrimenti sarebbe vita regalata ---
+  const r4 = new Room('v174d'); const h = r4.addPlayer('d', conn, 'D', 'guerriero'); r4.startGame(); r4.phase = C.PHASE_SHOP;
+  prendi(r4, h, 'juggernaut');
+  r4.enterMarket(); h.x = r4.seer.x; h.y = r4.seer.y; h.hp = r4.effMaxHp(h);
+  r4.toggleCard('d', 'juggernaut');
+  assert(h.hpDebt === 45, 'spegnendo con i PV pieni si apre un debito di 45');
+  h.hp = 100;                                    // poi si combatte e ci si fa male
+  h.x = r4.innkeeper.x; h.y = r4.innkeeper.y; h.coins = 500;
+  r4.restAtInn('d');
+  assert(h.hp === r4.effMaxHp(h), 'al focolare si torna al massimo');
+  assert(h.hpDebt === 0, 'e i PV pagati cancellano il debito: non si viene rimborsati due volte');
+  const hpPagato = h.hp;
+  h.x = r4.seer.x; h.y = r4.seer.y; r4.toggleCard('d', 'juggernaut');
+  assert(h.hp === hpPagato, 'e riaccendere la carta non regala i PV gia comprati');
+
+  // --- 5) cio' che arriva al client ---
+  const inviati = []; const conn5 = { send(x) { inviati.push(JSON.parse(x)); } };
+  const r5 = new Room('v174e'); const z = r5.addPlayer('e', conn5, 'E', 'ladro'); r5.startGame();
+  r5.enterMarket(); z.x = r5.innkeeper.x; z.y = r5.innkeeper.y; z.hp = 30; z.coins = 120;
+  inviati.length = 0; r5.offerInn(z, 1);
+  const off = inviati.filter(m => m.t === C.MSG.OFFER_INN).pop();
+  assert(off && off.hp === 30 && off.mx === Math.round(r5.effMaxHp(z)), 'il pannello riceve vita e massimo');
+  assert(off.manca > 0 && off.pieno > 0 && off.perHp === C.INN_PER_HP, 'quanto manca, quanto costa e il prezzo al PV');
+  r5.updateInn();
+  const snap = r5.snapshot().players.find(x => x.i === 'e');
+  assert(snap.ni === 1, 'e avvicinandosi lo snapshot dice che sei al focolare');
+  ok('novita v1.74 verificate');
+}
+
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.74)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -39,6 +39,7 @@ attach(server, (conn) => {
       case C.MSG.TAKE_BOUNTY: if (room) room.takeBounty(pid, m.i); break;
       case C.MSG.SELL_GEAR: if (room) room.sellGear(pid, m.id); break;
       case C.MSG.TOGGLE_CARD: if (room) room.toggleCard(pid, m.id); break;
+      case C.MSG.REST: if (room) room.restAtInn(pid); break;
       case C.MSG.SHOP_READY: if (room) room.shopReady(pid, m.dest); break;
       case 'sethero': if (room) { const p = room.players.get(pid); if (p && room.phase === C.PHASE_LOBBY) { const H = require('../shared/heroes.js').HEROES; if (H[m.hero]) { p.heroId = m.hero; p.hero = H[m.hero]; p.maxHp = p.hero.hp; p.hp = p.hero.hp; room.broadcast({ t: C.MSG.EVENT, ev: { t: 'herochange', id: pid, hero: m.hero } }); } } } break;
       case C.MSG.CHAT: if (room) room.broadcast({ t: C.MSG.CHAT, from: (room.players.get(pid) || {}).name || '???', text: String(m.text || '').slice(0, 120) }); break;

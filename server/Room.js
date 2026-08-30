@@ -128,7 +128,7 @@ class Room {
       // v1.73 — LE CARTE SI SPENGONO. `boonsOwned` e' cio' che possiedi, `cardOn` cio' che e' ACCESO
       // (al massimo C.MAX_CARDS carte diverse). `defianceUsed` tiene il conto delle cariche di Ultima
       // Occasione gia' spese, altrimenti ogni ricalcolo te le regalerebbe di nuovo.
-      cardOn: {}, defianceUsed: 0,
+      cardOn: {}, defianceUsed: 0, hpDebt: 0,
       stats: newStats(),
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
@@ -141,7 +141,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.cardOn = {}; p.defianceUsed = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -268,7 +268,18 @@ class Room {
     // scartate da Paolo): decide quali carte tieni ACCESE, al massimo C.MAX_CARDS per volta.
     const sgr = (v && v.npcs) ? v.npcs.find(n => n.crd) : null;
     this.seer = sgr ? { x: sgr.x, y: sgr.y, r: 18 } : null;
-    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; }
+    // v1.74 — l'OSTESSA: l'ultima bottega. Per ora fa una cosa sola, rimetterti in piedi a pagamento.
+    const inn = (v && v.npcs) ? v.npcs.find(n => n.inn) : null;
+    this.innkeeper = inn ? { x: inn.x, y: inn.y, r: 18 } : null;
+    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; }
+  }
+  updateInn() {
+    if (!this.innkeeper) return; const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this.innkeeper.x, this.innkeeper.y) <= RANGE;
+      if (near && !p._nearInn) { p._nearInn = true; this.offerInn(p, 1); }
+      else if (!near && p._nearInn) { p._nearInn = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'inn_leave' } }); }
+    }
   }
   updateSeer() {
     if (!this.seer) return; const RANGE = C.MARKET_MERCH_RANGE;
@@ -306,7 +317,7 @@ class Room {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
-    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); }
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); this.offerInn(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
@@ -315,8 +326,8 @@ class Room {
     const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
     for (const p of this.alivePlayers) {
       if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
-      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null;
-      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; }
+      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null;
+      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true; this.nextWave(); return;
     }
@@ -785,6 +796,37 @@ class Room {
       this.events.push({ t: 'bounty_done', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, testo: b.testo, pay: b.pay, color: b.color, icon: b.icon });
     }
   }
+  // ===== v1.74 — L'OSTESSA =====
+  // Si paga a PUNTO VITA, non a forfait: paghi per quello che ti serve. Un prezzo fisso sarebbe un affare
+  // quando sei quasi morto e uno spreco quando ti manca poco, e in tutti e due i casi non e' una scelta.
+  // Se le monete non bastano si compra quello che si puo': nessuno esce di li' a mani vuote.
+  _contoOstessa(p) {
+    const mx = this.effMaxHp(p), manca = Math.max(0, Math.round(mx - p.hp));
+    const pieno = Math.ceil(manca * C.INN_PER_HP);
+    const curabili = Math.min(manca, Math.floor((p.coins || 0) / C.INN_PER_HP));
+    return { mx: Math.round(mx), hp: Math.round(p.hp), manca, pieno, curabili, spesa: Math.ceil(curabili * C.INN_PER_HP) };
+  }
+  offerInn(p, near) {
+    const c = this._contoOstessa(p);
+    this.sendTo(p.id, { t: C.MSG.OFFER_INN, near: near ? 1 : 0, coins: p.coins || 0,
+      hp: c.hp, mx: c.mx, manca: c.manca, pieno: c.pieno, curabili: c.curabili, spesa: c.spesa, perHp: C.INN_PER_HP });
+  }
+  _dallOstessa(p) {
+    return this.phase === C.PHASE_MARKET && !!this.innkeeper &&
+      MU.dist(p.x, p.y, this.innkeeper.x, this.innkeeper.y) <= C.MARKET_MERCH_RANGE + 12;
+  }
+  restAtInn(pid) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._dallOstessa(p)) return;
+    const c = this._contoOstessa(p);
+    if (c.manca <= 0 || c.curabili <= 0) return;
+    p.coins -= c.spesa; p.hp = Math.min(this.effMaxHp(p), p.hp + c.curabili);
+    // v1.74 — i PV comprati cancellano anche il debito: quello e' cio' che il ricalcolo deve ancora
+    // restituire, e restituirlo dopo che hai gia' pagato ti regalerebbe vita.
+    p.hpDebt = Math.max(0, (p.hpDebt || 0) - c.curabili);
+    this.offerInn(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'rest', x: p.x, y: p.y, who: p.id, hp: c.curabili, spesa: c.spesa, pieno: c.curabili >= c.manca ? 1 : 0 } });
+  }
   offerSeer(p, near) {
     const carte = [];
     for (const id in p.boonsOwned) {
@@ -1064,7 +1106,12 @@ class Room {
     // v1.66 — quattro statistiche da gioco di ruolo. FORZA e COSTITUZIONE reggono il guerriero,
     // INTELLIGENZA il mago (danno E cadenza delle magie), DESTREZZA il ladro (danno, cadenza e passo).
     // Nessuna e' riservata a una classe: chiunque puo' comprarle tutte, ma agiscono sulla scuola dell'arma.
-    this._recomputeBoons(p);   // v1.73 — ricostruisce da zero: statistiche comprate + carte accese
+    // v1.74 — il punto di COSTITUZIONE alza il massimo ma NON cura: se curasse, l'Ostessa non servirebbe
+    // a nulla e la scelta fra spendere monete per rimettersi in piedi e spendere punti per crescere non
+    // esisterebbe. I PV correnti sono quelli di prima, tetto nuovo o no.
+    const hpPrima = p.hp;
+    this._recomputeBoons(p);
+    p.hp = Math.min(this.effMaxHp(p), hpPrima);
     this._checkEvo(p);
     this.offerShop(p); this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bought', id: statId } });
   }
@@ -1088,8 +1135,23 @@ class Room {
     for (const sy of Loot.detectSynergies(accese, {})) { sy.apply(p); p.synActive[sy.id] = 1; }
     if (p.spec) { const sp = Lv.SPEC_BY_ID[p.spec]; if (sp && sp.apply) sp.apply(p); }
     p.defianceLeft = Math.max(0, p.defianceLeft - (p.defianceUsed || 0));
+    // v1.74 — ALZARE IL MASSIMO NON CURA MAI. Ne' comprare Costituzione, ne' prendere Colosso o Scudo
+    // Vitale: rimettere in piedi il personaggio e' il mestiere dell'OSTESSA, e se lo facesse anche il
+    // negozio quel mestiere non esisterebbe.
+    //
+    // Resta pero' da non trasformare la Cartomante in una tassa: spegnere una carta abbassa il massimo e
+    // taglia i PV in eccesso, e se riaccendendola non tornassero, ogni giro costerebbe vita. Quindi il
+    // taglio non si perde, si SEGNA (hpDebt) e viene restituito solo quando il massimo risale — mai piu'
+    // di quanto era stato tolto. Cosi' accendere/spegnere e' neutro e nessuna via cura di striscio.
     const maxDopo = this.effMaxHp(p);
-    p.hp = Math.min(maxDopo, hpPrima + Math.max(0, maxDopo - maxPrima));
+    if (maxDopo < maxPrima) {
+      p.hpDebt = (p.hpDebt || 0) + Math.max(0, hpPrima - maxDopo);
+      p.hp = Math.min(hpPrima, maxDopo);
+    } else if (maxDopo > maxPrima) {
+      const resa = Math.min(maxDopo - maxPrima, p.hpDebt || 0);
+      p.hpDebt = (p.hpDebt || 0) - resa;
+      p.hp = Math.min(maxDopo, hpPrima + resa);
+    } else p.hp = Math.min(hpPrima, maxDopo);
     if (p.hp < 1 && !p.dead && !p.down) p.hp = 1;
   }
   // Quante carte DIVERSE sono accese adesso.
@@ -1144,7 +1206,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -1417,6 +1479,7 @@ class Room {
       if (p._nearHerb) o.nh = 1;
       if (p._nearBnd) o.nb = 1;
       if (p._nearSeer) o.ns = 1;
+      if (p._nearInn) o.ni = 1;
       // v1.72 — la taglia in corso viaggia sempre: senza vederla in partita te ne dimentichi.
       if (p.bounty) o.bo = { k: p.bounty.k, h: p.bounty.have, n: p.bounty.n, i: p.bounty.icon, c: p.bounty.color, t: p.bounty.testo };
       // v1.71 — la cintura viaggia compatta: uno 0 per lo slot vuoto, [indice, cariche] per gli altri.

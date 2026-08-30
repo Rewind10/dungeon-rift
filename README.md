@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.73.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.74.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,13 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.74 (l'Ostessa, e i PV massimi non curano piu')
+- **🍺 L'Ostessa**: il riposo si paga **a punto vita** (0,4 monete a PV mancante). Se le monete non bastano
+  compri quello che puoi. Piu' conveniente della pozione di Cura, che pero' si beve in combattimento.
+- **❤️ Alzare i PV massimi non cura**: ne' la Costituzione, ne' le carte Colosso e Scudo Vitale. Rimettersi
+  in piedi e' mestiere dell'Ostessa (o della pozione, o dei potenziamenti a terra).
+- **🏘️ Villaggio completo**: nessuna bottega chiusa.
 
 ## 🆕 Novita v1.73 (cinque carte, e un posto dove guardarle)
 - **🔮 La Cartomante**: decidi quali carte tenere **accese**, al massimo **cinque**. Il limite conta carte
