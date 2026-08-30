@@ -1,10 +1,22 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.76.0`
+**Versione attuale:** `1.76.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 👹 I NEMICI SI VEDONO ARRIVARE, NON COMPARIRE *(novita v1.76.1)*
+- **Il recupero anti-stallo** serve a non lasciare un'ondata aperta per sempre quando un mostro finisce
+  dove non puo' raggiungerti. Prima teletrasportava **tutti** i mostri a 240 px da un giocatore se per
+  6 secondi non ne moriva nessuno: scappare senza uccidere e' esattamente quella condizione.
+- Adesso guarda il singolo mostro e ne sposta uno solo se: **nessun progresso da 5 secondi**, e' oltre
+  **640 px**, e non e' fermo per costruzione (il Fungo sta piantato). Chi si sposta va **oltre i 950 px
+  e fuori dalla linea di vista**; se un posto cosi' non c'e', non si sposta niente.
+- **Le caselle di generazione** dei nemici sono scelte lontane dalla partenza, ma un'ondata dura minuti
+  e il giocatore si sposta: adesso si tiene conto di dov'e' **adesso** — almeno 520 px e possibilmente
+  fuori vista.
+- Verificato con sei partite da 60 secondi di fuga continua: **10.800 tick, zero scatti in vista**.
 
 ## 🗺️ LE MAPPE DI COMBATTIMENTO *(rifatte in v1.76)*
 

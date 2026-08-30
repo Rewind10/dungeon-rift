@@ -1101,9 +1101,12 @@ function testV163() {
   for (let y = 6; y < m0.h - 6 && !masso; y++) for (let x = 6; x < m0.w - 6; x++)
     if (suoloAt(x, y) && fuoriRoccia(x, y) && at(x, y) === 0) masso = [x, y];
   assert(!!masso, 'esistono ripari interni fuori dalla fascia: dietro un masso al centro non si muore');
+  // La copertura si misura su PIU' MAPPE: su una sola oscilla parecchio — misurato 46% su una,
+  // 34% di media su dieci — e il test diventava un lancio di dadi.
   let band = 0, tot = 0;
-  for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) { if (!suoloAt(x, y)) continue; tot++; if (at(x, y) > 0) band++; }
-  assert(band / tot > 0.15 && band / tot < 0.45, 'la fascia copre una quota sensata della mappa (' + (band / tot * 100).toFixed(0) + '%)');
+  for (let k = 0; k < 6; k++) { const mk = MapGen.generate(31337 + k * 977, 4);
+    for (let i = 0; i < mk.grid.length; i++) { if (mk.grid[i] === C.T_WALL) continue; tot++; if (mk.edgeField[i] > 0) band++; } }
+  assert(band / tot > 0.18 && band / tot < 0.48, 'la fascia copre una quota sensata della mappa (' + (band / tot * 100).toFixed(0) + '%, su sei mappe)');
 
   // ---------- grazia, poi drenaggio crescente ----------
   const room = new Room('v163a'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
@@ -2512,6 +2515,66 @@ function testV1752() {
   assert(dentroMai === 0, 'camminando in tutte le direzioni non si finisce mai dentro un corpo (' + dentroMai + ' su ' + passi + ' passi)');
   ok('novita v1.75.2 verificate');
 }
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV1761() {
+  console.log('\n[TEST 48] v1.76.1 — chi scappa non si vede comparire i nemici addosso');
+  const dt = 1 / C.TICK_RATE;
+  const room = new Room('v1761'); const p = room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
+  room.pending = 0; room.waveList = []; room.monsters.length = 0;
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2;
+    const mx = p.x + Math.cos(a) * 300, my = p.y + Math.sin(a) * 300;
+    if (room.isWallAt(mx, my)) continue;
+    room.spawnMonster('skeleton', mx, my, { scaling: Waves.scaling(1, 1) }); }
+  assert(room.monsters.length >= 5, 'ci sono mostri in campo per la prova (' + room.monsters.length + ')');
+
+  // 25 secondi di fuga senza uccidere nessuno: e' esattamente la condizione che prima faceva
+  // scattare il vecchio recupero anti-stallo e faceva comparire il branco a 240 px dal giocatore.
+  let peggio = 0, chi = '', casi = 0;
+  const prima = new Map();
+  for (let i = 0; i < C.TICK_RATE * 25; i++) {
+    prima.clear();
+    for (const m of room.monsters) if (!m.dead) prima.set(m.eid, MU.dist(m.x, m.y, p.x, p.y));
+    p.hp = p.maxHp; // non deve morire: la prova riguarda i movimenti, non la sopravvivenza
+    room.setInput('a', { mx: 1, my: 0.35, aim: 0, shoot: false, q: false, e: false, dash: false });
+    room.update(dt);
+    for (const m of room.monsters) {
+      if (m.dead || !prima.has(m.eid)) continue;
+      const d0 = prima.get(m.eid), d1 = MU.dist(m.x, m.y, p.x, p.y);
+      // Il filtro va messo sulla distanza DOPO, non prima. Al primo tentativo guardavo quella prima
+      // e scartavo tutto cio che stava oltre 800 px: cioe scartavo esattamente il caso che conta,
+      // il mostro lontano che ti compare addosso. Con quel filtro il test passava anche col codice
+      // vecchio — cioe non provava niente.
+      if (d1 > 900) continue;   // resta fuori dallo sguardo anche dopo: non rompe l illusione
+      const guadagno = d0 - d1;
+      const massimo = (m.speed || 120) * dt * 3 + 14;   // margine per spinta, rinculo e scivolamento
+      if (guadagno > massimo) { casi++; if (guadagno > peggio) { peggio = guadagno; chi = m.t; } }
+    }
+  }
+  assert(casi === 0, 'in 25 secondi di fuga nessun nemico in vista si avvicina di scatto (' + casi + ' casi, il peggiore ' + peggio.toFixed(0) + ' px in un tick' + (chi ? ' — ' + chi : '') + ')');
+
+  // ...ma il recupero deve restare vivo, se no un mostro bloccato tiene aperta l ondata per sempre.
+  const room2 = new Room('v1761b'); const p2 = room2.addPlayer('b', { send() {} }, 'B', 'ladro'); room2.startGame();
+  room2.pending = 0; room2.waveList = []; room2.monsters.length = 0;
+  // un mostro parcheggiato lontanissimo e tenuto fermo a forza: e' il caso "non ti raggiungera mai"
+  let lontano = null, dMax = 0;
+  for (let gy = 2; gy < room2.map.h - 2; gy++) for (let gx = 2; gx < room2.map.w - 2; gx++) {
+    if (room2.map.grid[gy * room2.map.w + gx] !== C.T_FLOOR) continue;
+    const wx = gx * C.TILE + C.TILE / 2, wy = gy * C.TILE + C.TILE / 2;
+    const d = MU.dist(wx, wy, p2.x, p2.y); if (d > dMax) { dMax = d; lontano = { x: wx, y: wy }; } }
+  assert(dMax > 640, 'trovato un angolo abbastanza lontano per la prova (' + dMax.toFixed(0) + ' px)');
+  const bloccato = room2.spawnMonster('skeleton', lontano.x, lontano.y, { scaling: Waves.scaling(1, 1) });
+  let spostato = false;
+  for (let i = 0; i < C.TICK_RATE * 9 && !spostato; i++) {
+    bloccato.x = lontano.x; bloccato.y = lontano.y;   // lo si tiene fermo: simula "non fa progressi"
+    p2.hp = p2.maxHp;
+    room2.setInput('b', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+    room2.update(dt);
+    if (MU.dist(bloccato.x, bloccato.y, lontano.x, lontano.y) > 300) spostato = true;
+  }
+  assert(spostato, 'un mostro che non fa progressi da cinque secondi viene comunque rimesso in gioco: l ondata non resta aperta per sempre');
+  const dFin = MU.dist(bloccato.x, bloccato.y, p2.x, p2.y);
+  assert(dFin > 500, 'e viene rimesso LONTANO, non addosso al giocatore (' + dFin.toFixed(0) + ' px)');
+  ok('novita v1.76.1 verificate');
+}
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

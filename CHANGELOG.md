@@ -2,6 +2,56 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.76.1] — 2026-08-30 · "I nemici non si teletrasportano"
+
+Segnalato provando la 1.76: **scappando, ogni tanto i nemici comparivano addosso**. Non era
+un'impressione, ed erano due meccanismi diversi.
+
+#### Il recupero anti-stallo
+Esisteva per una ragione buona — che un'ondata non resti aperta per sempre perche' un mostro e'
+finito dove non puo' piu' raggiungerti — ma era scritto male: **se per 6 secondi il numero di mostri
+non calava, teletrasportava TUTTI i mostri a 240 px da un giocatore**. Scappare senza uccidere e'
+esattamente quella condizione, e allora il branco ti compariva addosso.
+
+Adesso la regola guarda il **singolo mostro**, e ne sposta uno solo se tutte e tre valgono:
+
+1. non si e' avvicinato di un metro al giocatore piu' vicino **da 5 secondi**;
+2. sta comunque **oltre 640 px** — se ti e' addosso non e' bloccato, sta combattendo;
+3. non e' uno di quelli fermi per costruzione (il Fungo sta piantato: e' il suo mestiere).
+
+E chi si sposta va **oltre i 950 px e in un punto da cui non lo vedi**. Se un posto cosi' non si
+trova, non si sposta niente e si riprova fra cinque secondi: meglio un'ondata piu' lunga di qualche
+secondo che un mostro che si materializza in mezzo allo schermo.
+
+#### Le caselle di generazione
+Le caselle da cui nascono i nemici sono scelte lontane dalla **partenza**. Ma un'ondata dura minuti e
+tu nel frattempo ti sei spostato: una casella lontana dal punto di atterraggio puo' trovarsi a due
+passi da dove sei adesso. Adesso se ne pescano ventiquattro e si tiene la migliore — lontana almeno
+520 px **e possibilmente fuori dalla tua linea di vista**.
+
+#### ✅ Verificato
+**992 test, 0 falliti**, sei esecuzioni di fila.
+
+Il test nuovo riproduce esattamente la segnalazione: 25 secondi di fuga senza uccidere nessuno, e
+**nessun nemico in vista puo' avvicinarsi piu' di quanto le sue gambe permettano** in un tick. Piu'
+la controprova, che il recupero funzioni ancora: un mostro che non fa progressi da cinque secondi
+viene comunque rimesso in gioco, e lontano.
+
+Il test e' stato provato contro il codice VECCHIO e **fallisce** (75 px guadagnati in un tick, e il
+mostro rimesso a 240 px): non e' una prova che passa per costruzione.
+
+Due errori miei lungo la strada, tenuti nei commenti:
+- la prima versione del test filtrava sulla distanza **prima** del tick e scartava tutto oltre gli
+  800 px — cioe' scartava esattamente il caso che conta, il mostro lontano che ti compare addosso.
+  Con quel filtro passava anche col codice vecchio: non provava niente.
+- il primo ricollocamento mandava il mostro a 600-900 px, e 600 px sono **dentro lo schermo**. Se
+  n'e' accorto il test stesso: 619 px guadagnati in un tick sotto gli occhi del giocatore.
+
+Prova di tenuta fuori dalla suite: **sei partite da 60 secondi di fuga continua, 10.800 tick, zero
+scatti in vista**.
+
+---
+
 ### [1.76.0] — 2026-08-30 · "La caverna dipinta"
 
 Le mappe di combattimento erano il punto debole del gioco: pietra piatta, muri disegnati come

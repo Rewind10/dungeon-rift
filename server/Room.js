@@ -159,7 +159,33 @@ class Room {
     this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
   }
   spawnTreasure() { const pos = this.randomSpawnPos(); const m = this.spawnMonster('mimic', pos.x, pos.y, { scaling: this.waveScaling }); m.treasure = true; m.awake = true; m.maxHp = Math.round(m.maxHp * 2.4); m.hp = m.maxHp; m.speed = 210; m.escapeT = 26; this.treasure = m; this.events.push({ t: 'treasure_spawn', x: m.x, y: m.y }); }
-  randomSpawnPos() { const sp = this.map.enemySpawns; if (sp && sp.length) { const c = sp[(Math.random() * sp.length) | 0]; return { x: c.x * C.TILE + C.TILE / 2, y: c.y * C.TILE + C.TILE / 2 }; } return { x: this.map.spawn.x, y: this.map.spawn.y }; }
+  // v1.76.1 — I MOSTRI NON DEVONO NASCERE ADDOSSO A TE. Le caselle di generazione sono scelte
+  // lontane dalla PARTENZA, ma un'ondata dura minuti e tu nel frattempo ti sei spostato: una casella
+  // lontana dal punto di atterraggio puo' trovarsi a due passi da dove sei adesso, e il mostro ti
+  // spunta accanto. Vale lo stesso principio del recupero anti-stallo: si vede arrivare, non
+  // comparire. Si pescano piu' caselle e si tiene la migliore — lontana, e possibilmente fuori vista.
+  randomSpawnPos() { const sp = this.map.enemySpawns;
+    if (sp && sp.length) {
+      const ap = this.alivePlayers;
+      const mondo = (c) => ({ x: c.x * C.TILE + C.TILE / 2, y: c.y * C.TILE + C.TILE / 2 });
+      if (!ap.length) return mondo(sp[(Math.random() * sp.length) | 0]);
+      let meglio = null, megDist = -1;
+      for (let k = 0; k < 24; k++) {
+        const w = mondo(sp[(Math.random() * sp.length) | 0]);
+        let d = Infinity; for (const p of ap) { const dd = MU.dist(w.x, w.y, p.x, p.y); if (dd < d) d = dd; }
+        if (d < 520) continue;                      // troppo vicino: scartata
+        let visto = false; for (const p of ap) if (this.losClear(p.x, p.y, w.x, w.y)) { visto = true; break; }
+        if (!visto) return w;                        // lontana E fuori vista: e' quella giusta
+        if (d > megDist) { megDist = d; meglio = w; }
+      }
+      if (meglio) return meglio;
+      // nessuna casella lontana: si prende comunque la piu' lontana che c'e', non una a caso
+      let piuLontana = null, dMax = -1;
+      for (let k = 0; k < 40; k++) { const w = mondo(sp[(Math.random() * sp.length) | 0]);
+        let d = Infinity; for (const p of ap) { const dd = MU.dist(w.x, w.y, p.x, p.y); if (dd < d) d = dd; }
+        if (d > dMax) { dMax = d; piuLontana = w; } }
+      return piuLontana || mondo(sp[(Math.random() * sp.length) | 0]);
+    } return { x: this.map.spawn.x, y: this.map.spawn.y }; }
   spawnMonster(typeId, x, y, opts = {}) {
     const def = Mon.MONSTERS[typeId] || Mon.BOSSES[typeId] || Mon.MONSTERS.skeleton;
     const m = { eid: NEXT++, type: def.id, def: Object.assign({}, def), x, y, mx: 0, my: 0, facing: 0, hp: def.hp, maxHp: def.hp, dmg: def.dmg, speed: def.speed, radius: def.radius, xp: def.xp, atkT: MU.rand(0, def.atkCd), stun: 0, elite: false, hitFlash: 0, boss: !!def.boss, mega: !!def.mega, awake: def.ai !== 'ambush', slowT: 0, poison: 0, poisonT: 0 };
@@ -1267,7 +1293,53 @@ class Room {
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
-    if (inCombat && this.pending <= 0 && this.mode.survive === 0 && this.monsters.length > 0 && !this.mode.treasure) { if (this.monsters.length !== this._lastMon) { this._lastMon = this.monsters.length; this._stallT = 0; } else { this._stallT = (this._stallT || 0) + dt; } if (this._stallT > 6) { const ap = this.alivePlayers; if (ap.length) { for (const m of this.monsters) { const p = ap[(Math.random() * ap.length) | 0]; const a = Math.random() * Math.PI * 2; const nx = p.x + Math.cos(a) * 240, ny = p.y + Math.sin(a) * 240; if (!this.isWallAt(nx, ny)) { m.x = nx; m.y = ny; } } this._stallT = 0; } } } else { this._lastMon = undefined; this._stallT = 0; }
+    // =====================================================================================
+    // v1.76.1 — IL RECUPERO ANTI-STALLO, rifatto.
+    //
+    // Serve a una cosa sola: che un'ondata non resti aperta per sempre perche' un mostro e' finito
+    // dove non puo' piu' raggiungerti. Ma com'era scritto faceva molto di piu': se per 6 secondi il
+    // NUMERO di mostri non calava, teletrasportava TUTTI i mostri a 240 px da un giocatore.
+    // Scappare senza uccidere e' esattamente questo — e allora il branco ti compariva addosso.
+    // Non e' un aiuto al gioco, e' una bugia: toglie credibilita' a tutto il resto.
+    //
+    // La regola giusta guarda il SINGOLO mostro, e sposta solo chi e' davvero bloccato:
+    //   1. non si e' avvicinato di un metro al giocatore piu' vicino da 5 secondi, E
+    //   2. sta comunque LONTANO (oltre 640 px): se ti e' addosso non e' bloccato, sta combattendo, E
+    //   3. non e' uno di quelli fermi per costruzione (il Fungo sta piantato: e' il suo mestiere).
+    // E chi si sposta non compare addosso a te: va a 600-900 px, preferendo un punto da cui NON ti
+    // vede — cosi' non lo vedi mai apparire, lo vedi arrivare.
+    if (inCombat && this.pending <= 0 && this.mode.survive === 0 && this.monsters.length > 0 && !this.mode.treasure) {
+      const ap = this.alivePlayers;
+      if (ap.length) for (const m of this.monsters) {
+        if (m.dead || (m.def && m.def.immobile)) continue;
+        let d = Infinity, vicino = null;
+        for (const p of ap) { const dd = MU.dist(m.x, m.y, p.x, p.y); if (dd < d) { d = dd; vicino = p; } }
+        if (m._avvicinaMin === undefined || d < m._avvicinaMin - 40) { m._avvicinaMin = d; m._fermoT = 0; continue; }
+        m._fermoT = (m._fermoT || 0) + dt;
+        if (m._fermoT < 5 || d < 640) continue;
+        // Bloccato davvero: lo si rimette in gioco. DOVE conta quanto il quando — al primo tentativo
+        // lo mettevo a 600-900 px, e 600 px sono dentro lo schermo: il mio stesso test lo ha beccato,
+        // 619 px guadagnati in un tick sotto gli occhi del giocatore. Adesso va oltre i 900 px E in
+        // un punto da cui il giocatore non lo vede. Se un posto cosi' non si trova non si sposta
+        // niente: si riprova fra cinque secondi. Meglio un'ondata che dura qualche secondo in piu'
+        // che un mostro che si materializza in mezzo allo schermo.
+        let dove = null;
+        for (let k = 0; k < 64; k++) {
+          const a = Math.random() * Math.PI * 2, r = 950 + Math.random() * 550;
+          const nx = vicino.x + Math.cos(a) * r, ny = vicino.y + Math.sin(a) * r;
+          if (this.isWallAt(nx, ny) || this._blk(nx, ny, m.radius * 0.8)) continue;
+          let visto = false, troppoVicino = false;
+          for (const p of ap) {
+            if (MU.dist(nx, ny, p.x, p.y) < 900) troppoVicino = true;
+            if (this.losClear(p.x, p.y, nx, ny)) visto = true;
+          }
+          if (visto || troppoVicino) continue;
+          dove = { x: nx, y: ny }; break;
+        }
+        if (dove) { m.x = dove.x; m.y = dove.y; m._avvicinaMin = undefined; }
+        m._fermoT = 0;
+      }
+    }
     // condizioni di fine ondata per modalità
     if (inCombat) this._checkWaveClear();
     if (this.phase === C.PHASE_MARKET) {

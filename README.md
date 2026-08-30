@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.76.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.76.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.76.1 (i nemici non si teletrasportano)
+- **👹 Scappando non ti compaiono piu' addosso.** Il recupero anti-stallo teletrasportava tutti i
+  mostri a 240 px da te se per 6 secondi non ne moriva nessuno — cioe' proprio mentre scappavi.
+- Adesso si sposta **solo chi e' davvero bloccato** (nessun progresso da 5 s e oltre 640 px), e va
+  **oltre i 950 px, fuori dalla tua vista**. Se un posto cosi' non c'e', non si sposta niente.
+- **🥚 Anche le caselle di generazione** tengono conto di dove sei adesso, non solo di dov'eri
+  atterrato: almeno 520 px e possibilmente fuori vista.
 
 ## 🆕 Novita v1.76 (la caverna dipinta)
 - **🗺️ Mappe di combattimento rifatte da capo.** Da 46x34 a **64x46 tessere**: area calpestabile
