@@ -2,6 +2,47 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.74.1] — 2026-08-30 · "Nessuna cura automatica"
+
+Correzione trovata provando la 1.74: **a ogni fine ondata il gioco curava il 25% dei PV massimi**, in
+silenzio e gratis. Era lì da molte versioni, e rendeva l'Ostessa un lusso invece che un servizio: bastava
+aspettare la fine dell'ondata. Rimossa.
+
+- **I danni si portano dietro.** Chiudere un'ondata non ridà più niente: per rimettersi in piedi si paga
+  l'Ostessa, si beve una pozione o si raccoglie un potenziamento.
+- **Chi è a terra viene comunque rialzato** al 60%: quello non è curare, è rimettere in gioco chi
+  altrimenti resterebbe fuori per sempre.
+- Allineate due porte secondarie che sfuggivano alla regola della 1.74: l'offerta **"+PV massimi" del
+  Mercante Errante** e la **Benedizione "+40 PV" del Mercante Nero** ora alzano il tetto e basta.
+
+#### Le vie che restano per curarsi
+Tutte richiedono che qualcuno paghi, beva, raccolga o compia qualcosa:
+
+| Via | Quanto | Come si ottiene |
+|---|---|---|
+| **Ostessa** | quanto paghi | 0,4 monete a PV |
+| **Pozione di Cura** | 40% dei PV max | comprata dall'Erborista |
+| **Pozione di Rigenerazione** | 10 PV/s per 8 s | comprata dall'Erborista |
+| **Pozione di Salute** | 35% dei PV max | raccolta a terra |
+| **Bende del Viandante** | 55% dei PV max | 45 monete al Mercante Errante |
+| **buff Vigore** | 8 PV/s per 10 s | uscito da una cassa |
+| carta **Vampirismo** | 4% del danno inflitto | carta scelta a fine ondata |
+| carta **Scudo Vitale** | 2 PV/s | carta scelta a fine ondata |
+| carta **Ultima Occasione** | risorgi al 50% | carta scelta, una carica |
+| sinergia **Sete di Sangue** | +6% dal danno | Vampirismo + Adrenalina Pura |
+| **aura del Paladino** | 2%/s ai compagni, 1%/s a sé | specializzazione di rango V |
+| **combo di 40** | 25% dei PV max | 40 uccisioni concatenate |
+| rianimazione | 50-60% | un compagno, o la fine dell'ondata se sei a terra |
+
+#### ✅ Verificato
+**893 test, 0 falliti.** I nuovi: i PV con cui finisci un'ondata sono quelli con cui inizi la successiva,
+e restano tali anche dopo tre ondate; chi è a terra torna comunque in gioco; pozione, oggetto e Ostessa
+curano ancora; nessuna delle quattro porte che alzano il massimo (Costituzione, Colosso, Scudo Vitale,
+Mercante Errante) restituisce un PV; l'equipaggiamento non cura; e un controllo sul codice sorgente che
+non ricompaia da nessuna parte un aumento diretto dei punti ferita.
+
+---
+
 ### [1.74.0] — 2026-08-30 · "L'Ostessa, e i PV massimi non curano più"
 
 Il villaggio è **completo**: tutte e cinque le botteghe lavorano.

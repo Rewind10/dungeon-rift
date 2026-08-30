@@ -382,7 +382,7 @@ class Room {
     if (p.coins < w.cost) return;
     p.coins -= w.cost;
     if (w.kind === 'heal') { p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * 0.55)); }
-    else if (w.kind === 'maxhp') { p.stats.maxHpFlat += w.val; p.hp += w.val; }
+    else if (w.kind === 'maxhp') { p.stats.maxHpFlat += w.val; }   // v1.74.1 — alza il massimo, NON cura
     else if (w.kind === 'life') { p.lives += 1; }
     else if (w.kind === 'dmg') { p.stats.dmgMult += w.val; }
     else if (w.kind === 'speed') { p.stats.speedMult += w.val; }
@@ -436,7 +436,7 @@ class Room {
     else if (w.kind === 'pact_swift') { p.stats.speedMult += 0.18; p.stats.dmgMult = Math.max(0.3, p.stats.dmgMult - 0.12); note = 'Rapido come un\'ombra'; }
     else if (w.kind === 'blood_coin') { p.lives += 2; p.coins = Math.floor(p.coins / 2); note = 'Sangue per vita'; }
     else if (w.kind === 'dark_relic') { p.stats.maxHpFlat = Math.max(-p.maxHp + 20, p.stats.maxHpFlat - 20); if (p.hp > this.effMaxHp(p)) p.hp = this.effMaxHp(p); this.offerBoon(p); note = 'Potere maledetto'; }
-    else if (w.kind === 'gamble') { const good = Math.random() < 0.5; if (good) { const r = Math.random(); if (r < 0.34) { p.stats.dmgMult += 0.25; note = 'Benedizione: +25% danno!'; } else if (r < 0.67) { p.stats.maxHpFlat += 40; p.hp += 40; note = 'Benedizione: +40 PV!'; } else { p.lives += 1; note = 'Benedizione: +1 vita!'; } } else { const r = Math.random(); if (r < 0.5) { p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.10; note = 'Maledizione: +10% danni subiti'; } else { p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.10); note = 'Maledizione: -10% velocita'; } } }
+    else if (w.kind === 'gamble') { const good = Math.random() < 0.5; if (good) { const r = Math.random(); if (r < 0.34) { p.stats.dmgMult += 0.25; note = 'Benedizione: +25% danno!'; } else if (r < 0.67) { p.stats.maxHpFlat += 40; note = 'Benedizione: +40 PV massimi!'; } else { p.lives += 1; note = 'Benedizione: +1 vita!'; } } else { const r = Math.random(); if (r < 0.5) { p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.10; note = 'Maledizione: +10% danni subiti'; } else { p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.10); note = 'Maledizione: -10% velocita'; } } }
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'dark_buy', id: w.id, name: w.name, icon: w.icon, color: w.color, note, x: p.x, y: p.y } });
     this.sendTo(pid, { t: C.MSG.OFFER_MERCHANT, wares: this.darkMerchant.wares, near: 1, dark: 1, coins: p.coins });
   }
@@ -1247,8 +1247,11 @@ class Room {
       if (gc > 0) this.events.push({ t: 'coin', x: recip.x, y: recip.y - 10, v: gc, cid: 'gold', who: recip.id });
     }
     for (const p of this.players.values()) { if (!p.connected) continue;
+      // v1.74.1 — VIA LA CURA AUTOMATICA DI FINE ONDATA. Chiudere un'ondata regalava il 25% dei PV massimi:
+      // una cura gratuita, silenziosa e ripetuta, che rendeva l'Ostessa un lusso e non un servizio. Adesso
+      // i danni si portano dietro finche' non si paga (o non si beve). Chi e' A TERRA viene comunque
+      // rialzato, perche' quello non e' curare: e' rimettere in gioco chi altrimenti resterebbe fuori.
       if (p.down || p.dead) { p.down = false; p.dead = false; p.hp = Math.round(this.effMaxHp(p) * 0.6); if (p.lives < 1) p.lives = 1; }
-      else p.hp = Math.min(this.effMaxHp(p), p.hp + Math.round(this.effMaxHp(p) * 0.25));
       // v1.69 — una scelta alla volta: se c'e' una carta di rango in sospeso, il boon salta questo giro.
       // Il rango arriva sui boss, quindi in pratica alle ondate 5/10/15/20 si sceglie la carta di classe
       // e nelle altre il boon generico, senza mai due mazzi aperti insieme.

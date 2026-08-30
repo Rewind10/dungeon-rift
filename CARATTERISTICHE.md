@@ -6,6 +6,20 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ---
 
+## ❤️ NESSUNA CURA AUTOMATICA *(novita v1.74.1)*
+- A ogni fine ondata il gioco curava il **25% dei PV massimi**, in silenzio e gratis: era li' da molte
+  versioni e rendeva l'Ostessa un lusso invece che un servizio — bastava aspettare. **Rimosso.**
+- I danni **si portano dietro**: per rimettersi in piedi si paga l'Ostessa, si beve una pozione o si
+  raccoglie un potenziamento.
+- **Chi e' a terra viene comunque rialzato** al 60%: quello non e' curare, e' rimettere in gioco chi
+  altrimenti resterebbe fuori per sempre.
+- Allineate due porte secondarie: l'offerta "+PV massimi" del **Mercante Errante** e la Benedizione
+  "+40 PV" del **Mercante Nero** ora alzano il tetto e basta.
+- Restano tredici vie per curarsi, e tutte chiedono di pagare, bere, raccogliere o compiere qualcosa:
+  Ostessa, pozioni di Cura e Rigenerazione, Pozione di Salute a terra, Bende del Viandante, buff Vigore,
+  carte **Vampirismo**, **Scudo Vitale** e **Ultima Occasione**, sinergia **Sete di Sangue**, **aura del
+  Paladino**, ricompensa della **combo di 40**, e la rianimazione.
+
 ## 🍺 L'OSTESSA e la regola sui PV *(novita v1.74)*
 - Il villaggio e' **completo**: tutte e cinque le botteghe lavorano. L'Ostessa per ora fa una cosa sola,
   rimetterti in piedi; il resto verra'.

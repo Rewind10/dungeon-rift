@@ -2197,8 +2197,70 @@ function testV174() {
   ok('novita v1.74 verificate');
 }
 
-console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.74)'); console.log('==================================================');
+
+// ===================== v1.74.1 — NIENTE CURE AUTOMATICHE =====================
+// Chiudere un'ondata regalava il 25% dei PV massimi: una cura gratuita, silenziosa e ripetuta ogni ondata,
+// che rendeva l'Ostessa un lusso invece che un servizio. Questi test tengono chiusa quella porta e tutte
+// quelle vicine: i PV salgono solo se qualcuno paga, beve, raccoglie o compie qualcosa.
+function testV1741() {
+  console.log('\n[TEST 45] v1.74.1 — nessuna cura automatica fra un ondata e l altra');
+  const conn = { send() {} };
+
+  // --- 1) fine ondata: i danni restano addosso ---
+  const r = new Room('v1741a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+  r.phase = C.PHASE_COMBAT; p.hp = 80;
+  r.monsters.length = 0; r.pending = 0; r._checkWaveClear();
+  assert(r.phase === C.PHASE_SHOP, "l'ondata si chiude");
+  assert(p.hp === 80, 'e i PV restano quelli con cui l hai finita: nessuna cura di fine ondata');
+  // nemmeno tre ondate di fila la rimettono
+  for (let w = 0; w < 3; w++) { r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0; r._checkWaveClear(); }
+  assert(p.hp === 80, 'nemmeno dopo tre ondate');
+
+  // --- 2) chi e a TERRA viene comunque rialzato: quello non e curare ---
+  const r2 = new Room('v1741b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame();
+  r2.phase = C.PHASE_COMBAT; q.down = true; q.hp = 0;
+  r2.monsters.length = 0; r2.pending = 0; r2._checkWaveClear();
+  assert(!q.down && q.hp > 0, 'chi era a terra torna in gioco, altrimenti resterebbe fuori per sempre');
+
+  // --- 3) le uniche vie che alzano i PV sono quelle che qualcuno ha CHIESTO ---
+  const r3 = new Room('v1741c'); const g = r3.addPlayer('c', conn, 'C', 'guerriero'); r3.startGame(); r3.phase = C.PHASE_COMBAT;
+  const mx = r3.effMaxHp(g);
+  // pozione della cintura
+  g.hp = 50; g.belt[0] = { id: 'p_cura', n: 1 }; r3.usePotion(g, 0);
+  assert(g.hp > 50, 'la pozione di Cura cura (l hai comprata e bevuta)');
+  // oggetto raccolto a terra
+  g.hp = 50; r3.applyItem(g, Loot.ITEMS.find(i => i.kind === 'heal'));
+  assert(g.hp > 50, 'la Pozione di Salute raccolta a terra cura');
+  // l'Ostessa
+  const r4 = new Room('v1741d'); const h = r4.addPlayer('d', conn, 'D', 'ladro'); r4.startGame();
+  r4.enterMarket(); h.x = r4.innkeeper.x; h.y = r4.innkeeper.y; h.hp = 50; h.coins = 500;
+  r4.restAtInn('d');
+  assert(h.hp > 50 && h.coins < 500, "l'Ostessa cura, e si paga");
+
+  // --- 4) alzare il massimo non cura MAI, da nessuna porta ---
+  const r5 = new Room('v1741e'); const z = r5.addPlayer('e', conn, 'E', 'guerriero'); r5.startGame(); r5.phase = C.PHASE_SHOP;
+  z.hp = 100; z.points = 30; z.coins = 2000;
+  r5.buyStat('e', 'st_cos'); assert(z.hp === 100, 'Costituzione: no');
+  z.boonOffer = ['juggernaut']; r5.pickBoon('e', 'juggernaut'); assert(z.hp === 100, 'carta Colosso: no');
+  z.boonOffer = ['overheal']; r5.pickBoon('e', 'overheal'); assert(z.hp === 100, 'carta Scudo Vitale: no');
+  // mercante errante, offerta "+PV massimi"
+  r5.phase = C.PHASE_COMBAT;
+  r5.merchant = { x: z.x, y: z.y, wares: [{ id: 'w1', kind: 'maxhp', val: 30, cost: 10, name: 'Talismano' }] };
+  r5.buyMerchant('e', 'w1');
+  assert(z.hp === 100, 'offerta del Mercante Errante che alza il massimo: no');
+  assert(r5.effMaxHp(z) > 100, 'il massimo pero e salito, in tutti e quattro i casi');
+  // l'equipaggiamento non ha mai curato, ma che resti cosi'
+  const gearHp = z.hp; z.gear.armor = Gear.itemsFor('guerriero', 'armor').slice(-1)[0].id; r5._recomputeGear(z);
+  assert(z.hp === gearHp, "l'equipaggiamento non cura");
+
+  // --- 5) il codice non deve tornare ad avere scorciatoie: nessun `p.hp +=` in giro ---
+  const room = fs.readFileSync(require('path').join(__dirname, '..', 'server', 'Room.js'), 'utf8');
+  assert(!/\bp\.hp \+=/.test(room), 'nessun aumento diretto dei PV sparso nel codice (si passa sempre da un min col massimo)');
+  ok('novita v1.74.1 verificate');
+}
+
+console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.74.1)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
