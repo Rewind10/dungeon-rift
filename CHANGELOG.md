@@ -2,6 +2,53 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.75.0] — 2026-08-30 · "Il villaggio a micro-stanze"
+
+La sala unica e' finita. Cinque figure in piedi dentro un rettangolo non raccontavano niente, e le nicchie
+erano una mezza misura. Adesso **ogni mestiere ha la sua stanza**, con la sua porta, il suo pavimento e i
+suoi mobili: e' la **pianta** a dire chi fa cosa, prima ancora dei nomi.
+
+#### La pianta
+Una **piazza centrale** col falo' — si atterra li', e li' torna il portale. Attorno, cinque stanze
+attaccate da corridoi corti: **nessuna e' a piu' di due passi dalla piazza**, e da li' si vedono tutte le
+porte. Il villaggio si attraversa, non si esplora.
+
+| Stanza | Chi ci sta | Cosa c'e' dentro |
+|---|---|---|
+| **Taverna** (pavimento di legno) | Ostessa | bancone, credenza con le bottiglie alle sue spalle, due file di tavoli con gli sgabelli, botti, lanterne appese |
+| **Antro** (lastre viola) | Cartomante | tappeto, tavolo, candelabri, scaffale di libri e mazzi, grappoli di cristallo viola |
+| **Erboristeria** (terra battuta) | Erborista | bancone, alambicco, mortaio, scaffali, **tre aiuole in fila** (niente piu' funghi a caso) |
+| **Fucina** (lastre rossastre) | Fabbro | bancone, incudine, **quattro rastrelliere d'armi**, la colata di lava in fondo, bracieri |
+| **Gilda dei Contratti** (lastre) | Capitano | bacheca **TAGLIE**, bancone, stendardi, scaffali dell'usato, casse in ordine |
+
+#### Le persone
+- **I mercanti non sono piu' ritratti frontali.** Erano un pugno in un occhio in una mappa vista dall'alto.
+  Adesso nascono dalla **stessa silhouette dei tre eroi**, ricolorata mestiere per mestiere e **disarmata**
+  (niente elmo, scudo, arco o bastone): in mano hanno solo l'attrezzo del loro lavoro.
+- **Ognuno ha il suo alone di luce**, del suo colore: e' cosi' che lo riconosci da lontano, al buio.
+- **Il Banditore e' diventato il Capitano** della Gilda dei Contratti: un ufficiale che appende le taglie e
+  ricompra l'attrezzatura dei caduti. Era il personaggio meno riuscito — un tizio con un cartello. La chiave
+  interna resta `crier`/`bnd`: cambia la persona, non l'impianto.
+- **Otto comparse** in piedi attorno ai tavoli e per le strade. Non parlano e non vendono, ma senza di loro
+  il posto sembrava abbandonato invece che abitato. (Sedute non funzionavano: dall'alto una figura seduta e'
+  un ovale con una testa.)
+
+#### Come si aggiunge una stanza
+Una riga in `ROOMS` (rettangolo, pavimento, colore) e una in `LINKS` (il corridoio che la attacca alla
+piazza). L'arredo sta in una sezione per stanza dentro `generateMarket`. La mappa passa da **26x22 a 34x26**
+tile e adesso espone `floors`, un rettangolo di pavimento per stanza, che il renderer disegna prima di tutto
+il resto.
+
+#### ✅ Verificato
+**927 test, 0 falliti** (erano 893) piu' i controlli del client.
+I nuovi: si scava solo dove previsto e non resta roccia dentro le stanze; **dallo spawn si raggiunge ogni
+singola tile calpestabile** (352 su 352), portale compreso; ogni stanza e' collegata alla piazza; ogni
+mercante sta dentro la stanza del suo mestiere e ha un colore diverso dagli altri; niente mercanti, comparse
+o mobili dentro la roccia; **il renderer sa disegnare tutti i 26 tipi di arredo** (un tipo scritto male
+sarebbe un oggetto invisibile); l'arredo sta in una stanza, nella piazza o lungo un corridoio, mai altrove.
+
+---
+
 ### [1.74.1] — 2026-08-30 · "Nessuna cura automatica"
 
 Correzione trovata provando la 1.74: **a ogni fine ondata il gioco curava il 25% dei PV massimi**, in

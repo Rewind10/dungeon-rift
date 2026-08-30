@@ -684,8 +684,10 @@ function testV152() {
   assert(room.crates.length === 0, 'niente casse nel mercato (il 30% sarebbe una cassa-mima, cioe\' un nemico)');
   assert(!!room.gearMerchant, 'il fabbro dell\'equipaggiamento e\' presente');
   assert(!!room.map.exit, 'la mappa del mercato ha un portale EXIT');
+  // v1.75 — al centro adesso c'e' la PIAZZA col falo': il fabbro sta nella sua fucina, a un corridoio da li'.
   const cxw = (room.map.w / 2) * T, cyw = (room.map.h / 2) * T;
-  assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, cxw, cyw) < T * 8, 'il fabbro sta al centro della mappa');
+  assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, cxw, cyw) < T * 4, 'la piazza col falo sta al centro della mappa');
+  assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.fire.x, room.map.village.fire.y) < T * 14, 'e la fucina si apre sulla piazza');
   // acquisto: serve essere vicini al fabbro
   p.coins = 100000; p.x = room.map.spawn.x; p.y = room.map.spawn.y;
   if (MU.dist(p.x, p.y, room.gearMerchant.x, room.gearMerchant.y) > C.MARKET_MERCH_RANGE + 12) {
@@ -733,7 +735,8 @@ function testV153() {
   const ex = room.map.exit.x * T + T / 2, ey = room.map.exit.y * T + T / 2;
   const dSmith = MU.dist(sx, sy, room.gearMerchant.x, room.gearMerchant.y) / T;
   const dExit = MU.dist(sx, sy, ex, ey) / T;
-  assert(dSmith <= 10, 'il fabbro e a portata di sguardo dallo spawn (' + dSmith.toFixed(1) + ' tile)');
+  // v1.75 — il fabbro non e' piu' a due passi dallo spawn: si attraversa la piazza ed si entra in fucina.
+  assert(dSmith <= 13, 'il fabbro e a una traversata dallo spawn (' + dSmith.toFixed(1) + ' tile)');
   assert(dExit <= 16, 'il portale EXIT e in vista dallo spawn (' + dExit.toFixed(1) + ' tile)');
   // v1.57 — si compare dentro la sala e si esce dal varco a sud: il portale e vicino, i banchi attorno
   // la tile EXIT e' stata spostata NELLA GRIGLIA (il client disegna il portale da li)
@@ -770,84 +773,100 @@ function testV153() {
   ok('novita v1.53 verificate');
 }
 function testV157() {
-  console.log('\n[TEST 28] Novita v1.57 — il mercato e una SALA scavata: pareti nere, buio, falo, un solo varco');
+  // v1.75 — la SALA unica e' diventata un VILLAGGIO A MICRO-STANZE: una piazza col falo' e cinque
+  // stanze attaccate da corridoi corti, una per mestiere. Il test verifica la pianta, non i mobili.
+  console.log('\n[TEST 28] Il villaggio — piazza col falo, cinque stanze scavate, tutto raggiungibile');
   const MapGen = require('../shared/mapgen.js');
   const T = C.TILE, m = MapGen.generateMarket(4242), V = MapGen.VILLAGE;
   const at = (x, y) => m.grid[y * m.w + x];
   const isFloor = (x, y) => at(x, y) !== C.T_WALL;
+  const dentro = (x, y, r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
 
-  // --- si SCAVA nella roccia: fuori dalla sala e dal corridoio c'e' solo muro ---
-  let stray = 0, roomFloor = 0;
+  assert(m.w === V.w && m.h === V.h, 'la mappa e ' + m.w + 'x' + m.h + ' tile');
+  assert(V.rooms.length === 5, 'cinque stanze, una per mestiere');
+
+  // --- si SCAVA: pavimento SOLO dentro piazza, stanze e corridoi; e li' dentro mai roccia ---
+  const inLink = (x, y) => V.links.some(L => x >= L[0] && x <= L[2] && y >= L[1] && y <= L[3]);
+  let stray = 0, vuoti = 0, area = 0;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
-    const inRoom = x >= V.room.x0 && x <= V.room.x1 && y >= V.room.y0 && y <= V.room.y1;
-    const inGap = x >= V.gap.x0 && x <= V.gap.x1 && y > V.room.y1 && y <= V.gap.y1;
-    if (isFloor(x, y) && !inRoom && !inGap) stray++;
-    if (inRoom) { if (!isFloor(x, y)) stray++; else roomFloor++; }
+    const dovuto = dentro(x, y, V.piazza) || V.rooms.some(r => dentro(x, y, r)) || inLink(x, y);
+    if (isFloor(x, y)) { area++; if (!dovuto) stray++; } else if (dovuto) vuoti++;
   }
-  assert(stray === 0, 'la sala e scavata: niente pavimento fuori, niente muri dentro (' + stray + ' anomalie)');
-  assert(roomFloor > 100, 'la sala ha spazio per muoversi (' + roomFloor + ' tile)');
+  assert(stray === 0, 'niente pavimento fuori da piazza, stanze e corridoi (' + stray + ' anomalie)');
+  assert(vuoti === 0, 'niente roccia dentro le stanze (' + vuoti + ' buchi)');
+  assert(area > 250, 'c e spazio per muoversi (' + area + ' tile calpestabili)');
 
-  // --- un solo varco, a sud ---
-  let openings = 0;
-  for (let x = 0; x < m.w; x++) if (isFloor(x, V.room.y1 + 1)) openings++;
-  assert(openings === V.gap.x1 - V.gap.x0 + 1, 'il varco a sud e largo ' + openings + ' tile');
-  for (let y = V.room.y0; y <= V.room.y1; y++) { if (isFloor(V.room.x0 - 1, y) || isFloor(V.room.x1 + 1, y)) openings += 10; }
-  for (let x = V.room.x0; x <= V.room.x1; x++) { if (isFloor(x, V.room.y0 - 1)) openings += 10; }
-  assert(openings < 10, 'nessun altro passaggio: pareti chiuse su nord, est e ovest');
-
-  // --- il portale sta nel corridoio, e ci si arriva a piedi dallo spawn ---
+  // --- ogni stanza tocca la piazza: dallo spawn si arriva OVUNQUE, portale compreso ---
   assert(at(m.exit.x, m.exit.y) === C.T_EXIT, 'il portale EXIT e sulla griglia');
-  assert(m.exit.y > V.room.y1, 'il portale sta nel corridoio a sud, fuori dalla sala');
+  assert(!dentro(m.exit.x, m.exit.y, V.piazza), 'il portale sta fuori dalla piazza, in fondo al corridoio sud');
   const seen = new Set(), q = [[(m.spawn.x / T) | 0, (m.spawn.y / T) | 0]];
   while (q.length) { const [x, y] = q.pop(); const k = y * m.w + x;
     if (seen.has(k) || x < 0 || y < 0 || x >= m.w || y >= m.h || !isFloor(x, y)) continue;
     seen.add(k); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+  assert(seen.size === area, 'dallo spawn si raggiunge ogni angolo del villaggio (' + seen.size + '/' + area + ')');
   assert(seen.has(m.exit.y * m.w + m.exit.x), 'dallo spawn si raggiunge il portale a piedi');
+  for (const r of V.rooms) {
+    const cx = (r.x0 + r.x1) >> 1, cy = (r.y0 + r.y1) >> 1;
+    assert(seen.has(cy * m.w + cx), 'la stanza ' + r.id + ' e collegata alla piazza');
+  }
 
-  // --- falo' al centro, cinque banchetti, cinque mercanti ---
+  // --- il falo' sta nella piazza, ed e' l'unica sorgente di luce dichiarata ---
   assert(!!m.village.fire, 'il falo e esposto nella mappa (e la sorgente di luce)');
   const fireT = { x: (m.village.fire.x / T) | 0, y: (m.village.fire.y / T) | 0 };
-  assert(fireT.x === V.fire.x && fireT.y === V.fire.y, 'il falo e al centro della sala');
-  const stalls = m.props.filter(p => p.type === 'stall');
-  assert(stalls.length === 5, 'ci sono 5 banchetti (' + stalls.length + ')');
-  assert(new Set(stalls.map(s => s.kind)).size === 5, 'i 5 banchetti sono tutti diversi');
-  assert(stalls.every(s => s.s > 1.4), 'i banchetti sono piu grandi dei mercanti (scala ' + stalls[0].s + ')');
+  assert(fireT.x === V.fire.x && fireT.y === V.fire.y, 'il falo e dove lo mette la pianta');
+  assert(dentro(fireT.x, fireT.y, V.piazza), 'e il falo sta nella piazza centrale');
+  assert(m.props.filter(p => p.type === 'bonfire').length === 1, 'un solo falo');
+
+  // --- i pavimenti per stanza: sei rettangoli (piazza + cinque stanze) ---
+  assert(Array.isArray(m.floors) && m.floors.length === V.rooms.length + 1, 'il renderer riceve un pavimento per stanza, piu la piazza');
+  assert(m.floors.every(f => f.kind && f.col), 'ogni pavimento dichiara tipo e colore');
+
+  // --- cinque mercanti, ognuno nella SUA stanza, dietro il suo banco ---
+  assert(m.props.filter(p => p.type === 'stall').length === 0, 'i banchetti sono spariti in v1.75: restano le persone');
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
-  assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende: il fabbro');
-  // v1.72 — hanno aperto Erborista e Banditore: restano chiusi Cartomante e Ostessa.
-  assert(m.village.npcs.filter(n => n.soon).length === 0, 'in v1.74 il villaggio e completo: nessuna bottega chiusa');
+  assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende equipaggiamento: il fabbro');
+  assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
   assert(m.village.npcs.filter(n => n.crd).length === 1, 'la Cartomante ha aperto in v1.73');
   assert(m.village.npcs.filter(n => n.inn).length === 1, "e l'Ostessa in v1.74");
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
-  // ogni mercante sta DIETRO il suo banco: piu' lontano dal fuoco
-  let behind = true;
-  for (let i = 0; i < stalls.length; i++) { const n = m.village.npcs[i];
-    const ds = MU.dist(stalls[i].x, stalls[i].y, m.village.fire.x, m.village.fire.y);
-    const dn = MU.dist(n.x, n.y, m.village.fire.x, m.village.fire.y);
-    if (dn <= ds + 60) behind = false; }
-  assert(behind, 'ogni mercante sta dietro al suo banco, non sopra');
+  assert(m.village.npcs.every(n => n.col), 'ogni mercante ha il suo colore: e cosi che lo riconosci da lontano');
+  assert(new Set(m.village.npcs.map(n => n.col)).size === 5, 'i cinque colori sono tutti diversi');
+  let fuori = 0;
+  for (let i2 = 0; i2 < V.stalls.length; i2++) {
+    const s2 = V.stalls[i2], r = V.rooms.find(x => x.id === s2.room);
+    if (!r || !dentro(Math.floor(s2.x), Math.floor(s2.y), r)) fuori++;
+  }
+  assert(fuori === 0, 'ogni mercante sta dentro la stanza del suo mestiere (' + fuori + ' fuori posto)');
+  assert(m.village.npcs.every(n => n.name && n.name.length > 2), 'ognuno ha un nome');
+  assert(V.stalls.find(s => s.bnd).name === 'Capitano', 'il Banditore e diventato il Capitano della Gilda dei Contratti');
 
-  // --- niente mercanti o arredo dentro la roccia ---
+  // --- la gente del villaggio: comparse che non vendono nulla ---
+  assert(Array.isArray(m.village.extras) && m.village.extras.length >= 6, 'ci sono comparse: il posto e abitato, non abbandonato');
+  assert(m.village.extras.every(e => !e.shop && !e.pot && !e.bnd && !e.crd && !e.inn), 'le comparse non vendono niente');
+
+  // --- niente mercanti, comparse o arredo dentro la roccia ---
   const inWall = (o) => at((o.x / T) | 0, (o.y / T) | 0) === C.T_WALL;
   assert(!m.village.npcs.some(inWall), 'nessun mercante dentro la roccia');
+  assert(!m.village.extras.some(inWall), 'nessuna comparsa dentro la roccia');
   assert(!m.props.some(inWall), 'nessun arredo dentro la roccia');
 
-  // --- la sala e BUIA: la luce la fa il falo ---
-  assert(!m.lit, 'la sala non e illuminata a giorno: resta al buio');
+  // --- il villaggio e BUIO: la luce la fanno il falo e gli aloni dei mercanti ---
+  assert(!m.lit, 'il villaggio non e illuminato a giorno: resta al buio');
+  assert(m.props.filter(p => p.type === 'glowspot').length === 5, "un alone di luce per mercante");
   assert(m.market === 1, 'la mappa si dichiara mercato');
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
   const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
-  assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa la sala');
-  assert(room.monsters.length === 0 && room.crates.length === 0, 'nella sala non ci sono nemici ne casse');
+  assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa il villaggio');
+  assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro');
   let inside = false;
-  for (let i = 0; i < 40; i++) { room.newMap(1000 + i, 3, true); for (const q2 of room.players.values()) if (room.isWallAt(q2.x, q2.y)) inside = true; }
+  for (let i2 = 0; i2 < 40; i2++) { room.newMap(1000 + i2, 3, true); for (const q2 of room.players.values()) if (room.isWallAt(q2.x, q2.y)) inside = true; }
   assert(!inside, 'nessun giocatore compare dentro la roccia');
-  ok('novita v1.57 verificate');
+  ok('il villaggio v1.75 verificato');
 }
 
 function testV158() {
@@ -2261,6 +2280,53 @@ function testV1741() {
 
 console.log('=================================================='); console.log('  DUNGEON RIFT — SUITE DI TEST (v1.74.1)'); console.log('==================================================');
 const T0 = Date.now();
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV175() {
+  console.log('\n[TEST 46] Novita v1.75 — arredo e persone del villaggio: nulla di invisibile, nulla nel muro');
+  const MapGen = require('../shared/mapgen.js');
+  const path = require('path'), fs2 = require('fs');
+  const m = MapGen.generateMarket(777), T = C.TILE;
+  const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+
+  // --- ogni mobile che la mappa piazza dev'essere DISEGNATO: un tipo scritto male e' un oggetto invisibile ---
+  const disegnati = new Set();
+  for (const mm of src.matchAll(/case '([a-z_]+)'/g)) disegnati.add(mm[1]);
+  disegnati.add('glowspot'); disegnati.add('bonfire');   // non sono case: diventano luci, gestite prima dello switch
+  const usati = [...new Set(m.props.map(p => p.type))];
+  const orfani = usati.filter(t => !disegnati.has(t));
+  assert(orfani.length === 0, 'il renderer sa disegnare tutti i ' + usati.length + ' tipi di arredo (orfani: ' + orfani.join(', ') + ')');
+
+  // --- i mobili nuovi della v1.75 ci sono davvero, uno per stanza ---
+  const conta = (t) => m.props.filter(p => p.type === t).length;
+  assert(conta('bancone') >= 4, 'ogni mestiere ha il suo bancone (' + conta('bancone') + ')');
+  assert(conta('tavolo') >= 4 && conta('panca') >= 8, 'la taverna ha i tavoli con gli sgabelli attorno');
+  assert(conta('credenza') === 1, 'e dietro l ostessa la credenza con le bottiglie');
+  assert(conta('incudine') === 1 && conta('rastrelliera') >= 4, 'la fucina ha incudine e rastrelliere');
+  assert(conta('lavapool') >= 2, 'e la colata di lava in fondo');
+  assert(conta('aiuola') === 3 && conta('alambicco') === 1 && conta('mortaio') === 1, 'l erborista ha le piantagioni e i suoi strumenti');
+  assert(conta('tappeto') === 1 && conta('scaffale') >= 4, 'la cartomante ha il tappeto, e ci sono scaffali in giro');
+  assert(m.props.some(p => p.type === 'signpost' && p.txt === 'TAGLIE'), 'la bacheca delle taglie e nella stanza del Capitano');
+  assert(conta('bones') === 0, 'niente ossa sparse: sembravano asterischi bianchi');
+
+  // --- l'arredo sta ORDINATO nella sua stanza, non sparso a caso ---
+  const V = MapGen.VILLAGE;
+  const dentro = (x, y, r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const inLink2 = (x, y) => V.links.some(L => x >= L[0] && x <= L[2] && y >= L[1] && y <= L[3]);
+  let sparsi = 0, inCorridoio = 0;
+  for (const p of m.props) {
+    const tx = (p.x / T) | 0, ty = (p.y / T) | 0;
+    if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
+    if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
+  }
+  assert(sparsi === 0, 'ogni mobile sta in una stanza, nella piazza o lungo un corridoio (' + sparsi + ' fuori posto)');
+  assert(inCorridoio <= 2, 'e nei corridoi si passa: al massimo il cartello del portale (' + inCorridoio + ')');
+
+  // --- le persone: il mercante e' un EROE ricolorato e disarmato, non piu' un ritratto frontale ---
+  assert(/_vendorPal/.test(src) && /_vendorBase/.test(src), 'i mercanti nascono dalla silhouette degli eroi, con la loro tavolozza');
+  assert(/civile/.test(src), 'e sono disarmati: niente elmo, scudo, arco o bastone dietro il bancone');
+  assert(/village.extras/.test(src), 'e il renderer disegna anche le comparse');
+  assert(m.village.extras.every(e => !e.seated), 'le comparse stanno in piedi: dall alto una figura seduta non si legge');
+  ok('novita v1.75 verificate');
+}
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

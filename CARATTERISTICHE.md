@@ -1,10 +1,47 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.70.0`
+**Versione attuale:** `1.75.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🏘️ IL VILLAGGIO A MICRO-STANZE *(novita v1.75)*
+
+### La pianta
+- Una **piazza centrale** col falo': ci si atterra, e li' sta il portale per l'ondata successiva.
+- Attorno, **cinque stanze** attaccate alla piazza da corridoi di una o due tile. Nessuna e' a piu' di due
+  passi, e dalla piazza si vedono tutte le porte: il villaggio si **attraversa**, non si esplora.
+- La mappa passa da **26x22 a 34x26** tile. Si scava nella roccia piena: fuori da piazza, stanze e corridoi
+  non c'e' nulla. **Ogni tile calpestabile e' raggiungibile a piedi dallo spawn** — 352 su 352.
+
+### Le cinque stanze
+| Stanza | Chi ci sta | Pavimento | Cosa c'e' dentro |
+|---|---|---|---|
+| **Taverna** | Ostessa | assi di legno | bancone, credenza con le bottiglie alle sue spalle, due file di tavoli con gli sgabelli attorno, botti in fila, lanterne appese, braciere |
+| **Antro** | Cartomante | lastre viola | tappeto, tavolo, due candelabri, scaffale di libri e mazzi, grappoli di cristallo viola, teschio |
+| **Erboristeria** | Erborista | terra battuta | bancone, alambicco, mortaio, due scaffali, **tre aiuole allineate**, botte e sacco |
+| **Fucina** | Fabbro | lastre rossastre | bancone, incudine, **quattro rastrelliere d'armi**, colata di lava in fondo, braciere, casse |
+| **Gilda dei Contratti** | Capitano | lastre | bacheca **TAGLIE**, bancone, due stendardi, scaffali dell'usato, rastrelliera, casse in ordine |
+
+### Le persone
+- **I mercanti si vedono dall'alto**, come il tuo eroe. Prima erano ritratti frontali: in una mappa vista
+  dall'alto stonavano. Adesso nascono dalla **stessa silhouette dei tre eroi** — guerriero, mago, ladro —
+  ricolorata mestiere per mestiere e **disarmata**: niente elmo, niente scudo, niente arco, niente bastone.
+  In mano tengono solo l'attrezzo del loro lavoro.
+- **Ognuno ha il suo alone di luce**, del suo colore (arancio il Fabbro, verde l'Erborista, viola la
+  Cartomante, ambra l'Ostessa, rosso il Capitano): e' cosi' che lo riconosci da lontano, al buio.
+- **Il Banditore e' diventato il Capitano** della Gilda dei Contratti — un ufficiale che appende le taglie
+  e ricompra l'attrezzatura dei caduti. Era il personaggio meno riuscito, un tizio con un cartello. La
+  chiave interna resta la stessa: cambia la persona, non l'impianto.
+- **Otto comparse** in piedi attorno ai tavoli e per le strade. Non parlano e non vendono, ma senza di loro
+  il posto sembrava abbandonato invece che abitato. Sedute non funzionavano: vista dall'alto, una figura
+  seduta e' un ovale con una testa sopra.
+
+### Come si aggiunge una stanza
+Una riga in `ROOMS` (rettangolo, tipo di pavimento, colore) e una in `LINKS` (il corridoio che la attacca
+alla piazza). L'arredo sta in una sezione per stanza dentro `generateMarket`. La mappa espone `floors`, un
+rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il resto.
 
 ## ❤️ NESSUNA CURA AUTOMATICA *(novita v1.74.1)*
 - A ogni fine ondata il gioco curava il **25% dei PV massimi**, in silenzio e gratis: era li' da molte

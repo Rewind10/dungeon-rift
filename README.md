@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.74.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.75.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.75 (il villaggio a micro-stanze)
+- **🏘️ Ogni mestiere ha la sua stanza.** Una piazza centrale col falo' — dove si atterra e dove sta il
+  portale — e attorno cinque stanze attaccate da corridoi corti: **taverna**, **antro** della Cartomante,
+  **erboristeria**, **fucina** e **Gilda dei Contratti**. Nessuna e' a piu' di due passi dalla piazza.
+- **🪑 Ogni stanza ha il suo pavimento e i suoi mobili**: assi di legno e tavoli in taverna, aiuole di terra
+  dall'Erborista, incudine, rastrelliere e colata di lava in fucina, bacheca delle taglie alla Gilda.
+- **🧍 I mercanti si vedono dall'alto** come il tuo eroe: stessa silhouette, ricolorata mestiere per
+  mestiere e **disarmata**, con in mano solo l'attrezzo del suo lavoro. Ognuno ha il **suo alone di luce**.
+- **🎖️ Il Banditore e' ora il Capitano** della Gilda dei Contratti: appende le taglie e ricompra
+  l'attrezzatura dei caduti.
+- **👥 Otto comparse** in piedi attorno ai tavoli: il villaggio e' abitato, non abbandonato.
 
 ## 🆕 Novita v1.74.1 (nessuna cura automatica)
 - **A fine ondata non si guarisce piu'.** Il gioco regalava il 25% dei PV massimi a ogni ondata chiusa, in
