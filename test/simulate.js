@@ -56,8 +56,10 @@ function hasNaN(room) { for (const p of room.players.values()) if (!isFinite(p.x
 
 function testMapThemes() {
   console.log('\n[TEST 1] Temi mappa + connettività');
+  // v1.76 — il campo si costruisce dalla PARTENZA, non dal centro geometrico: con la caverna il
+  // centro della mappa puo' essere dentro una massa di roccia, e allora non si raggiungeva nulla.
   const PF = require('../shared/pathfinding.js'); const seen = {}; let cf = 0, ef = 0;
-  for (let i = 0; i < 50; i++) { const map = MapGen.generate((Math.random() * 1e9) | 0, 1 + (i % 20)); seen[map.theme.id] = 1; const dist = PF.build(map.grid, map.w, map.h, [{ gx: map.w >> 1, gy: map.h >> 1 }]); let r = 0, t = 0; for (const s of map.enemySpawns) { t++; if (dist[s.y * map.w + s.x] >= 0) r++; } if (t && r / t < 0.98) cf++; if (!map.exit) ef++; }
+  for (let i = 0; i < 50; i++) { const map = MapGen.generate((Math.random() * 1e9) | 0, 1 + (i % 20)); seen[map.theme.id] = 1; const dist = PF.build(map.grid, map.w, map.h, [{ gx: (map.spawn.x / C.TILE) | 0, gy: (map.spawn.y / C.TILE) | 0 }]); let r = 0, t = 0; for (const s of map.enemySpawns) { t++; if (dist[s.y * map.w + s.x] >= 0) r++; } if (t && r / t < 0.98) cf++; if (!map.exit) ef++; }
   assert(Object.keys(seen).length >= 3, 'più temi (' + Object.keys(seen).join(',') + ')'); assert(cf === 0, 'tutte connesse'); assert(ef === 0, 'tutte con portale'); ok('temi/connettività OK');
 }
 function testLives() {
@@ -166,6 +168,18 @@ function testV16() {
   // boon homing: i proiettili portano il flag e curvano
   room.phase = C.PHASE_SHOP; p.boonOffer = ['homing']; room.pickBoon('b', 'homing'); assert(p.boon.homing === 1, 'boon Mira Guidata applicato');
   // scenario deterministico: nessun mostro residuo, mira nota (verso destra), unico bersaglio sotto il proiettile
+  // v1.76 — lo scenario va messo in mezzo allo SPAZIO LIBERO. Con la pianta nuova il giocatore puo'
+  // trovarsi a ridosso della roccia: il proiettile ci sbatteva entro tre tick, spariva, e il test
+  // "curva verso il bersaglio" falliva una volta su quattro senza che ci fosse niente di rotto.
+  { let best = null, bestR = 0;
+    for (let gy = 3; gy < room.map.h - 3; gy++) for (let gx = 3; gx < room.map.w - 3; gx++) {
+      let r = 0;
+      while (r < 5) { let lib = true;
+        for (let dy = -(r + 1); dy <= r + 1 && lib; dy++) for (let dx = -(r + 1); dx <= r + 1; dx++)
+          if (room.map.grid[(gy + dy) * room.map.w + (gx + dx)] === C.T_WALL) { lib = false; break; }
+        if (!lib) break; r++; }
+      if (r > bestR) { bestR = r; best = { x: gx, y: gy }; } }
+    if (best) { p.x = best.x * C.TILE + C.TILE / 2; p.y = best.y * C.TILE + C.TILE / 2; } }
   room.monsters.length = 0; room.bullets.length = 0; p.aim = 0; p.input.aim = 0; p.fireCd = 0; room.firePlayerWeapon(p); const hb = room.bullets.find(x => !x.hostile); assert(hb && hb.homing === 1, 'i proiettili ereditano il flag homing');
   const tm = room.spawnMonster('skeleton', hb.x + 30, hb.y + 120, { scaling: Waves.scaling(2, 1) });
   const sp0 = Math.hypot(hb.vx, hb.vy) || 720; hb.vx = sp0; hb.vy = 0; // v1.17 — elimina lo spread dell'arma: test deterministico
@@ -1053,12 +1067,42 @@ function testV163() {
   const r0 = new Room('v163g'); r0.addPlayer('a', { send() {} }, 'A', 'ladro'); r0.startGame();
   const m0 = r0.map, T2 = C.TILE, M = C.EDGE_MARGIN;
   const at = (gx, gy) => r0._edgeDepth(gx * T2 + T2 / 2, gy * T2 + T2 / 2);
-  assert(at((m0.w / 2) | 0, (m0.h / 2) | 0) === 0, 'al centro la profondita nel margine e zero');
-  assert(at(2, (m0.h / 2) | 0) === M, 'sul bordo dritto la profondita e ' + M);
-  assert(at(2, 2) === M * 2, 'in un ANGOLO la profondita raddoppia (' + at(2, 2) + '): la faglia morde il doppio piu in fretta');
-  assert(at(2 + M, (m0.h / 2) | 0) === 0, 'oltre ' + M + ' tessere dal bordo si e fuori dalla fascia');
+  // v1.76 — la fascia non e' piu' il bordo del RETTANGOLO: segue la forma della caverna. Percio' non
+  // si prova piu' "l angolo della mappa vale il doppio" (l angolo e' roccia piena), si prova la cosa
+  // che conta davvero: attaccati alla parete esterna morde al massimo, due tessere dentro non morde
+  // piu', e i massi INTERNI non hanno alone — se no stare al riparo dietro un sasso sarebbe letale.
+  const suoloAt = (gx, gy) => m0.grid[gy * m0.w + gx] !== C.T_WALL;
+  // la roccia ESTERNA e' quella che comunica col bordo della mappa: i massi interni non contano,
+  // ed e' apposta — dietro un masso al centro si deve poter stare al riparo senza morire.
+  const esterna = new Uint8Array(m0.w * m0.h);
+  { const q = [];
+    for (let x = 0; x < m0.w; x++) q.push([x, 0], [x, m0.h - 1]);
+    for (let y = 0; y < m0.h; y++) q.push([0, y], [m0.w - 1, y]);
+    while (q.length) { const p = q.pop(), x = p[0], y = p[1];
+      if (x < 0 || y < 0 || x >= m0.w || y >= m0.h) continue;
+      const i = y * m0.w + x;
+      if (esterna[i] || m0.grid[i] !== C.T_WALL) continue;
+      esterna[i] = 1; q.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]); } }
+  const controParete = (gx, gy) => { for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) {
+    const nx = gx + d[0], ny = gy + d[1];
+    if (nx < 0 || ny < 0 || nx >= m0.w || ny >= m0.h) continue;
+    if (esterna[ny * m0.w + nx]) return true; } return false; };
+  const fuoriRoccia = (gx, gy) => { for (const d of [[1,0],[-1,0],[0,1],[0,-1]])
+    if (!suoloAt(gx + d[0], gy + d[1])) return true; return false; };
+  let attaccate = 0, attaccateMax = 0, dentro = 0, dentroFuori = 0;
+  for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) {
+    if (!suoloAt(x, y)) continue;
+    if (!controParete(x, y)) continue;
+    attaccate++; if (at(x, y) === M * 2) attaccateMax++;
+  }
+  assert(attaccateMax / attaccate > 0.9, 'chi sta attaccato alla parete ESTERNA e nella fascia piena (' + (attaccateMax / attaccate * 100).toFixed(0) + '% delle tessere a contatto)');
+  // un masso interno non deve avere alone: si cerca una tessera a contatto SOLO con roccia interna
+  let masso = null;
+  for (let y = 6; y < m0.h - 6 && !masso; y++) for (let x = 6; x < m0.w - 6; x++)
+    if (suoloAt(x, y) && fuoriRoccia(x, y) && at(x, y) === 0) masso = [x, y];
+  assert(!!masso, 'esistono ripari interni fuori dalla fascia: dietro un masso al centro non si muore');
   let band = 0, tot = 0;
-  for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) { tot++; if (at(x, y) > 0) band++; }
+  for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) { if (!suoloAt(x, y)) continue; tot++; if (at(x, y) > 0) band++; }
   assert(band / tot > 0.15 && band / tot < 0.45, 'la fascia copre una quota sensata della mappa (' + (band / tot * 100).toFixed(0) + '%)');
 
   // ---------- grazia, poi drenaggio crescente ----------
@@ -1288,9 +1332,18 @@ function testV161() {
   // Un mostro normale messo dentro un muro viene ESPULSO da _unstuck (salto secco).
   // Il fatuo invece deve proseguire di suo, passo dopo passo, e uscire da solo.
   const room = new Room('v161'); const pl = room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
+  // v1.76 — prima si prendeva la PRIMA tessera di muro scandendo da (2,2): con la caverna quella e'
+  // in mezzo all'anello di roccia esterno, a otto tessere dal pavimento piu' vicino, e nessun recupero
+  // anti-incastro puo' tirarti fuori da li'. Ma non e' nemmeno un caso che capiti giocando. La prova
+  // giusta e' una tessera di roccia che TOCCA il pavimento: quella si', ci si finisce dentro davvero.
   let wx = -1, wy = -1;
-  for (let gy = 2; gy < room.map.h - 2 && wx < 0; gy++) for (let gx = 2; gx < room.map.w - 2; gx++)
-    if (room.map.grid[gy * room.map.w + gx] === C.T_WALL) { wx = gx; wy = gy; break; }
+  for (let gy = 2; gy < room.map.h - 2 && wx < 0; gy++) for (let gx = 2; gx < room.map.w - 2; gx++) {
+    if (room.map.grid[gy * room.map.w + gx] !== C.T_WALL) continue;
+    let tocca = false;
+    for (const d of [[1,0],[-1,0],[0,1],[0,-1]])
+      if (room.map.grid[(gy + d[1]) * room.map.w + (gx + d[0])] !== C.T_WALL) tocca = true;
+    if (tocca) { wx = gx; wy = gy; break; }
+  }
   assert(wx >= 0, 'trovata una tessera di muro per la prova');
   const wcx = wx * C.TILE + C.TILE / 2, wcy = wy * C.TILE + C.TILE / 2;
 

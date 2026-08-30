@@ -228,11 +228,20 @@ class Room {
   _edgeDepth(x, y) {
     const T = C.TILE, M = C.EDGE_MARGIN;
     const gx = (x / T) | 0, gy = (y / T) | 0;
+    // v1.76 — se la mappa porta il campo della faglia (le mappe di combattimento lo fanno), la
+    // profondita' e' quella misurata sulla forma vera della caverna. Il calcolo sul rettangolo qui
+    // sotto resta per il villaggio e per qualunque mappa senza campo.
+    const F = this.map && this.map.edgeField;
+    if (F) { if (gx < 0 || gy < 0 || gx >= this.map.w || gy >= this.map.h) return M * 2;
+      return F[gy * this.map.w + gx] || 0; }
     const dx = Math.min(gx - 2, (this.map.w - 3) - gx);
     const dy = Math.min(gy - 2, (this.map.h - 3) - gy);
     return Math.max(0, M - dx) + Math.max(0, M - dy);
   }
-  _unstuck(e) { const T = C.TILE; const gx = (e.x / T) | 0, gy = (e.y / T) | 0; let best = null, bd = Infinity; for (let ry = -3; ry <= 3; ry++) for (let rx = -3; rx <= 3; rx++) { const nx = gx + rx, ny = gy + ry; if (nx < 0 || ny < 0 || nx >= this.map.w || ny >= this.map.h) continue; if (this.map.grid[ny * this.map.w + nx] === C.T_WALL) continue; const cx = nx * T + T / 2, cy = ny * T + T / 2; const d = MU.dist2(e.x, e.y, cx, cy); if (d < bd) { bd = d; best = { x: cx, y: cy }; } } if (best) { const n = MU.norm(best.x - e.x, best.y - e.y); e.x += n.x * 6; e.y += n.y * 6; if (this.isWallAt(e.x, e.y) && bd < 9999) { e.x = best.x; e.y = best.y; } } }
+  // v1.76 — la ricerca era +-3 tessere. Con le masse di roccia della pianta nuova, chi finisce
+  // dentro una massa grande non trova pavimento entro tre tessere e ci resta incastrato: misurato,
+  // 7 mostri piantati nel muro su una partita. Adesso +-8, che copre la massa piu' larga.
+  _unstuck(e) { const T = C.TILE; const gx = (e.x / T) | 0, gy = (e.y / T) | 0; let best = null, bd = Infinity; for (let ry = -8; ry <= 8; ry++) for (let rx = -8; rx <= 8; rx++) { const nx = gx + rx, ny = gy + ry; if (nx < 0 || ny < 0 || nx >= this.map.w || ny >= this.map.h) continue; if (this.map.grid[ny * this.map.w + nx] === C.T_WALL) continue; const cx = nx * T + T / 2, cy = ny * T + T / 2; const d = MU.dist2(e.x, e.y, cx, cy); if (d < bd) { bd = d; best = { x: cx, y: cy }; } } if (best) { const n = MU.norm(best.x - e.x, best.y - e.y); e.x += n.x * 6; e.y += n.y * 6; if (this.isWallAt(e.x, e.y) && bd < 9999) { e.x = best.x; e.y = best.y; } } }
   // v1.43 — RECUPERO da INCASTRO (per QUALSIASI mostro, boss compresi). Il monster è "incastrato" quando prova a
   // muoversi ma non avanza (wedge in un angolo, senza essere dentro un muro). Qui prova a SCIVOLARE: tra 8 direzioni
   // sceglie quella non bloccata più allineata all'intento; se persiste, fa un piccolo salto verso una cella libera.

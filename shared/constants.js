@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.75.3',
+    VERSION: '1.76.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -15,7 +15,7 @@
 
     VIS_SCALE: 1.45, COL_SCALE: 1.08,  // v1.13 — ridimensionamento LEGGERO: occhi grandi, hitbox quasi invariata (fluidita preservata)
     TICK_RATE: 30, SNAPSHOT_RATE: 20, MAX_PLAYERS: 6,
-    TILE: 48, MAP_W: 46, MAP_H: 34,
+    TILE: 48, MAP_W: 64, MAP_H: 46,
     T_FLOOR: 0, T_WALL: 1, T_TRAP: 2, T_HAZARD: 3, T_DECO: 4, T_EXIT: 5,
     PLAYER_RADIUS: 16, PLAYER_BASE_SPEED: 210,
     START_LIVES: 2, DOWN_BLEED_TIME: 4.0, REVIVE_IFRAME: 1.6,

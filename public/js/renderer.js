@@ -261,6 +261,164 @@
     init(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); for (const k in PUPPETS) PUPPETS[k].load(); for (const k in SHEETS) SHEETS[k].load(); this.resize(); window.addEventListener('resize', () => this.resize()); try { this.torch = localStorage.getItem('dr_torch') !== '0'; } catch (_) {} window.addEventListener('keydown', (e) => { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.code === 'KeyL') { this.torch = !this.torch; try { localStorage.setItem('dr_torch', this.torch ? '1' : '0'); } catch (_) {} } }); },
     resize() { this.dpr = Math.min(2, window.devicePixelRatio || 1); this.w = innerWidth; this.h = innerHeight; this.canvas.width = this.w * this.dpr; this.canvas.height = this.h * this.dpr; this.canvas.style.width = this.w + 'px'; this.canvas.style.height = this.h + 'px'; this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); if (!this.darkCv) { this.darkCv = document.createElement('canvas'); this.darkCtx = this.darkCv.getContext('2d'); } this.darkCv.width = Math.max(1, Math.round(this.w * this.darkScale)); this.darkCv.height = Math.max(1, Math.round(this.h * this.darkScale)); },
     setMap(map) { this.map = map; this.theme = map.theme || {}; this._bake(); this._bakeMinimap(); },
+    // =====================================================================================
+    // v1.76 — LA CAVERNA DIPINTA. Vale solo per le mappe di COMBATTIMENTO: il villaggio ha il suo
+    // aspetto e resta com'e'.
+    //
+    // Le tre regole, misurate sulle battlemap disegnate invece che scelte a occhio:
+    //   1. GERARCHIA DEL RUMORE. Il pavimento e' QUIETO (macchie morbide, crepe lunghe, nessun
+    //      contorno), i muri sono RUMOROSI (massa scura, massi col contorno spesso, ombra proiettata
+    //      dentro la stanza). Se pavimento e muri hanno la stessa grana l'occhio non capisce dove si
+    //      cammina — l'ho sbagliato due volte prima di capirlo.
+    //   2. LUMINOSITA'. Le battlemap dipinte hanno luminanza mediana 44. Il gioco stava a 18: era
+    //      cosi' buio che non si vedeva niente di quello che c'era.
+    //   3. DENSITA' DI CONTORNI. Nei riferimenti il 6,6% dei pixel e' un bordo forte; nel gioco
+    //      l'1,3%. E' quella la differenza fra "disegnato" e "sfumato".
+    //
+    // Si cuoce UNA volta quando nasce la mappa, in una tela fuori schermo: a fotogramma e' un solo
+    // drawImage, esattamente come prima.
+    _bakeCaverna(g, m, T, th) {
+      const W = m.w, H = m.h, PW = W * T, PH = H * T;
+      let _s = ((m.seed >>> 0) || 1) ^ 0x9e3779b9;
+      const rnd = () => (_s = (_s * 1664525 + 1013904223) >>> 0) / 4294967296;
+      const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1));
+      const suolo = (x, y) => x >= 0 && y >= 0 && x < W && y < H && m.grid[y * W + x] !== C.T_WALL;
+      const mix = (h1, h2, t) => { const a = this._hexToRgb(h1), b = this._hexToRgb(h2);
+        return 'rgb(' + Math.round(a.r + (b.r - a.r) * t) + ',' + Math.round(a.g + (b.g - a.g) * t) + ',' + Math.round(a.b + (b.b - a.b) * t) + ')'; };
+      // la palette esce dal TEMA, cosi' cripta, lava, ghiaccio, foresta e arcano restano diversi:
+      // cambia il modo di disegnare, non l'identita' della mappa
+      const base = th.floorB || '#151a26', chiaro = '#c9d2dc', scuro = '#0a0e14';
+      const PAV = [mix(base, chiaro, .34), mix(base, chiaro, .28), mix(base, chiaro, .40), mix(base, chiaro, .23), mix(base, chiaro, .45)];
+      const ROC = [mix(th.wall || '#1b2036', chiaro, .18), mix(th.wall || '#1b2036', chiaro, .12), mix(th.wallTop || '#262d4a', chiaro, .16)];
+      const ROC_T = mix(th.wallTop || '#262d4a', chiaro, .34), ROC_S = mix(th.wall || '#1b2036', scuro, .45);
+      const INK = mix(scuro, th.wall || '#1b2036', .18);
+      const MUSCO = mix(th.accent || '#4d6b46', scuro, .35);
+      const blob = (cx, cy, r, n, jit, ovalY) => { g.beginPath();
+        for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, rad = r * (1 - jit / 2 + rnd() * jit);
+          const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad * (ovalY || 1);
+          i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+      const inchiostro = (w) => { g.strokeStyle = INK; g.lineWidth = w; g.lineJoin = 'round'; g.stroke(); };
+
+      // ---- 1. PAVIMENTO, quieto. Si cuoce a parte e si ritaglia sul calpestabile.
+      const pav = document.createElement('canvas'); pav.width = PW; pav.height = PH;
+      const p = pav.getContext('2d');
+      p.fillStyle = PAV[0]; p.fillRect(0, 0, PW, PH);
+      const nMac = Math.round(PW * PH / 1750);
+      for (let i = 0; i < nMac; i++) { const x = rr(0, PW), y = rr(0, PH), r = rr(34, 150);
+        const gr = p.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, PAV[(rnd() * PAV.length) | 0]); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        p.globalAlpha = rr(.05, .15); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, 7); p.fill(); }
+      p.globalAlpha = 1; p.lineCap = 'round';
+      // crepe: poche, lunghe, sottili. Sono il dettaglio, non il rumore.
+      for (let k = 0, nk = Math.round(PW * PH / 82000); k < nk; k++) {
+        let x = rr(0, PW), y = rr(0, PH), a = rr(0, 6.28);
+        p.strokeStyle = 'rgba(18,24,30,' + rr(.22, .46).toFixed(3) + ')'; p.lineWidth = rr(1.2, 3.2);
+        p.beginPath(); p.moveTo(x, y);
+        for (let i = 0; i < 16; i++) { a += rr(-.5, .5); x += Math.cos(a) * rr(16, 38); y += Math.sin(a) * rr(16, 38); p.lineTo(x, y); }
+        p.stroke(); }
+      // giunti di lastrone appena accennati: danno la scala senza fare reticolo
+      for (let k = 0, nk = Math.round(PW * PH / 150000); k < nk; k++) {
+        let x = rr(0, PW), y = rr(0, PH), a = (ri(0, 1) ? 0 : 1.5708) + rr(-.12, .12);
+        p.strokeStyle = 'rgba(26,34,42,.26)'; p.lineWidth = rr(2, 4.5);
+        p.beginPath(); p.moveTo(x, y);
+        for (let i = 0; i < 6; i++) { a += rr(-.13, .13); x += Math.cos(a) * rr(44, 100); y += Math.sin(a) * rr(44, 100); p.lineTo(x, y); }
+        p.stroke(); }
+      // terra battuta attorno alle camere: e' quella che disegna i passaggi consumati
+      for (const c of (m.camere || [])) { const cx = c.x * T, cy = c.y * T;
+        for (let i = 0; i < 40; i++) { const x = cx + rr(-240, 240), y = cy + rr(-175, 175), r = rr(45, 115);
+          const gr = p.createRadialGradient(x, y, 0, x, y, r);
+          gr.addColorStop(0, mix(base, '#8a7a58', .55)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+          p.globalAlpha = rr(.07, .18); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, 7); p.fill(); } }
+      p.globalAlpha = 1;
+      g.save(); g.beginPath();
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (suolo(x, y)) g.rect(x*T - 6, y*T - 6, T + 12, T + 12);
+      g.clip(); g.drawImage(pav, 0, 0); g.restore();
+
+      // ---- 2. MURI, rumorosi.
+      const bordo = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (suolo(x, y)) continue;
+        for (const d of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])
+          if (suolo(x + d[0], y + d[1])) { bordo.push([x, y]); break; } }
+      // 2a — l'ombra che la parete getta DENTRO la stanza: e' quella che da' l'altezza alla roccia
+      for (let k = 0; k < bordo.length; k++) { const cx = bordo[k][0]*T + T/2, cy = bordo[k][1]*T + T/2;
+        const gr = g.createRadialGradient(cx, cy + 16, 6, cx, cy + 16, T * 1.6);
+        gr.addColorStop(0, 'rgba(4,7,11,.8)'); gr.addColorStop(1, 'rgba(4,7,11,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(cx, cy + 16, T * 1.6, 0, 7); g.fill(); }
+      // 2b — la massa, quasi nera: e' cosi' che la caverna si stacca di netto dal fondo
+      g.fillStyle = mix(th.wall || '#1b2036', scuro, .55);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!suolo(x, y)) g.fillRect(x*T - 1, y*T - 1, T + 2, T + 2);
+      // 2c — i massi, SOLO sul bordo, in ordine di profondita' cosi' quelli davanti coprono i dietro
+      const massi = [];
+      for (let k = 0; k < bordo.length; k++) for (let q = 0; q < 3; q++)
+        massi.push({ x: bordo[k][0]*T + T/2 + rr(-19, 19), y: bordo[k][1]*T + T/2 + rr(-19, 19), r: rr(22, 42) });
+      massi.sort((a, b) => a.y - b.y);
+      for (const mm of massi) {
+        g.fillStyle = 'rgba(6,10,14,.5)'; g.beginPath();
+        g.ellipse(mm.x + 6, mm.y + mm.r * .5, mm.r, mm.r * .42, 0, 0, 7); g.fill();
+        blob(mm.x, mm.y, mm.r, 10, .3, .84); g.fillStyle = ROC[(rnd() * ROC.length) | 0]; g.fill(); inchiostro(3.2);
+        blob(mm.x - mm.r*.14, mm.y - mm.r*.26, mm.r*.6, 9, .34, .76);
+        g.fillStyle = ROC_T; g.globalAlpha = .5; g.fill(); g.globalAlpha = 1;
+        g.strokeStyle = ROC_S; g.lineWidth = 2.2;
+        for (let k = 0; k < 2; k++) { g.beginPath();
+          let px = mm.x + rr(-mm.r*.6, mm.r*.6), py = mm.y - mm.r*.55;
+          g.moveTo(px, py); for (let i = 0; i < 3; i++) { px += rr(-11, 11); py += rr(8, 18); g.lineTo(px, py); } g.stroke(); }
+        if (rnd() < .3) { blob(mm.x + rr(-mm.r*.5, mm.r*.5), mm.y - mm.r*.5, rr(7, 14), 8, .5, .7);
+          g.fillStyle = MUSCO; g.globalAlpha = .45; g.fill(); g.globalAlpha = 1; }
+      }
+
+      // ---- 3. IL PIETRISCO. Senza, il pavimento resta un piazzale: misurato, la densita' di
+      // contorni si ferma al 3,5% contro il 6,6% delle battlemap disegnate. Sono massi, macerie e
+      // ossa sparse, e valgono la regola gia' pagata sui pilastri del villaggio: un oggetto
+      // appoggiato per terra dev'essere PIU' CHIARO del pavimento, se no dall'alto e' una buca.
+      const OGG = [mix(base, chiaro, .52), mix(base, chiaro, .46), mix(base, chiaro, .58)];
+      const OGG_T = mix(base, chiaro, .70), OGG_S = mix(base, scuro, .30), OSSO = mix(chiaro, '#e8e2c8', .6);
+      const masso = (gx, gy, r) => {
+        g.fillStyle = 'rgba(8,12,16,.42)'; g.beginPath();
+        g.ellipse(gx + 4, gy + r * .5, r, r * .4, 0, 0, 7); g.fill();
+        blob(gx, gy, r, 9, .34, .82); g.fillStyle = OGG[(rnd() * OGG.length) | 0]; g.fill(); inchiostro(2.4);
+        blob(gx - r*.16, gy - r*.24, r*.55, 8, .36, .74);
+        g.fillStyle = OGG_T; g.globalAlpha = .42; g.fill(); g.globalAlpha = 1;
+        // la crepa va misurata SUL SASSO: a passo fisso usciva dal contorno e ogni pietra si
+        // ritrovava un antenna attaccata. Solo sui massi abbastanza grandi da mostrarla.
+        if (r > 9) { g.strokeStyle = OGG_S; g.lineWidth = 1.6; g.beginPath();
+          let px2 = gx + rr(-r*.35, r*.35), py2 = gy - r*.5;
+          g.moveTo(px2, py2);
+          for (let i = 0; i < 3; i++) { px2 += rr(-r*.22, r*.22); py2 += r * .33; g.lineTo(px2, py2); }
+          g.stroke(); }
+      };
+      // dove si puo' appoggiare: serve il 3x3 libero, cosi' niente pietrisco a meta' dentro la roccia
+      const posabile = (wx, wy) => { const tx = (wx / T) | 0, ty = (wy / T) | 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!suolo(tx + dx, ty + dy)) return false;
+        return true; };
+      const occ = [];
+      const posto = (distMin) => { for (let k = 0; k < 60; k++) {
+          const wx = rr(T * 2, PW - T * 2), wy = rr(T * 2, PH - T * 2);
+          if (!posabile(wx, wy)) continue;
+          let male = false;
+          for (const o of occ) if (Math.hypot(wx - o[0], wy - o[1]) < distMin) { male = true; break; }
+          if (male) continue;
+          occ.push([wx, wy]); return [wx, wy]; }
+        return null; };
+      const K = PW * PH / (1400 * 1000);
+      const quanti = (n) => Math.round(n * K);
+      // massi singoli, sparsi
+      for (let i = 0; i < quanti(15); i++) { const q = posto(95); if (q) masso(q[0], q[1], rr(7, 17)); }
+      // grappoli di macerie
+      for (let i = 0; i < quanti(7); i++) { const q = posto(210); if (!q) continue;
+        for (let k = 0, n = ri(4, 8); k < n; k++) masso(q[0] + rr(-40, 40), q[1] + rr(-30, 30), rr(6, 15)); }
+      // ossa: il contrasto chiaro che rompe il grigio
+      for (let i = 0; i < quanti(6); i++) { const q = posto(230); if (!q) continue;
+        for (let k = 0, n = ri(2, 5); k < n; k++) {
+          g.save(); g.translate(q[0] + rr(-38, 38), q[1] + rr(-28, 28)); g.rotate(rr(0, 6.28));
+          g.fillStyle = OSSO; g.strokeStyle = INK; g.lineWidth = 1.9;
+          g.beginPath(); g.roundRect(-8, -2, 16, 4, 2); g.fill(); g.stroke();
+          g.beginPath(); g.arc(-8,-1.8,2.3,0,7); g.arc(-8,1.8,2.3,0,7); g.arc(8,-1.8,2.3,0,7); g.arc(8,1.8,2.3,0,7);
+          g.fill(); g.stroke(); g.restore(); } }
+      // chiazze scure: sporco, muffa, bruciato. Non hanno contorno: sono pavimento, non oggetti.
+      for (let i = 0; i < quanti(11); i++) { const wx = rr(T, PW - T), wy = rr(T, PH - T);
+        if (!posabile(wx, wy)) continue;
+        blob(wx, wy, rr(30, 62), 11, .4, .68); g.fillStyle = 'rgba(20,26,24,.24)'; g.fill(); }
+    },
     _bake() {
       const m = this.map; if (!m) return; const T = m.tile; const th = this.theme || {};
       const fA = th.floorA || '#12161f', fB = th.floorB || '#151a26', wl = th.wall || '#1b2036', wt = th.wallTop || '#262d4a', hz = th.hazard || '#ff5a1e', tint = th.tint || 'rgba(60,90,60,.15)';
@@ -277,8 +435,12 @@
       const wallTex = _rockTile(seedBase + 202, 192, wlDark, { scale: 0.05, warp: 30, bump: 4.0, cell: 110, moss: false });
       const floorPat = g.createPattern(floorTex, 'repeat'), wallPat = g.createPattern(wallTex, 'repeat');
       // pavimento ovunque (sotto ai muri), poi roccia-muro sopra le celle muro
-      g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height);
-      for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_WALL) continue; const px = x * T, py = y * T; g.save(); g.beginPath(); g.rect(px, py, T, T); g.clip(); g.fillStyle = wallPat; g.fillRect(px, py, T, T); g.restore(); }
+      // v1.76 — le mappe di COMBATTIMENTO passano dalla cottura nuova (caverna dipinta). Il
+      // villaggio (m.market) tiene la sua, che e' fatta apposta per le micro-stanze.
+      const _nuova = !m.market;
+      if (_nuova) this._bakeCaverna(g, m, T, th);
+      else { g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height); }
+      if (!_nuova) for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_WALL) continue; const px = x * T, py = y * T; g.save(); g.beginPath(); g.rect(px, py, T, T); g.clip(); g.fillStyle = wallPat; g.fillRect(px, py, T, T); g.restore(); }
       // v1.75 — IL PAVIMENTO DI OGNI STANZA. Il villaggio non e' piu' una sala sola: la taverna ha le assi,
       // la fucina la pietra bruciata, l'antro il suo colore. Senza questo le sei stanze sarebbero sei
       // scatole con lo stesso fondo, e la pianta non si leggerebbe.
@@ -319,6 +481,10 @@
         }
       }
 
+      // v1.76 — STEP C e C2 sono allineati alla TESSERA: sopra i massi tondi della caverna dipinta
+      // uscivano come rettangoli chiari incollati alla roccia. La cottura nuova fa gia' la sua ombra
+      // proiettata e la sua faccia in luce, quindi per le mappe di combattimento si saltano.
+      if (!_nuova) {
       // STEP C — v1.22 OMBRA MARCATA muro→pavimento: drop-shadow forte + linea di contatto scura = stacco netto
       for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
         if (m.grid[y * m.w + x] === C.T_WALL) continue; const px = x * T, py = y * T;
@@ -366,6 +532,7 @@
           g.lineCap = 'butt'; made++;
         }
       }
+      }   // fine del blocco saltato quando vale la cottura nuova
       // STEP D — POZZE: forma UNICA irregolare (union di cerchi, nessun contorno a "bolle") + conca scura per la PROFONDITÀ
       { const seen = new Uint8Array(m.w * m.h);
         const union = (cells, k) => { g.beginPath(); for (const cc of cells) { const cx = cc[0], cy = cc[1]; const h1 = HSH(cx, cy), h2 = HSH(cx + 5, cy + 9); const ox = (h1 - 0.5) * T * 0.16, oy = (h2 - 0.5) * T * 0.16; const rr = T * k * (1.0 + h1 * 0.14); const bxp = cx * T + T / 2 + ox, byp = cy * T + T / 2 + oy; g.moveTo(bxp + rr, byp); g.arc(bxp, byp, rr, 0, 7); } };

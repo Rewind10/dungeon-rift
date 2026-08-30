@@ -1,10 +1,43 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.75.3`
+**Versione attuale:** `1.76.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🗺️ LE MAPPE DI COMBATTIMENTO *(rifatte in v1.76)*
+
+### La pianta
+- **64x46 tessere** (3072x2208 px). Area calpestabile ~1330 tessere contro le 1041 di prima (+28%),
+  spazio libero attorno da 0,78 a 1,16 (+49%).
+- **Zero tessere-strozzatura**: nessuna tessera, tolta, spezza la mappa in due. Da ogni camera si
+  esce sempre da almeno due parti. Un passaggio le cerca con la visita di Tarjan e le allarga finche'
+  non ce n'e' piu'.
+- Si scava UNA caverna grande e irregolare, poi ci si mettono dentro **masse di roccia** a scolpire
+  le camere: lo spazio resta grande e continuo, la struttura la fanno gli ostacoli. La quantita' di
+  roccia e' un **budget** — il 26% della caverna — non un numero scelto a mano.
+- Tre archetipi: **anello**, **quadrifoglio**, **stella**, piu' le **dorsali**, schiene di pietra che
+  attraversano e obbligano a scegliere da che parte girarle.
+- **Il boss ci passa**: il grafo delle celle abbastanza larghe per un boss dev'essere collegato, e
+  dove non lo e' si scava solo il cammino piu' corto fra i pezzi.
+- **La partenza e' una radura**: la piu' ampia della mappa, e a parita' la piu' vicina al centro.
+  Raggio libero minimo misurato su 80 mappe: 4 tessere.
+
+### L'aspetto
+- **Pavimento QUIETO** (macchie morbide, crepe lunghe, nessun contorno) e **muri RUMOROSI** (massa
+  quasi nera, massi col contorno spesso, ombra proiettata dentro la stanza). E' questa scala di
+  rumore a dire all'occhio dove si cammina — e sbagliarla e' l'errore che rende una mappa illeggibile.
+- **Pietrisco** col contorno a inchiostro: massi, grappoli di macerie, ossa sparse, chiazze di
+  sporco. Tutti piu' chiari del pavimento su cui stanno, se no dall'alto sono buche.
+- **La palette esce dal tema**: cripta, lava, ghiaccio, foresta e arcano restano diversi.
+- Misurato: luminanza mediana da 18 a 48, densita' di contorni dall'1,3% all'8,3% (le battlemap
+  dipinte prese a riferimento stanno a 44 e 6,6%).
+
+### La faglia segue la caverna
+- La profondita' nel margine si misura dalla **roccia esterna** — quella che confina col bordo della
+  mappa — non dai bordi del rettangolo e non dai massi interni. Dietro un masso al centro si sta al
+  riparo; contro la parete della caverna no. Fascia profonda due tessere, copertura 34%.
 
 ## 🏘️ IL VILLAGGIO A MICRO-STANZE *(novita v1.75)*
 

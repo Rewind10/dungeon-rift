@@ -19,7 +19,38 @@
   ];
   function stampBlob(g, cx, cy, rw, rh, v) { for (let y = cy - rh; y <= cy + rh; y++) for (let x = cx - rw; x <= cx + rw; x++) { if (x <= 1 || y <= 1 || x >= W - 2 || y >= H - 2) continue; g[idx(x, y)] = v; } }
   function areaFree(g, cx, cy, rw, rh, pad) { for (let y = cy - rh - pad; y <= cy + rh + pad; y++) for (let x = cx - rw - pad; x <= cx + rw + pad; x++) { if (x < 0 || y < 0 || x >= W || y >= H) return false; if (g[idx(x, y)] !== C.T_FLOOR) return false; } return true; }
-  function floodReach(g) { const seen = new Uint8Array(W * H); const sx = W >> 1, sy = H >> 1; const st = [[sx, sy]]; seen[idx(sx, sy)] = 1; let c = 0; while (st.length) { const [x, y] = st.pop(); c++; const nb = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]; for (const [nx, ny] of nb) { if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const i = idx(nx, ny); if (seen[i] || g[i] === C.T_WALL) continue; seen[i] = 1; st.push([nx, ny]); } } return { seen, count: c }; }
+  // v1.76 — QUESTA FUNZIONE HA ROTTO LA MAPPA DUE VOLTE, in due modi diversi, ed e' istruttivo.
+  // Serve a trovare la parte di mappa "buona": chi resta fuori viene murato dal chiamante.
+  //   1o errore (originale): partiva dal CENTRO GEOMETRICO. Con la pianta nuova il centro puo'
+  //      essere dentro una massa di roccia: la visita non partiva, seen restava vuoto e il
+  //      chiamante murava LA MAPPA INTERA. 4 mappe su 400.
+  //   2o errore (la mia prima correzione): partiva dalla prima tessera libera vicino al centro.
+  //      Ma la prima che si incontra puo' essere una SACCA ISOLATA da una tessera: si murava
+  //      tutto il resto lo stesso. Ancora 4 mappe su 300, con una sola tessera di pavimento.
+  // La regola giusta non e' "da dove parto" ma "cosa tengo": si tiene la COMPONENTE PIU' GRANDE.
+  function floodReach(g) {
+    const N = W * H, comp = new Int32Array(N).fill(-1), dim = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i0b = idx(x, y);
+      if (g[i0b] === C.T_WALL || comp[i0b] >= 0) continue;
+      const id = dim.length; let n = 0; const st = [i0b];
+      while (st.length) { const i = st.pop();
+        if (comp[i] >= 0 || g[i] === C.T_WALL) continue;
+        comp[i] = id; n++;
+        const px = i % W, py = (i / W) | 0;
+        if (px > 0) st.push(i - 1);
+        if (px < W - 1) st.push(i + 1);
+        if (py > 0) st.push(i - W);
+        if (py < H - 1) st.push(i + W);
+      }
+      dim.push(n);
+    }
+    const seen = new Uint8Array(N);
+    if (!dim.length) return { seen, count: 0 };
+    let big = 0; for (let i = 1; i < dim.length; i++) if (dim[i] > dim[big]) big = i;
+    for (let i = 0; i < N; i++) if (comp[i] === big) seen[i] = 1;
+    return { seen, count: dim[big] };
+  }
   // v1.28 — allarga i "colli di bottiglia": ogni corridoio deve essere >= 3 tile (144px) per far passare i boss (mega dragon r=52)
   function widenForBoss(g) {
     for (let pass = 0; pass < 4; pass++) {
@@ -40,35 +71,265 @@
       for (const i of kill) g[i] = C.T_FLOOR;
     }
   }
+  // =====================================================================================
+  // v1.76 — LA PIANTA DELLE MAPPE DI COMBATTIMENTO, rifatta.
+  //
+  // Cosa c'era prima, e perche' non andava (era gia' scritto qui sotto dalla v1.62, senza rimedio):
+  // massi di roccia sparsi a caso piu' widenForBoss, che e' un REGOLATORE DI DENSITA' e cancella
+  // qualunque pianta piu' chiusa di "campo aperto con pilastri". Risultato: tutte le mappe uguali,
+  // apertura media 0,78 tessere, nessun carattere.
+  //
+  // Adesso si lavora per SOTTRAZIONE, come la caverna di una battlemap disegnata: si scava UNA
+  // caverna grande e irregolare, poi si mettono dentro MASSE DI ROCCIA a scolpire le camere. Lo
+  // spazio giocabile resta grande e continuo, la struttura la fanno gli ostacoli.
+  //
+  // DUE VINCOLI, e sono misurati dai test, non sperati:
+  //   1. ZERO TESSERE-STROZZATURA. Nessuna singola tessera, tolta, deve spezzare la mappa in due:
+  //      da ogni camera si esce sempre da almeno due parti. Se la mappa diventa un imbuto il
+  //      giocatore muore incastrato, non per bravura del mostro.
+  //   2. AREA MINIMA. Un seme sfortunato produceva caverne da 720 tessere invece di 1300: si
+  //      rigenera col seme perturbato finche' non si sta sopra la soglia.
+  //
+  // La QUANTITA' di roccia non si sceglie a numeri magici — provato, oscillava fra 795 e 1330
+  // tessere secondo archetipo e dimensione. C'e' un BUDGET: la roccia interna arriva al 26% della
+  // caverna e ci si ferma li'.
+  const ARCHETIPI = ['anello', 'quadrifoglio', 'stella'];
+
+  // Le TESSERE-STROZZATURA sono i punti di articolazione del grafo del pavimento: tolta quella
+  // tessera, la mappa si spezza in due. La prima versione le cercava a forza bruta — un flood fill
+  // per ogni tessera, cioe' O(area^2): su una mappa da 1350 tessere sono 1,8 milioni di passi per
+  // chiamata, e la suite dei test e' andata in timeout. Questa e' la visita di Tarjan: una sola
+  // passata, O(tessere). Iterativa e non ricorsiva, perche' su 1350 celle in fila la pila di
+  // JavaScript non regge.
+  function tessereStrozzatura(g) {
+    const N = W * H;
+    const suolo = (i) => g[i] !== C.T_WALL;
+    const disc = new Int32Array(N).fill(-1), low = new Int32Array(N), padre = new Int32Array(N).fill(-1);
+    const art = new Uint8Array(N);
+    let tempo = 0;
+    const vicini = (i) => { const x = i % W, y = (i / W) | 0; const out = [];
+      if (x > 0 && suolo(i - 1)) out.push(i - 1);
+      if (x < W - 1 && suolo(i + 1)) out.push(i + 1);
+      if (y > 0 && suolo(i - W)) out.push(i - W);
+      if (y < H - 1 && suolo(i + W)) out.push(i + W);
+      return out; };
+    for (let r = 0; r < N; r++) {
+      if (!suolo(r) || disc[r] >= 0) continue;
+      let figliRadice = 0;
+      const pila = [[r, 0, vicini(r)]];
+      disc[r] = low[r] = tempo++;
+      while (pila.length) {
+        const cima = pila[pila.length - 1];
+        const u = cima[0], vic = cima[2];
+        if (cima[1] < vic.length) {
+          const v = vic[cima[1]++];
+          if (disc[v] < 0) {
+            padre[v] = u; if (u === r) figliRadice++;
+            disc[v] = low[v] = tempo++;
+            pila.push([v, 0, vicini(v)]);
+          } else if (v !== padre[u]) { if (disc[v] < low[u]) low[u] = disc[v]; }
+        } else {
+          pila.pop();
+          const p = padre[u];
+          if (p >= 0) { if (low[u] < low[p]) low[p] = low[u];
+            if (p !== r && low[u] >= disc[p]) art[p] = 1; }
+        }
+      }
+      if (figliRadice > 1) art[r] = 1;
+    }
+    const out = [];
+    for (let i = 0; i < N; i++) if (art[i]) out.push([i % W, (i / W) | 0]);
+    return out;
+  }
+
+  function piantaGrezza(rng, archetipo) {
+    const rr = (a, b) => a + rng() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1));
+    const g = new Uint8Array(W * H).fill(C.T_WALL);
+    const dentro = (x, y) => x >= 2 && y >= 2 && x < W - 2 && y < H - 2;
+    const disco = (cx, cy, r, v) => { for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++)
+      for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++)
+        if (dentro(x, y) && Math.hypot(x - cx, y - cy) <= r) g[idx(x, y)] = v; };
+    const cx0 = W / 2, cy0 = H / 2, SX = W / 56, SY = H / 40;
+    const fase = rng() * Math.PI * 2;
+
+    // (1) la caverna: il bordo ondeggia su tre frequenze, cosi' non si legge una formula
+    const RX = W / 2 - 3, RY = H / 2 - 3;
+    const f1 = rr(0, 6.28), f2 = rr(0, 6.28), f3 = rr(0, 6.28);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!dentro(x, y)) continue;
+      const dx = (x - cx0) / RX, dy = (y - cy0) / RY, a = Math.atan2(dy, dx);
+      const onda = 1 + 0.11 * Math.sin(a * 3 + f1) + 0.07 * Math.sin(a * 5 - f2) + 0.05 * Math.sin(a * 8 + f3);
+      if (Math.hypot(dx, dy) <= onda * 0.99) g[idx(x, y)] = C.T_FLOOR;
+    }
+    // insenature: morsi nella roccia dal bordo, danno angoli e ripari
+    for (let k = 0, nk = ri(3, 5); k < nk; k++) {
+      const a = rng() * Math.PI * 2, d = rr(.72, 1.0);
+      disco(cx0 + Math.cos(a) * RX * d, cy0 + Math.sin(a) * RY * d, rr(2, 3.4) * SX, C.T_WALL);
+    }
+
+    // (2) dove stanno le camere
+    let n, rxA, ryA;
+    if (archetipo === 'anello') { n = 6; rxA = 17 * SX; ryA = 12 * SY; }
+    else if (archetipo === 'quadrifoglio') { n = 4; rxA = 16 * SX; ryA = 11.5 * SY; }
+    else { n = 5; rxA = 17.5 * SX; ryA = 12 * SY; }
+    const camere = [{ x: cx0, y: cy0 }];
+    for (let i = 0; i < n; i++) { const a = fase + i / n * Math.PI * 2 + rr(-.12, .12);
+      camere.push({ x: cx0 + Math.cos(a) * rxA, y: cy0 + Math.sin(a) * ryA }); }
+
+    // (3) le masse, col budget
+    let cavernaArea = 0;
+    for (let i = 0; i < g.length; i++) if (g[i] !== C.T_WALL) cavernaArea++;
+    const daTogliere = cavernaArea * 0.26;
+    const candidati = [];
+    // (a) DORSALI: schiene di pietra che attraversano e obbligano a scegliere da che parte girarle
+    for (let k = 0, nk = ri(2, 3); k < nk; k++) {
+      const a0 = rng() * Math.PI * 2;
+      let px = cx0 + Math.cos(a0) * rr(5, 13) * SX, py = cy0 + Math.sin(a0) * rr(4, 9) * SY, dir = rng() * Math.PI * 2;
+      for (let i = 0, lung = ri(5, 9); i < lung; i++) {
+        dir += rr(-.25, .25);
+        candidati.push({ x: px, y: py, r: rr(1.5, 2.3) * SX, sottile: 1 });
+        px += Math.cos(dir) * 2.4 * SX; py += Math.sin(dir) * 2.4 * SX;
+      }
+    }
+    // (b) le masse GROSSE fra due camere vicine: sono quelle che separano
+    for (let i = 0; i < n; i++) {
+      const A = camere[i + 1], B = camere[(i + 1) % n + 1];
+      const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, d = Math.hypot(mx - cx0, my - cy0) || 1;
+      candidati.push({ x: mx + (mx - cx0) / d * rr(1.5, 3.5), y: my + (my - cy0) / d * rr(1, 2.5), r: rr(3.4, 5) * SX });
+      candidati.push({ x: cx0 + (mx - cx0) * rr(.42, .58), y: cy0 + (my - cy0) * rr(.42, .58), r: rr(2.4, 3.6) * SX });
+    }
+    // (c) i massi di COPERTURA dentro le camere: servono a combattere, non a separare
+    for (let k = 0; k < 40; k++) { const c = camere[ri(0, camere.length - 1)];
+      candidati.push({ x: c.x + rr(-7, 7) * SX, y: c.y + rr(-5, 5) * SY, r: rr(1.3, 2.4) * SX }); }
+
+    let tolto = 0;
+    const segna = (cx, cy, r) => { for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++)
+      for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++)
+        if (dentro(x, y) && Math.hypot(x - cx, y - cy) <= r && g[idx(x, y)] === C.T_FLOOR) { g[idx(x, y)] = C.T_WALL; tolto++; } };
+    for (const m of candidati) {
+      if (tolto >= daTogliere) break;
+      if (m.sottile) segna(m.x, m.y, m.r);
+      else for (let d = 0; d < 3; d++) segna(m.x + rr(-1, 1), m.y + rr(-1, 1), m.r * rr(.58, .95));
+    }
+
+    // (4) riparazione: nessuna strozzatura sopravvive
+    for (let giro = 0; giro < 14; giro++) {
+      const brutte = tessereStrozzatura(g);
+      if (!brutte.length) break;
+      for (const b of brutte) disco(b[0], b[1], 2.4, C.T_FLOOR);
+    }
+    // (5) cornice invalicabile
+    for (let x = 0; x < W; x++) { g[idx(x, 0)] = g[idx(x, 1)] = g[idx(x, H - 1)] = g[idx(x, H - 2)] = C.T_WALL; }
+    for (let y = 0; y < H; y++) { g[idx(0, y)] = g[idx(1, y)] = g[idx(W - 1, y)] = g[idx(W - 2, y)] = C.T_WALL; }
+    return { g, camere, archetipo };
+  }
+
+  // v1.76 — LE DUE RIPARAZIONI, e girano su tutta la pianta FINITA, dopo che il resto del
+  // generatore ha fatto la sua parte. Farle solo dentro piantaGrezza non basta: misurato, alcuni
+  // semi uscivano con 2-4 tessere-strozzatura e il grafo "largo" spezzato in nove pezzi.
+  //
+  // (A) IL PASSAGGIO DEI BOSS. Un boss ha raggio 32: gli serve piu' di una tessera. La condizione
+  //     giusta e' che il 3x3 attorno sia libero. Dove non lo e', se il restringimento e' SOTTILE
+  //     (al massimo tre tessere di roccia nel 3x3) si scava; se e' una massa vera la si lascia
+  //     stare, e il boss ci gira attorno. E' la differenza fra allargare un passaggio e demolire
+  //     la mappa — che e' quello che faceva widenForBoss da solo.
+  // PRIMA VERSIONE, SBAGLIATA, e vale la pena tenerne il ricordo: "se attorno a una tessera ci sono
+  // al massimo tre tessere di roccia, scavale". Sembra prudente e non lo e': ogni scavo crea nuove
+  // tessere che soddisfano la condizione, l'erosione va a cascata e in otto passate si mangia tutta
+  // la roccia. Misurato: area da 1350 a 2470 su 2944, apertura da 1,15 a 7,32. Cioe' la mappa intera.
+  //
+  // La versione giusta non allarga DOVE E' STRETTO, allarga SOLO I PONTI CHE SERVONO: si guarda il
+  // grafo delle celle larghe (3x3 libero, che e' la condizione perche' ci passi un boss di raggio 32),
+  // e se e' spezzato in piu' pezzi si scava un corridoio da tre tessere lungo il cammino piu' corto
+  // fra il pezzo grande e ognuno degli altri. Tutto il resto della roccia resta dov'e'.
+  function allargaPerBoss(g) {
+    const largo = (x, y) => {
+      if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+        if (g[idx(x + dx, y + dy)] === C.T_WALL) return false;
+      return true;
+    };
+    const suolo = (x, y) => x >= 0 && y >= 0 && x < W && y < H && g[idx(x, y)] !== C.T_WALL;
+    for (let giro = 0; giro < 6; giro++) {
+      // componenti del grafo "largo"
+      const comp = new Int32Array(W * H).fill(-1); const dim = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        if (comp[idx(x, y)] >= 0 || !largo(x, y)) continue;
+        const id = dim.length; let n = 0; const q = [[x, y]];
+        while (q.length) { const p = q.pop(), a = p[0], b = p[1];
+          if (!largo(a, b) || comp[idx(a, b)] >= 0) continue;
+          comp[idx(a, b)] = id; n++; q.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]); }
+        dim.push(n);
+      }
+      if (dim.length <= 1) return giro;
+      let grande = 0; for (let i = 1; i < dim.length; i++) if (dim[i] > dim[grande]) grande = i;
+      // i pezzi troppo piccoli non valgono un corridoio: sono angoli, non stanze
+      const orfani = []; for (let i = 0; i < dim.length; i++) if (i !== grande && dim[i] >= 14) orfani.push(i);
+      if (!orfani.length) return giro;
+      // cammino piu' corto sul PAVIMENTO dal pezzo grande al primo orfano, e lo si allarga
+      const prev = new Int32Array(W * H).fill(-2); const q = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)
+        if (comp[idx(x, y)] === grande) { prev[idx(x, y)] = -1; q.push(idx(x, y)); }
+      let arrivo = -1;
+      for (let h = 0; h < q.length && arrivo < 0; h++) {
+        const i = q[h], x = i % W, y = (i / W) | 0;
+        if (orfani.indexOf(comp[i]) >= 0) { arrivo = i; break; }
+        const vic = [[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+        for (const v of vic) { if (!suolo(v[0], v[1])) continue; const j = idx(v[0], v[1]);
+          if (prev[j] !== -2) continue; prev[j] = i; q.push(j); }
+      }
+      if (arrivo < 0) return giro;
+      for (let i = arrivo; i >= 0; i = prev[i]) {
+        const cx = i % W, cy = (i / W) | 0;
+        for (let y = cy - 2; y <= cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++)
+          if (x >= 2 && y >= 2 && x < W - 2 && y < H - 2 && Math.hypot(x - cx, y - cy) <= 1.6) g[idx(x, y)] = C.T_FLOOR;
+        if (prev[i] === -1) break;
+      }
+    }
+    return -1;
+  }
+  // (B) NIENTE STROZZATURE. Nessuna singola tessera, tolta, deve spezzare la mappa in due.
+  function togliStrozzature(g) {
+    for (let giro = 0; giro < 20; giro++) {
+      const brutte = tessereStrozzatura(g);
+      if (!brutte.length) return giro;
+      for (const b of brutte) {
+        const cx = b[0], cy = b[1];
+        for (let y = cy - 3; y <= cy + 3; y++) for (let x = cx - 3; x <= cx + 3; x++)
+          if (x >= 2 && y >= 2 && x < W - 2 && y < H - 2 && Math.hypot(x - cx, y - cy) <= 2.4) g[idx(x, y)] = C.T_FLOOR;
+      }
+    }
+    return -1;
+  }
+
+  function piantaCaverna(rng, level) {
+    const AREA_MINIMA = Math.round(W * H * 0.40);
+    const arc = ARCHETIPI[Math.floor(rng() * ARCHETIPI.length)];
+    let ultima = null;
+    for (let tent = 0; tent < 6; tent++) {
+      const p = piantaGrezza(rng, arc);
+      let area = 0; for (let i = 0; i < p.g.length; i++) if (p.g[i] !== C.T_WALL) area++;
+      ultima = p; ultima.area = area;
+      if (area >= AREA_MINIMA) break;
+    }
+    return ultima;
+  }
+
   function generate(seed, level) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
     const theme = THEMES[Math.floor(rng() * THEMES.length)];
     const TILE = C.TILE, cxm = W >> 1, cym = H >> 1;
     // v1.22 — CONFORMAZIONE ORGANICA (caverna varia, non "piatta"): blob di muro + connettivita garantita
-    const grid = new Uint8Array(W * H).fill(C.T_FLOOR);
-    for (let x = 0; x < W; x++) { grid[idx(x, 0)] = C.T_WALL; grid[idx(x, 1)] = C.T_WALL; grid[idx(x, H - 1)] = C.T_WALL; grid[idx(x, H - 2)] = C.T_WALL; }
-    for (let y = 0; y < H; y++) { grid[idx(0, y)] = C.T_WALL; grid[idx(1, y)] = C.T_WALL; grid[idx(W - 1, y)] = C.T_WALL; grid[idx(W - 2, y)] = C.T_WALL; }
-    // ⚠️ v1.62 — theme.blobMul RESTA SCOLLEGATO, e non per dimenticanza: e' stato provato e MISURATO,
-    // e collegarlo non cambia niente. Vale la pena scrivere perche', perche' e' la stessa ragione per cui
-    // tutte le mappe si somigliano.
-    //   1) La posa satura. `areaFree` pretende 2 tessere di pavimento libero attorno a ogni masso: la mappa
-    //      esaurisce i posti legali a ~15 blob e i 700 tentativi finiscono sempre. Chiederne 20 o 38 e'
-    //      identico. Quindi dalla v1.22 blobCount e' di fatto una COSTANTE — e anche il termine sul livello
-    //      non fa nulla: la mappa dell'ondata 20 ha la stessa roccia di quella dell'ondata 1.
-    //   2) Anche forzando la posa (pad 1 -> 26 massi, 769 tessere di muro contro 611), `widenForBoss`
-    //      RIPORTA TUTTO INDIETRO: misurato su 60 mappe, pad 1 -> 513 muri finali, pad 2 -> 536, pad 3 -> 513.
-    //      Non e' un correttore di corridoi, e' un REGOLATORE DI DENSITA': cancella qualunque mappa piu'
-    //      chiusa di "campo aperto con pilastri", che e' esattamente l'unica pianta che il gioco produce.
-    // Morale: la varieta' di pianta non si ottiene da qui. Va rifatto `widenForBoss` (garantire il passaggio
-    // dei boss lungo un percorso, non ovunque), e quello e' il lavoro degli ARCHETIPI DI PIANTA, non di qui.
-    const blobCount = Math.round(14 + Math.min(12, Math.floor(level * 0.7)) + rint(0, 6)); let placed = 0, tries = 0;
-    while (placed < blobCount && tries < 700) { tries++; const rw = rint(1, 3), rh = rint(1, 3); const cx = rint(4, W - 5), cy = rint(4, H - 5); if (Math.abs(cx - cxm) < 6 && Math.abs(cy - cym) < 6) continue; if (!areaFree(grid, cx, cy, rw, rh, 2)) continue; stampBlob(grid, cx, cy, rw, rh, C.T_WALL); placed++; }
-    // connettivita: apri i muri che separano zone raggiungibili, poi mura le sacche isolate
-    let { seen, count } = floodReach(grid); let ft = 0; for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL) ft++; let gd = 0;
-    while (count < ft * 0.985 && gd < 40) { gd++; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] !== C.T_WALL || seen[i]) continue; const ar = [idx(x + 1, y), idx(x - 1, y), idx(x, y + 1), idx(x, y - 1)]; let ts = false, tf = false; for (const a of ar) { if (seen[a]) ts = true; if (grid[a] !== C.T_WALL) tf = true; } if (ts && tf) grid[i] = C.T_FLOOR; } const r = floodReach(grid); seen = r.seen; count = r.count; ft = 0; for (let k = 0; k < grid.length; k++) if (grid[k] !== C.T_WALL) ft++; }
-    ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
+    // v1.76 — la pianta arriva da piantaCaverna(): caverna scavata + masse a scolpire le camere,
+    // con zero tessere-strozzatura garantite. Il vecchio blocco (massi a caso + apertura dei muri
+    // per connettivita') stava qui e produceva sempre la stessa mappa: e' scritto sopra il perche'.
+    const _p = piantaCaverna(rng, level);
+    const grid = _p.g; const camere = _p.camere; const archetipo = _p.archetipo;
+    let seen;   // la usa il blocco di sicurezza qui sotto (murare le sacche staccate)
     widenForBoss(grid); // v1.28 — garantisce corridoi >= 3 tile per il passaggio dei boss
+    allargaPerBoss(grid);   // v1.76 — e allarga i restringimenti sottili, senza demolire le masse
     ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
+    togliStrozzature(grid); // v1.76 — e questa e' l'ultima parola: zero imbuti, misurato dai test
     const free = []; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] === C.T_FLOOR && seen[i]) free.push({ x, y, i, cd: 0 }); }
     const isW = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : grid[idx(x, y)] === C.T_WALL;
     const nearWall = (c) => isW(c.x - 1, c.y) || isW(c.x + 1, c.y) || isW(c.x, c.y - 1) || isW(c.x, c.y + 1);
@@ -84,12 +345,24 @@
     // era di fatto sgombro perche i blob di roccia lo evitano (|dx|,|dy| < 6), e mezzo gioco lo dava per
     // scontato: nemici generati a 200-260px dal giocatore con linea di vista libera. Quindi qui si misura
     // il raggio libero di ogni candidata e si sceglie solo fra le PIU AMPIE.
+    // v1.76 — LA RADURA DI PARTENZA, e questa e' una garanzia su cui poggia mezzo gioco: i nemici
+    // nascono a 200-260 px dal giocatore con la linea di vista libera, e mezza dozzina di prove danno
+    // per scontato che attorno alla partenza ci sia spazio. Prima si cercava solo entro 7 tessere dal
+    // centro geometrico; con la caverna il centro puo' essere roccia, la lista usciva vuota e si
+    // ripiegava su free[0] — cioe' un angolo qualunque, magari incastrato. Sintomo: prove che
+    // fallivano una volta su quattro senza che ci fosse niente di rotto.
+    // Adesso si cerca su TUTTA la mappa la radura piu' ampia, e a parita' si preferisce quella piu'
+    // vicina al centro: la partenza resta centrale quando si puo', ma prima di tutto e' larga.
     let start = null;
-    { const cand = free.filter(c => Math.hypot(c.x - cxm, c.y - cym) <= 7);
-      let bestR = 0; const scored = [];
-      for (const c of cand) { let r = 0; while (r < 6 && areaFree(grid, c.x, c.y, r + 1, r + 1, 0)) r++; if (r >= 2) { scored.push({ c, r }); if (r > bestR) bestR = r; } }
-      const top = scored.filter(o => o.r >= bestR);
-      if (top.length) start = top[(rng() * top.length) | 0].c; }
+    { let bestR = 0; const scored = [];
+      for (const c of free) { let r = 0; while (r < 6 && areaFree(grid, c.x, c.y, r + 1, r + 1, 0)) r++;
+        if (r >= 2) { scored.push({ c, r }); if (r > bestR) bestR = r; } }
+      const top = scored.filter(o => o.r >= bestR).map(o => o.c);
+      if (top.length) {
+        let dMin = Infinity; for (const c of top) { const d = Math.hypot(c.x - cxm, c.y - cym); if (d < dMin) dMin = d; }
+        const vicine = top.filter(c => Math.hypot(c.x - cxm, c.y - cym) <= dMin + 6);
+        start = vicine[(rng() * vicine.length) | 0];
+      } }
     if (!start) start = free.find(c => c.x === cxm && c.y === cym) || free[0] || { x: cxm, y: cym, i: idx(cxm, cym) };
     for (const c of free) c.cd = Math.hypot(c.x - start.x, c.y - start.y);
 
@@ -226,7 +499,46 @@
     // rete di sicurezza: se il centro fosse troppo roccioso si torna alla regola vecchia
     if (crateSpawns.length < 10) crateSpawns = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 5).map(c => ({ x: wcx(c), y: wcy(c) }));
     const spawnCells = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > Math.min(W, H) * 0.28).map(c => ({ x: c.x, y: c.y }));
-    return { w: W, h: H, tile: TILE, seed, level, theme, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
+    // v1.76 — IL CAMPO DELLA FAGLIA. Prima la profondita' si misurava dai bordi del RETTANGOLO della
+    // mappa. Con la caverna, che e' rientrata rispetto al rettangolo, la fascia toccava il 10% delle
+    // tessere calpestabili invece del 30% e arrivava a profondita' 3 invece di 6: chi si accampava
+    // contro la parete non veniva piu' punito, cioe' la faglia aveva smesso di fare il suo mestiere.
+    // Adesso la profondita' si misura dalla ROCCIA ESTERNA — quella che confina col bordo della mappa,
+    // non i massi interni, se no ogni sasso avrebbe il suo alone di morte e stare al riparo dietro un
+    // masso diventerebbe un suicidio. Distanza 0 dalla parete = 6, la stessa intensita' che prima
+    // aveva l'angolo della mappa.
+    const edgeField = (() => {
+      const fuori = new Uint8Array(W * H);      // roccia che comunica col bordo della mappa
+      const q = [];
+      for (let x = 0; x < W; x++) { q.push([x, 0], [x, H - 1]); }
+      for (let y = 0; y < H; y++) { q.push([0, y], [W - 1, y]); }
+      while (q.length) { const p = q.pop(), x = p[0], y = p[1];
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const i = idx(x, y);
+        if (fuori[i] || grid[i] !== C.T_WALL) continue;
+        fuori[i] = 1; q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+      // distanza (in tessere) dalla roccia esterna, camminando sul pavimento
+      const dist = new Int16Array(W * H).fill(-1); const q2 = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        if (!fuori[idx(x, y)]) continue;
+        for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + d[0], ny = y + d[1];
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = idx(nx, ny);
+          if (grid[j] !== C.T_WALL && dist[j] < 0) { dist[j] = 0; q2.push(j); } } }
+      for (let h = 0; h < q2.length; h++) { const i = q2[h], x = i % W, y = (i / W) | 0;
+        for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + d[0], ny = y + d[1];
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = idx(nx, ny);
+          if (grid[j] !== C.T_WALL && dist[j] < 0) { dist[j] = dist[i] + 1; q2.push(j); } } }
+      const M = C.EDGE_MARGIN, out = new Uint8Array(W * H);
+      // La fascia va tarata sulla COPERTURA, non a occhio. Misurato su 10 mappe: le tessere attaccate
+      // alla parete esterna sono il 17%, entro una tessera il 34%, entro due il 48%. Il gioco ne vuole
+      // fra il 15% e il 45% (e prima, sul rettangolo, ne toccava circa il 30%): quindi la fascia e'
+      // profonda DUE tessere — 6 attaccati alla parete, 3 a una tessera, niente da li' in poi.
+      for (let i = 0; i < W * H; i++) if (dist[i] >= 0) out[i] = Math.max(0, 2 * M - M * dist[i]);
+      return Array.from(out);
+    })();
+    return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
   }
 
   // ===================== v1.56 — MAPPA MERCATO: un VILLAGGIO, non una caverna =====================
@@ -454,5 +766,7 @@
     };
   }
 
-  return { generate, generateMarket, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME };
+  // piantaCaverna e tessereStrozzatura escono anche da sole: i test le provano senza dover
+  // generare una mappa intera, ed e' cosi' che si tiene onesto il vincolo delle strozzature.
+  return { generate, generateMarket, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME, piantaCaverna, tessereStrozzatura };
 });

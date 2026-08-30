@@ -2,6 +2,79 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.76.0] — 2026-08-30 · "La caverna dipinta"
+
+Le mappe di combattimento erano il punto debole del gioco: pietra piatta, muri disegnati come
+rettangoli neri, e quasi niente sopra. Rifatte da capo — pianta, pavimento, muri, pietrisco — con le
+battlemap disegnate come bersaglio. Il villaggio non e' toccato: ha il suo aspetto e se lo tiene.
+
+#### Prima la pianta, perche' e' quella che decide se si gioca bene
+La mappa passa da **46x34 a 64x46 tessere** (3072x2208 px invece di 2208x1632). Area calpestabile da
+**1041 a ~1330 tessere** (+28%), e lo spazio libero attorno — quello che conta per non farsi
+incastrare — da **0,78 a 1,16** (+49%).
+
+Il vincolo che tiene tutto in piedi e' misurato, non sperato: **zero tessere-strozzatura**. Una
+tessera-strozzatura e' una tessera che, tolta, spezza la mappa in due; zero significa che da ogni
+camera si esce sempre da almeno due parti. C'e' un passaggio che le cerca (visita di Tarjan, una
+sola passata) e le allarga finche' non ce n'e' piu'.
+
+Tre archetipi — **anello**, **quadrifoglio**, **stella** — piu' le **dorsali**, schiene di pietra che
+attraversano e obbligano a scegliere da che parte girarle.
+
+Come si costruisce: si scava UNA caverna grande e irregolare, poi ci si mettono dentro **masse di
+roccia** a scolpire le camere. Lo spazio giocabile resta grande e continuo, la struttura la fanno gli
+ostacoli. La quantita' di roccia non e' un numero scelto a mano — e' un **budget**: la roccia interna
+arriva al 26% della caverna e ci si ferma li'.
+
+#### Poi l'aspetto
+- **Il pavimento e' QUIETO**: macchie morbide, crepe lunghe e sottili, giunti appena accennati,
+  nessun contorno. **I muri sono RUMOROSI**: massa quasi nera, massi col contorno spesso, ombra
+  proiettata dentro la stanza. E' questa scala di rumore a dire all'occhio dove si cammina.
+- **Il pietrisco**: massi, grappoli di macerie, ossa sparse, chiazze di sporco — tutti col contorno a
+  inchiostro, tutti piu' chiari del pavimento su cui stanno.
+- **La palette esce dal tema**: cripta, lava, ghiaccio, foresta e arcano restano diversi. Cambia il
+  modo di disegnare, non l'identita' della mappa.
+
+Misurato con lo stesso metodo sulle immagini di riferimento: **luminanza mediana da 18 a 48** (le
+battlemap dipinte stanno a 44 — a 18 era cosi' buio che non si vedeva niente di quello che c'era) e
+**densita' di contorni dall'1,3% all'8,3%** (il riferimento sta al 6,6%).
+
+#### Quattro bug veri, trovati portandolo nel motore
+- **`floodReach` murava la mappa intera.** Partiva dal centro geometrico; con la caverna il centro
+  puo' essere roccia, la visita non partiva e il blocco che mura le sacche staccate murava tutto: 4
+  mappe su 400 senza portale, con 2944 tessere di muro su 2944. Corretto una prima volta partendo
+  dalla prima tessera libera — e sbagliato di nuovo, perche' la prima che si incontra puo' essere una
+  sacca isolata da una tessera. La regola giusta non e' "da dove parto" ma "cosa tengo": si tiene la
+  **componente piu' grande**.
+- **La faglia aveva smesso di mordere.** La profondita' si misurava dai bordi del rettangolo; con la
+  caverna rientrata, la fascia toccava il 10% delle tessere invece del 30% e arrivava a profondita' 3
+  invece di 6. Adesso si misura dalla **roccia esterna** — quella che confina col bordo della mappa,
+  non i massi interni, se no stare al riparo dietro un sasso sarebbe letale. Fascia profonda due
+  tessere, copertura 34%, tarata sulla misura e non a occhio.
+- **La radura di partenza non era piu' garantita.** Si cercava solo entro 7 tessere dal centro; se
+  quella zona era roccia si ripiegava su una tessera qualunque, magari incastrata. Mezzo gioco da'
+  per scontato che attorno alla partenza ci sia spazio (i nemici nascono a 200-260 px con la linea di
+  vista libera). Adesso si cerca la radura piu' ampia su tutta la mappa, e a parita' la piu' vicina
+  al centro. Raggio libero minimo misurato su 80 mappe: **4 tessere**.
+- **Il recupero anti-incastro non bastava piu'.** Cercava pavimento entro 3 tessere: dentro una massa
+  di roccia della pianta nuova non ce n'e'. Sette mostri piantati nel muro in una partita. Portato a 8.
+
+#### Due errori miei, scritti nel codice perche' non li rifaccia
+- **Allargare "dove e' stretto"** invece che i ponti che servono: ogni scavo crea nuove tessere che
+  soddisfano la condizione, l'erosione va a cascata e in otto passate si mangia tutta la roccia
+  (area da 1350 a 2470 su 2944). Adesso si guarda il grafo delle celle larghe abbastanza per un boss
+  e si scava **solo il cammino piu' corto** fra i pezzi scollegati.
+- **Cercare le strozzature a forza bruta**, un flood fill per tessera: su 1350 tessere sono 1,8
+  milioni di passi per chiamata e la suite dei test e' andata in timeout. Rifatto con la visita di
+  Tarjan: 10 mappe in 154 ms.
+
+#### ✅ Verificato
+**987 test, 0 falliti**, sei esecuzioni di fila. Su 400 mappe generate: nessuna rotta, pavimento
+minimo 736 tessere, zero tessere-strozzatura, e il boss arriva all'uscita in tutte. Tre prove che
+fallivano a intermittenza sono state stabilizzate alla radice (la radura di partenza), non zittite.
+
+---
+
 ### [1.75.3] — 2026-08-30 · "Soglie sgombre"
 
 Tre correzioni trovate provando la 1.75.2. Finche' i mobili erano decorazione non davano fastidio; da quando
