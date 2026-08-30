@@ -2,6 +2,32 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.75.3] — 2026-08-30 · "Soglie sgombre"
+
+Tre correzioni trovate provando la 1.75.2. Finche' i mobili erano decorazione non davano fastidio; da quando
+hanno un corpo, un mobile appoggiato accanto a una porta e' uno spigolo che prendi **ogni volta** che entri.
+
+- **Via le due casse della piazza**: stavano davanti all'osteria e davanti alla gilda delle taglie.
+- **Via la rastrelliera davanti all'ingresso della fucina** (ne restano quattro, alle spalle del fabbro e
+  sulla parete est in basso).
+- Adesso tutte e cinque le porte hanno lo **stesso passaggio libero: 98 px**, tre volte e mezzo la larghezza
+  del personaggio. Il varco del portale ne ha 146.
+
+#### ✅ Verificato
+**989 test, 0 falliti** (erano 987).
+
+Il primo test che avevo scritto misurava la **distanza dal mobile piu' vicino** e non funzionava: una cassa
+piantata davanti alla porta e un tavolo che sta due tile *dentro* la stanza danno lo stesso numero (66, 83 e
+90 px le tre cose tolte; 85 px il primo tavolo della taverna, che ci sta benissimo dov'e'). Nessuna soglia
+numerica li separa.
+
+Quello che si misura adesso e' la **luce**: quanto passaggio libero resta davvero attraversando la porta,
+corpi solidi inclusi. Deve essere almeno il doppio della larghezza del personaggio — oggi e' tre volte e
+mezzo. In piu' un controllo diretto: **nella piazza non ci sono casse**, che e' esattamente cio' che
+stava davanti all'osteria e alle taglie.
+
+---
+
 ### [1.75.2] — 2026-08-30 · "I mobili hanno un corpo"
 
 Attraversare un tavolo da parte a parte faceva sembrare il villaggio un disegno invece che un posto. Adesso

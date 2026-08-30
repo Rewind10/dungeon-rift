@@ -359,7 +359,8 @@
     for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2;
       P('rock', VILLAGE.fire.x + Math.cos(a) * 1.4, VILLAGE.fire.y + Math.sin(a) * 1.0, 0.5); }
     P('signpost', 16, 17.6, 1);
-    for (const [x, y] of [[13.6, 10.6], [19.4, 15.6]]) P('cratebox', x, y, 0.9);
+    // v1.75.3 — qui c'erano due casse: stavano esattamente sulla soglia dell'osteria e della gilda, e da
+    // quando i mobili hanno un corpo (v1.75.2) erano un ostacolo piantato in mezzo alla porta. Via.
 
     // --- LA TAVERNA: l'ostessa DIETRO il bancone, la credenza alle sue spalle, gli avventori ai tavoli ---
     P('credenza', 6.5, 3.2, 1, { r: 0 });                       // contro il muro nord, dietro di lei
@@ -394,8 +395,8 @@
     P('bancone', 5, 15.2, 1, { r: 0 });                          // il banco fra lui e chi compra
     P('rastrelliera', 4.4, 13.2, 1, { r: 0 });                   // le armi alle sue spalle
     P('rastrelliera', 7.4, 13.2, 1, { r: 0 });
-    P('rastrelliera', 9.6, 15.4, 1, { r: 1 });                   // e sulla parete est
-    P('rastrelliera', 9.6, 17.4, 1, { r: 1 });
+    P('rastrelliera', 9.6, 17.4, 1, { r: 1 });                   // e una sulla parete est, in basso
+    // v1.75.3 — la seconda rastrelliera est stava a 9.6,15.4: proprio davanti all'ingresso della fucina.
     P('incudine', 7.6, 16.6, 1.15);
     for (const [x, y, sc] of [[4.4, 18.4, 1.5], [5.7, 18.6, 1.35], [4.7, 17.6, 1.2]]) P('lavapool', x, y, sc);
     P('brazier', 7.4, 18.6, 1);

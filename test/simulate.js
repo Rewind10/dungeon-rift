@@ -2405,6 +2405,30 @@ function testV1752() {
     if (!visto[gy * W + gx] && libero(gx * STEP, gy * STEP)) isolate++;
   assert(isolate === 0, 'nessuna zona libera resta tagliata fuori dai mobili (' + isolate + ' posizioni isolate)');
 
+  // --- v1.75.3: LA PORTA RESTA LIBERA. Da quando i mobili hanno un corpo, quello che sta sulla soglia
+  // non e piu un dettaglio grafico. Misurare la "distanza dal mobile piu vicino" pero non distingue una
+  // cassa piantata davanti alla porta da un tavolo che sta due tile dentro la stanza: escono lo stesso
+  // numero. Quello che conta e la LUCE, cioe quanto passaggio libero resta davvero attraversando.
+  const V2 = MapGen.VILLAGE;
+  let stretta2 = '';
+  for (const L of V2.links) {
+    const cx = ((L[0] + L[2]) / 2 + 0.5) * T, cy = ((L[1] + L[3]) / 2 + 0.5) * T;
+    const misura = (vert) => { let tot = 0;
+      for (let d = -160; d <= 160; d += 2) { const x = vert ? cx + d : cx, y = vert ? cy : cy + d;
+        if (!room._blk(x, y, r)) tot += 2; }
+      return tot; };
+    // la piu stretta delle due misure: l'altra e la lunghezza del corridoio, non la sua luce
+    const luce = Math.min(misura(true), misura(false));
+    if (luce < r * 2 * 2) stretta2 += ' ' + luce + 'px';
+  }
+  assert(stretta2 === '', 'da ogni porta passa almeno il doppio del personaggio, corpi solidi inclusi:' + (stretta2 || ' tutte larghe'));
+
+  // e la piazza resta sgombra: le due casse che stavano davanti all osteria e alle taglie sono andate via
+  const PZ = V2.piazza;
+  const nellaPiazza = m.props.filter(q => { const tx = (q.x / T) | 0, ty = (q.y / T) | 0;
+    return tx >= PZ.x0 && tx <= PZ.x1 && ty >= PZ.y0 && ty <= PZ.y1 && q.type === 'cratebox'; });
+  assert(nellaPiazza.length === 0, 'nella piazza non ci sono casse davanti alle porte (' + nellaPiazza.length + ')');
+
   // --- non si attraversa piu un tavolo ---
   const tav = mm.props.find(q => q.type === 'tavolo');
   assert(!libero(tav.x, tav.y), 'sul tavolo non ci si sale');

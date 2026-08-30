@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.75.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.75.3 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,11 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.75.3 (soglie sgombre)
+- **📦 Via le casse davanti all'osteria e alle taglie** e **la rastrelliera davanti alla fucina**: da quando
+  i mobili hanno un corpo erano uno spigolo da prendere a ogni ingresso.
+- **🚪 Tutte e cinque le porte hanno lo stesso passaggio libero**: 98 px, tre volte e mezzo il personaggio.
 
 ## 🆕 Novita v1.75.2 (i mobili hanno un corpo)
 - **🪑 Nel villaggio non si attraversa piu' niente**: tavoli, banconi, scaffali, incudine, aiuole, casse,

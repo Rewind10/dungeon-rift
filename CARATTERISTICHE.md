@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.75.2`
+**Versione attuale:** `1.75.3`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -40,6 +40,11 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   *fra due* corpi le spinte si annullerebbero a vicenda, e allora si cerca il punto libero piu' vicino.
 - **Vale solo nel villaggio.** Fuori non ci sono mobili, e nelle ondate un secondo insieme di corpi solidi
   in mezzo a mostri e proiettili sarebbe un rischio senza guadagno.
+- **La soglia resta sgombra** *(v1.75.3)*. Un mobile appoggiato accanto a una porta, finche' era
+  decorazione, non dava fastidio; con un corpo e' uno spigolo che prendi a ogni ingresso. Sono spariti le
+  due casse davanti a osteria e taglie e la rastrelliera davanti alla fucina, e un test impedisce che
+  qualcosa torni a meno di 1,9 tile da una porta. Tutte e cinque le porte danno lo stesso passaggio
+  libero: **98 px**, tre volte e mezzo la larghezza del personaggio; il varco del portale ne da' 146.
 
 ### Le persone
 - **I mercanti si vedono dall'alto**, come il tuo eroe. Prima erano ritratti frontali: in una mappa vista
