@@ -810,6 +810,23 @@ function testV157() {
     assert(seen.has(cy * m.w + cx), 'la stanza ' + r.id + ' e collegata alla piazza');
   }
 
+  // --- v1.75.1: ogni PORTA e larga almeno due tile. Una sola tile (48 px) contro un personaggio largo
+  // 35 lasciava sei pixel per parte: ci si passava a pelo, sfregando lo stipite.
+  const rettangoli = [{ id: 'piazza', x0: V.piazza.x0, y0: V.piazza.y0, x1: V.piazza.x1, y1: V.piazza.y1 }].concat(V.rooms);
+  let stretta = '';
+  for (const L of V.links) for (const r of rettangoli) {
+    let bordo = 0;
+    for (let y = L[1]; y <= L[3]; y++) for (let x = L[0]; x <= L[2]; x++)
+      for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + d[0], ny = y + d[1];
+        if (nx >= r.x0 && nx <= r.x1 && ny >= r.y0 && ny <= r.y1) bordo++;
+      }
+    if (bordo > 0 && bordo < 2) stretta += ' ' + r.id + '(' + bordo + ')';
+  }
+  assert(stretta === '', 'ogni porta e larga almeno due tile:' + (stretta || ' tutte ok'));
+  const varco = V.links[V.links.length - 1];
+  assert(varco[2] - varco[0] + 1 >= 3, 'e il varco del portale e largo tre tile: e la strada principale');
+
   // --- il falo' sta nella piazza, ed e' l'unica sorgente di luce dichiarata ---
   assert(!!m.village.fire, 'il falo e esposto nella mappa (e la sorgente di luce)');
   const fireT = { x: (m.village.fire.x / T) | 0, y: (m.village.fire.y / T) | 0 };
@@ -2327,6 +2344,97 @@ function testV175() {
   assert(m.village.extras.every(e => !e.seated), 'le comparse stanno in piedi: dall alto una figura seduta non si legge');
   ok('novita v1.75 verificate');
 }
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV1752() {
+  console.log('\n[TEST 47] Novita v1.75.2 — mobili e persone hanno un corpo: ci sbatti contro, e se ci finisci dentro ti spinge fuori');
+  const MapGen = require('../shared/mapgen.js');
+  const T = C.TILE;
+
+  // --- i corpi solidi esistono SOLO nel villaggio ---
+  const m = MapGen.generateMarket(4242);
+  assert(Array.isArray(m.solids) && m.solids.length > 30, 'il villaggio ha i suoi corpi solidi (' + (m.solids || []).length + ')');
+  const dungeon = MapGen.generate(1234, 3);
+  assert(!dungeon.solids || dungeon.solids.length === 0, 'nelle mappe delle ondate non ce ne sono: li' + "'" + ' in mezzo ai mostri sarebbero un rischio senza guadagno');
+
+  // --- cosa e solido e cosa no ---
+  const SOLIDI = ['tavolo', 'bancone', 'incudine', 'alambicco', 'crystal_cluster', 'barrel', 'sack', 'brazier',
+                  'candelabra', 'signpost', 'mortaio', 'bonfire', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox'];
+  const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot'];
+  for (const t of SOLIDI) assert(m.props.some(p => p.type === t), 'nel villaggio c e almeno un "' + t + '"');
+  for (const t of PASSANTI) assert(m.props.some(p => p.type === t), 'e almeno un "' + t + '"');
+  const persone = m.solids.filter(s2 => s2.chi);
+  const nMobili = m.props.filter(p => SOLIDI.indexOf(p.type) >= 0).length;
+  const nPassanti = m.props.filter(p => PASSANTI.indexOf(p.type) >= 0).length;
+  assert(m.solids.length === nMobili + persone.length,
+    'ha un corpo esattamente cio che deve averlo: ' + nMobili + ' mobili + ' + persone.length + ' persone = ' + m.solids.length);
+  assert(nMobili + nPassanti === m.props.length,
+    'e ogni oggetto del villaggio e classificato, o solido o attraversabile (' + (nMobili + nPassanti) + '/' + m.props.length + ')');
+  assert(persone.length === m.village.npcs.length + m.village.extras.length, 'ogni persona del villaggio ha un corpo (' + persone.length + ')');
+
+  // --- la stanza vera: si cammina, si arriva da tutti, e nessuna zona resta tagliata fuori ---
+  const room = new Room('v1752'); room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  const p = [...room.players.values()][0];
+  assert(!!room.solids && room.solids.length > 30, 'la stanza carica i corpi del villaggio');
+  const r = p.radius * 0.8, mm = room.map;
+  const libero = (x, y) => !room._blk(x, y, r);
+  assert(libero(mm.spawn.x, mm.spawn.y), 'si atterra su spazio libero, non dentro un mobile');
+
+  // riempimento fine (passo 8 px) che rispetta muri E corpi
+  const STEP = 8, W = Math.ceil(mm.w * T / STEP), H = Math.ceil(mm.h * T / STEP);
+  const visto = new Uint8Array(W * H), coda = [[Math.round(mm.spawn.x / STEP), Math.round(mm.spawn.y / STEP)]];
+  const dMin = new Array(mm.village.npcs.length).fill(Infinity);
+  let dExit = Infinity, celle = 0;
+  const ex = mm.exit.x * T + T / 2, ey = mm.exit.y * T + T / 2;
+  while (coda.length) {
+    const c = coda.pop(), gx = c[0], gy = c[1], k = gy * W + gx;
+    if (gx < 0 || gy < 0 || gx >= W || gy >= H || visto[k]) continue;
+    const wx = gx * STEP, wy = gy * STEP;
+    if (!libero(wx, wy)) continue;
+    visto[k] = 1; celle++;
+    for (let i = 0; i < mm.village.npcs.length; i++) {
+      const d = MU.dist(wx, wy, mm.village.npcs[i].x, mm.village.npcs[i].y); if (d < dMin[i]) dMin[i] = d; }
+    const de = MU.dist(wx, wy, ex, ey); if (de < dExit) dExit = de;
+    coda.push([gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]);
+  }
+  assert(celle > 6000, 'resta spazio in abbondanza per muoversi (' + celle + ' posizioni)');
+  for (let i = 0; i < mm.village.npcs.length; i++)
+    assert(dMin[i] <= C.MARKET_MERCH_RANGE, 'si arriva a parlare con ' + mm.village.npcs[i].name + ' (' + dMin[i].toFixed(0) + ' px, serve ' + C.MARKET_MERCH_RANGE + ')');
+  assert(dExit <= C.MARKET_EXIT_RADIUS, 'e si arriva al portale (' + dExit.toFixed(0) + ' px)');
+  let isolate = 0;
+  for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++)
+    if (!visto[gy * W + gx] && libero(gx * STEP, gy * STEP)) isolate++;
+  assert(isolate === 0, 'nessuna zona libera resta tagliata fuori dai mobili (' + isolate + ' posizioni isolate)');
+
+  // --- non si attraversa piu un tavolo ---
+  const tav = mm.props.find(q => q.type === 'tavolo');
+  assert(!libero(tav.x, tav.y), 'sul tavolo non ci si sale');
+  const banco = mm.props.find(q => q.type === 'bancone');
+  assert(!libero(banco.x, banco.y), 'e il bancone si aggira, non si attraversa');
+  assert(!libero(mm.village.npcs[0].x, mm.village.npcs[0].y), 'e nemmeno si passa attraverso un mercante');
+
+  // --- LA SPINTA: dovunque ti ritrovi incastrato, al tick dopo sei fuori ---
+  for (const dentro of [tav, banco, { x: mm.village.npcs[0].x, y: mm.village.npcs[0].y },
+                        { x: mm.village.extras[0].x, y: mm.village.extras[0].y }]) {
+    p.x = dentro.x; p.y = dentro.y;
+    room._spingiFuori(p);
+    assert(libero(p.x, p.y), 'spinto fuori da (' + (dentro.type || 'una persona') + ')');
+    assert(!room.isWallAt(p.x, p.y), 'e non dentro la roccia');
+    assert(MU.dist(p.x, p.y, dentro.x, dentro.y) < 110, 'e a due passi, non teletrasportato dall altra parte');
+  }
+  // e non si muove di un pixel quando NON e incastrato
+  p.x = mm.spawn.x; p.y = mm.spawn.y; room._spingiFuori(p);
+  assert(p.x === mm.spawn.x && p.y === mm.spawn.y, 'chi non e incastrato non viene toccato');
+
+  // --- CAMMINARE: in nessuna direzione, e per nessun numero di passi, si finisce dentro un corpo ---
+  let dentroMai = 0, passi = 0;
+  for (let k = 0; k < 16; k++) {
+    p.x = mm.spawn.x; p.y = mm.spawn.y;
+    const a = k * Math.PI / 8, vx = Math.cos(a) * 7, vy = Math.sin(a) * 7;
+    for (let i = 0; i < 260; i++) { room.moveCircle(p, vx, vy); passi++; if (!libero(p.x, p.y)) dentroMai++; }
+  }
+  assert(dentroMai === 0, 'camminando in tutte le direzioni non si finisce mai dentro un corpo (' + dentroMai + ' su ' + passi + ' passi)');
+  ok('novita v1.75.2 verificate');
+}
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -77,6 +77,9 @@ class Room {
   newMap(seed, level, market) {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
+    // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
+    // collisione torna a costare esattamente quanto prima: un solo confronto con null.
+    this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
     this.merchant = null; this.darkMerchant = null; this.gearMerchant = null;
@@ -172,7 +175,52 @@ class Room {
   tileAtWorld(x, y) { const gx = (x / C.TILE) | 0, gy = (y / C.TILE) | 0; if (gx < 0 || gy < 0 || gx >= this.map.w || gy >= this.map.h) return C.T_WALL; return this.map.grid[gy * this.map.w + gx]; }
   isWallAt(x, y) { return this.tileAtWorld(x, y) === C.T_WALL; }
   moveCircle(e, dx, dy) { const r = e.radius * 0.8; let nx = e.x + dx; if (!this._blk(nx, e.y, r)) e.x = nx; else e.x = this._snap(e.x, nx, e.y, r, true); let ny = e.y + dy; if (!this._blk(e.x, ny, r)) e.y = ny; else e.y = this._snap(e.y, ny, e.x, r, false); }
-  _blk(x, y, r) { return this.isWallAt(x - r, y) || this.isWallAt(x + r, y) || this.isWallAt(x, y - r) || this.isWallAt(x, y + r); }
+  _blk(x, y, r) { return this.isWallAt(x - r, y) || this.isWallAt(x + r, y) || this.isWallAt(x, y - r) || this.isWallAt(x, y + r) || this._corpo(x, y, r); }
+  // v1.75.2 — un cerchio di raggio r, in (x,y), tocca un mobile o una persona del villaggio?
+  _corpo(x, y, r) {
+    const S = this.solids; if (!S) return false;
+    for (let i = 0; i < S.length; i++) { const s = S[i];
+      if (s.t === 'c') { const dx = x - s.x, dy = y - s.y, rr = s.r + r; if (dx * dx + dy * dy < rr * rr) return true; }
+      else if (Math.abs(x - s.x) < s.hw + r && Math.abs(y - s.y) < s.hh + r) return true; }
+    return false;
+  }
+  // v1.75.2 — LA SPINTA. La collisione impedisce di ENTRARE in un mobile, ma dentro ci si puo' trovare lo
+  // stesso: un teletrasporto, uno scatto, o semplicemente una persona che si sposta addosso a te. Allora si
+  // esce dal lato piu' vicino, un po' per volta, e mai dentro la roccia — quella la sistema _unstuck.
+  _spingiFuori(e) {
+    const S = this.solids; if (!S) return;
+    const r = e.radius * 0.8;
+    for (let giro = 0; giro < 4; giro++) {
+      let mosso = false;
+      for (let i = 0; i < S.length; i++) { const s = S[i];
+        let px = 0, py = 0;
+        if (s.t === 'c') {
+          const dx = e.x - s.x, dy = e.y - s.y, rr = s.r + r, d2 = dx * dx + dy * dy;
+          if (d2 >= rr * rr) continue;
+          const d = Math.sqrt(d2);
+          const nx = d > 0.01 ? dx / d : 1, ny = d > 0.01 ? dy / d : 0;
+          px = nx * (rr - d + 0.5); py = ny * (rr - d + 0.5);
+        } else {
+          const dx = e.x - s.x, dy = e.y - s.y;
+          const ox = s.hw + r - Math.abs(dx), oy = s.hh + r - Math.abs(dy);
+          if (ox <= 0 || oy <= 0) continue;
+          if (ox < oy) px = (dx < 0 ? -1 : 1) * (ox + 0.5); else py = (dy < 0 ? -1 : 1) * (oy + 0.5);
+        }
+        // si esce solo verso lo spazio libero: se di la' c'e' roccia si prova dal lato opposto
+        if (!this.isWallAt(e.x + px, e.y + py)) { e.x += px; e.y += py; mosso = true; }
+        else if (!this.isWallAt(e.x - px, e.y - py)) { e.x -= px; e.y -= py; mosso = true; }
+      }
+      if (!mosso) break;
+    }
+    // Incastrato FRA DUE corpi (fra il tavolo e chi ci sta attorno) le due spinte si annullano a vicenda e
+    // il ciclo qui sopra fa avanti e indietro. Allora si smette di negoziare: si cerca il punto libero piu'
+    // vicino, girando in tondo e allargando, e ci si mette li'. Costa qualcosa solo quando serve davvero.
+    if (!this._blk(e.x, e.y, r)) return;
+    for (let d = 6; d <= 96; d += 6) for (let k = 0; k < 16; k++) {
+      const ang = k * Math.PI / 8, nx = e.x + Math.cos(ang) * d, ny = e.y + Math.sin(ang) * d;
+      if (!this._blk(nx, ny, r)) { e.x = nx; e.y = ny; return; }
+    }
+  }
   _snap(cur, tgt, oth, r, isX) { const st = tgt > cur ? 1 : -1; let v = cur; for (let i = 0; i < 12; i++) { const t = v + st * 2; const bx = isX ? t : oth, by = isX ? oth : t; if (this._blk(bx, by, r)) break; v = t; } return v; }
   // v1.63 — PROFONDITA' NEL MARGINE: 0 = sei al sicuro, cresce avvicinandosi al bordo giocabile.
   // I due assi si SOMMANO, quindi un angolo (dove sei coperto su due lati, il posto piu' abusato)
@@ -1350,6 +1398,7 @@ class Room {
         }
       } else if (p._spronati) p._spronati = null;
       if (this.isWallAt(p.x, p.y)) this._unstuck(p); // v1.11 — rete di sicurezza anti-blocco
+      if (this.solids) this._spingiFuori(p);         // v1.75.2 — e se sei finito dentro un mobile, fuori
       const t = this.tileAtWorld(p.x, p.y);
       if (t === C.T_HAZARD && !p.buffs.iframe && !p.buffs.i_invuln) { p.hazT = (p.hazT || 0) + dt; if (p.hazT > 0.25) { this.damagePlayer(p, 6, p.x + 1, p.y, 0); p.hazT = 0; } }
       else if (t === C.T_TRAP && !p.buffs.iframe && !p.buffs.i_invuln) { p.trapT = (p.trapT || 0) + dt; if (p.trapT > 0.6) { this.damagePlayer(p, 14, p.x, p.y - 1, 0); p.trapT = 0; this.events.push({ t: 'trap', x: p.x, y: p.y }); } }

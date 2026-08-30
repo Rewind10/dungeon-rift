@@ -2,6 +2,56 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.75.2] — 2026-08-30 · "I mobili hanno un corpo"
+
+Attraversare un tavolo da parte a parte faceva sembrare il villaggio un disegno invece che un posto. Adesso
+**mobili e persone sono ostacoli veri**: ci sbatti contro e ci giri attorno.
+
+- **Hanno un corpo**: tavoli, banconi, credenza, scaffali, rastrelliere, incudine, aiuole, alambicco,
+  mortaio, casse, botti, sacchi, bracieri, candelabri, cristalli, il cartello e il falo'.
+- **Anche le persone**: i cinque mercanti e le otto comparse. Dietro il bancone non ci si passa piu' in
+  mezzo.
+- **Si attraversa** cio' che e' basso, appeso o dipinto a terra: tappeti, pozze di lava, ragnatele,
+  stendardi, teschi, lanterne (stanno sul soffitto), le pietre attorno al falo' e **gli sgabelli** — solidi
+  darebbero solo fastidio fra il tavolo e chi ci gira attorno.
+- **Se ti ritrovi incastrato, ti spinge fuori.** Un teletrasporto o uno scatto possono depositarti dentro un
+  mobile: si esce dal lato piu' vicino, mai dentro la roccia. E se sei stretto *fra due* corpi — fra il
+  tavolo e chi ci sta seduto attorno — le due spinte si annullerebbero a vicenda, quindi in quel caso si
+  smette di negoziare e si cerca il punto libero piu' vicino girando in tondo.
+- **Vale solo nel villaggio.** Fuori non ci sono mobili, e nelle ondate un secondo insieme di corpi solidi
+  in mezzo a mostri e proiettili sarebbe un rischio senza guadagno. Fuori dal villaggio la collisione costa
+  esattamente quanto prima: un confronto con `null`.
+
+#### ✅ Verificato
+**987 test, 0 falliti** (erano 929).
+I nuovi: i corpi esistono solo nel villaggio; ha un corpo **esattamente** cio' che deve averlo (26 mobili +
+13 persone = 39 corpi) e ogni oggetto del villaggio e' classificato, o solido o attraversabile; con i corpi
+attivi si arriva ancora **a parlare con tutti e cinque i mercanti** e al portale; **nessuna zona libera
+resta tagliata fuori** dai mobili; camminando in **sedici direzioni per 260 passi ciascuna** non si finisce
+mai dentro un corpo; messi dentro un tavolo, un bancone, un mercante o una comparsa si viene spinti fuori
+entro 110 px e mai nella roccia; e chi non e' incastrato non viene spostato di un pixel.
+
+---
+
+### [1.75.1] — 2026-08-30 · "Porte piu' larghe"
+
+Correzione trovata provando la 1.75: **le porte fra le stanze erano larghe una sola tile** — 48 pixel
+contro un personaggio largo 35. Ci si passava a pelo, sfregando lo stipite a ogni ingresso.
+
+- **Ogni porta e' larga due tile** (96 px): il doppio dello spazio, e il passaggio si legge come una porta
+  invece che come una fessura. La griglia lavora a tile intere: fra una e due non c'e' nulla in mezzo.
+- **Il varco verso il portale e' largo tre tile**: e' la strada principale del villaggio, e con un numero
+  dispari resta centrata sull'uscita.
+- **Taverna ed erboristeria guadagnano una riga** (fino a y=11): serviva perche' la loro porta si affacci
+  sul fianco della piazza e non sullo spigolo, dove qualunque corridoio resterebbe stretto una tile.
+
+#### ✅ Verificato
+**927 test, 0 falliti.** Il nuovo controlla il **confine di ogni porta**: se un corridoio tocca una stanza
+o la piazza con una sola tile, il test fallisce. Tutte e 385 le tile calpestabili restano raggiungibili a
+piedi dallo spawn, e nessun mobile o personaggio finisce nella roccia.
+
+---
+
 ### [1.75.0] — 2026-08-30 · "Il villaggio a micro-stanze"
 
 La sala unica e' finita. Cinque figure in piedi dentro un rettangolo non raccontavano niente, e le nicchie

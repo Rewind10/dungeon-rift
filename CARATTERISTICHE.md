@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.75.0`
+**Versione attuale:** `1.75.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -10,6 +10,9 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 
 ### La pianta
 - Una **piazza centrale** col falo': ci si atterra, e li' sta il portale per l'ondata successiva.
+- **Le porte sono larghe due tile** (96 px) e il **varco verso il portale tre** *(v1.75.1)*. Una tile
+  sola lasciava sei pixel per parte a un personaggio largo 35: si passava sfregando lo stipite. La
+  griglia lavora a tile intere, quindi fra una e due non c'e' nulla in mezzo.
 - Attorno, **cinque stanze** attaccate alla piazza da corridoi di una o due tile. Nessuna e' a piu' di due
   passi, e dalla piazza si vedono tutte le porte: il villaggio si **attraversa**, non si esplora.
 - La mappa passa da **26x22 a 34x26** tile. Si scava nella roccia piena: fuori da piazza, stanze e corridoi
@@ -23,6 +26,20 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 | **Erboristeria** | Erborista | terra battuta | bancone, alambicco, mortaio, due scaffali, **tre aiuole allineate**, botte e sacco |
 | **Fucina** | Fabbro | lastre rossastre | bancone, incudine, **quattro rastrelliere d'armi**, colata di lava in fondo, braciere, casse |
 | **Gilda dei Contratti** | Capitano | lastre | bacheca **TAGLIE**, bancone, due stendardi, scaffali dell'usato, rastrelliera, casse in ordine |
+
+### I mobili e le persone sono ostacoli veri *(novita v1.75.2)*
+- Attraversare un tavolo da parte a parte faceva sembrare il villaggio un disegno invece che un posto.
+  Adesso **mobili e persone hanno un corpo**: ci sbatti contro e ci giri attorno.
+- **Solido**: tavoli, banconi, credenza, scaffali, rastrelliere, incudine, aiuole, alambicco, mortaio,
+  casse, botti, sacchi, bracieri, candelabri, cristalli, il cartello, il falo' — e **le persone**, i cinque
+  mercanti e le otto comparse.
+- **Attraversabile**: cio' che e' basso, appeso o dipinto a terra — tappeti, pozze di lava, ragnatele,
+  stendardi, teschi, lanterne (stanno sul soffitto), le pietre attorno al falo' e **gli sgabelli**: solidi
+  darebbero solo fastidio fra il tavolo e chi ci gira attorno.
+- **Se ti ritrovi incastrato, ti spinge fuori**: si esce dal lato piu' vicino, mai dentro la roccia. Stretto
+  *fra due* corpi le spinte si annullerebbero a vicenda, e allora si cerca il punto libero piu' vicino.
+- **Vale solo nel villaggio.** Fuori non ci sono mobili, e nelle ondate un secondo insieme di corpi solidi
+  in mezzo a mostri e proiettili sarebbe un rischio senza guadagno.
 
 ### Le persone
 - **I mercanti si vedono dall'alto**, come il tuo eroe. Prima erano ritratti frontali: in una mappa vista

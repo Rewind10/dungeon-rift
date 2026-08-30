@@ -256,20 +256,23 @@
     exit: { x: 16, y: 20 },
     // le stanze: rettangolo INTERNO (la roccia attorno e' il muro)
     rooms: [
-      { id: 'taverna',  x0: 3,  y0: 3,  x1: 11, y1: 10, pav: 'legno',  col: 'rgba(92,62,32,.62)' },
+      { id: 'taverna',  x0: 3,  y0: 3,  x1: 11, y1: 11, pav: 'legno',  col: 'rgba(92,62,32,.62)' },
       { id: 'antro',    x0: 14, y0: 2,  x1: 20, y1: 7,  pav: 'lastre', col: 'rgba(58,42,84,.42)' },
-      { id: 'erbe',     x0: 23, y0: 4,  x1: 30, y1: 10, pav: 'terra',  col: 'rgba(46,58,36,.44)' },
+      { id: 'erbe',     x0: 23, y0: 4,  x1: 30, y1: 11, pav: 'terra',  col: 'rgba(46,58,36,.44)' },
       { id: 'fucina',   x0: 3,  y0: 13, x1: 10, y1: 19, pav: 'lastre', col: 'rgba(72,38,24,.48)' },
       { id: 'retro',    x0: 23, y0: 13, x1: 30, y1: 19, pav: 'lastre', col: 'rgba(70,40,38,.42)' },
     ],
     // i corridoi verso la piazza: una lista di rettangoli da scavare, porta compresa
+    // v1.75.1 — le porte erano larghe UNA tile (48 px) contro un personaggio largo 35: ci si passava a
+    // pelo, sfregando lo stipite. Adesso ogni porta e' larga DUE tile, e il varco del portale TRE: e' la
+    // strada principale del villaggio, e cosi' resta centrata sull'uscita.
     links: [
-      [12, 9, 12, 10],    // taverna  -> piazza
-      [16, 8, 16, 9],     // antro    -> piazza
-      [21, 10, 22, 10],   // erbe     -> piazza
-      [11, 15, 12, 15],   // fucina   -> piazza
-      [21, 15, 22, 15],   // retro    -> piazza
-      [16, 17, 16, 20],   // piazza   -> portale
+      [12, 10, 12, 11],   // taverna  -> piazza
+      [16, 8,  17, 9],    // antro    -> piazza
+      [21, 10, 22, 11],   // erbe     -> piazza
+      [11, 15, 12, 16],   // fucina   -> piazza
+      [21, 15, 22, 16],   // retro    -> piazza
+      [15, 17, 17, 20],   // piazza   -> portale (il varco grande)
     ],
     // dove sta ogni mercante, e il colore della sua luce
     stalls: [
@@ -293,6 +296,45 @@
     floorA: '#1c1813', floorB: '#221d17', wall: '#050607', wallTop: '#0d1013',
     hazard: '#ffb020', accent: '#ffb14a', blobMul: 0, hazMul: 0, propMix: [], tint: 'rgba(60,40,20,.10)',
   };
+  // ===================== v1.75.2 — GLI OSTACOLI FISICI =====================
+  // Attraversare un tavolo da parte a parte faceva sembrare il villaggio un disegno invece che un posto.
+  // Qui i mobili e le persone hanno un CORPO: ci sbatti contro e ci giri attorno.
+  //
+  // Vale SOLO nel villaggio. Fuori non ci sono mobili, e nelle ondate un secondo insieme di corpi solidi
+  // in mezzo ai mostri e ai proiettili sarebbe un rischio senza guadagno.
+  //
+  // Ogni voce e' l'ingombro del mobile a SCALA 1, in pixel di mondo, misurato su come lo disegna
+  // renderer.js:  c = cerchio (raggio)  ·  r = rettangolo (mezza larghezza, mezza altezza).
+  // Quello che NON e' in questa tabella si attraversa: tappeti, pozze di lava, ragnatele, stendardi,
+  // teschi, lanterne appese (stanno sul soffitto) e gli sgabelli, che sono bassi e solo darebbero fastidio
+  // fra il tavolo e chi ci gira attorno.
+  const INGOMBRI = {
+    tavolo: { c: 20 }, incudine: { c: 15 }, alambicco: { c: 11 }, crystal_cluster: { c: 13 },
+    barrel: { c: 10 }, sack: { c: 10 }, brazier: { c: 12 }, candelabra: { c: 8 },
+    signpost: { c: 8 }, mortaio: { c: 9 }, bonfire: { c: 26 },
+    bancone: { r: [32, 11] }, credenza: { r: [27, 12] }, scaffale: { r: [25, 13] },
+    rastrelliera: { r: [23, 8] }, aiuola: { r: [23, 19] }, cratebox: { r: [12, 12] },
+  };
+  // questi quattro il renderer li gira di 90 gradi quando il prop ha r > 0.5: l'ingombro deve girare con loro
+  const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1 };
+  // il corpo di una persona: piu' stretto della sagoma disegnata, cosi' ci si passa accanto senza incastri
+  const CORPO = 14;
+
+  function ingombri(props, village) {
+    const out = [];
+    for (const p of props) {
+      const d = INGOMBRI[p.type]; if (!d) continue;
+      const s = p.s || 1;
+      if (d.c) { out.push({ t: 'c', x: p.x, y: p.y, r: d.c * s }); continue; }
+      let hw = d.r[0] * s, hh = d.r[1] * s;
+      if (GIRANO[p.type] && (p.r || 0) > 0.5) { const t = hw; hw = hh; hh = t; }
+      out.push({ t: 'r', x: p.x, y: p.y, hw, hh });
+    }
+    for (const n of village.npcs) out.push({ t: 'c', x: n.x, y: n.y, r: CORPO, chi: 1 });
+    for (const e of village.extras) out.push({ t: 'c', x: e.x, y: e.y, r: CORPO, chi: 1 });
+    return out;
+  }
+
   function generateMarket(seed) {
     const w = VILLAGE.w, h = VILLAGE.h, TILE = C.TILE;
     const g = new Uint8Array(w * h).fill(C.T_WALL);   // si parte da roccia piena e si SCAVA
@@ -376,13 +418,7 @@
     // --- ragnatele e catene negli angoli: siamo pur sempre sottoterra ---
     for (const [x, y] of [[3.4, 3.4], [30.4, 4.4], [3.4, 19.4], [30.4, 19.4]]) P('web', x, y, 0.9);
 
-    return {
-      w, h, tile: TILE, seed, level: 0, theme: VILLAGE_THEME, market: 1,
-      grid: Array.from(g), floors,
-      spawn: { x: VILLAGE.spawn.x * TILE + TILE / 2, y: VILLAGE.spawn.y * TILE + TILE / 2 },
-      exit: { x: VILLAGE.exit.x, y: VILLAGE.exit.y },
-      enemySpawns: [], crateSpawns: [], props, microAreas: [],
-      village: (() => {
+    const village = (() => {
         // v1.75 — senza banchetto il mercante sta AL SUO POSTO, non piu' 2.1 tile piu' indietro: quello
         // scarto serviva solo a non farlo coprire dal banco.
         // Ogni mercante sta nella SUA stanza, girato verso la porta che da' sulla piazza.
@@ -404,8 +440,16 @@
           { x: 25.4, y: 17.2, kind: 'patron', face: 4.6 },
         ].map(e => ({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2, kind: e.kind, seated: e.seated || 0, face: e.face || 0, name: '', sub: '' }));
         const sm = npcs.find(n => n.shop) || npcs[0];
-        return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
-      })(),
+      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
+    })();
+
+    return {
+      w, h, tile: TILE, seed, level: 0, theme: VILLAGE_THEME, market: 1,
+      grid: Array.from(g), floors,
+      spawn: { x: VILLAGE.spawn.x * TILE + TILE / 2, y: VILLAGE.spawn.y * TILE + TILE / 2 },
+      exit: { x: VILLAGE.exit.x, y: VILLAGE.exit.y },
+      enemySpawns: [], crateSpawns: [], props, microAreas: [],
+      village, solids: ingombri(props, village),
     };
   }
 
