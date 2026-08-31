@@ -1067,6 +1067,45 @@ function testV163() {
   const r0 = new Room('v163g'); r0.addPlayer('a', { send() {} }, 'A', 'ladro'); r0.startGame();
   const m0 = r0.map, T2 = C.TILE, M = C.EDGE_MARGIN;
   const at = (gx, gy) => r0._edgeDepth(gx * T2 + T2 / 2, gy * T2 + T2 / 2);
+
+  // LA FAGLIA E' UNA MANOPOLA, e il test la segue invece di imporre una scelta. EDGE_MARGIN a 0
+  // significa "spenta": nessuna fascia, nessun drenaggio. E' una decisione di gioco legittima — la
+  // faglia serve a scoraggiare chi si accampa sul bordo, e si puo' preferire di lasciar fare. Quello
+  // che il test deve garantire e' che la manopola FUNZIONI in tutte e due le posizioni: se e' spenta,
+  // deve essere spenta davvero e non mordere di nascosto.
+  if (M <= 0) {
+    let fascia = 0, tessere = 0;
+    for (let y = 2; y < m0.h - 2; y++) for (let x = 2; x < m0.w - 2; x++) {
+      if (m0.grid[y * m0.w + x] === C.T_WALL) continue;
+      tessere++; if (at(x, y) > 0) fascia++;
+    }
+    assert(fascia === 0, 'con EDGE_MARGIN a 0 nessuna tessera e nella fascia (' + fascia + ' su ' + tessere + ')');
+    // e chi si accampa sul bordo non deve perdere un solo punto ferita
+    const rs = new Room('v163off'); const ps = rs.addPlayer('s', { send() {} }, 'S', 'ladro'); rs.startGame();
+    rs.pending = 0; rs.waveList = []; rs.monsters.length = 0;
+    const cc = rs.map.spawn;
+    rs.spawnMonster('spore_fungus', cc.x, cc.y, { scaling: Waves.scaling(1, 1) });
+    // La casella di prova va scelta LONTANA dal Fungo, se no i suoi colpi entrano nella misura e
+    // sembra che morda la faglia: alla prima stesura il giocatore perdeva 108 PV in venti secondi, e
+    // non era la faglia — era il Fungo. Si prende la tessera calpestabile piu' lontana da lui.
+    let bordo = null, dLontano = -1;
+    for (let y = 2; y < rs.map.h - 2; y++) for (let x = 2; x < rs.map.w - 2; x++) {
+      if (rs.map.grid[y * rs.map.w + x] !== C.T_FLOOR) continue;
+      const d = MU.dist(x * T2 + T2 / 2, y * T2 + T2 / 2, cc.x, cc.y);
+      if (d > dLontano) { dLontano = d; bordo = { x, y }; }
+    }
+    assert(dLontano > 700, 'la casella di prova e lontana dal Fungo (' + dLontano.toFixed(0) + ' px)');
+    ps.hp = 500; ps.maxHp = 500; const hp0 = ps.hp;
+    for (let i = 0; i < C.TICK_RATE * 20; i++) {
+      ps.x = bordo.x * T2 + T2 / 2; ps.y = bordo.y * T2 + T2 / 2;
+      rs.setInput('s', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      rs.update(1 / C.TICK_RATE);
+    }
+    assert(ps.hp === hp0, 'e venti secondi sul bordo non tolgono un punto ferita (' + hp0 + ' -> ' + ps.hp + ')');
+    assert((ps.edgeLv || 0) === 0, 'e la carica resta a zero (' + (ps.edgeLv || 0) + ')');
+    ok('la faglia e SPENTA per scelta (EDGE_MARGIN 0) e non morde di nascosto');
+    return;
+  }
   // v1.76 — la fascia non e' piu' il bordo del RETTANGOLO: segue la forma della caverna. Percio' non
   // si prova piu' "l angolo della mappa vale il doppio" (l angolo e' roccia piena), si prova la cosa
   // che conta davvero: attaccati alla parete esterna morde al massimo, due tessere dentro non morde
@@ -2683,6 +2722,50 @@ function testV177() {
   assert(r4.mode.survive > 0 && r4.parT === 0, 'nell ondata a sopravvivenza non c e tempo obiettivo (parT ' + r4.parT + ')');
   ok('novita v1.77 verificate');
 }
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testPonteClient() {
+  console.log('\n[TEST 50] Il ponte fra server e HUD: nessun campo dello snapshot si perde per strada');
+  // PERCHE' QUESTO TEST ESISTE. Il cronometro dell'ondata (v1.77) e' rimasto fermo su 0:00 per due
+  // versioni. La prima volta era un bug del server; la seconda — quella vera — era che l'HUD non
+  // riceve affatto lo snapshot del server. Riceve G.world, lo stato interpolato del client, e i campi
+  // non-giocatore vanno copiati a mano uno per uno in main.js con `w.X = next.X`. Il server mandava
+  // wt e wp, il client li buttava, e non c'era nessun errore da nessuna parte: nessun test se ne
+  // accorgeva, perche' provare lo snapshot del server non prova il ponte.
+  // Qui si confrontano le due liste: cio' che l'HUD LEGGE contro cio' che il client COPIA.
+  const path = require('path'), fsx = require('fs');
+  const dirPub = path.join(__dirname, '..', 'public', 'js');
+  const hud = fsx.readFileSync(path.join(dirPub, 'hud.js'), 'utf8');
+  const main = fsx.readFileSync(path.join(dirPub, 'main.js'), 'utf8');
+
+  // 1) il corpo di updateTop, preso contando le graffe
+  const inizio = hud.indexOf('updateTop(snap, me) {');
+  assert(inizio >= 0, 'updateTop esiste in hud.js');
+  let liv = 0, fine = -1;
+  for (let i = hud.indexOf('{', inizio); i < hud.length; i++) {
+    if (hud[i] === '{') liv++;
+    else if (hud[i] === '}') { liv--; if (liv === 0) { fine = i; break; } }
+  }
+  assert(fine > inizio, 'e se ne trova la fine');
+  const corpo = hud.slice(inizio, fine);
+  const letti = new Set();
+  for (const m of corpo.matchAll(/\bsnap\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) letti.add(m[1]);
+  assert(letti.size > 3, 'updateTop legge piu di tre campi dallo snapshot (' + [...letti].join(', ') + ')');
+
+  // 2) i campi che main.js copia nel mondo del client
+  const copiati = new Set();
+  for (const m of main.matchAll(/\bw\.([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*next\./g)) copiati.add(m[1]);
+  assert(copiati.size > 3, 'main.js copia piu di tre campi (' + [...copiati].join(', ') + ')');
+
+  // 3) uno snapshot VERO del server, per sapere quali di quei campi esistono davvero
+  const room = new Room('ponte'); room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
+  const snap = room.snapshot();
+  const persi = [...letti].filter(k => Object.prototype.hasOwnProperty.call(snap, k) && !copiati.has(k) && k !== 'players');
+  assert(persi.length === 0,
+    'ogni campo che l HUD legge e che il server manda viene copiato nel mondo del client (persi: ' + (persi.join(', ') || 'nessuno') + ')');
+
+  // e il cronometro in particolare, che e' il caso da cui e nato tutto
+  assert(copiati.has('wt') && copiati.has('wp'), 'il cronometro (wt) e il tempo obiettivo (wp) arrivano fino all HUD');
+  ok('il ponte fra server e HUD regge');
+}
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

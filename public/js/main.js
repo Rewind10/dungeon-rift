@@ -193,7 +193,15 @@
     // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
     // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
     w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;
+    // ATTENZIONE — QUI SI PERDONO I CAMPI NUOVI. L'HUD non riceve lo snapshot del server: riceve
+    // G.world, che e' lo stato interpolato del client, e i campi non-giocatore vanno copiati QUI a mano
+    // uno per uno. Chi aggiunge un campo allo snapshot e si dimentica di questa riga vede il campo
+    // arrivare sul filo e sparire prima dell'HUD, senza nessun errore da nessuna parte.
+    // E' successo col cronometro dell'ondata (v1.77): il server mandava wt e wp, il client li buttava,
+    // e il cronometro restava fermo su 0:00. C'e' un controllo in test/client.js che confronta i campi
+    // letti da updateTop con quelli copiati qui, apposta perche' non ricapiti.
     w.bt = next.bt; w.wave = next.wave; w.phase = next.phase; w.mcount = next.mcount; w.pend = next.pend; w.mode = next.mode; w.survive = next.survive;
+    w.wt = next.wt; w.wp = next.wp;
   }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function lerpA(a, b, t) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; }

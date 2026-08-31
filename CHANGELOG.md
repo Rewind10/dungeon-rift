@@ -2,6 +2,50 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.77.3] — 2026-08-30 · "Il cronometro arriva fino all'HUD"
+
+Il cronometro restava fermo su 0:00 anche dopo la 1.77.2. La correzione precedente era vera ma non
+era **quella**: avevo verificato lo snapshot del server e mi ero fermato li'.
+
+#### Il difetto vero: un ponte con la lista dei campi scritta a mano
+L'HUD non riceve lo snapshot del server. Riceve `G.world`, lo stato **interpolato** del client, e in
+`main.js` i campi non-giocatore vanno copiati a mano, uno per uno:
+
+```js
+w.wave = next.wave; w.phase = next.phase; w.mcount = next.mcount; ...
+```
+
+`wt` e `wp` non erano in quella riga. Il server li mandava, il client li leggeva dal filo e li
+buttava un istante dopo — nessun errore, da nessuna parte. Aggiunti.
+
+#### Verificato sul gioco vero, non sul pezzo
+Questa volta la prova e' stata: far girare il server, aprire il gioco in un browser, cliccare
+*ENTRA IN PARTITA* e *AVVIA LA RUN*, e leggere il cronometro sullo schermo ogni due secondi e mezzo.
+Col codice corretto sale (0:04 → 0:06 → 0:09 → 0:11 → 0:14); togliendo la riga della copia torna a
+mostrare **⏱ 0:00** fisso, esattamente il sintomo segnalato.
+
+#### Il test che impedisce che ricapiti
+Nuovo controllo che confronta due liste prese dal sorgente: i campi che `updateTop` **legge** dallo
+snapshot, e i campi che `main.js` **copia** nel mondo del client. Se il server manda un campo che
+l'HUD legge e il client non lo copia, il test fallisce dicendo quale. Provato contro il codice col
+difetto: *«persi: wt, wp»*.
+
+Provare lo snapshot del server non provava il ponte: e' per questo che due versioni di test non hanno
+visto niente.
+
+#### La faglia: i test seguono la manopola
+Trovato `EDGE_MARGIN: 0` nella copia di lavoro — non e' una mia modifica, e non l'ho toccata: spegne
+la faglia. I test pero' la davano per accesa e fallivano. Adesso il test **segue la manopola**: se
+EDGE_MARGIN e' 0 verifica che la faglia sia spenta *davvero* — nessuna tessera nella fascia, venti
+secondi sul bordo senza perdere un punto ferita, carica a zero — e se e' maggiore di zero verifica che
+morda come prima. La scelta resta di chi gioca; il test garantisce che la manopola funzioni in tutte e
+due le posizioni.
+
+#### ✅ Verificato
+**1023 test, 0 falliti**, sei esecuzioni di fila, piu' la prova nel browser sul gioco in esecuzione.
+
+---
+
 ### [1.77.2] — 2026-08-30 · "Il cronometro cammina"
 
 Segnalato da Paolo: **a inizio partita il cronometro restava fermo su 0:00**.
