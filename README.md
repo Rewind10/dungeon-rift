@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.77.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.78.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.78 (l'ondata finisce quando lo decidi tu)
+- **✔ Pulsante EXIT sulla mappa ripulita**: ucciso l'ultimo nemico non si esce di scatto. Compare la
+  scritta **ONDATA COMPLETATA** in alto e il pulsante **EXIT** al centro. Il cronometro si ferma li' (il
+  premio di velocita' non si perde aspettando) e **quello che e' a terra non scade** finche' sei li'.
+  In cooperativa si aspettano tutti i vivi; dopo 120 s si esce comunque.
+- **🎴 Le carte arrivano dai livelli**: una per livello guadagnato, non piu' una per ondata. Se non sei
+  salito, il pannello dice quanta XP manca invece di aprire un mazzo che non ti sei guadagnato.
+- **📊 Riepilogo di fine livello**: nemici uccisi, XP e monete dell'ondata, durata contro il tempo
+  obiettivo, livelli presi e il premio del cronometro.
+- **🗑 Una sola modalita'**: Orda, Caccia, Sopravvivenza e Tesoro sono state tolte, e con loro
+  l'indicazione della modalita' sulla mappa.
+- **🔤 +1px a tutti i font del testo**, titoli e icone invariati.
 
 ## 🆕 Novita v1.77 (niente cade dal cielo, e le ondate hanno un cronometro)
 - **🚫 I nemici non lasciano piu' oggetti**: nessuno, boss e cassa-mima compresi. Una cura gratis dal

@@ -13,20 +13,19 @@
 
   // Modalità ondata (le ondate boss restano a parte)
   const MODES = {
-    horde:    { id: 'horde', name: 'ORDA', color: '#ff9a3b', desc: 'Sciami di nemici deboli', countMul: 1.5, eliteMul: 0.4, survive: 0 },
-    hunt:     { id: 'hunt', name: 'CACCIA', color: '#b061ff', desc: 'Pochi nemici d\'élite', countMul: 0.55, eliteMul: 3.2, survive: 0 },
-    survival: { id: 'survival', name: 'SOPRAVVIVENZA', color: '#7dffea', desc: 'Resisti all\'assalto continuo', countMul: 1.0, eliteMul: 1.0, survive: 30 },
-    treasure: { id: 'treasure', name: 'TESORO', color: '#ffd24a', desc: 'Uccidi lo scrigno prima che fugga!', countMul: 0.8, eliteMul: 0.6, survive: 0, treasure: true },
-    assault:  { id: 'assault', name: 'ASSALTO', color: '#ff5252', desc: 'Ondata standard', countMul: 1.0, eliteMul: 1.0, survive: 0 },
+    // v1.78 — resta solo questa: le altre quattro (Orda, Caccia, Sopravvivenza, Tesoro) sono state
+    // tolte. Il nome non compare piu' da nessuna parte, ma la voce serve al motore per countMul/eliteMul.
+    assault:  { id: 'assault', name: 'ONDATA', color: '#ff5252', desc: 'Ondata standard', countMul: 1.0, eliteMul: 1.0, survive: 0 },
   };
+  // v1.78 — UNA MODALITA' SOLA. Orda, Caccia, Sopravvivenza e Tesoro sono state tolte: ogni ondata e'
+  // un'ondata normale. Cambiavano il ritmo in modo che il giocatore non sceglieva e non poteva
+  // prevedere — la Sopravvivenza per esempio durava un tempo fisso e non si poteva chiudere prima, il
+  // Tesoro trasformava l'ondata in un inseguimento. Con una modalita' sola l'unica variabile che resta
+  // e' l'ondata stessa, e il cronometro ha finalmente senso su tutte.
+  // MODES resta una tabella perche' il resto del motore legge mode.countMul e mode.eliteMul, e perche'
+  // se un domani si volesse rimettere una variante il posto e' questo — ma modeForWave risponde sempre
+  // 'assault' e le altre voci sono sparite dalla tabella, cosi' non si possono raggiungere per sbaglio.
   function modeForWave(wave, rng) {
-    if (isBossWave(wave)) return MODES.assault;
-    if (wave <= 1) return MODES.assault;
-    const r = (rng ? rng() : Math.random());
-    if (wave % 4 === 0) return MODES.hunt;
-    if (wave % 4 === 2) return MODES.survival;
-    if (r < 0.20) return MODES.treasure;
-    if (r < 0.55) return MODES.horde;
     return MODES.assault;
   }
 

@@ -1,10 +1,50 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.77.3`
+**Versione attuale:** `1.78.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## ✔ LA MAPPA RIPULITA E IL PULSANTE EXIT *(novita v1.78)*
+- Ucciso l'ultimo nemico l'ondata **non finisce da sola**: la fase diventa **MAPPA RIPULITA**, con la
+  scritta `ONDATA COMPLETATA` in alto al centro e il pulsante **EXIT** sotto il personaggio.
+- Prima l'ultimo nemico che cadeva ti spediva nel pannello del negozio nello stesso fotogramma: non
+  facevi in tempo a capire di aver vinto, e quello che era rimasto a terra lo raccoglieva il gioco al
+  posto tuo.
+- Il **cronometro si ferma** all'ultima uccisione: il premio di velocita' si calcola sul tempo di
+  combattimento, non su quanto ci metti a raccogliere.
+- **Niente scade** finche' la mappa e' ripulita: sfere di esperienza, monete e oggetti a terra vivono
+  30 secondi, e senza questa regola sparirebbero mentre li vai a prendere. Si ferma la scadenza, non
+  la calamita che li tira verso di te.
+- In cooperativa si aspettano **tutti i giocatori in piedi** (i caduti no: non potrebbero premere
+  niente) e il pulsante dice a che punto e' l'attesa. Dopo **120 s** (`EXIT_TIMEOUT`) si esce comunque.
+
+## 🎴 LE CARTE ARRIVANO DAI LIVELLI *(novita v1.78)*
+- **Una carta per livello guadagnato.** Prima ne arrivava una a ogni fine ondata: il potere arrivava
+  col calendario, non col merito.
+- Chi sale di tre livelli in un'ondata sceglie **tre carte**, una dopo l'altra: il mazzo si riapre
+  finche' il debito non e' chiuso.
+- Se non sei salito di livello il mazzo **non si apre**, e il pannello scrive quanta XP manca al
+  livello successivo invece di restare muto.
+- Ritmo misurato: la prima carta arriva a fine **seconda** ondata (prima era la prima), ma all'ottava
+  un giocatore solo ne ha **10** contro le 8 di prima.
+
+## 📊 IL RIEPILOGO DI FINE LIVELLO *(novita v1.78)*
+In cima al pannello di fine ondata: **nemici uccisi**, **esperienza** e **monete** raccolte in
+quell'ondata, **durata** contro il tempo obiettivo, **livelli** guadagnati, e il **premio del
+cronometro** se sei rimasto sotto. Fuori tempo lo dice, invece di tacere.
+
+## 🗑 UNA SOLA MODALITA' *(novita v1.78)*
+Orda, Caccia, Sopravvivenza e Tesoro sono state **tolte**: ogni ondata e' un'ondata normale, e
+l'indicazione della modalita' e' sparita dalla mappa perche' non indicava piu' niente. Con loro se ne
+vanno lo **scrigno fuggitivo**, i suoi eventi, i moltiplicatori di XP e monete che valevano solo per
+lui, e le ondate a tempo fisso. La **cassa-mima** resta, come mostro normale.
+
+## 🔤 FONT DEL TESTO +1px *(novita v1.78)*
+Cento regole del foglio di stile e quindici scritte disegnate sul canvas. Invariati: i **titoli**
+(h1 44px, h2 19px), le **icone e le emoji** (sono disegni, non testo) e i numeroni gia' grandi
+(vita, combo, contatori).
 
 ## 🚫 DAI NEMICI NON CADE PIU' NIENTE *(novita v1.77)*
 - Nessun oggetto e nessuna pozione, da nessun nemico: ne' comuni, ne' elite, ne' boss, ne' cassa-mima.
@@ -743,10 +783,10 @@ ufficiale, altrimenti l'ufficiale. **Mai entrambi insieme.**
 
 ## 🕹️ Loop di gioco
 
-1. **Ondata di combattimento** con una **modalità** casuale (Orda, Caccia, Sopravvivenza, Tesoro, Assalto).
-2. I nemici lasciano **XP** ✦ e talvolta **oggetti** 🎁.
+1. **Ondata di combattimento** (una sola modalita, dal v1.78).
+2. I nemici lasciano **XP** ✦ e **monete** 🪙 — oggetti no, dal v1.77.
 3. Uccisioni consecutive → **COMBO** con moltiplicatore XP crescente. *(v1.6)*
-4. A fine ondata: **scegli 1 Potere (Boon)** e spendi la XP nel **negozio statistiche**.
+4. Ripulita la mappa: **EXIT**, poi il **riepilogo**, le **carte** dovute ai livelli presi e i **punti** da spendere.
 5. Ogni 5 ondate → **BOSS**. Alla 20ª → **MEGA BOSS AZ'GAROTH**.
 
 ---
@@ -975,13 +1015,10 @@ Hit-stop (freeze-frame) su critici e uccisioni di boss/élite, screen shake, par
 **3 mostri** in vista frontale (Zombie Putrido, Negromante, Troll delle Caverne) *(dal v1.30)*, più i **boss** con fasi
 (Signore della Guerra, Re Lich…) e il **MEGA BOSS finale AZ'GAROTH** con meteore e ondate multiple.
 
-## 🌍 Modalità ondata
+## 🌍 Modalità ondata *(tolte in v1.78)*
 
-- **Orda** — sciami di nemici deboli.
-- **Caccia** — pochi nemici ma molte élite.
-- **Sopravvivenza** — resisti al timer con respawn continuo.
-- **Tesoro** 👑 — uccidi lo scrigno fuggitivo prima che scappi con il loot.
-- **Assalto** — combattimento standard.
+Orda, Caccia, Sopravvivenza e Tesoro non esistono piu: ogni ondata e un'ondata normale. Quello che
+cambia da un'ondata all'altra e il **contenuto** (quanti nemici, quante elite) e il **tempo obiettivo**.
 
 ## 🎨 Temi mappa
 

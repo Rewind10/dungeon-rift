@@ -22,6 +22,7 @@
     toggleCard(id) { this.send({ t: C.MSG.TOGGLE_CARD, id }); },
     rest() { this.send({ t: C.MSG.REST }); },
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
+    exitWave() { this.send({ t: C.MSG.EXIT_WAVE }); },   // v1.78 — pulsante EXIT sulla mappa ripulita
     setHero(h) { this.send({ t: 'sethero', hero: h }); },
     chat(text) { this.send({ t: C.MSG.CHAT, text }); },
     // v1.68 — SNAPSHOT MAGRO: il server manda la parte immutabile di mostri e giocatori (tipo, PV massimi,
@@ -68,6 +69,7 @@
       case C.MSG.EVENT: if (this.onEvent) this.onEvent(m.ev); break;
       case C.MSG.OFFER_SHOP: if (this.onOfferShop) this.onOfferShop(m); break;
       case C.MSG.OFFER_BOON: if (this.onOfferBoon) this.onOfferBoon(m); break;
+      case C.MSG.WAVE_STATS: if (this.onWaveStats) this.onWaveStats(m); break;   // v1.78 — riepilogo di fine livello
       case C.MSG.OFFER_RANK: if (this.onOfferRank) this.onOfferRank(m); break;
       case C.MSG.OFFER_GEAR: if (this.onOfferGear) this.onOfferGear(m); break;
       case C.MSG.OFFER_POTION: if (this.onOfferPotion) this.onOfferPotion(m); break;

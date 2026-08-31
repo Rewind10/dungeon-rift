@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.77.3',
+    VERSION: '1.78.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -56,6 +56,10 @@
     PAR_BASE: 25, PAR_PER_MOSTRO: 3.2,
     // il premio per chi ci sta dentro, in scala con l'ondata
     PAR_XP: 25, PAR_XP_ONDATA: 8, PAR_MONETE: 12, PAR_MONETE_ONDATA: 3,
+    // v1.78 — QUANTO SI PUO' RESTARE nella mappa ripulita prima che l'uscita scatti da sola. Non e' una
+    // fretta: e' l'anti-AFK. Chi vuole raccogliere con calma ha tutto questo tempo, chi si e' alzato dalla
+    // sedia non blocca gli altri per sempre.
+    EXIT_TIMEOUT: 120,
     MAX_ALIVE: 30,
     MAX_ALIVE_CURVE: [8, 10, 12, 14, 16, 18, 21, 23, 26, 30],
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
@@ -97,10 +101,15 @@
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)
+      EXIT_WAVE: 'exit_wave', WAVE_STATS: 'wave_stats',   // v1.78 — il pulsante EXIT e il riepilogo di fine livello
     },
     PHASE_LOBBY: 'lobby', PHASE_COMBAT: 'combat', PHASE_SHOP: 'shop',
     PHASE_BOSS: 'boss', PHASE_GAMEOVER: 'gameover', PHASE_VICTORY: 'victory',
     PHASE_MARKET: 'market',  // v1.52 — mappa di sosta: nessun nemico, mercante equipaggiamento, uscita dal portale EXIT
+    // v1.78 — MAPPA RIPULITA. Prima l'ultimo nemico che cadeva sbatteva il giocatore nel pannello di fine
+    // ondata nello stesso istante: brusco, e senza il tempo di raccogliere quello che era rimasto a terra.
+    // Adesso c'e' una fase in mezzo: nessun nemico, il tempo si ferma, e si esce quando si vuole.
+    PHASE_CLEARED: 'cleared',
   };
   return C;
 });

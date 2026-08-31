@@ -703,7 +703,7 @@
           g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 14, 8, 4, 0, 0, 7); g.fill();
           g.strokeStyle = '#3a2a18'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 13); g.lineTo(0, -14); g.stroke();
           g.fillStyle = '#5a4326'; g.strokeStyle = '#241a10'; g.lineWidth = 2; this._rr(g, -22, -22, 44, 15, 2); g.fill(); g.stroke();
-          g.fillStyle = '#f0dcae'; g.font = 'bold 10px Segoe UI'; g.textAlign = 'center'; g.fillText(p.txt || 'MERCATO', 0, -11); g.textAlign = 'left'; break; }
+          g.fillStyle = '#f0dcae'; g.font = 'bold 11px Segoe UI'; g.textAlign = 'center'; g.fillText(p.txt || 'MERCATO', 0, -11); g.textAlign = 'left'; break; }
         case 'rock': case 'rockSmall': { const s = p.type === 'rock' ? 14 : 8; g.fillStyle = '#3a4152'; g.strokeStyle = '#242a38'; g.lineWidth = 2; g.beginPath(); g.moveTo(-s, s * .5); g.lineTo(-s * .5, -s); g.lineTo(s * .6, -s * .7); g.lineTo(s, s * .4); g.lineTo(s * .2, s); g.closePath(); g.fill(); g.stroke(); break; }
         case 'bones': { g.strokeStyle = '#cfc9b6'; g.lineWidth = 3; g.lineCap = 'round'; g.rotate(rot); for (let i = 0; i < 3; i++) { g.save(); g.rotate(i * 1.1); g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); g.restore(); } break; }
         case 'skull': { g.rotate(rot * .3); g.fillStyle = '#d8d2c0'; g.strokeStyle = '#8f8874'; g.lineWidth = 1.5; g.beginPath(); g.arc(0, -1, 7, 0, 7); g.fill(); g.stroke(); g.fillRect(-5, 4, 10, 5); g.fillStyle = '#1a1a22'; g.beginPath(); g.arc(-2.6, -1, 2, 0, 7); g.arc(2.6, -1, 2, 0, 7); g.fill(); break; }
@@ -1060,7 +1060,7 @@
         ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(10,12,18,.92)'; ctx.strokeText('LEVEL UP', 0, 0);
         const g = this._grad('lvup', () => { const q = ctx.createLinearGradient(0, -16, 0, 6); q.addColorStop(0, '#fff6d0'); q.addColorStop(0.55, '#ffd27a'); q.addColorStop(1, '#e0a52c'); return q; });
         ctx.fillStyle = g; ctx.fillText('LEVEL UP', 0, 0);
-        if (L.lv) { ctx.font = 'bold 13px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,12,18,.92)';
+        if (L.lv) { ctx.font = 'bold 14px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,12,18,.92)';
           ctx.strokeText('Lv. ' + L.lv, 0, 17); ctx.fillStyle = '#ffe9a8'; ctx.fillText('Lv. ' + L.lv, 0, 17); }
         ctx.textAlign = 'left'; ctx.restore();
       }
@@ -1104,7 +1104,7 @@
           ctx.font = 'bold 26px Segoe UI'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.85)';
           ctx.strokeText('EXIT', ex, ey - 54);
           ctx.fillStyle = 'rgba(170,255,205,' + (0.75 + pu * 0.25).toFixed(3) + ')'; ctx.fillText('EXIT', ex, ey - 54);
-          ctx.font = 'bold 11px Segoe UI'; ctx.lineWidth = 4;
+          ctx.font = 'bold 12px Segoe UI'; ctx.lineWidth = 4;
           ctx.strokeText('entra per proseguire', ex, ey - 38);
           ctx.fillStyle = 'rgba(205,255,225,.9)'; ctx.fillText('entra per proseguire', ex, ey - 38);
           ctx.restore(); ctx.textAlign = 'left';
@@ -1166,8 +1166,8 @@
       ctx.fillStyle = '#0a0810'; ctx.beginPath(); ctx.arc(0, -19, 6, 0, 7); ctx.fill();
       ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(-2.2, -19, 1.4, 0, 7); ctx.arc(2.2, -19, 1.4, 0, 7); ctx.fill();
       ctx.restore();
-      ctx.fillStyle = 'rgba(255,207,74,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('🪙', x, y - 44 + bob); ctx.textAlign = 'left';
-      ctx.fillStyle = '#ffe9b0'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83E\uDE99 Mercante', x, y - 60 + bob); ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(255,207,74,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 17px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('🪙', x, y - 44 + bob); ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffe9b0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83E\uDE99 Mercante', x, y - 60 + bob); ctx.textAlign = 'left';
     },
     // v1.52 — MERCATO: il fabbro dell'equipaggiamento. Forgia + incudine + martello, accento ambra,
     // beacon sempre acceso (sta al centro della mappa, deve leggersi anche col buio della torcia).
@@ -1209,7 +1209,7 @@
       ctx.restore();
       ctx.restore();
       ctx.save(); ctx.textAlign = 'center';
-      ctx.font = 'bold 12px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)';
+      ctx.font = 'bold 13px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)';
       ctx.strokeText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
       ctx.fillStyle = '#ffe0a8'; ctx.fillText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
       ctx.restore(); ctx.textAlign = 'left';
@@ -1291,14 +1291,14 @@
       if (!o.noLabel) {
         const ny = y - r * 1.5 - 26;
         ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = 'bold 13px Segoe UI';
+        ctx.font = 'bold 14px Segoe UI';
         const label = (o.label || n.name || '');
         const tw = ctx.measureText(label).width;
         ctx.fillStyle = 'rgba(12,9,6,.85)'; ctx.strokeStyle = pal.trim || '#c8a23a'; ctx.lineWidth = 2;
         this._rr(ctx, x - tw / 2 - 10, ny - 11, tw + 20, 22, 6); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#f4e3b8'; ctx.fillText(label, x, ny + 1);
         const sub = n.soon ? '— chiuso —' : (n.sub ? '— ' + n.sub + ' —' : '');
-        if (sub) { ctx.font = 'bold 10px Segoe UI'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+        if (sub) { ctx.font = 'bold 11px Segoe UI'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
           ctx.strokeText(sub, x, ny + 20); ctx.fillStyle = n.soon ? 'rgba(205,195,175,.8)' : 'rgba(255,205,130,.9)'; ctx.fillText(sub, x, ny + 20); }
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.restore();
       }
@@ -1608,9 +1608,9 @@
       ctx.strokeStyle = '#e8e0d0'; ctx.lineCap = 'round'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-12, -2); ctx.moveTo(8, -6); ctx.lineTo(12, -2); ctx.stroke();
       ctx.restore();
       // simbolo teschio fluttuante + etichetta se vicino
-      ctx.fillStyle = 'rgba(199,125,255,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83D\uDC80', x, y - 46 + bob); ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(199,125,255,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 17px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83D\uDC80', x, y - 46 + bob); ctx.textAlign = 'left';
       // v1.32 — etichetta SEMPRE visibile (come il Mercante Errante), non solo da vicino
-      ctx.fillStyle = '#e0b0ff'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83D\uDC80 Mercante Nero', x, y - 62 + bob); ctx.textAlign = 'left';
+      ctx.fillStyle = '#e0b0ff'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83D\uDC80 Mercante Nero', x, y - 62 + bob); ctx.textAlign = 'left';
     },
     _drawXp(ctx, o) { const t = this.time; const y = o.y + Math.sin(t * 6 + o.e) * 1.2; ctx.fillStyle = 'rgba(120,255,180,' + (0.5 + 0.3 * Math.sin(t * 8 + o.e)) + ')'; ctx.beginPath(); ctx.arc(o.x, y, 5, 0, 7); ctx.fill(); ctx.fillStyle = '#eaffe6'; ctx.beginPath(); ctx.arc(o.x, y, 2, 0, 7); ctx.fill(); },
     _drawCoin(ctx, o) { const cc = COIN_COL[o.c] || { color: '#ffcf4a', r: 5 }; const t = this.time; const ph = o.e || 0; const y = o.y + Math.sin(t * 5 + ph) * 1.4; const sq = Math.abs(Math.cos(t * 3 + ph)); const rw = cc.r * (0.4 + 0.6 * sq); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(o.x, o.y + 6, cc.r * 0.9, cc.r * 0.4, 0, 0, 7); ctx.fill(); ctx.fillStyle = cc.color; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(o.x, y, rw, cc.r, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.35 * sq) + ')'; ctx.beginPath(); ctx.ellipse(o.x - rw * 0.3, y - cc.r * 0.3, rw * 0.3, cc.r * 0.35, 0, 0, 7); ctx.fill(); },
@@ -1618,8 +1618,8 @@
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(it.x, it.y + 12, 12, 5, 0, 0, 7); ctx.fill();
       const gr = ctx.createRadialGradient(it.x, y, 2, it.x, y, 26); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + it.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(it.x, y, 26, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
       ctx.fillStyle = col; ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(it.x, y, 8, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#0a0c12'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(def.glyph || '?', it.x, y + 4); ctx.textAlign = 'left'; },
-    _drawCrate(ctx, c) { const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; },
+      ctx.fillStyle = '#0a0c12'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(def.glyph || '?', it.x, y + 4); ctx.textAlign = 'left'; },
+    _drawCrate(ctx, c) { const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; },
     _drawWeapon(ctx, wd) { const W = window.GAME.Loot.WEAPONS[wd.wt] || {}; const col = W.color || '#ffd24a'; const t = this.time; const x = wd.x, y = wd.y + Math.sin(t * 2.5 + wd.e) * 1.6; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(wd.x, wd.y + 14, 13, 5, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + wd.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.globalAlpha = 1; ctx.save(); ctx.translate(x, y); ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; if (wd.wt === 'scatter') { ctx.fillStyle = col; this._rr(ctx, -10, -4, 20, 8, 2); ctx.fill(); ctx.stroke(); } else if (wd.wt === 'burst') { ctx.fillStyle = col; this._rr(ctx, -9, -3, 16, 6, 2); ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -7); ctx.lineTo(11, 0); ctx.lineTo(0, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.restore(); for (let i = 0; i < 3; i++) { ctx.fillStyle = i < (wd.lv || 1) ? col : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x - 8 + i * 8, y - 15, 2.4, 0, 7); ctx.fill(); } },
     _drawChains(ctx) { for (const c of this.chains) { const a = c.t / 0.18; ctx.strokeStyle = 'rgba(140,220,255,' + a + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); const seg = 4; ctx.moveTo(c.x1, c.y1); for (let i = 1; i < seg; i++) { const t = i / seg; ctx.lineTo(MU.lerp(c.x1, c.x2, t) + MU.rand(-6, 6), MU.lerp(c.y1, c.y2, t) + MU.rand(-6, 6)); } ctx.lineTo(c.x2, c.y2); ctx.stroke(); } },
     // v1.63 — LA FAGLIA AI MARGINI. L'alone si chiude dai bordi dello schermo mentre la carica sale, e
@@ -1939,11 +1939,11 @@
       const LV = window.GAME && window.GAME.Levels;
       if (!isMe || p.dn) {
         ctx.textAlign = 'center';
-        ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 11px Segoe UI';
+        ctx.fillStyle = isMe ? '#fff' : '#c9d2e6'; ctx.font = 'bold 12px Segoe UI';
         ctx.fillText(p.n + (p.dn ? ' (a terra ' + p.dt + 's)' : ''), x, y - r - 32);
         if (LV && p.lvl && !isMe) {
           const rk = LV.rankName(p.h, p.lvl, p.sp || null), spec = LV.rankForLevel(p.lvl) >= 5;
-          ctx.font = '10px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
+          ctx.font = '11px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
           ctx.fillText('Lv.' + p.lvl + ' · ' + rk, x, y - r - 44);
           if ((p.prg || 0) < 1) { const bw2 = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
         }
@@ -2258,7 +2258,7 @@
       else if (def.front) { const flip = Math.cos(m.f) < 0 ? -1 : 1; const back = Math.sin(m.f) < -0.35; let moving = false; if (def.puppet) { moving = !!moveInfo(m.e).on; } this._front(ctx, def.shape, rr, bodyc, dk, def.eye || '#fff', this.time, atk, back, flip, moving, m.fl > 0, m.el); } // v1.30 billboard · v1.36 movimento · v1.38 hit · v1.39 elite (tint)
       else { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); }
       ctx.restore();
-      if (m.tr) { ctx.fillStyle = '#ffd24a'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('👑', x, y - rr - 14); ctx.textAlign = 'left'; }
+      if (m.tr) { ctx.fillStyle = '#ffd24a'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('👑', x, y - rr - 14); ctx.textAlign = 'left'; }
       if (m.hp < m.mhp) { const bw = Math.max(24, rr * 2.2); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw / 2, y - rr - 12, bw, m.b ? 6 : 4); ctx.fillStyle = m.tr ? '#ffd24a' : (m.mg ? '#ff2d55' : (m.b ? '#ff3b5b' : (m.el ? '#ffb020' : '#ff6b6b'))); ctx.fillRect(x - bw / 2, y - rr - 12, bw * Math.max(0, m.hp / m.mhp), m.b ? 6 : 4); }
     },
     // v1.26 — segnala un attacco (swing) per il mostro eid

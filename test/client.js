@@ -442,6 +442,66 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
 })();
 
+
+// ===== v1.78 — USCITA DALLA MAPPA RIPULITA, RIEPILOGO, CARTE DAI LIVELLI ====================
+(function () {
+  console.log('\n-- v1.78: pulsante EXIT, riepilogo di fine livello, carte dai livelli');
+  const top = document.getElementById('clearTop'), btn = document.getElementById('exitBtn'), sub = document.getElementById('clearSub');
+  const snap = (o) => Object.assign({ wave: 3, mcount: 0, pend: 0, phase: 'combat', wt: 30, wp: 60 }, o);
+  // in combattimento non si vede niente
+  HUD.updateTop(snap({}), null);
+  ok(top.classList.contains('hidden') && btn.classList.contains('hidden'), 'in combattimento il pulsante EXIT non c e');
+  // mappa ripulita, in singolo
+  HUD.updateTop(snap({ phase: 'cleared', ex: { n: 0, tot: 1, t: 118 } }), null);
+  ok(!top.classList.contains('hidden') && !btn.classList.contains('hidden'), 'a mappa ripulita compaiono avviso e pulsante');
+  ok(document.getElementById('hud').classList.contains('ripulita'), 'e gli annunci al centro si spostano per non coprire la scritta');
+  ok(btn.textContent === 'EXIT', 'il pulsante dice EXIT');
+  ok(document.getElementById('boonTitle') !== null, 'il titolo del mazzo ha un id, per poterlo cambiare');
+  ok(String(sub.innerHTML).indexOf('EXIT') > 0, 'e la scritta in alto spiega di premerlo');
+  ok(String(sub.innerHTML).indexOf('118') > 0, 'dicendo anche fra quanto si esce da soli');
+  // premuto: il pulsante passa in attesa
+  HUD.exitPremuto();
+  ok(btn.classList.contains('attesa'), 'premuto, il pulsante passa in attesa');
+  HUD.updateTop(snap({ phase: 'cleared', ex: { n: 1, tot: 3, t: 90 } }), null);
+  ok(String(btn.textContent).indexOf('1/3') > 0, 'in cooperativa dice a quanti si sta aspettando');
+  // fase cambiata: tutto sparisce e il pulsante torna come nuovo
+  HUD.updateTop(snap({ phase: 'shop' }), null);
+  ok(top.classList.contains('hidden') && btn.classList.contains('hidden'), 'finita l attesa spariscono');
+  ok(!document.getElementById('hud').classList.contains('ripulita'), 'e gli annunci tornano al loro posto');
+  HUD.updateTop(snap({ phase: 'cleared', ex: { n: 0, tot: 1, t: 120 } }), null);
+  ok(btn.textContent === 'EXIT' && !btn.classList.contains('attesa'), 'e all ondata dopo il pulsante e di nuovo premibile');
+  // e il contatore di combo non deve stare sopra alla scritta
+  HUD.updateTop(snap({ phase: 'combat', ex: null }), { cmb: 9, cmx: 1.4, cmt: 0.5, hp: 10, mhp: 10, lv: 1, k: 0, xp: 0, co: 0, lives: 2, pot: [], cards: [] });
+  ok(!document.getElementById('comboMeter').classList.contains('hidden'), 'in combattimento la combo si vede');
+  HUD.updateTop(snap({ phase: 'cleared', ex: { n: 0, tot: 1, t: 100 } }), { cmb: 9, cmx: 1.4, cmt: 0.5, hp: 10, mhp: 10, lv: 1, k: 0, xp: 0, co: 0, lives: 2, pot: [], cards: [] });
+  ok(document.getElementById('comboMeter').classList.contains('hidden'), 'a mappa ripulita sparisce, per non coprire la scritta');
+  HUD.updateTop(snap({ phase: 'combat' }), null);
+
+  // il riepilogo di fine livello
+  const box = document.getElementById('waveStats');
+  HUD.setWaveStats({ wave: 4, uccisi: 23, xp: 310, monete: 88, livelli: 2, durata: 71.4, par: 90, bonus: { xp: 57, monete: 24 }, carte: 2, livello: 6 });
+  ok(!box.classList.contains('hidden'), 'il riepilogo di fine livello compare');
+  const h = String(box.innerHTML);
+  ok(h.indexOf('23') > 0 && h.indexOf('310') > 0 && h.indexOf('88') > 0, 'con nemici uccisi, esperienza e monete');
+  ok(h.indexOf('1:11') > 0 && h.indexOf('1:30') > 0, 'con la durata e il tempo obiettivo in minuti');
+  ok(h.indexOf('+57') > 0 && h.indexOf('+24') > 0, 'e il premio del cronometro quando c e');
+  ok(h.indexOf('2') > 0 && h.indexOf('livelli') > 0, 'e i livelli guadagnati');
+  HUD.setWaveStats({ wave: 5, uccisi: 9, xp: 40, monete: 12, livelli: 0, durata: 140, par: 90, bonus: null });
+  ok(String(box.innerHTML).indexOf('nessun premio') > 0, 'fuori tempo lo dice invece di tacere');
+  ok(String(box.innerHTML).indexOf('livelli') < 0, 'e senza livelli non mostra la casella dei livelli');
+
+  // le carte: quando non se ne deve nessuna, il pannello spiega perche
+  HUD.setBoons({ boons: [], resta: 0, liv: 3, manca: 140 }, () => {});
+  const bsec = document.getElementById('boonSection'), bsub = document.getElementById('boonSub');
+  ok(!bsec.classList.contains('hidden'), 'senza carte da scegliere la sezione resta visibile');
+  ok(String(document.getElementById('boonTitle').textContent).indexOf('NESSUNA') > 0, 'e il titolo non promette una scelta che non c e');
+  ok(String(bsub.innerHTML).indexOf('140') > 0 && String(bsub.innerHTML).indexOf('livello') > 0, 'e dice quanta XP manca al livello');
+  HUD.setBoons({ boons: [{ id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'rare', desc: 'passa attraverso' }], resta: 3, liv: 7 }, () => {});
+  ok(String(bsub.innerHTML).indexOf('carta 1 di 3') > 0, 'con piu carte dovute dice a che punto sei');
+  ok(String(document.getElementById('boonTitle').textContent).indexOf('SCEGLI') > 0, 'e quando c e da scegliere il titolo torna quello');
+  ok(String(bsub.innerHTML).indexOf('Livello <b>7</b>') >= 0, 'e quale livello l ha pagata');
+})();
+
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');
 
 

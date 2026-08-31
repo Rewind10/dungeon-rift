@@ -14,6 +14,13 @@ const fs = require('fs');
 let PASS = 0, FAIL = 0;
 function assert(c, m) { if (c) PASS++; else { FAIL++; console.log('  ❌ FAIL:', m); } }
 function ok(m) { console.log('  ✅', m); }
+// v1.78 — da qui in poi un'ondata ripulita non finisce da sola: si ferma sulla fase 'cleared' e aspetta
+// che i giocatori premano EXIT. I test che chiudevano un'ondata svuotando la mappa devono premerlo, se no
+// misurano la fase sbagliata. Questo e' il gesto del giocatore, in una riga.
+function chiudiOndata(room) {
+  room._checkWaveClear();
+  if (room.phase === C.PHASE_CLEARED) for (const p of room.players.values()) room.exitWave(p.id);
+}
 function bot(room, p) {
   // v1.52 — nella mappa MERCATO non ci sono nemici: il bot punta al portale EXIT (con un po' di
   // jitter, altrimenti si incastra sui muri andando in linea retta).
@@ -100,20 +107,26 @@ function testWeaponEvo() {
   ok('evoluzione verificata');
 }
 function testModes() {
-  console.log('\n[TEST 5] Modalità ondata');
-  const ids = new Set(); const r = MU.seedRng(1);
-  for (let w = 2; w <= 19; w++) if (!Waves.isBossWave(w)) ids.add(Waves.modeForWave(w, Math.random).id);
-  for (let i = 0; i < 200; i++) { const w = 2 + (i % 18); if (!Waves.isBossWave(w)) ids.add(Waves.modeForWave(w).id); }
-  assert(ids.has('survival'), 'esiste la modalità Sopravvivenza'); assert(ids.has('hunt'), 'esiste la modalità Caccia'); assert(ids.has('treasure') || ids.has('horde') || ids.has('assault'), 'esistono altre modalità');
-  // hunt genera meno nemici ma più élite; horde più nemici
-  const hunt = Waves.buildWave(8, 1, Waves.MODES.hunt); const horde = Waves.buildWave(8, 1, Waves.MODES.horde);
-  assert(horde.list.length > hunt.list.length, 'Orda ha più nemici della Caccia');
-  // treasure: la modalità spawn-a uno scrigno fuggitivo
-  const room = new Room('tr'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
-  room.wave = 0; // forza una wave treasure
-  room.wave = 1; room.mode = Waves.MODES.treasure; room.waveScaling = Waves.scaling(3, 1); room.spawnTreasure();
-  assert(room.treasure && room.treasure.treasure, 'lo scrigno-tesoro viene generato'); assert(room.treasure.escapeT > 0, 'lo scrigno ha un timer di fuga');
-  ok('modalità verificate');
+  console.log('\n[TEST 5] Una modalita sola');
+  // v1.78 — Orda, Caccia, Sopravvivenza e Tesoro sono state tolte: ogni ondata e' un'ondata normale.
+  // Il test non prova piu' che le varianti esistano — prova che NON esistano, che e' la cosa che si
+  // puo' rompere per sbaglio rimettendo un ramo in modeForWave.
+  const ids = new Set();
+  for (let w = 1; w <= 20; w++) ids.add(Waves.modeForWave(w).id);
+  for (let i = 0; i < 300; i++) ids.add(Waves.modeForWave(1 + (i % 20), Math.random).id);
+  assert(ids.size === 1, 'una sola modalita in venti ondate e trecento sorteggi (' + [...ids].join(', ') + ')');
+  assert(ids.has('assault'), 'ed e quella normale');
+  assert(Object.keys(Waves.MODES).length === 1, 'e nella tabella ce n e una sola (' + Object.keys(Waves.MODES).join(', ') + ')');
+  for (const sparita of ['horde', 'hunt', 'survival', 'treasure'])
+    assert(!Waves.MODES[sparita], 'la modalita ' + sparita + ' non esiste piu');
+  const m = Waves.MODES.assault;
+  assert(m.survive === 0 && !m.treasure, 'e non ha ne durata fissa ne scrigno');
+  // v1.78 — e nel motore non deve restare nemmeno l attrezzatura dello scrigno fuggitivo
+  assert(typeof (new Room('v178m')).spawnTreasure !== 'function', 'il metodo spawnTreasure e sparito dal server');
+  // e nessuna ondata ha piu' un tempo di sopravvivenza: il cronometro vale per tutte
+  const room = new Room('mod'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
+  assert(room.surviveT === undefined && room.parT > 0, 'ogni ondata ha un tempo obiettivo, e del tempo fisso non e rimasto nemmeno il campo');
+  ok('una modalita sola verificata');
 }
 function testHitstop() {
   console.log('\n[TEST 6] Hit-stop (eventi di feedback)');
@@ -137,7 +150,7 @@ function testFullRun(n, label) {
   console.log(`\n[TEST 8] Partita completa — ${n} bot (${label})`);
   const room = new Room('r' + n); for (let i = 0; i < n; i++) room.addPlayer('b' + i, { send() {} }, 'B' + i, Heroes.ORDER[i % 3]); room.startGame();
   const dt = 1 / C.TICK_RATE; let ticks = 0, maxMs = 0, tot = 0, nan = null, pWall = 0, maxMon = 0;
-  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (p.points > 0) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
+  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_CLEARED) for (const p of room.players.values()) room.exitWave(p.id);   /* v1.78 — il bot preme EXIT: senza, resterebbe fermo sulla mappa ripulita fino al timeout */ if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (p.points > 0) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
   console.log(`  fase: ${room.phase} · ondata: ${room.wave} · ~${(ticks / C.TICK_RATE) | 0}s · perf avg ${(tot / ticks).toFixed(3)}ms max ${maxMs.toFixed(2)}ms · picco ${maxMon} mostri`);
   assert(nan === null, 'nessun NaN (' + (nan || 'ok') + ')'); assert(maxMs < (1000 / C.TICK_RATE) * 3, 'no tick catastrofico'); assert((tot / ticks) < (1000 / C.TICK_RATE), 'perf media OK'); assert(pWall === 0, 'giocatori mai nei muri'); assert(room.wave >= 1, 'run progredita');
 }
@@ -2101,12 +2114,12 @@ function testV172() {
   assert(w.noLifeLost === true, "a inizio ondata la lavagna e pulita");
   w.down = true; w.downT = -1; w.lives = 2; rn.updatePlayers(1 / C.TICK_RATE);
   assert(w.noLifeLost === false, 'perdere una vita la sporca');
-  rn.monsters.length = 0; rn.pending = 0; rn._checkWaveClear();
+  rn.monsters.length = 0; rn.pending = 0; chiudiOndata(rn);
   assert(w.bounty && w.bounty.have === 0, "e l'ondata finita non chiude la taglia");
   // ondata nuova, questa volta pulita
   const rn2 = new Room('v172n2'); const w2 = rn2.addPlayer('f', conn, 'F', 'guerriero'); rn2.startGame(); rn2.phase = C.PHASE_COMBAT;
   w2.bounty = Bnt.istanza('illeso', 3); const c5 = w2.coins;
-  rn2.monsters.length = 0; rn2.pending = 0; rn2._checkWaveClear();
+  rn2.monsters.length = 0; rn2.pending = 0; chiudiOndata(rn2);
   assert(w2.bounty === null && w2.coins > c5, "un'ondata senza cadute la chiude e la paga");
 
   // --- 7) la taglia arriva al client, e si vede in partita ---
@@ -2355,17 +2368,17 @@ function testV1741() {
   // --- 1) fine ondata: i danni restano addosso ---
   const r = new Room('v1741a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
   r.phase = C.PHASE_COMBAT; p.hp = 80;
-  r.monsters.length = 0; r.pending = 0; r._checkWaveClear();
+  r.monsters.length = 0; r.pending = 0; chiudiOndata(r);
   assert(r.phase === C.PHASE_SHOP, "l'ondata si chiude");
   assert(p.hp === 80, 'e i PV restano quelli con cui l hai finita: nessuna cura di fine ondata');
   // nemmeno tre ondate di fila la rimettono
-  for (let w = 0; w < 3; w++) { r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0; r._checkWaveClear(); }
+  for (let w = 0; w < 3; w++) { r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0; chiudiOndata(r); }
   assert(p.hp === 80, 'nemmeno dopo tre ondate');
 
   // --- 2) chi e a TERRA viene comunque rialzato: quello non e curare ---
   const r2 = new Room('v1741b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame();
   r2.phase = C.PHASE_COMBAT; q.down = true; q.hp = 0;
-  r2.monsters.length = 0; r2.pending = 0; r2._checkWaveClear();
+  r2.monsters.length = 0; r2.pending = 0; chiudiOndata(r2);
   assert(!q.down && q.hp > 0, 'chi era a terra torna in gioco, altrimenti resterebbe fuori per sempre');
 
   // --- 3) le uniche vie che alzano i PV sono quelle che qualcuno ha CHIESTO ---
@@ -2646,7 +2659,7 @@ function testV177() {
   const boss = room.spawnMonster('orc_warlord', p.x + 60, p.y, { scaling: Waves.scaling(10, 1) });
   boss.boss = true; room.killMonster(boss, p); uccisi++;
   const mima = room.spawnMonster('mimic', p.x + 60, p.y, { scaling: Waves.scaling(7, 1) });
-  mima.treasure = 1; room.killMonster(mima, p); uccisi++;
+  room.killMonster(mima, p); uccisi++;   // v1.78 — non e piu uno "scrigno": la modalita Tesoro non esiste, la mima e un mostro come gli altri
   assert(room.items.length === 0, 'su ' + uccisi + ' nemici uccisi (elite, boss e cassa-mima compresi) non e caduto un solo oggetto (' + room.items.length + ')');
   // ...ma esperienza e monete devono continuare a cadere, se no si e rotta l economia
   assert(room.groundXp.length > 0, 'l esperienza continua a cadere');
@@ -2713,13 +2726,15 @@ function testV177() {
   assert(!r3.parPreso, 'chiudendo trenta secondi oltre l obiettivo il premio non scatta');
   assert(p3.coins === mon3, 'e le monete restano quelle (' + p3.coins + ')');
 
-  // le ondate a SOPRAVVIVENZA sono escluse: durano un tempo fisso, il premio toccherebbe sempre
+  // v1.78 — le ondate a sopravvivenza non esistono piu': il tempo obiettivo vale per TUTTE, senza
+  // eccezioni da spiegare. Si controlla proprio quello.
   const r4 = new Room('v177d'); r4.addPlayer('d', { send() {} }, 'D', 'ladro'); r4.startGame();
-  let trovata = 0;
-  for (let w = 1; w <= 20 && !trovata; w++) { const md = Waves.modeForWave(w); if (md && md.survive) trovata = w; }
-  assert(trovata > 0, 'esiste almeno un ondata a sopravvivenza (la ' + trovata + ')');
-  r4.wave = trovata - 1; r4.phase = C.PHASE_SHOP; r4.shopReady('d', 'next'); r4._afterShop();
-  assert(r4.mode.survive > 0 && r4.parT === 0, 'nell ondata a sopravvivenza non c e tempo obiettivo (parT ' + r4.parT + ')');
+  let senzaObiettivo = 0;
+  for (let w = 1; w <= 12; w++) {
+    r4.wave = w - 1; r4.phase = C.PHASE_SHOP; r4.shopReady('d', 'next'); r4._afterShop();
+    if (!(r4.parT > 0)) senzaObiettivo++;
+  }
+  assert(senzaObiettivo === 0, 'tutte le prime dodici ondate hanno un tempo obiettivo (' + senzaObiettivo + ' senza)');
   ok('novita v1.77 verificate');
 }
 function testPonteClient() {
@@ -2745,7 +2760,18 @@ function testPonteClient() {
     else if (hud[i] === '}') { liv--; if (liv === 0) { fine = i; break; } }
   }
   assert(fine > inizio, 'e se ne trova la fine');
-  const corpo = hud.slice(inizio, fine);
+  let corpo = hud.slice(inizio, fine);
+  // v1.78 — updateTop delega: _aggiornaUscita legge snap.ex e vive fuori da updateTop. Se si guardasse
+  // solo il corpo di updateTop, un campo letto da un metodo delegato passerebbe sotto il radar — che e'
+  // esattamente il buco da cui e' nato il cronometro fermo.
+  for (const m of corpo.matchAll(/this\.(_[a-zA-Z0-9_]+)\(snap/g)) {
+    // la DEFINIZIONE, non la chiamata: la chiamata e' preceduta da 'this.', la definizione da un a capo.
+    const i2 = hud.indexOf('\n    ' + m[1] + '(snap');
+    if (i2 < 0) continue;
+    let l2 = 0, f2 = -1;
+    for (let i = hud.indexOf('{', i2); i < hud.length; i++) { if (hud[i] === '{') l2++; else if (hud[i] === '}') { l2--; if (l2 === 0) { f2 = i; break; } } }
+    if (f2 > i2) corpo += hud.slice(i2, f2);
+  }
   const letti = new Set();
   for (const m of corpo.matchAll(/\bsnap\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) letti.add(m[1]);
   assert(letti.size > 3, 'updateTop legge piu di tre campi dallo snapshot (' + [...letti].join(', ') + ')');
@@ -2764,8 +2790,178 @@ function testPonteClient() {
 
   // e il cronometro in particolare, che e' il caso da cui e nato tutto
   assert(copiati.has('wt') && copiati.has('wp'), 'il cronometro (wt) e il tempo obiettivo (wp) arrivano fino all HUD');
+  assert(letti.has('ex'), 'il ponte vede anche i campi letti dai metodi delegati (ex, lo stato dell uscita)');
+  assert(copiati.has('ex'), 'e lo stato dell uscita (ex) arriva fino all HUD');
   ok('il ponte fra server e HUD regge');
 }
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ===================== v1.78 — USCITA, CARTE DAI LIVELLI, RIEPILOGO =====================
+// Le cinque richieste di questa versione, ognuna con la sua prova:
+//  1. i font del testo cresciuti di 1px, i titoli no
+//  2. la mappa ripulita non ti sbatte fuori: c'e' il pulsante EXIT
+//  3. le carte si scelgono salendo di livello, non finendo un'ondata
+//  4. una sola modalita' (la prova sta nel TEST 5, riscritto)
+//  5. il riepilogo di fine livello
+function testV178() {
+  console.log('\n[TEST 51] Novita v1.78 — uscita col pulsante EXIT, carte dai livelli, riepilogo di fine livello');
+  const conn = () => { const box = []; return { box, send(s) { box.push(JSON.parse(s)); } }; };
+
+  // --- 1. LA MAPPA RIPULITA NON CHIUDE DA SOLA ---
+  const c1 = conn();
+  const r = new Room('v178a'); const p = r.addPlayer('a', c1, 'A', 'guerriero'); r.startGame();
+  r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0;
+  r._checkWaveClear();
+  assert(r.phase === C.PHASE_CLEARED, 'uccisi tutti i nemici la fase e "mappa ripulita", non il negozio');
+  assert(r.snapshot().ex && r.snapshot().ex.tot === 1, 'lo snapshot dice a quanti si sta aspettando');
+  assert(r.snapshot().ex.n === 0, 'e che nessuno ha ancora premuto EXIT');
+  const clearEv = c1.box.filter(m => m.ev && m.ev.t === 'cleared');
+  assert(clearEv.length === 1, 'l avviso di mappa ripulita parte una volta sola');
+  // il tempo si ferma qui: aspettare non deve costare il premio di velocita'
+  const t1 = r.snapshot().wt;
+  for (let i = 0; i < C.TICK_RATE * 20; i++) r.update(1 / C.TICK_RATE);
+  assert(r.phase === C.PHASE_CLEARED, 'venti secondi dopo si e ancora li: nessuno ha premuto');
+  assert(Math.abs(r.snapshot().wt - t1) < 0.01, 'e il cronometro e fermo (' + t1 + ' -> ' + r.snapshot().wt + ')');
+  r.exitWave('a');
+  assert(r.phase === C.PHASE_SHOP, 'premuto EXIT si va al pannello di fine ondata');
+
+  // --- 2. IN COOPERATIVA SI ASPETTANO TUTTI, MA NON I CADUTI ---
+  const r2 = new Room('v178b');
+  const a = r2.addPlayer('a', conn(), 'A', 'guerriero'), b = r2.addPlayer('b', conn(), 'B', 'mago'), d = r2.addPlayer('d', conn(), 'D', 'ladro');
+  r2.startGame(); r2.phase = C.PHASE_COMBAT; r2.monsters.length = 0; r2.pending = 0; r2._checkWaveClear();
+  assert(r2.phase === C.PHASE_CLEARED, 'in tre la mappa ripulita aspetta');
+  r2.exitWave('a');
+  assert(r2.phase === C.PHASE_CLEARED, 'uno solo non basta a portare via gli altri');
+  assert(r2.snapshot().ex.n === 1 && r2.snapshot().ex.tot === 3, 'e si vede 1 su 3');
+  d.dead = true;                              // un caduto non puo' premere niente
+  r2.exitWave('b');
+  assert(r2.phase === C.PHASE_SHOP, 'chi e caduto non si aspetta: premuto da tutti i vivi si esce');
+
+  // --- 3. L ANTI-AFK: dopo EXIT_TIMEOUT si esce comunque ---
+  const r3 = new Room('v178c'); r3.addPlayer('a', conn(), 'A', 'guerriero'); r3.addPlayer('b', conn(), 'B', 'mago');
+  r3.startGame(); r3.phase = C.PHASE_COMBAT; r3.monsters.length = 0; r3.pending = 0; r3._checkWaveClear();
+  let sec = 0; while (r3.phase === C.PHASE_CLEARED && sec < C.EXIT_TIMEOUT + 30) { for (let i = 0; i < C.TICK_RATE; i++) r3.update(1 / C.TICK_RATE); sec++; }
+  assert(r3.phase === C.PHASE_SHOP, 'nessuno preme: dopo il tempo massimo si esce lo stesso');
+  assert(sec >= C.EXIT_TIMEOUT - 2, 'ma non prima del tempo massimo (' + sec + 's su ' + C.EXIT_TIMEOUT + ')');
+
+  // --- 4. ASPETTARE NON COSTA IL PREMIO DI VELOCITA ---
+  const c4 = conn();
+  const r4 = new Room('v178d'); const q = r4.addPlayer('a', c4, 'A', 'guerriero'); r4.startGame();
+  r4.phase = C.PHASE_COMBAT; r4.waveT0 = r4.time; r4.parT = 40; r4.monsters.length = 0; r4.pending = 0;
+  for (let i = 0; i < C.TICK_RATE * 10; i++) r4.update(1 / C.TICK_RATE);   // ondata chiusa in ~10s
+  assert(r4.phase === C.PHASE_CLEARED, 'la mappa e ripulita');
+  for (let i = 0; i < C.TICK_RATE * 60; i++) r4.update(1 / C.TICK_RATE);   // un minuto a raccogliere con calma
+  r4.exitWave('a');
+  assert(r4.parPreso === 1, 'il premio di velocita si guadagna sul tempo di COMBATTIMENTO, non sul tempo passato a raccogliere');
+
+  // --- 4bis. QUELLO CHE E' A TERRA TI ASPETTA ---
+  // Con l'uscita a pulsante si puo' girare per la mappa un minuto intero: se le sfere continuassero a
+  // scadere, il bottino sparirebbe sotto gli occhi di chi lo sta andando a prendere.
+  const r45 = new Room('v178d2'); const k = r45.addPlayer('a', conn(), 'A', 'guerriero'); r45.startGame();
+  r45.phase = C.PHASE_COMBAT;
+  for (let i = 0; i < 6; i++) { const m = r45.spawnMonster('skeleton', k.x + 900, k.y, { scaling: Waves.scaling(2, 1) }); r45.killMonster(m, k); }
+  const sfere = r45.groundXp.length, soldi = r45.groundCoins.length;
+  assert(sfere > 0 && soldi > 0, 'i nemici hanno lasciato esperienza e monete per terra');
+  r45.monsters.length = 0; r45.pending = 0; r45._checkWaveClear();
+  assert(r45.phase === C.PHASE_CLEARED, 'mappa ripulita');
+  for (let i = 0; i < C.TICK_RATE * 60; i++) r45.update(1 / C.TICK_RATE);   // un minuto buono a girare
+  assert(r45.groundXp.length === sfere && r45.groundCoins.length === soldi,
+    'dopo un minuto sulla mappa ripulita la roba a terra e ancora li (' + r45.groundXp.length + '/' + sfere + ' sfere, ' + r45.groundCoins.length + '/' + soldi + ' monete)');
+
+  // --- 5. LE CARTE ARRIVANO DAI LIVELLI ---
+  const c5 = conn();
+  const r5 = new Room('v178e'); const z = r5.addPlayer('a', c5, 'A', 'guerriero'); r5.startGame();
+  assert(z.carteDovute === 0, 'a inizio partita non si deve nessuna carta');
+  r5.phase = C.PHASE_COMBAT; r5.monsters.length = 0; r5.pending = 0; c5.box.length = 0;
+  r5._checkWaveClear(); r5.exitWave('a');
+  const offerte0 = c5.box.filter(m => m.t === C.MSG.OFFER_BOON && m.boons.length);
+  assert(offerte0.length === 0, 'chiudere un ondata senza salire di livello NON regala nessuna carta');
+  const vuoto = c5.box.filter(m => m.t === C.MSG.OFFER_BOON && !m.boons.length);
+  assert(vuoto.length === 1 && vuoto[0].manca > 0, 'ma il pannello dice quanta XP manca al livello');
+  // tre livelli in un ondata = tre carte, una dopo l altra
+  const r6 = new Room('v178f'); const y = r6.addPlayer('a', conn(), 'A', 'mago'); r6.startGame();
+  r6.phase = C.PHASE_COMBAT;
+  const primaLv = y.level; r6.addXp(y, 3000);
+  const saliti = y.level - primaLv;
+  assert(saliti >= 3, 'con 3000 XP si sale di almeno tre livelli (' + saliti + ')');
+  assert(y.carteDovute === saliti, 'e si devono altrettante carte (' + y.carteDovute + ')');
+  r6.monsters.length = 0; r6.pending = 0; r6._checkWaveClear(); r6.exitWave('a');
+  // il premio di velocita' e' esperienza anche lui: puo' far salire un altro livello proprio mentre si
+  // esce, e allora le carte dovute sono una in piu'. Si misura il debito DOPO l'uscita, non prima.
+  const dovute = y.carteDovute;
+  assert(dovute >= saliti, 'il debito comprende anche i livelli presi col premio di fine ondata (' + dovute + ')');
+  let scelte = 0;
+  while (y.boonOffer && y.boonOffer.length && scelte < 12) { r6.pickBoon('a', y.boonOffer[0]); scelte++; }
+  assert(scelte === dovute, 'il mazzo si riapre finche le carte dovute non sono finite (' + scelte + '/' + dovute + ')');
+  assert(y.carteDovute === 0, 'poi il debito e chiuso');
+  // e nell ondata dopo, senza livelli, non si offre piu niente
+  r6.nextWave(); r6.phase = C.PHASE_COMBAT; r6.monsters.length = 0; r6.pending = 0;
+  r6._checkWaveClear(); r6.exitWave('a');
+  assert(!(y.boonOffer && y.boonOffer.length), 'ondata successiva senza livelli: nessuna carta');
+
+  // --- 6. IL RIEPILOGO DI FINE LIVELLO ---
+  const c7 = conn();
+  const r7 = new Room('v178g'); const w = r7.addPlayer('a', c7, 'A', 'ladro'); r7.startGame();
+  r7.phase = C.PHASE_COMBAT; r7.waveT0 = r7.time; r7.parT = 300;
+  const uccisi = 5;
+  for (let i = 0; i < uccisi; i++) { const m = r7.spawnMonster('skeleton', w.x + 200, w.y, { scaling: Waves.scaling(2, 1) }); r7.killMonster(m, w); }
+  assert(w.ondata.uccisi === uccisi, 'il contatore dell ondata conta i nemici uccisi (' + w.ondata.uccisi + ')');
+  // l'esperienza si conta quando la RACCOGLI, non quando cade: le sfere restano a terra finche' non le
+  // prendi, ed e' giusto che il riepilogo dica cosa hai in tasca e non cosa era per terra.
+  assert(w.ondata.xp === 0, 'l esperienza per terra non e ancora tua');
+  r7.addXp(w, 40);
+  assert(w.ondata.xp === 40, 'quella raccolta invece si (' + w.ondata.xp + ')');
+  c7.box.length = 0;
+  r7.monsters.length = 0; r7.pending = 0; r7._checkWaveClear(); r7.exitWave('a');
+  const rep = c7.box.filter(m => m.t === C.MSG.WAVE_STATS);
+  assert(rep.length === 1, 'il riepilogo arriva una volta sola');
+  const R = rep[0];
+  assert(R.uccisi === uccisi, 'e riporta i nemici uccisi (' + R.uccisi + ')');
+  assert(R.xp > 0 && R.monete >= 0, 'esperienza e monete dell ondata');
+  assert(R.durata >= 0 && R.par === 300, 'quanto e durata e qual era il tempo obiettivo');
+  assert(R.bonus && R.bonus.xp > 0 && R.bonus.monete > 0, 'e il premio del cronometro, visto che siamo rimasti sotto');
+  // fuori tempo: il riepilogo c e lo stesso, senza premio
+  const c8 = conn();
+  const r8 = new Room('v178h'); const v = r8.addPlayer('a', c8, 'A', 'ladro'); r8.startGame();
+  r8.phase = C.PHASE_COMBAT; r8.parT = 5; r8.waveT0 = r8.time - 60;
+  r8.monsters.length = 0; r8.pending = 0; c8.box.length = 0; r8._checkWaveClear(); r8.exitWave('a');
+  const R8 = c8.box.filter(m => m.t === C.MSG.WAVE_STATS)[0];
+  assert(!!R8 && !R8.bonus, 'fuori tempo il riepilogo arriva comunque, ma senza premio');
+  // il conto si azzera all ondata nuova
+  assert(v.ondata.uccisi === 0 && v.ondata.xp === 0, 'e a ondata nuova il conto riparte da zero');
+
+  // --- 7. I FONT DEL TESTO SONO CRESCIUTI DI 1px, I TITOLI NO ---
+  const css = fs.readFileSync(__dirname + '/../public/style.css', 'utf8');
+  assert(/h1\{font-size:44px/.test(css), 'il titolo grande e rimasto a 44px');
+  assert(/h2\{font-size:19px/.test(css), 'i titoli di sezione sono rimasti a 19px');
+  assert(/#hud\{[^}]*font-size:15px/.test(css), 'il testo dell interfaccia e passato a 15px');
+  assert(/\.kf\{[^}]*font-size:13px/.test(css), 'il registro delle uccisioni e passato a 13px');
+  // e nessun colore rotto: e' successo davvero (un "#ffc" seguito da una parola) e non si vede finche'
+  // non guardi quella riga a schermo.
+  // e nessun colore rotto: e' successo davvero (un "#ffc" seguito da una parola, e un ideogramma in
+  // mezzo a un esadecimale) e non te ne accorgi finche' non guardi QUELLA riga a schermo.
+  // Si controllano solo i VALORI delle dichiarazioni: i selettori cominciano per # anche loro.
+  const valori = [...css.matchAll(/([a-z-]+)\s*:\s*([^;{}]+)[;}]/g)];
+  assert(valori.length > 300, 'il foglio di stile ha le sue dichiarazioni (' + valori.length + ')');
+  const rotti = [];
+  for (const m of valori) {
+    const prop = m[1], grezzo = m[2].trim();
+    // ogni esadecimale dev essere lungo 3, 4, 6 o 8 cifre: "#12<qualcosa>7040" si spezza e si vede subito
+    for (const h of grezzo.match(/#[0-9a-zA-Z]*/g) || [])
+      if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(h)) rotti.push(prop + ':' + grezzo);
+    // e un colore e' UN valore solo: "#ffc martedi" sono due parole, quindi e un errore di battitura
+    if (/color$/.test(prop)) {
+      let senzaFunzioni = grezzo;   // le funzioni si annidano (var dentro var): si sbucciano finche restano
+      for (let g = 0; g < 6; g++) { const q = senzaFunzioni.replace(/[a-z-]*\([^()]*\)/gi, 'F'); if (q === senzaFunzioni) break; senzaFunzioni = q; }
+      if (/\s/.test(senzaFunzioni) || !/^(#[0-9a-fA-F]{3,8}|F|[a-zA-Z]+)$/.test(senzaFunzioni)) rotti.push(prop + ':' + grezzo);
+    }
+  }
+  assert(rotti.length === 0, 'nessun colore e scritto male (' + rotti.slice(0, 3).join(' | ') + ')');
+  // un ideogramma dentro un colore esadecimale non e' una scelta di stile: e' un tasto sbagliato.
+  const strani = css.match(/[\u2E80-\u9FFF\uAC00-\uD7AF]/g) || [];
+  assert(strani.length === 0, 'e nessun ideogramma finito li per sbaglio (' + strani.slice(0, 3).join(' ') + ')');
+
+  ok('novita v1.78 verificate');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

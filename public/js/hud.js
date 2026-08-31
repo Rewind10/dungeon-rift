@@ -44,9 +44,8 @@
     },
     updateTop(snap, me) {
       $('waveNum').textContent = snap.wave + '/' + window.GAME.Constants.FINAL_WAVE; $('ecNum').textContent = snap.mcount + (snap.pend > 0 ? '+' : '');
-      const ph = { combat: 'COMBATTIMENTO', boss: '⚠ BOSS', shop: 'POTENZIAMENTI', lobby: 'LOBBY', gameover: 'SCONFITTA', victory: 'VITTORIA' };
+      const ph = { combat: 'COMBATTIMENTO', boss: '⚠ BOSS', shop: 'POTENZIAMENTI', lobby: 'LOBBY', gameover: 'SCONFITTA', victory: 'VITTORIA', cleared: '✔ MAPPA RIPULITA' };
       let phase = ph[snap.phase] || '';
-      if (snap.phase === 'combat' && snap.mode === 'survival' && snap.survive > 0) phase = 'SOPRAVVIVI: ' + Math.ceil(snap.survive) + 's';
       $('phaseInfo').textContent = phase;
       // v1.77 — il cronometro dell'ondata e il tempo obiettivo
       const wt = $('waveTimer');
@@ -64,6 +63,9 @@
           wt.classList.remove('hidden');
         }
       }
+      // v1.78 — MAPPA RIPULITA: avviso in alto e pulsante EXIT al centro. Il pulsante torna al suo stato
+      // di partenza appena la fase cambia, se no alla ondata dopo lo si troverebbe gia' "in attesa".
+      this._aggiornaUscita(snap);
       if (me) {
         this._updateVitals(me);
         let chips = `<div class="chip">💀 ${me.k}</div><div class="chip" style="color:#8bffb0">✦ ${me.xp} XP</div><div class="chip" style="color:#ffcf4a" title="monete">🪙 ${me.co || 0}</div>`;
@@ -73,7 +75,9 @@
         $('statChips').innerHTML = chips;
         // v1.6 — combo meter
         const cm = $('comboMeter');
-        if (me.cmb && me.cmb >= 3) {
+        // v1.78 — a mappa ripulita il contatore di combo sparisce: la combo e finita comunque, e li in
+        // mezzo starebbe sopra alla scritta ONDATA COMPLETATA.
+        if (me.cmb && me.cmb >= 3 && snap.phase !== 'cleared') {
           cm.classList.remove('hidden');
           $('comboN').textContent = me.cmb;
           $('comboMult').textContent = 'x' + (me.cmx || 1).toFixed(1);
@@ -81,6 +85,56 @@
           if (me.cmb !== this._lastCombo) { cm.classList.remove('pop'); void cm.offsetWidth; cm.classList.add('pop'); this._lastCombo = me.cmb; }
         } else { cm.classList.add('hidden'); this._lastCombo = 0; }
       } else { $('comboMeter').classList.add('hidden'); }
+    },
+    // v1.78 — l'uscita dalla mappa ripulita. In singolo il pulsante chiude subito l'ondata; in
+    // cooperativa aspetta che tutti abbiano premuto (i caduti non si aspettano) e nel frattempo dice a
+    // che punto e' l'attesa. Il conto alla rovescia e' l'anti-AFK, non una fretta.
+    _aggiornaUscita(snap) {
+      const top = $('clearTop'), btn = $('exitBtn'); if (!top || !btn) return;
+      const hud = $('hud');
+      if (snap.phase !== 'cleared') {
+        if (this._uscitaOn) { top.classList.add('hidden'); btn.classList.add('hidden'); btn.classList.remove('attesa'); if (hud) hud.classList.remove('ripulita'); this._uscitaOn = false; this._exitPremuto = false; }
+        return;
+      }
+      this._uscitaOn = true;
+      // gli annunci al centro (LEVEL UP, rango nuovo) nascono al 20% dell'altezza, cioe' esattamente
+      // sopra la scritta: finche' la mappa e' ripulita scendono piu' in basso.
+      if (hud) hud.classList.add('ripulita');
+      top.classList.remove('hidden'); btn.classList.remove('hidden');
+      const ex = snap.ex || { n: 0, tot: 1, t: 0 };
+      const sub = $('clearSub');
+      if (this._exitPremuto) {
+        btn.classList.add('attesa');
+        btn.textContent = ex.tot > 1 ? 'IN ATTESA ' + ex.n + '/' + ex.tot : 'USCITA…';
+        if (sub) sub.innerHTML = ex.tot > 1
+          ? 'Aspettiamo gli altri: <b>' + ex.n + ' su ' + ex.tot + '</b> hanno premuto EXIT — uscita automatica fra ' + ex.t + 's'
+          : 'Uscita in corso…';
+      } else {
+        btn.classList.remove('attesa');
+        btn.textContent = 'EXIT';
+        if (sub) sub.innerHTML = 'Raccogli quello che resta, poi premi <b>EXIT</b> al centro per uscire'
+          + (ex.tot > 1 ? ' <span style="opacity:.75">(' + ex.n + '/' + ex.tot + ' pronti)</span>' : '')
+          + ' <span style="opacity:.6">— automatica fra ' + ex.t + 's</span>';
+      }
+    },
+    exitPremuto() { this._exitPremuto = true; const b = $('exitBtn'); if (b) { b.classList.add('attesa'); b.textContent = 'USCITA…'; } },
+    // v1.78 — IL RIEPILOGO DI FINE LIVELLO, in cima al pannello di fine ondata.
+    setWaveStats(m) {
+      this._wstats = m;
+      const box = $('waveStats'); if (!box) return;
+      if (!m) { box.classList.add('hidden'); return; }
+      const mm = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+      const cella = (v, k, cl) => '<div class="ws-i ' + (cl || '') + '"><div class="v">' + v + '</div><div class="k">' + k + '</div></div>';
+      let h = '<div class="ws-h">Ondata ' + m.wave + ' — riepilogo</div><div class="ws-row">';
+      h += cella('💀 ' + (m.uccisi || 0), 'nemici');
+      h += cella('✦ ' + (m.xp || 0), 'esperienza', 'xp');
+      h += cella('🪙 ' + (m.monete || 0), 'monete', 'oro');
+      h += cella('⏱ ' + mm(m.durata || 0), (m.par ? 'su ' + mm(m.par) : 'durata'));
+      if (m.livelli > 0) h += cella('▲ ' + m.livelli, m.livelli === 1 ? 'livello' : 'livelli', 'liv');
+      h += '</div>';
+      if (m.bonus) h += '<div class="ws-b si">⚡ Sotto il tempo obiettivo: <b>+' + m.bonus.xp + ' XP</b> e <b>+' + m.bonus.monete + ' monete</b></div>';
+      else if (m.par) h += '<div class="ws-b no">Fuori dal tempo obiettivo di ' + mm(m.par) + ' — nessun premio di velocita\u0300</div>';
+      box.innerHTML = h; box.classList.remove('hidden');
     },
     updateBossBar(snap) { const boss = snap.mon.find(m => m.b); const wrap = $('bossBarWrap'); if (boss) { wrap.classList.remove('hidden'); const def = MON[boss.t] || BOSSES[boss.t] || {}; $('bossName').textContent = (def.name || 'BOSS').toUpperCase(); const bar = wrap.querySelector('#bossBar i'); bar.style.width = (100 * Math.max(0, boss.hp / boss.mhp)) + '%'; bar.style.background = boss.mg ? 'linear-gradient(90deg,#ff2d55,#b061ff)' : 'linear-gradient(90deg,#ff2d55,#ff7a3d)'; } else wrap.classList.add('hidden'); },
     killfeed(text) { const kf = $('centerFeed') || $('killfeed'); const el = document.createElement('div'); el.className = 'cf-item'; el.innerHTML = text; kf.appendChild(el); void el.offsetWidth; el.classList.add('show'); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600); while (kf.children.length > 4) kf.removeChild(kf.firstChild); },
@@ -157,8 +211,20 @@
       this._renderRank();
       // BOON row (top)
       const brow = $('boonCards'); brow.innerHTML = '';
-      if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
+      // v1.78 — sezione visibile anche a mani vuote, per dire PERCHE' non c'e' nessuna carta.
+      if (this._boons && this._boons.boons && !this._boons.boons.length && this._boons.manca != null && !this._boons.picked) {
         $('boonSection').classList.remove('hidden');
+        const bt0 = $('boonTitle'); if (bt0) bt0.textContent = '🎴 NESSUNA CARTA QUESTA VOLTA';
+        const bs0 = $('boonSub');
+        if (bs0) bs0.innerHTML = 'I poteri arrivano <b>salendo di livello</b>. Al livello ' + ((this._boons.liv || 1) + 1) + ' mancano <b>' + this._boons.manca + ' XP</b>.';
+      } else if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
+        $('boonSection').classList.remove('hidden');
+        // v1.78 — le carte arrivano dai LIVELLI: la riga sotto al titolo dice quale livello l'ha pagata e
+        // quante ne restano, se no chi ne ha guadagnati tre non capisce perche' il mazzo si riapre.
+        const bt = $('boonTitle'); if (bt) bt.textContent = '🎴 SCEGLI UN POTERE';
+        const bs = $('boonSub');
+        if (bs) { const r = this._boons.resta || 1, l = this._boons.liv || 0;
+          bs.innerHTML = (l ? 'Livello <b>' + l + '</b> — ' : '') + (r > 1 ? 'carta 1 di ' + r : 'una carta'); }
         this._boons.boons.forEach(b => { const rar = RAR[b.rarity] || RAR.common; const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = rar.color; el.innerHTML = `<span class="rar" style="color:${rar.color}">${rar.name}</span><div class="icon">${b.icon}</div><div class="nm">${b.name}</div><div class="ds">${b.desc}</div>${b.owned ? `<div class="own">posseduto ×${b.owned}</div>` : ''}`; el.onclick = () => { if (this._pick) this._pick(b.id); this._boons.picked = true; this._render(); }; brow.appendChild(el); });
       } else { $('boonSection').classList.add('hidden'); }
       // STAT shop

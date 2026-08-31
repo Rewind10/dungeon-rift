@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, mode: 'assault', survive: 0 }, lastInput: 0 };
+  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -18,6 +18,8 @@
 
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), (dest) => Net.shopReady(dest || 'wave')); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
+  Net.onWaveStats = (m) => { HUD.setWaveStats(m); };   // v1.78 — riepilogo di fine livello
+  $('exitBtn').onclick = () => { Net.exitWave(); HUD.exitPremuto(); };   // v1.78 — arriva solo se hai guadagnato livelli, e una volta per livello
   Net.onOfferRank = (m) => { HUD.setRank(m, (id) => Net.pickRank(id)); };
   // v1.52 — l'offerta arriva sia dal pannello di fine ondata (se riabilitato) sia dal mercante del MERCATO:
   // 'near' distingue i due casi.
@@ -139,16 +141,15 @@
       case 'boss_tell': R.ring(ev.x, ev.y, '#ff3b3b', 10, 80, 0.5); break;
       case 'boss_spawn': A.boss(); R.addShake(ev.mega ? 22 : 16); HUD.killfeed('⚠ <b style="color:' + (ev.mega ? '#ff2d55' : '#ff5252') + '">' + esc(ev.name) + '</b> ' + (ev.mega ? 'INCOMBE!' : 'è apparso!')); break;
       case 'par_ok': HUD.killfeed('\u23F1 ONDATA VELOCE \u2014 +' + ev.xp + ' XP, +' + ev.monete + ' \uD83E\uDE99'); break;
-      case 'wave': A.wave(); HUD.killfeed((ev.final ? '☠ ONDATA FINALE ' : (ev.boss ? '⚠ ONDATA BOSS ' : '🌊 Ondata ')) + ev.wave); if (ev.modeName && !ev.boss) HUD.modeBanner(ev.modeName, ev.modeColor, ev.modeDesc); break;
+      case 'wave': A.wave(); HUD.killfeed((ev.final ? '☠ ONDATA FINALE ' : (ev.boss ? '⚠ ONDATA BOSS ' : '🌊 Ondata ')) + ev.wave); /* v1.78 — qui si annunciava la modalita dell ondata: non esistono piu, l ondata e una sola. */ break;
       case 'shop': HUD.killfeed('✨ Scegli un potere e spendi la XP'); break;
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;
       case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
       case 'boon_ok': if (ev.off) HUD.killfeed('\uD83C\uDCCF <b>' + esc(ev.name) + '</b> \u2014 <b style="color:#ffcf4a">presa ma SPENTA</b>: hai gi\u00e0 5 carte attive, accendila dalla Cartomante'); A.boon(); HUD.killfeed(`🎴 Potere ottenuto: ${ev.icon} <b>${esc(ev.name)}</b>`); HUD.onBoonPicked(); break;
       case 'weapon_evo': A.evo(); R.ring(ev.x, ev.y, ev.color || '#b061ff', 10, 90, 0.7); R.burst(ev.x, ev.y, ev.color || '#b061ff', 26, 220, 0.7); R.addShake(8); HUD.killfeed(`✦ <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ARMA EVOLUTA: <b>${esc(ev.name)}</b>!`); break;
-      case 'treasure_spawn': HUD.killfeed('👑 <b style="color:#ffd24a">Scrigno del Tesoro!</b> Uccidilo prima che fugga!'); break;
-      case 'treasure_dead': R.burst(ev.x, ev.y, '#ffd24a', 30, 240, 0.8); R.ring(ev.x, ev.y, '#ffd24a', 8, 120, 0.6); HUD.killfeed('💰 <b style="color:#ffd24a">Tesoro conquistato!</b>'); break;
-      case 'treasure_escape': HUD.killfeed('💨 <b style="color:#ff8a5b">Lo scrigno è fuggito…</b>'); break;
+      // v1.78 — qui c'erano i tre annunci dello Scrigno del Tesoro (comparsa, morte, fuga). La
+      // modalita' Tesoro non esiste piu', quindi il server non manda piu' quegli eventi.
       case 'item_pickup': { const rare = ['i_rage', 'i_invuln', 'i_life', 'i_power'].includes(ev.id); A.item(rare); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 70, 0.5); R.burst(ev.x, ev.y, ev.color || '#ffd24a', rare ? 22 : 12, 180, 0.6); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ${esc(ev.name)}`); break; }
       case 'weapon_pickup': A.weapon(); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 70, 0.5); R.burst(ev.x, ev.y, ev.color, 16, 170, 0.6); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ${esc(ev.name)} <b>Lv.${ev.level}</b>`); break;
       case 'crate_buff': A.crate(); R.ring(ev.x, ev.y, ev.color, 8, 60, 0.5); R.burst(ev.x, ev.y, ev.color, 16, 160, 0.6); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ${esc(ev.name)}!`); break;
@@ -200,8 +201,8 @@
     // E' successo col cronometro dell'ondata (v1.77): il server mandava wt e wp, il client li buttava,
     // e il cronometro restava fermo su 0:00. C'e' un controllo in test/client.js che confronta i campi
     // letti da updateTop con quelli copiati qui, apposta perche' non ricapiti.
-    w.bt = next.bt; w.wave = next.wave; w.phase = next.phase; w.mcount = next.mcount; w.pend = next.pend; w.mode = next.mode; w.survive = next.survive;
-    w.wt = next.wt; w.wp = next.wp;
+    w.bt = next.bt; w.wave = next.wave; w.phase = next.phase; w.mcount = next.mcount; w.pend = next.pend;
+    w.wt = next.wt; w.wp = next.wp; w.ex = next.ex;
   }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function lerpA(a, b, t) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; }

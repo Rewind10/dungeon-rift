@@ -2,6 +2,66 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.78.0] — 2026-08-31 · "L'ondata finisce quando lo decidi tu"
+
+Cinque richieste in un colpo solo: font piu' leggibili, l'uscita dalla mappa a pulsante invece che di
+scatto, le carte agganciate ai livelli, una sola modalita' di ondata e un riepilogo di fine livello.
+
+#### ✔ La mappa ripulita non ti sbatte fuori
+Prima l'ultimo nemico che cadeva ti spediva nel pannello del negozio nello stesso fotogramma: non
+facevi in tempo a capire di aver vinto, e quello che era rimasto a terra lo raccoglieva il gioco al
+posto tuo. Adesso c'e' una fase in mezzo — **MAPPA RIPULITA** — con la scritta in alto e il pulsante
+**EXIT** al centro dello schermo. Si esce quando si vuole.
+- Il **cronometro si ferma** al momento dell'ultima uccisione: aspettare non costa il premio di
+  velocita' (misurato: ondata chiusa in 10 s, un minuto passato a raccogliere, premio incassato lo
+  stesso).
+- **Quello che e' a terra non scade** finche' la mappa e' ripulita. Le sfere vivono 30 secondi: senza
+  questa regola sparirebbero sotto gli occhi di chi le sta andando a prendere. Si ferma solo la
+  scadenza, non la calamita.
+- In cooperativa si aspettano **tutti i vivi** (i caduti no, non potrebbero premere niente) e il
+  pulsante dice a che punto e' l'attesa. Dopo `EXIT_TIMEOUT` (120 s) si esce comunque: e' l'anti-AFK.
+- Il pulsante sta al centro in orizzontale ma un po' **sotto** in verticale: al centro esatto coprirebbe
+  il tuo personaggio, che sta sempre li'.
+
+#### 🎴 Le carte si scelgono salendo di livello
+Prima ogni fine ondata regalava una carta: il potere arrivava col **calendario**, non col merito.
+Adesso la fonte e' una sola — il **livello** — e chi ne guadagna tre ne sceglie tre, una dopo l'altra.
+- Quando non sei salito di livello il mazzo non si apre, ma il pannello **dice perche'** ("i poteri
+  arrivano salendo di livello: al livello 2 mancano 105 XP") invece di restare muto: un riquadro vuoto
+  senza spiegazione si legge come un guasto.
+- Il debito si porta dietro: se sali di livello durante un'ondata a cui e' gia' agganciata una carta di
+  rango, la carta ti aspetta all'ondata dopo.
+- Misura sul ritmo: la prima carta adesso arriva a fine **seconda** ondata invece che della prima, ma
+  all'ottava un giocatore solo ne ha **10** invece di 8. Piu' lento all'inizio, piu' generoso dopo.
+
+#### 📊 Il riepilogo di fine livello
+Un box in cima al pannello: nemici uccisi, esperienza e monete **di quell'ondata**, quanto e' durata
+contro il tempo obiettivo, i livelli guadagnati e il premio del cronometro se sei rimasto sotto. Se sei
+finito fuori tempo lo dice, invece di tacere.
+
+#### 🗑 Una sola modalita'
+Via **Orda**, **Caccia**, **Sopravvivenza** e **Tesoro**: ogni ondata e' un'ondata normale, e
+l'indicazione della modalita' e' sparita dalla mappa perche' non indicava piu' niente. Con loro se ne
+vanno lo scrigno fuggitivo (`spawnTreasure`), i suoi tre eventi, i moltiplicatori di XP e monete che
+valevano solo per lui e le ondate a tempo fisso.
+
+#### 🔤 +1px su tutti i font del testo
+Cento regole del foglio di stile e quindici scritte disegnate sul canvas. **Non** sono cresciuti i
+titoli (h1 resta 44px, h2 resta 19px), le icone e le emoji (che sono disegni, non testo) e i numeroni
+gia' grandi (vita, combo, contatori).
+
+#### I test
+1072 controlli nella suite del server (+46) e la suite dell'interfaccia estesa. Fra i nuovi:
+- il **ponte server→HUD** adesso guarda anche i metodi **delegati** da `updateTop` — `snap.ex` viveva
+  fuori da `updateTop` e sarebbe passato sotto il radar, che e' esattamente il buco da cui era nato il
+  cronometro fermo. Provato contro il codice col difetto: *«persi: ex»*.
+- un controllo sui **colori del CSS**: ogni esadecimale dev'essere lungo 3, 4, 6 o 8 cifre e un colore
+  dev'essere **un** valore solo. Nato da due errori di battitura veri (`#ffc martedi` in v1.77.2, e un
+  ideogramma finito in mezzo a un esadecimale in questa versione): a schermo non si vedono finche' non
+  guardi quella riga. Provati entrambi contro il test: li prende.
+- la prova che la roba a terra **non scade** sulla mappa ripulita, provata contro il codice senza la
+  correzione: *«0/6 sfere, 0/6 monete»*.
+
 ### [1.77.3] — 2026-08-30 · "Il cronometro arriva fino all'HUD"
 
 Il cronometro restava fermo su 0:00 anche dopo la 1.77.2. La correzione precedente era vera ma non

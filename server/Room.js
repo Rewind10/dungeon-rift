@@ -66,7 +66,7 @@ class Room {
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
-    this.bossAlive = false; this.dt = 1 / C.TICK_RATE; this.mode = Waves.MODES.assault; this.surviveT = 0;
+    this.bossAlive = false; this.dt = 1 / C.TICK_RATE; this.mode = Waves.MODES.assault;
     this.newMap(1234 + (id.charCodeAt ? id.charCodeAt(0) : 0), 1);
   }
   get alivePlayers() { const a = []; for (const p of this.players.values()) if (p.connected && !p.dead) a.push(p); return a; }
@@ -129,6 +129,13 @@ class Room {
       // dell'oggetto sostituito.
       gear: Gear.startingGear(hero.id), gearBonus: { maxHpFlat: 0, dmgReduce: 0, speedMult: 0 },
       boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
+      // v1.78 — LE CARTE SI GUADAGNANO SALENDO DI LIVELLO, non finendo un'ondata. `carteDovute` e' il
+      // debito: sale di uno a ogni livello, scende di uno a ogni carta scelta. Se e' zero il mazzo non si
+      // apre proprio — chi non e' cresciuto non sceglie niente.
+      carteDovute: 0, livelloCarta: 0,
+      // v1.78 — il conto dell'ondata in corso, per il riepilogo di fine livello. Si azzera a ogni ondata:
+      // il box racconta QUESTA ondata, non tutta la partita (quella e' la tabella di fine run).
+      ondata: { uccisi: 0, xp: 0, monete: 0, livelli: 0 }, exitOk: false,
       // v1.73 — LE CARTE SI SPENGONO. `boonsOwned` e' cio' che possiedi, `cardOn` cio' che e' ACCESO
       // (al massimo C.MAX_CARDS carte diverse). `defianceUsed` tiene il conto delle cariche di Ultima
       // Occasione gia' spese, altrimenti ogni ricalcolo te le regalerebbe di nuovo.
@@ -145,17 +152,17 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.carteDovute = 0; p.livelloCarta = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
     this.wave++;
-    this.mode = Waves.modeForWave(this.wave); this.surviveT = this.mode.survive || 0; this.treasure = null;
+    this.mode = Waves.modeForWave(this.wave);
     this.phase = Waves.isBossWave(this.wave) ? C.PHASE_BOSS : C.PHASE_COMBAT;
     if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }  // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella stanza del mercante
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
-    else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
+    else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
     // v1.77.2 — ATTENZIONE AL RIPIEGO. Qui c'era scritto `this.time - (this.waveT0 || this.time)`:
     // alla PRIMA ondata waveT0 vale esattamente 0, che in JavaScript e' falso, quindi scattava il
@@ -165,12 +172,18 @@ class Room {
     // dell'ondata (mostri in coda piu' quelli gia' in campo) diviso i giocatori in piedi.
     this.waveT0 = this.time;
     this.waveMostri = this.pending + this.monsters.filter(x => !x.dead).length;
-    this.parT = (this.mode && this.mode.survive) ? 0
-      : Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * this.waveMostri / Math.max(1, this.alivePlayers.length || 1));
-    this.parPreso = 0;
-    this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
+    // v1.78 — con una modalita' sola non esistono piu' ondate a tempo fisso: il tempo obiettivo vale
+    // per tutte, senza eccezioni da spiegare.
+    this.parT = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * this.waveMostri / Math.max(1, this.alivePlayers.length || 1));
+    this.parPreso = 0; this.waveDur = null; this.parBonus = null;
+    for (const p of this.players.values()) { p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; }
+    this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE } });
   }
-  spawnTreasure() { const pos = this.randomSpawnPos(); const m = this.spawnMonster('mimic', pos.x, pos.y, { scaling: this.waveScaling }); m.treasure = true; m.awake = true; m.maxHp = Math.round(m.maxHp * 2.4); m.hp = m.maxHp; m.speed = 210; m.escapeT = 26; this.treasure = m; this.events.push({ t: 'treasure_spawn', x: m.x, y: m.y }); }
+  // v1.78 — QUI C'ERA spawnTreasure(). Generava una cassa-mima gonfiata che scappava dai giocatori
+  // con un timer di fuga: era il cuore della modalita' Tesoro, tolta insieme alle altre tre. Con essa
+  // se ne vanno il campo m.treasure, il campo this.treasure, gli eventi treasure_spawn/dead/escape e i
+  // moltiplicatori di XP e monete che valevano solo per lei. La cassa-mima normale ('mimic') resta un
+  // mostro come gli altri.
   // v1.76.1 — I MOSTRI NON DEVONO NASCERE ADDOSSO A TE. Le caselle di generazione sono scelte
   // lontane dalla PARTENZA, ma un'ondata dura minuti e tu nel frattempo ti sei spostato: una casella
   // lontana dal punto di atterraggio puo' trovarsi a due passi da dove sei adesso, e il mostro ti
@@ -410,7 +423,7 @@ class Room {
   }
   enterMarket() {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
-    this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = []; this.treasure = null;
+    this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
     for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); this.offerInn(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
@@ -1012,7 +1025,7 @@ class Room {
     // v1.69 — il tetto va contato SUI VIVI e va rispettato anche dalla scissione. Prima bastava che ci
     // fosse un posto libero perche' la Melma ne generasse due: con 29 in campo si finiva a 31, e "mai piu'
     // di 30" tornava a essere un auspicio. La melma che muore libera il proprio posto, quindi non conta.
-    if (m.def.splitInto && !m.minion && !m.treasure) {
+    if (m.def.splitInto && !m.minion) {
       let vivi = 0; for (const x of this.monsters) if (!x.dead) vivi++;
       const spazio = this.tettoVivi() - vivi;
       const n = Math.max(0, Math.min(m.def.splitCount || 2, spazio));
@@ -1025,9 +1038,10 @@ class Room {
       if (n > 0) this.events.push({ t: 'split', x: m.x, y: m.y, c: m.def.eye });
     }
     this.events.push({ t: 'mkill', x: m.x, y: m.y, id: m.type, f: +(m.facing || 0).toFixed(2), boss: m.boss, elite: m.elite, mega: m.mega });
-    if (m.boss || m.elite || m.treasure) this.events.push({ t: 'hitstop', d: m.mega ? 0.16 : (m.boss ? 0.12 : 0.06) });
+    if (m.boss || m.elite) this.events.push({ t: 'hitstop', d: m.mega ? 0.16 : (m.boss ? 0.12 : 0.06) });
     if (src) {
       src.kills++;
+      if (src.ondata) src.ondata.uccisi++;   // v1.78 — per il riepilogo di fine livello
       src.combo = (src.combo || 0) + 1; src.comboT = C.COMBO_TIME; if (src.combo > (src.comboBest || 0)) src.comboBest = src.combo;
       // v1.72 — le taglie contano qui, dove le uccisioni gia' accadono: caccia grossa, contratto mirato
       // (solo se e' la specie giusta) e teste grosse (solo elite, boss esclusi: hanno gia' la loro ricompensa).
@@ -1052,19 +1066,18 @@ class Room {
       if (src.boon.killNova > 0 && MU.chance(0.25 * src.boon.killNova)) { for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; this.bullets.push({ eid: NEXT++, hostile: false, owner: src.id, x: m.x, y: m.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, r: 6, dmg: Math.round(this.effDamage(src) * 0.7), color: '#ffd24a', life: 0.45, pierce: 2, knock: 30 }); } this.events.push({ t: 'nova', x: m.x, y: m.y }); }
     }
     const comboMul = src ? this.comboMult(src) : 1; const xpMul = src ? (src.stats.xpMult || 1) : 1;
-    const xpVal = Math.round(m.xp * (m.treasure ? 6 : 1) * comboMul * xpMul); const orbs = (m.boss || m.treasure) ? 8 : (m.elite ? 3 : 1);
-    for (let i = 0; i < orbs; i++) { const a = Math.random() * Math.PI * 2, r = (m.boss || m.treasure) ? MU.rand(10, 60) : MU.rand(4, 18); this.groundXp.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: Math.max(1, Math.round(xpVal / orbs)), t: 30 }); }
+    const xpVal = Math.round(m.xp * comboMul * xpMul); const orbs = m.boss ? 8 : (m.elite ? 3 : 1);
+    for (let i = 0; i < orbs; i++) { const a = Math.random() * Math.PI * 2, r = m.boss ? MU.rand(10, 60) : MU.rand(4, 18); this.groundXp.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: Math.max(1, Math.round(xpVal / orbs)), t: 30 }); }
     // MONETE (v1.8): valore in base al tipo di nemico, distribuito in tagli diversi.
-    const coinVal = Math.max(1, Math.round((m.def.xp || 4) * 0.6 * (m.treasure ? 8 : m.boss ? 6 : m.elite ? 2.2 : 1)));
+    const coinVal = Math.max(1, Math.round((m.def.xp || 4) * 0.6 * (m.boss ? 6 : m.elite ? 2.2 : 1)));
     const coinPieces = Loot.coinsFor(coinVal, C.COINS);
-    for (const cp of coinPieces) { const a = Math.random() * Math.PI * 2, r = (m.boss || m.treasure) ? MU.rand(12, 66) : MU.rand(4, 20); this.groundCoins.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: cp.v, cid: cp.id, t: 30 }); }
+    for (const cp of coinPieces) { const a = Math.random() * Math.PI * 2, r = m.boss ? MU.rand(12, 66) : MU.rand(4, 20); this.groundCoins.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: cp.v, cid: cp.id, t: 30 }); }
     // v1.77 — I NEMICI NON LASCIANO PIU' OGGETTI NE' POZIONI. Nessuno: ne' i comuni, ne' gli elite,
     // ne' i boss, ne' la cassa-mima. Una Pozione di Salute che cade dal nulla mentre combatti toglie
     // il mestiere all'Ostessa (che si fa pagare per rimetterti in piedi) e all'Erborista (che si fa
     // pagare per la stessa cosa in boccetta). Se la cura arriva gratis dai mostri, quei due sono
     // decorazione. Le pozioni forti che cadevano di qui sono passate all'Erborista, a caro prezzo.
     // Restano: esperienza, monete, e quello che c'e' dentro le CASSE — che non sono nemici.
-    if (m.treasure) { this.treasure = null; this.events.push({ t: 'treasure_dead', x: m.x, y: m.y }); }
     if (m.boss) this.bossAlive = false;
   }
 
@@ -1088,14 +1101,20 @@ class Room {
   addXp(p, v, fonte) {
     if (!p || v <= 0) return;
     p.xpPool += v;
+    if (p.ondata) p.ondata.xp += v;
     const nuovo = Lv.levelForXp(p.xpPool);
     while (p.level < nuovo) {
       p.level++; p.points += Lv.POINTS_PER_LEVEL;
+      // v1.78 — ogni livello vale UNA carta. La scelta non si apre qui: in mezzo alla battaglia nessuno
+      // legge tre carte, e in cooperativa non si puo' mettere in pausa il mondo per uno solo. Resta in
+      // debito e si paga alla fine dell'ondata, una carta per livello guadagnato.
+      p.carteDovute = (p.carteDovute || 0) + 1;
+      if (p.ondata) p.ondata.livelli++;
       const r = Lv.rankForLevel(p.level);
       if (r > Lv.rankForLevel(p.level - 1)) this._rankUp(p, r);
       // l'evento parte SEMPRE, anche in mezzo alla battaglia: il "LEVEL UP" sopra la testa e il suo
       // jingle sono il momento in cui il giocatore sente di essere cresciuto.
-      this.events.push({ t: 'levelup', x: p.x, y: p.y, who: p.id, lv: p.level, name: p.name, rank: Lv.rankName(p.heroId, p.level, p.spec) });
+      this.events.push({ t: 'levelup', x: p.x, y: p.y, who: p.id, lv: p.level, name: p.name, rank: Lv.rankName(p.heroId, p.level, p.spec), carte: p.carteDovute || 0 });
     }
     if (fonte) this.events.push({ t: 'xpfonte', x: p.x, y: p.y, who: p.id, v, k: fonte });
   }
@@ -1146,6 +1165,21 @@ class Room {
     }
   }
 
+  // v1.78 — IL RIEPILOGO DI FINE LIVELLO. Un box piccolo con quello che l'ondata ti ha fruttato: nemici
+  // uccisi, XP e monete raccolte, quanto ci hai messo e il premio di velocita' se sei rimasto sotto il
+  // tempo obiettivo. E' il momento in cui il giocatore vede il risultato del suo lavoro: senza, l'ondata
+  // finisce e non resta niente in mano.
+  inviaRiepilogo(p) {
+    const o = p.ondata || { uccisi: 0, xp: 0, monete: 0, livelli: 0 };
+    this.sendTo(p.id, {
+      t: C.MSG.WAVE_STATS, wave: this.wave,
+      uccisi: o.uccisi, xp: o.xp, monete: o.monete, livelli: o.livelli,
+      durata: +(this.waveDur != null ? this.waveDur : 0).toFixed(1), par: this.parT || 0,
+      bonus: this.parPreso && this.parBonus ? this.parBonus : null,
+      carte: p.carteDovute || 0,
+      livello: p.level, uccisiTot: p.kills, moneteTot: p.coins,
+    });
+  }
   offerShop(p) {
     // v1.69 — il pannello mostra i PUNTI, non la XP: il prezzo di una statistica non e' piu' un numero a
     // quattro cifre ma "1, 2 o 3 punti", che si legge senza calcolatrice.
@@ -1189,10 +1223,19 @@ class Room {
     if (p._nearBnd) this.offerBandit(p, 1);                 // il magazzino e' cambiato: il banco si aggiorna
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: posseduto ? 1 : 0 } });
   }
+  // v1.78 — QUANDO NON SI E' SALITI DI LIVELLO il mazzo non si apre, ma il pannello non deve restare
+  // muto: un riquadro vuoto senza spiegazione si legge come un guasto. Si dice quanto manca al livello.
+  nienteCarta(p) {
+    p.boonOffer = null; p.boonPicked = true;
+    const pr = Lv.progress(p.xpPool);
+    this.sendTo(p.id, { t: C.MSG.OFFER_BOON, boons: [], resta: 0, liv: p.level, manca: Math.max(0, Math.round(pr.need - pr.cur)) });
+  }
   offerBoon(p) {
     const choices = Loot.offerBoons(C.RARITY, p.boonsOwned);
     p.boonOffer = choices.map(b => b.id); p.boonPicked = choices.length === 0;
-    this.sendTo(p.id, { t: C.MSG.OFFER_BOON, boons: choices.map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), owned: p.boonsOwned[b.id] || 0, max: b.max })) });
+    // v1.78 — `resta` e' quante carte restano da scegliere COMPRESA questa, `liv` il livello che l'ha
+    // pagata: servono al pannello per scrivere "Livello 7 — carta 1 di 3" invece di un mazzo muto.
+    this.sendTo(p.id, { t: C.MSG.OFFER_BOON, resta: p.carteDovute || 0, liv: p.level, boons: choices.map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), owned: p.boonsOwned[b.id] || 0, max: b.max })) });
   }
   buyStat(pid, statId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;
@@ -1274,6 +1317,10 @@ class Room {
     if (Object.keys(p.synActive || {}).length > synPrima)
       for (const id in p.synActive) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'synergy', id: sy.id, name: sy.name, icon: sy.icon, desc: sy.desc } }); }
     this.sendBoons(p);  // v1.51 — aggiorna la barra dei poteri attivi
+    // v1.78 — una carta pagata, un livello in meno da riscuotere. Se il giocatore ha guadagnato piu'
+    // livelli in un'ondata sola il mazzo si riapre subito con tre carte nuove, finche' il debito e' zero.
+    if (p.carteDovute > 0) p.carteDovute--;
+    if (p.carteDovute > 0 && this.phase === C.PHASE_SHOP) this.offerBoon(p);
   }
   // v1.51 — elenco dei poteri attivi, per la barra in basso nell'HUD. Inviato solo quando cambia qualcosa
   // (scelta di un boon, sinergia, inizio partita): non entra nello snapshot, che gira 20 volte al secondo.
@@ -1289,8 +1336,8 @@ class Room {
     this.time += dt; this.dt = dt; this.flowTimer -= dt;
     if (this.flowTimer <= 0) { this.flowTimer = 0.12; const t = this.alivePlayers.map(p => ({ gx: (p.x / C.TILE) | 0, gy: (p.y / C.TILE) | 0 })); if (t.length) this.flow = PF.build(this.map.grid, this.map.w, this.map.h, t); }
     const inCombat = (this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS);
-    // MODALITÀ sopravvivenza: timer + respawn continuo
-    if (inCombat && this.surviveT > 0) { this.surviveT -= dt; }
+    // v1.78 — qui c'era il timer della modalita' Sopravvivenza e, piu' sotto, il suo rifornimento
+    // continuo di mostri. Tolta la modalita', sono spariti tutti e due insieme al campo `surviveT`.
     // v1.68 — il tetto dei vivi e' sceso da 50 a 30 e i nemici in eccesso restano in CODA: l'ondata non
     // perde nessuno, cambia solo quanti se ne vedono insieme. Perche' il tetto non si trasformi in
     // un'ondata piu' lenta, il rifornimento ha due velocita': mentre l'arena si riempie per la prima volta
@@ -1301,7 +1348,6 @@ class Room {
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     // v1.70 — il rifornimento della SOPRAVVIVENZA aveva un 14 scritto a mano che scavalcava il tetto:
     // all ondata 2 (tetto 10) si arrivava a 14 vivi. Ora passa dalla stessa porta di tutti gli altri.
-    if (inCombat && this.mode.survive > 0 && this.surviveT > 0 && this.pending <= 0 && this._postiLiberi() > 0) { const it = MU.weighted(Waves.poolForWave(this.wave)); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.id), pos.x, pos.y, { scaling: this.waveScaling, elite: MU.chance(this.waveScaling.eliteChance) }); }
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
@@ -1324,7 +1370,7 @@ class Room {
     //   3. non e' uno di quelli fermi per costruzione (il Fungo sta piantato: e' il suo mestiere).
     // E chi si sposta non compare addosso a te: va a 600-900 px, preferendo un punto da cui NON ti
     // vede — cosi' non lo vedi mai apparire, lo vedi arrivare.
-    if (inCombat && this.pending <= 0 && this.mode.survive === 0 && this.monsters.length > 0 && !this.mode.treasure) {
+    if (inCombat && this.pending <= 0 && this.monsters.length > 0) {
       const ap = this.alivePlayers;
       if (ap.length) for (const m of this.monsters) {
         if (m.dead || (m.def && m.def.immobile)) continue;
@@ -1358,6 +1404,8 @@ class Room {
     }
     // condizioni di fine ondata per modalità
     if (inCombat) this._checkWaveClear();
+    // v1.78 — mappa ripulita: si aspetta il pulsante EXIT di tutti, con un tetto di tempo anti-AFK.
+    if (this.phase === C.PHASE_CLEARED) { this.exitT -= dt; if (this.exitT <= 0) this._waveDone(); }
     if (this.phase === C.PHASE_MARKET) {
       this._checkMarketExit();
       if (this.phase === C.PHASE_MARKET) { this.marketTimer -= dt; let conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) conn++;
@@ -1370,16 +1418,41 @@ class Room {
   }
   _checkWaveClear() {
     if (Waves.isBossWave(this.wave)) { if (this.pending <= 0 && this.monsters.length === 0) return this._waveDone(); return; }
-    if (this.mode.survive > 0) { if (this.surviveT <= 0) { for (const m of this.monsters.slice()) this.killMonster(m, null); return this._waveDone(); } return; }
-    if (this.mode.treasure) { const treasureGone = !this.treasure; if (treasureGone && this.pending <= 0 && this.monsters.length === 0) return this._waveDone(); return; }
-    if (this.pending <= 0 && this.monsters.length === 0) return this._waveDone();
+    // v1.78 — qui c'erano i due rami delle modalita' Sopravvivenza (finisce a tempo) e Tesoro (finisce
+    // quando lo scrigno muore). Tolte le modalita', l'ondata finisce in un modo solo: quando non resta
+    // piu' nessuno.
+    if (this.pending <= 0 && this.monsters.length === 0) return this._mappaRipulita();
+  }
+  // v1.78 — L'ULTIMO NEMICO NON TI SBATTE FUORI. Cadeva, e nello stesso fotogramma eri nel pannello del
+  // negozio: non facevi in tempo a capire di aver vinto, e quello che era rimasto a terra lo raccoglieva
+  // il gioco al posto tuo. Adesso la mappa resta tua: il cronometro si ferma qui (aspettare non costa il
+  // premio di velocita'), e si esce col pulsante EXIT. La partita finale non passa di qui: la vittoria
+  // e' la vittoria, non ha un'uscita da cercare.
+  _mappaRipulita() {
+    if (this.wave >= Waves.FINAL_WAVE) return this._waveDone();
+    this.waveDur = this.time - this.waveT0;
+    this.phase = C.PHASE_CLEARED; this.exitT = C.EXIT_TIMEOUT;
+    for (const p of this.players.values()) p.exitOk = false;
+    const inTempo = this.parT > 0 && this.waveDur <= this.parT;
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'cleared', wave: this.wave, durata: +this.waveDur.toFixed(1), par: this.parT || 0, tempo: inTempo ? 1 : 0 } });
+  }
+  // Quanti giocatori devono premere EXIT perche' si esca, e quanti l'hanno gia' fatto.
+  // Chi e' caduto non puo' premere niente: non lo si aspetta, o si resterebbe fermi fino al timeout.
+  _contaUscita() { let n = 0, tot = 0; for (const p of this.players.values()) { if (!p.connected || p.dead) continue; tot++; if (p.exitOk) n++; } return { n, tot }; }
+  exitWave(pid) {
+    if (this.phase !== C.PHASE_CLEARED) return;
+    const p = this.players.get(pid); if (!p) return;
+    p.exitOk = true;
+    const c = this._contaUscita();
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'exit_ready', who: pid, name: p.name, n: c.n, tot: c.tot } });
+    if (c.n >= c.tot || c.tot === 0) this._waveDone();
   }
   _waveDone() {
     // v1.72 — l'ondata e' finita: chi non ha perso vite chiude la taglia "Nessun caduto".
     for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
     // v1.77 — IL PREMIO DI VELOCITA'. Le ondate a sopravvivenza sono escluse per costruzione: durano
     // un tempo fisso, non si possono chiudere prima, e un premio che tocca sempre non e' un premio.
-    const durata = this.time - this.waveT0;
+    const durata = this.waveDur != null ? this.waveDur : this.time - this.waveT0;
     if (this.parT > 0 && durata <= this.parT) {
       this.parPreso = 1;
       const xp = Math.round(C.PAR_XP + C.PAR_XP_ONDATA * this.wave);
@@ -1388,6 +1461,7 @@ class Room {
         if (!p.connected || p.dead) continue;
         this.addXp(p, xp, 'tempo'); p.coins += monete;
       }
+      this.parBonus = { xp, monete };
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'par_ok', wave: this.wave, secondi: +durata.toFixed(1), par: this.parT, xp, monete } });
     }
     if (this.wave >= Waves.FINAL_WAVE) this.victory(); else this.enterShop();
@@ -1399,7 +1473,7 @@ class Room {
     if (recip) {
       let gx = 0, gc = 0;
       for (const o of this.groundXp) if (!o.dead) { this.addXp(recip, o.v); gx += o.v; }
-      for (const o of this.groundCoins) if (!o.dead) { recip.coins += o.v; gc += o.v; }
+      for (const o of this.groundCoins) if (!o.dead) { recip.coins += o.v; if (recip.ondata) recip.ondata.monete += o.v; gc += o.v; }
       this.groundXp.length = 0; this.groundCoins.length = 0;
       if (gx > 0) this.events.push({ t: 'xp', x: recip.x, y: recip.y - 10, v: gx });
       if (gc > 0) this.events.push({ t: 'coin', x: recip.x, y: recip.y - 10, v: gc, cid: 'gold', who: recip.id });
@@ -1414,21 +1488,33 @@ class Room {
       // Il rango arriva sui boss, quindi in pratica alle ondate 5/10/15/20 si sceglie la carta di classe
       // e nelle altre il boon generico, senza mai due mazzi aperti insieme.
       p.ready = false; p.killHasteStacks = 0;
+      // v1.78 — IL MAZZO SI APRE SOLO SE SEI CRESCIUTO. Prima ogni fine ondata regalava una carta a
+      // prescindere: il potere arrivava col calendario, non col merito. Adesso la fonte e' una sola, il
+      // livello, e chi ne ha presi tre ne sceglie tre.
       if (this.offerRank(p)) { p.boonOffer = null; p.boonPicked = true; }
-      else this.offerBoon(p);
+      else if ((p.carteDovute || 0) > 0) this.offerBoon(p);
+      else this.nienteCarta(p);
+      this.inviaRiepilogo(p);
       this.offerShop(p); this.sendBoons(p);
       if (C.SHOP_GEAR_ENABLED) this.offerGear(p);  // v1.51 — Emporio a monete nascosto in attesa di ridisegno
     }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'shop', next: this.wave + 1 } });
   }
 
+  // v1.78 — MENTRE LA MAPPA E' RIPULITA NIENTE SCADE. Le sfere di esperienza e le monete vivono 30
+  // secondi: con l'uscita a pulsante il giocatore puo' girare per la mappa anche un minuto, e senza
+  // questa regola si troverebbe il bottino svanito sotto gli occhi proprio mentre lo va a prendere.
+  // Il tempo riprende a correre quando ricomincia il combattimento.
   updatePickups(dt) {
-    for (const o of this.groundXp) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.addXp(target, o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
+    // ATTENZIONE: si ferma solo la SCADENZA, non il resto. Azzerare dt qui spegnerebbe anche la calamita
+    // che tira le sfere verso il giocatore, cioe proprio il gesto che questa regola vuole permettere.
+    const scade = this.phase === C.PHASE_CLEARED ? 0 : dt;
+    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.addXp(target, o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
     if (this.groundXp.some(o => o.dead)) this.groundXp = this.groundXp.filter(o => !o.dead);
     // Raccolta MONETE (calamita come l'XP)
-    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.alivePlayers) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
+    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.alivePlayers) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; if (target.ondata) target.ondata.monete += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
-    for (const it of this.items) { if (it.dead) continue; it.t -= dt; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.alivePlayers) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
+    for (const it of this.items) { if (it.dead) continue; it.t -= scade; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.alivePlayers) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
     for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
         // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
@@ -1550,12 +1636,6 @@ class Room {
       // veleno (boon)
       if (m.poison > 0 && m.poisonT > 0) { m.poisonT -= dt; m.poisonTick = (m.poisonTick || 0) + dt; if (m.poisonTick > 0.5) { m.poisonTick = 0; this.damageMonster(m, m.poison * 2, m.x, m.y - 1, 0, this.players.get(m.poisonSrc)); if (m.dead) continue; } }
       let slow = 1; if (m.slowT > 0) { m.slowT -= dt; slow = 0.5; }
-      if (m.treasure) { // fugge dai giocatori
-        m.escapeT -= dt; const np = this._nearestPlayer(m.x, m.y); if (np) { const n = MU.norm(m.x - np.x, m.y - np.y); m.mx = n.x * m.speed; m.my = n.y * m.speed; m.facing = Math.atan2(np.y - m.y, np.x - m.x); } else { m.mx = m.my = 0; }
-        this.moveCircle(m, m.mx * dt * tf * slow, m.my * dt * tf * slow); if (this.isWallAt(m.x, m.y)) this._unstuck(m);
-        if (m.escapeT <= 0) { m.dead = true; this.treasure = null; this.events.push({ t: 'treasure_escape', x: m.x, y: m.y }); }
-        continue;
-      }
       const ld = dt * tf; const pd = ctx.dt; ctx.dt = ld; AI.update(m, ctx); ctx.dt = pd; let cu = 1; const np = this._nearestPlayer(m.x, m.y); if (np) { const nd = MU.dist(m.x, m.y, np.x, np.y); if (nd > 340) cu = 1 + Math.min(1.1, (nd - 340) / 420); }
       const px0 = m.x, py0 = m.y; const wantMove = (Math.abs(m.mx) + Math.abs(m.my)) > 4; // v1.43 — misura intento vs spostamento reale
       // v1.61 — ATTRAVERSA I MURI (def.phasing, Fuoco Fatuo): niente moveCircle, niente _unstuck, niente
@@ -1659,7 +1739,7 @@ class Room {
       const o = { e: m.eid, x: Math.round(m.x), y: Math.round(m.y), f: +m.facing.toFixed(2), hp: Math.round(m.hp) };
       if (nuovo) {                                                        // parte immutabile: una volta sola
         o.t = m.type; o.mhp = m.maxHp;
-        if (m.elite) o.el = 1; if (m.boss) o.b = 1; if (m.mega) o.mg = 1; if (m.treasure) o.tr = 1;
+        if (m.elite) o.el = 1; if (m.boss) o.b = 1; if (m.mega) o.mg = 1;
       }
       if (m.hitFlash > 0) o.fl = 1;
       if (m.shielded > 0) o.sh = 1;
@@ -1680,7 +1760,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), wt: +Math.max(0, this.time - this.waveT0).toFixed(1), wp: this.parT || 0, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

@@ -1,5 +1,12 @@
 # 🎚️ PROGRESSIONE.md — Livelli, ranghi e punti
 
+> **AGGIORNAMENTO v1.78 — le carte si pagano coi LIVELLI.** Il boon generico non arriva piu a ogni
+> fine ondata: ne arriva **uno per livello guadagnato**, e chi in un ondata sale di tre livelli sceglie
+> tre carte una dopo l altra. Chi non e salito non sceglie niente, e il pannello scrive quanta XP manca.
+> Misurato: la prima carta arriva a fine seconda ondata invece che della prima, ma all ottava un
+> giocatore solo ne ha 10 invece di 8. La riga "Scelte gratuite" della tabella delle valute va letta
+> cosi: **livello / rango**, non piu **fine ondata / rango**.
+>
 > **REALIZZATO nella v1.69, RIVISTO nella v1.70.** Quattro cose sono cambiate dopo la prova sul campo,
 > e il documento le riporta: **niente piu' tetto ai livelli**, **esperienza da piu' fonti**, **carte di
 > rango rimosse** (le sostituiranno le abilita' di classe) e **annuncio del LEVEL UP in partita**.
@@ -155,7 +162,7 @@ valute con tre scopi distinti, e nessuna che si converta nell'altra (tranne l'XP
 |---|---|---|
 | **XP** | uccisioni | livelli → punti → statistiche |
 | **Monete** | uccisioni | equipaggiamento dal fabbro |
-| **Scelte gratuite** | fine ondata / rango | boon generici / carte di classe |
+| **Scelte gratuite** | livello *(v1.78)* / rango | boon generici / carte di classe |
 
 ---
 

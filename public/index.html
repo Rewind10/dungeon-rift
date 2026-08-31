@@ -17,6 +17,13 @@
   <div id="zoneName" class="hidden"></div>
   <div id="waveTimer" class="hidden"></div>
   <div id="modeBanner" class="hidden"></div>
+  <!-- v1.78 — mappa ripulita: l'avviso in alto e il pulsante EXIT al centro. Il pannello di fine ondata
+       non arriva piu' da solo: ci si va quando si vuole. -->
+  <div id="clearTop" class="hidden">
+    <div class="ct-t">ONDATA COMPLETATA</div>
+    <div class="ct-s" id="clearSub">Raccogli quello che resta, poi premi <b>EXIT</b> al centro per uscire</div>
+  </div>
+  <button id="exitBtn" class="hidden">EXIT</button>
   <div id="comboMeter" class="hidden"><div class="cm-num"><b id="comboN">0</b><span>COMBO</span></div><div class="cm-bar"><i id="comboBar"></i></div><div id="comboMult">x1.0</div></div>
   <div id="abilityBar"></div>
   <div id="vitals">
@@ -69,7 +76,7 @@
         <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ e <b>oggetti</b> 🎁.</li>
         <li>A fine ondata scegli <b>1 Potere su 3</b> 🎴 e spendi la XP nel negozio (statistiche a costo crescente, con tetto).</li>
         <li>Porta un'arma a <b>Lv.3</b> con la statistica giusta per <b>evolverla</b>! ✦</li>
-        <li>Modalità ondata: <b>Orda</b>, <b>Caccia</b>, <b>Sopravvivenza</b>, <b>Tesoro</b> 👑. <b>20 livelli</b> → MEGA BOSS.</li>
+        <li><b>20 livelli</b> → MEGA BOSS. Ogni ondata ha un <b>tempo obiettivo</b> ⏱: restaci sotto e prendi XP e monete extra.</li>
       </ul>
     </details>
   </div>
@@ -86,13 +93,16 @@
 </div>
 <div id="upgradeScreen" class="hidden">
   <div class="upgrade-inner">
+    <!-- v1.78 — riepilogo dell'ondata appena chiusa -->
+    <div id="waveStats" class="hidden"></div>
     <div id="rankSection" class="hidden">
       <h2 id="rankTitle">RANGO</h2>
       <div class="rank-sub" id="rankSub"></div>
       <div id="rankCards"></div>
     </div>
     <div id="boonSection" class="hidden">
-      <h2>🎴 SCEGLI UN POTERE</h2>
+      <h2 id="boonTitle">🎴 SCEGLI UN POTERE</h2>
+      <div id="boonSub" class="rank-sub"></div>
       <div id="boonCards"></div>
     </div>
     <div id="gearSection" class="hidden">
@@ -103,7 +113,7 @@
     <h2>PUNTI — dove metti quello che hai imparato</h2>
     <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
     <div id="upgradeCards"></div>
-    <p class="shop-hint">Scegli <b>1 potere fra 3</b>, poi investi la XP: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Poi scegli dove andare: <b>avanti</b> con l'ondata successiva, oppure dal <b>fabbro</b> a potenziare l'equipaggiamento con le monete. <b>Spazio</b> = prossima ondata.</p>
+    <p class="shop-hint">I <b>poteri</b> arrivano salendo di <b>livello</b>: uno per livello guadagnato. I <b>punti</b> si spendono qui: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Poi scegli dove andare: <b>avanti</b> con l'ondata successiva, oppure dal <b>fabbro</b> a potenziare l'equipaggiamento con le monete. <b>Spazio</b> = prossima ondata.</p>
     <div id="shopActions">
       <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady('wave'); window.HUD.hideShop();">▶  PROSSIMA ONDATA</button>
       <button id="shopMarketBtn" class="ghost" onclick="window.Net.shopReady('market'); window.HUD.hideShop();">🏕️  VAI AL VILLAGGIO</button>
