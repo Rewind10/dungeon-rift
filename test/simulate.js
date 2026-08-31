@@ -1096,11 +1096,26 @@ function testV163() {
     attaccate++; if (at(x, y) === M * 2) attaccateMax++;
   }
   assert(attaccateMax / attaccate > 0.9, 'chi sta attaccato alla parete ESTERNA e nella fascia piena (' + (attaccateMax / attaccate * 100).toFixed(0) + '% delle tessere a contatto)');
-  // un masso interno non deve avere alone: si cerca una tessera a contatto SOLO con roccia interna
-  let masso = null;
-  for (let y = 6; y < m0.h - 6 && !masso; y++) for (let x = 6; x < m0.w - 6; x++)
-    if (suoloAt(x, y) && fuoriRoccia(x, y) && at(x, y) === 0) masso = [x, y];
-  assert(!!masso, 'esistono ripari interni fuori dalla fascia: dietro un masso al centro non si muore');
+  // Un masso INTERNO non deve avere alone: dietro un sasso in mezzo alla caverna si deve poter stare
+  // al riparo. La prima versione cercava solo nella finestra 6..h-6 e chiedeva "tocca roccia": su
+  // qualche mappa quella finestra non conteneva massi interni e il test falliva a intermittenza —
+  // colpa della prova, non del gioco. Adesso si cerca su tutta la mappa e si chiede la cosa esatta:
+  // una tessera che tocca roccia NON esterna. Se una mappa non ne avesse nemmeno una sarebbe una
+  // mappa senza ripari interni, e quello si' sarebbe un difetto da segnalare.
+  let masso = null, toccaInterna = 0;
+  for (let y = 2; y < m0.h - 2 && !masso; y++) for (let x = 2; x < m0.w - 2; x++) {
+    if (!suoloAt(x, y)) continue;
+    let interna = false;
+    for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + d[0], ny = y + d[1];
+      if (nx < 0 || ny < 0 || nx >= m0.w || ny >= m0.h) continue;
+      const i = ny * m0.w + nx;
+      if (m0.grid[i] === C.T_WALL && !esterna[i]) interna = true; }
+    if (!interna) continue;
+    toccaInterna++;
+    if (at(x, y) === 0) { masso = [x, y]; break; }
+  }
+  assert(toccaInterna > 0, 'la caverna ha massi interni dietro cui ripararsi (' + toccaInterna + ' tessere a contatto)');
+  assert(!!masso, 'e almeno uno di quei ripari e fuori dalla fascia della faglia: dietro un masso al centro non si muore');
   // La copertura si misura su PIU' MAPPE: su una sola oscilla parecchio — misurato 46% su una,
   // 34% di media su dieci — e il test diventava un lancio di dadi.
   let band = 0, tot = 0;
@@ -1933,7 +1948,6 @@ function testV171() {
     assert(!ids[it.id], 'ogni pozione ha un id suo: ' + it.id); ids[it.id] = 1;
     assert(it.cost > 0 && it.name && it.icon && it.desc, it.name + ' e completa');
     if (it.kind === 'heal') assert(it.heal > 0, it.name + ' cura una frazione dei PV');
-    else if (it.kind === 'life') assert(it.maxN === 1, it.name + ' e una vita in boccetta: una carica sola, se no la morte diventa una formalita');
     else assert(it.buff && it.dur > 0, it.name + ' ha una chiave di buff e una durata');
   }
   // un buff che nessuno legge non farebbe nulla e nessun test se ne accorgerebbe: qui si controlla
@@ -2601,7 +2615,7 @@ function testV177() {
 
   // --- 2. LE POZIONI FORTI SONO DALL ERBORISTA, e costano
   const forti = Pot.POTIONS.filter(x => x.cost >= 100);
-  assert(forti.length === 4, 'l Erborista ha quattro pozioni forti (' + forti.length + ')');
+  assert(forti.length === 3, 'l Erborista ha tre pozioni forti (' + forti.length + ')');
   const base = Pot.POTIONS.filter(x => x.cost < 100);
   const maxBase = Math.max(...base.map(x => x.cost));
   assert(Math.min(...forti.map(x => x.cost)) > maxBase * 2, 'la piu economica delle forti costa piu del doppio della piu cara delle base');
@@ -2609,18 +2623,15 @@ function testV177() {
     assert(Pot.POTIONS.some(x => x.buff === id), 'l effetto ' + id + ', che prima cadeva a terra, adesso si compra');
 
   // la vita in boccetta: si beve, da una vita, e non se ne possono tenere tre
-  // si compra solo stando al banco dell'Erborista: si porta la stanza al mercato e il giocatore addosso a lui
-  const r1b = new Room('v177e'); const pb = r1b.addPlayer('a', { send() {} }, 'A', 'ladro'); r1b.startGame();
-  r1b.wave = 3; r1b.phase = C.PHASE_SHOP; r1b.shopReady('a', 'market'); r1b._afterShop();
-  const erb = r1b.map.village.npcs.find(n => n.pot);
-  assert(!!erb, 'l Erborista e nel villaggio');
-  pb.x = erb.x; pb.y = erb.y;
-  pb.coins = 9999; pb.belt[0] = { id: 'p_fenice', n: 0 };
-  r1b.buyPotion('a', 0); r1b.buyPotion('a', 0); r1b.buyPotion('a', 0);
-  assert(pb.belt[0].n === 1, 'del Cuore di Fenice si compra UNA carica sola (' + pb.belt[0].n + ')');
-  const vite0 = pb.lives; pb.potCd = 0;
-  assert(r1b.usePotion(pb, 0) === true, 'e si beve');
-  assert(pb.lives === vite0 + 1, 'e da una vita (' + vite0 + ' -> ' + pb.lives + ')');
+  // v1.77.1 — LE VITE EXTRA NON SI COMPRANO DALL'ERBORISTA. Per un giorno il Cuore di Fenice e' stato
+  // una pozione da cintura con una carica sola: sbagliato lo stesso, perche' l'Erborista e' sempre
+  // raggiungibile e una vita comprabile da lui e' una vita comprabile a ogni passaggio dal villaggio.
+  // Resta solo dal Mercante Errante, che compare a caso durante le ondate.
+  assert(!Pot.POTIONS.some(x => x.kind === 'life'), 'nel catalogo dell Erborista non c e nessuna vita extra');
+  assert(!Pot.POTIONS.some(x => /fenice/i.test(x.name)), 'e nemmeno il Cuore di Fenice sotto altro nome');
+  const errante = room.merchantWaresPool().filter(w => w.kind === 'life');
+  assert(errante.length === 1, 'il Cuore di Fenice resta dal Mercante Errante (' + errante.length + ')');
+  assert(errante[0].cost >= 150, 'e li costa ' + errante[0].cost + ' monete');
 
   // --- 3. IL CRONOMETRO E IL PREMIO
   const r2 = new Room('v177b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'ladro'); r2.startGame();

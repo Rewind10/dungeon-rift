@@ -520,7 +520,6 @@
         el.innerHTML = '<div class="ic">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
           '<div class="ds">' + esc(it.desc) + ' \u00b7 ' + esc(it.dur) + '</div>' +
           (dove >= 0 && !suo ? '<span class="tag">\u2014 già nello slot ' + (dove + 1) + '</span>' : '') +
-          (it.maxN === 1 ? '<span class="tag">\u2014 una carica sola</span>' : '') +
           '</div><div class="cost">\uD83E\uDE99' + it.cost + '</div>';
         if (dove < 0) el.onclick = () => { if (cb.pick) cb.pick(this._potSel, it.id); };
         cat.appendChild(el);

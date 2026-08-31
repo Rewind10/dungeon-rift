@@ -2,6 +2,36 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.77.1] — 2026-08-30 · "Le vite extra non si comprano dall'Erborista"
+
+Correzione della 1.77, segnalata da Paolo. Il **Cuore di Fenice** era finito nel catalogo
+dell'Erborista come pozione da cintura, con un tetto di una carica per slot. Il tetto non bastava:
+**l'Erborista e' sempre li'**. Una vita comprabile da lui e' una vita comprabile *ogni volta* che
+passi dal villaggio, e le vite si accumulano senza attrito.
+
+Resta solo dal **Mercante Errante**, che compare a caso durante le ondate: e' quella incertezza a
+dargli il prezzo vero, non le 180 monete.
+
+- Via la pozione dal catalogo: l'Erborista torna a nove voci, tre delle quali forti.
+- Via anche il meccanismo che le serviva — il ramo `kind: 'life'` in `usePotion` e il tetto di cariche
+  per singola pozione. Erano stati aggiunti per lei sola e non li usava piu' nessuno: un meccanismo che
+  nessuno usa e' una trappola per chi legge. Nel catalogo c'e' scritto dov'e' il posto giusto se un
+  domani servisse di nuovo (erano tre righe).
+
+#### E una prova instabile, mia, sistemata
+Il test della v1.76 "dietro un masso al centro non si muore" cercava un riparo interno solo nella
+finestra centrale della mappa: su qualche seme quella finestra non conteneva massi interni e il test
+falliva una volta su sei. Colpa della prova, non del gioco. Adesso cerca su tutta la mappa e chiede la
+cosa esatta — una tessera che tocca roccia **non esterna** — con due assunti separati: che i ripari
+interni esistano, e che almeno uno sia fuori dalla fascia della faglia.
+
+#### ✅ Verificato
+**1027 test, 0 falliti**, sei esecuzioni di fila. I nuovi: nel catalogo dell'Erborista non c'e' nessuna
+vita extra, ne' sotto altro nome; il Cuore di Fenice e' ancora fra le merci del Mercante Errante e li'
+costa 180 monete.
+
+---
+
 ### [1.77.0] — 2026-08-30 · "Niente cade dal cielo, e le ondate hanno un cronometro"
 
 #### I nemici non lasciano piu' oggetti

@@ -774,9 +774,6 @@ class Room {
       const cura = Math.round(mx * it.heal * Pot.healMult(p.buys.st_cos || 0));
       p.hp = Math.min(mx, p.hp + cura);
       this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon, heal: cura });
-    } else if (it.kind === 'life') {
-      p.lives += 1;   // v1.77 — il Cuore di Fenice in boccetta: una carica sola, vedi potions.js
-      this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon });
     } else {
       // ASSEGNA, non somma: bere la seconda Furia fa ripartire il timer, non raddoppia l'effetto.
       p.buffs[it.buff] = it.dur * Pot.durMult(p.buys.st_int || 0);
@@ -790,7 +787,7 @@ class Room {
   // non ricalcola nulla, disegna quello che riceve.
   offerPotions(p, near) {
     const belt = p.belt.map(s => s ? { id: s.id, n: s.n } : null);
-    const list = Pot.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost, maxN: it.maxN || Pot.MAX_CHARGES,
+    const list = Pot.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost,
       desc: it.desc, dur: it.durTxt, slot: p.belt.findIndex(s => s && s.id === it.id) }));
     this.sendTo(p.id, { t: C.MSG.OFFER_POTION, coins: p.coins, belt, list, max: Pot.MAX_CHARGES, near: near ? 1 : 0 });
   }
@@ -818,9 +815,8 @@ class Room {
     const p = this.players.get(pid); if (!p || p.dead) return;
     if (!this._alBanco(p)) return;
     slot = slot | 0; const s = p.belt[slot]; if (!s) return;
-    const _it0 = Pot.BY_ID[s.id];
-    if (s.n >= ((_it0 && _it0.maxN) || Pot.MAX_CHARGES)) return;   // v1.77 — alcune pozioni hanno un tetto proprio
-    const it = _it0; if (!it || p.coins < it.cost) return;
+    if (s.n >= Pot.MAX_CHARGES) return;
+    const it = Pot.BY_ID[s.id]; if (!it || p.coins < it.cost) return;
     p.coins -= it.cost; s.n++;
     this.offerPotions(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'potion_buy', x: p.x, y: p.y, slot, id: it.id, name: it.name, color: it.color, icon: it.icon, n: s.n } });

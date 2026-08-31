@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.77.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.77.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -27,8 +27,10 @@ Test: `npm test`
 ## 🆕 Novita v1.77 (niente cade dal cielo, e le ondate hanno un cronometro)
 - **🚫 I nemici non lasciano piu' oggetti**: nessuno, boss e cassa-mima compresi. Una cura gratis dal
   nulla toglieva il mestiere all'Ostessa e all'Erborista. Restano esperienza, monete e le casse.
-- **🧪 Le quattro pozioni forti si comprano dall'Erborista**: Nucleo Instabile (110), Ira Berserk
-  (185), Egida Divina (270), Cuore di Fenice (240, **una carica sola**). Care apposta.
+- **🧪 Le tre pozioni forti si comprano dall'Erborista**: Nucleo Instabile (110), Ira Berserk (185),
+  Egida Divina (270). Care apposta.
+- **💗 Le vite extra no**: il Cuore di Fenice resta solo dal **Mercante Errante**, che compare a caso.
+  L'Erborista e' sempre li', e una vita comprabile a ogni passaggio si accumulerebbe senza attrito.
 - **⏱ Cronometro dell'ondata** sotto il nome della mappa, col tempo obiettivo. Verde sei dentro, ambra
   ultimi dieci secondi, spento obiettivo perso.
 - **🏆 Chi chiude dentro il tempo** prende XP e monete in piu'. Il limite si calcola dal numero di

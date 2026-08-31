@@ -61,10 +61,13 @@
       desc: 'Danno raddoppiato e +40% cadenza', durTxt: '8 s' },
     { id: 'p_egida', name: 'Egida Divina', icon: '✨', color: '#ffd24a', cost: 270, kind: 'buff', buff: 'i_invuln', dur: 5,
       desc: 'Invulnerabile', durTxt: '5 s' },
-    // Una vita in boccetta e' la cosa piu' forte del gioco: UNA SOLA carica per slot, se no tre vite di
-    // scorta in cintura renderebbero la morte una formalita'.
-    { id: 'p_fenice', name: 'Cuore di Fenice', icon: '💗', color: '#ff77cc', cost: 240, kind: 'life', dur: 0, maxN: 1,
-      desc: '+1 vita', durTxt: 'una carica sola' },
+    // v1.77.1 — QUI NON C'E' NESSUNA VITA EXTRA, ed e' una scelta. Per un giorno il Cuore di Fenice e'
+    // stato una pozione da cintura con una carica sola: sbagliato lo stesso. L'Erborista e' sempre
+    // raggiungibile, quindi una vita comprabile da lui e' una vita comprabile OGNI VOLTA che passi dal
+    // villaggio — e le vite si accumulerebbero senza attrito. Il Cuore di Fenice resta solo dal
+    // MERCANTE ERRANTE, che compare a caso durante le ondate: e' quella incertezza a dargli il prezzo
+    // vero. Se un domani serve una pozione con un tetto di cariche proprio, il posto e' questo e il
+    // meccanismo va rimesso in buyPotion (era tre righe).
   ];
   const BY_ID = {}; POTIONS.forEach((p, i) => { BY_ID[p.id] = p; p.idx = i; });
 

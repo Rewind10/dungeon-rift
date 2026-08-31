@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.77.0`
+**Versione attuale:** `1.77.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -13,17 +13,19 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
   all'**Ostessa** e all'**Erborista**, che si fanno pagare per la stessa cosa.
 - Restano **esperienza**, **monete** e il contenuto delle **casse** — che non sono nemici.
 
-## 🧪 LE QUATTRO POZIONI FORTI *(novita v1.77)*
+## 🧪 LE TRE POZIONI FORTI *(novita v1.77)*
 | Pozione | Effetto | Prezzo |
 |---|---|---|
 | 🔺 Nucleo Instabile | +50% danno per 12 s | 110 |
 | 💥 Ira Berserk | danno raddoppiato e +40% cadenza per 8 s | 185 |
 | ✨ Egida Divina | invulnerabile per 5 s | 270 |
-| 💗 Cuore di Fenice | +1 vita, **una sola carica per slot** | 240 |
 - Sono gli effetti rari che prima cadevano a terra: riusano le stesse chiavi, l'effetto e' identico,
   cambia chi te lo da'. La piu' economica costa **piu' del doppio** della piu' cara fra le sei di base.
-- Il Cuore di Fenice ha un tetto di **una** carica: tre vite di scorta in cintura renderebbero la morte
-  una formalita'.
+- **Le vite extra non si comprano dall'Erborista** *(v1.77.1)*. Per un giorno il Cuore di Fenice e'
+  stato una pozione da cintura con una carica sola: non bastava. L'Erborista e' **sempre** li', quindi
+  una vita comprabile da lui e' una vita comprabile a ogni passaggio dal villaggio, e le vite si
+  accumulano senza attrito. Resta solo dal **Mercante Errante**, che compare a caso durante le ondate:
+  e' quella incertezza a dargli il prezzo vero.
 
 ## ⏱ IL CRONOMETRO DELL'ONDATA *(novita v1.77)*
 - Sotto il nome della mappa: **tempo trascorso / tempo obiettivo**. Verde sei dentro, ambra ti restano
