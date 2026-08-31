@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.78.1',
+    VERSION: '1.79.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -72,9 +72,23 @@
     // a mano in mapgen (VILLAGE), quindi restano solo i raggi di interazione.
     MARKET_EXIT_RADIUS: 42, MARKET_MERCH_RANGE: 84,
     SELL_BACK: 0.5,     // v1.72 — quanto rende un oggetto venduto al Banditore (meta', come il rimborso delle pozioni)
-    // v1.73 — quante CARTE possono essere attive insieme. Il limite conta carte DIVERSE: Rimbalzo x3 occupa
-    // un posto solo, cosi' approfondire una carta resta una strategia e non una tassa.
+    // v1.79 — QUESTO NUMERO NON LIMITA PIU' NIENTE. Con quattro abilita' passive in tutta la run, e tutte
+    // sempre accese, non c'e' niente da accendere o spegnere: e' il motivo per cui la Cartomante si e'
+    // potuta chiudere senza perdere nulla. Resta a 5 perche' l'HUD disegna ancora le caselle del box del
+    // personaggio, e quattro passive + specializzazione fanno esattamente cinque caselle piene.
     MAX_CARDS: 5,
+    // v1.79 — LA CARTOMANTE E' CHIUSA. La struttura resta nel villaggio (porta, interno, insegna): si
+    // spegne solo la funzione, che verra' ridisegnata. Rimettere questo a true la riaccende com'era.
+    CARTOMANTE_ATTIVA: false,
+    // v1.79 — XP CONDIVISA. Ogni uccisione da' esperienza a TUTTI i giocatori vivi, non a chi arriva
+    // primo sulla sfera. Ma le ondate crescono col gruppo meno che proporzionalmente (misurato: un trio
+    // genera solo il +27% di XP totale rispetto a un solista), quindi senza correzione un gruppo
+    // arriverebbe al tetto con ondate di anticipo. Ognuno riceve il valore pieno moltiplicato per questo
+    // fattore, tarato perche' la curva dei livelli valga identica da 1 a 6 giocatori.
+    // Misura in PROGRESSIONE-2.md §4. NB: a sei giocatori il tetto dei mostri vivi taglia la crescita
+    // dell'ondata, ed e' per questo che l'ultimo valore non segue la formula: si usa la tabella.
+    XP_GRUPPO: [1, 1, 0.80, 0.69, 0.58, 0.52, 0.50],   // indice = numero di giocatori vivi
+    // Le MONETE no: restano di chi le raccoglie. La cooperazione riguarda la crescita, non il portafoglio.
     // v1.74 — quanto costa un punto vita all'OSTESSA. Deve restare piu' conveniente della pozione di Cura
     // (0,54 monete a PV): la pozione la bevi in mezzo ai nemici, l'Ostessa no.
     INN_PER_HP: 0.4,
@@ -90,6 +104,10 @@
       uncommon: { name: 'Non comune', color: '#4bd66b', weight: 26, mult: 1.18 },
       rare: { name: 'Raro', color: '#3aa0ff', weight: 10, mult: 1.40 },
       epic: { name: 'Epico', color: '#b061ff', weight: 3.2, mult: 1.75 },
+      // v1.79 — DIVINO: il quarto scaglione delle abilita' passive, quello del livello 12. I pesi non
+      // servono piu' a niente per le abilita' (non si sorteggiano: lo scaglione decide cosa vedi), ma
+      // restano perche' equipaggiamento e oggetti li usano ancora.
+      divine: { name: 'Divino', color: '#ffe9a8', weight: 0.5, mult: 2.60 },
       legendary: { name: 'Leggendario', color: '#ffb020', weight: 0.8, mult: 2.30 },
     },
     MSG: {
@@ -106,6 +124,7 @@
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)
       EXIT_WAVE: 'exit_wave', WAVE_STATS: 'wave_stats',   // v1.78 — il pulsante EXIT e il riepilogo di fine livello
+      GO_VILLAGE: 'go_village',                            // v1.79 — la sezione Villaggio del menu di fine ondata
     },
     PHASE_LOBBY: 'lobby', PHASE_COMBAT: 'combat', PHASE_SHOP: 'shop',
     PHASE_BOSS: 'boss', PHASE_GAMEOVER: 'gameover', PHASE_VICTORY: 'victory',

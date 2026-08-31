@@ -2,6 +2,112 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.79.0] — 2026-08-31 · "Quindici livelli, quattro scelte"
+
+La versione piu' grossa dalla 1.69: cambia come cresce il personaggio, come si spende quello che
+guadagna e come si legge il menu fra un'ondata e l'altra. Il progetto completo, con le misure da cui
+escono tutti i numeri, sta in **PROGRESSIONE-2.md**.
+
+#### 🎚️ Tetto ai livelli: 15
+Dalla 1.70 non c'era: si saliva finche' c'era esperienza, e dall'ondata 12 in poi si saliva **a vuoto**.
+Adesso la crescita finisce al 15, dove si sceglie la specializzazione. L'esperienza raccolta dopo non
+serve piu' a niente — come in un gioco di ruolo — e non si accumula nemmeno nel serbatoio, cosi' la barra
+resta piena e onesta.
+
+#### 🎴 Le carte diventano ABILITA' PASSIVE, a scaglioni
+Prima ne arrivava una a ogni livello e se ne accumulavano una decina a run. Adesso sono **quattro in
+tutta la partita**, una per **scaglione**, ai livelli **3, 6, 9 e 12**:
+
+| Scaglione | Livello | Cosa fa |
+|---|---|---|
+| Non comune | 3 | da' forma al colpo base |
+| Raro | 6 | aggiunge una regola a come combatti |
+| Epico | 9 | definisce la build, e puo' avere un prezzo |
+| Divino | 12 | riscrive una regola, e punta alla specializzazione |
+
+Ogni scaglione mostra **quattro abilita': due della tua classe e due neutre**, e se ne sceglie **una**.
+Le abilita' di classe le vede **solo** quella classe: un mago non sa nemmeno che esistono quelle del
+guerriero, ed e' voluto — e' la rigiocabilita' a cambiare personaggio.
+
+- **32 abilita'** in tutto: 8 neutre e 8 per classe. Le 33 carte di prima ci sono entrate tutte tranne
+  tre, e una e' nuova (🌌 **Implosione**, divino del mago: una bolla ogni cinque risucchia i nemici in un
+  punto e li blocca).
+- **Niente impilamento**: ogni abilita' si prende una volta sola. Con quattro scelte in tutto, spendere
+  uno scaglione per raddoppiare la stessa abilita' sarebbe sempre la mossa sbagliata. Per questo i valori
+  sono **circa il doppio** della singola copia di prima.
+- **Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata e 🧲 Fame Vorace. Sono bonus all'XP raccolta, e col tetto
+  ai livelli sono spazzatura per costruzione — allo scaglione divino varrebbero esattamente zero.
+- **Due correzioni di equita' fra classi**, non di grandezza: i bonus ai PV neutri diventano
+  **percentuali** (il guerriero ha 200 PV e il mago 100: "+30 PV" valeva il triplo per il mago), e il
+  veleno si misura **per bersaglio** e non per colpo (a 3 colpi al secondo il ladro ne otteneva il doppio
+  del mago: non era una scelta di build, era la cadenza dell'arma).
+
+#### 🔗 Le sinergie diventano scelte di build
+Verificato dal test: tutte e sei restano raggiungibili, ognuna da **una sola classe** e a cavallo di
+**due scaglioni diversi**. Prenderne una costa meta' delle scelte della run: e' il prezzo giusto, e si
+pianifica dal livello 3 invece di capitare per fortuna.
+
+#### 📈 La curva dell'esperienza, rifatta sulle misure
+Circa il **doppio** di prima (cumulata al 15: **14.100** contro 6.810), con gli **ultimi due scalini** i
+piu' cari della curva. Misurato sul gioco, con un giocatore che uccide tutto e raccoglie tutto:
+
+| arriva il livello | 3 | 6 | 9 | 12 | **15** |
+|---|---|---|---|---|---|
+| ondata (gioco perfetto) | 4 | 8 | 11 | 13-14 | **16-17** |
+
+Il livello 15 non arriva prima dell'ondata 16 **nemmeno** giocando alla perfezione, in nessuna taglia di
+gruppo (misurato da 1 a 6 giocatori: 16,0 - 17,5).
+
+#### 👥 L'esperienza e' CONDIVISA
+Ogni uccisione vale per tutti i giocatori vivi: la crescita e' del gruppo, la corsa alla sfera non e' un
+gioco. Con una correzione che nasce da una misura: le ondate crescono col gruppo **meno che
+proporzionalmente** (un trio genera solo il **+27%** di XP totale rispetto a un solista), quindi ognuno
+riceve il valore pieno moltiplicato per un **fattore di gruppo** — 1 · 0,80 · 0,69 · 0,58 · 0,52 · 0,50 —
+tarato perche' la curva valga identica da 1 a 6 giocatori. Le monete no: restano di chi le raccoglie.
+
+#### ◆ I punti statistica: costo fisso, conto esatto
+**18 punti** in tutta la run (14 dai livelli, 4 dai ranghi) e **1 punto per livello** di statistica, a
+qualunque altezza: spariscono gli scaglioni 1/2/3. Il conto e' esatto: cappare una statistica costa 12,
+portarne una seconda a 6 ne costa altri 6, totale 18. Cappare **due** statistiche resta impossibile.
+
+#### 🏅 I ranghi seguono gli scaglioni
+Non piu' 1/5/10/15/20 ma **3/6/9/12/15**: il rango cade insieme alla scelta. Sei fasce, e a ognuna un
+titolo — ne serviva uno in piu' per classe: **Signore delle Lame**, **Magister**, **Spettro**.
+
+#### 🔮 La Cartomante e' chiusa
+Struttura, porta e insegna restano nel villaggio; la funzione no. Con quattro abilita' in tutta la run,
+tutte sempre accese, non c'e' piu' niente da accendere o spegnere: il tetto delle cinque carte attive e
+il concetto stesso di carta *spenta* sono spariti con lei. Verra' ridisegnata.
+
+#### 🧭 Il menu di fine ondata, rifatto
+Prima era tutto in colonna nella stessa schermata — riepilogo, carte, punti, negozio, destinazione — ed
+era confuso. Adesso sono **quattro sezioni** con una barra in basso, e sotto, **da solo e centrato**, il
+pulsante che fa partire la mappa successiva.
+
+- **RIEPILOGO** — si apre da sola: e' la risposta alla domanda che il giocatore ha appena finito di farsi.
+- **PERSONAGGIO** — le quattro statistiche e l'**inventario**: salute, vite, arma, equipaggiamento per
+  slot, cintura delle pozioni.
+- **ABILITA'** — la scelta in sospeso e l'elenco per scaglione, con scritto quando arrivano quelle che
+  mancano. Solo le tue: nessuna abilita' di un'altra classe.
+- **VAI AL VILLAGGIO** — ci si entra **solo da qui**, mai durante l'ondata, ed e' sempre visitabile. Resta
+  una mappa condivisa: ci si entra tutti insieme. **L'uscita riporta al menu**, non fa partire l'ondata.
+
+Due regole che il menu fa rispettare da solo: finche' hai una **scelta in sospeso** il pulsante della
+mappa successiva resta **spento** (uno scaglione saltato per distrazione non si recupera piu'), e la
+mappa parte **solo** da quel pulsante.
+
+#### 🔒 Le due abilita' attive: gli slot ci sono, spenti
+I livelli **6** e **12** sono gli slot destinati alle abilita' attive. Le sei gia' progettate (Turbine,
+Giuramento, Catena Nera, Meteora, Marchio, Salva) restano scritte e assegnate, ma **non sono
+implementate**: nella barra in basso i due slot si vedono col **lucchetto**.
+
+#### I test
+**1170 controlli** nella suite del server (+98) e la suite dell'interfaccia estesa al menu. Fra i nuovi:
+la griglia per classe (nessuna classe puo' vedere le abilita' di un'altra), le sinergie ancora
+raggiungibili, il tetto e la coda degli scaglioni, i 18 punti spesi fino all'ultimo, l'XP condivisa col
+fattore di gruppo, il giro completo menu → villaggio → menu → mappa, e l'implosione che tira i nemici
+verso il punto invece di respingerli.
+
 ### [1.78.1] — 2026-08-31 · "Il pulsante EXIT a misura"
 
 #### ✂️ Pulsante EXIT dimezzato

@@ -13,7 +13,7 @@ function mkEl(id) {
   Object.defineProperty(el, 'innerHTML', { get() { return el._html; }, set(v) { el._html = v; el.children = []; } });
   return el;
 }
-global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new') };
+global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new'), querySelector: () => mkEl('q') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
 for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'mapgen']) {
@@ -38,11 +38,12 @@ ok(bar.innerHTML.includes('syn'), 'la sinergia e evidenziata');
 HUD.setActiveBoons([]);
 ok((bar.innerHTML.match(/cchip empty/g) || []).length === window.GAME.Constants.MAX_CARDS, 'senza carte le caselle restano, tutte vuote');
 
-// 2) negozio: 3 carte potere, statistiche con tetto, emporio assente
-const boons = L.offerBoons(C.RARITY, {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, desc: 'x', owned: 0, max: b.max }));
-HUD.setBoons({ boons, picked: false }, () => {});
-HUD.setStats({ xp: 500, stats: L.XP_STATS.map((s, i) => { const lvl = i === 0 ? L.STAT_MAX_LEVEL : 2; const maxed = lvl >= L.STAT_MAX_LEVEL; return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : L.statCost(s.base, lvl), lvl, max: L.STAT_MAX_LEVEL, maxed }; }) }, () => {}, () => {});
-ok(document.getElementById('boonCards').children.length === 3, 'il negozio disegna 3 carte potere');
+// 2) v1.79 — il menu: quattro abilita' dello scaglione, statistiche con tetto, emporio assente
+const boons = L.offerteScaglione('ladro', 'rare', {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, desc: 'x', owned: 0, max: b.max }));
+HUD.setBoons({ boons, picked: false, tier: 'rare', tierName: 'Raro', tierColor: '#3aa0ff', scaglione: 2, tot: 4, resta: 1, liv: 6 }, () => {});
+HUD.setStats({ xp: 500, level: 6, rankName: 'Predone', points: 5, wave: 6, stats: L.XP_STATS.map((s, i) => { const lvl = i === 0 ? L.STAT_MAX_LEVEL : 2; const maxed = lvl >= L.STAT_MAX_LEVEL; return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : L.statCost(s.base, lvl), lvl, max: L.STAT_MAX_LEVEL, maxed }; }) }, () => {}, () => {});
+ok(document.getElementById('boonCards').children.length === 4, 'il menu disegna le quattro abilita dello scaglione');
+ok(String(document.getElementById('boonSub').innerHTML).indexOf('Raro') > 0, 'e dice di quale scaglione si tratta');
 const cards = document.getElementById('upgradeCards').children;
 ok(cards.length === L.XP_STATS.length, 'una carta per statistica');
 ok(cards[0].className.includes('maxed') && cards[0].innerHTML.includes('MAX'), 'la statistica al tetto e marcata MAX');
@@ -362,7 +363,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(!box.classList.contains('hidden'), 'il box del personaggio si vede');
   ok(String(document.getElementById('heroBoxName').textContent) === 'Paolo', 'con il nome, che non sta piu sopra la testa');
   ok(String(document.getElementById('heroBoxLv').innerHTML).indexOf('Lv.12') >= 0, 'con il livello');
-  ok(String(document.getElementById('heroBoxLv').innerHTML).indexOf('Veterano') > 0, 'e il rango di quel livello');
+  ok(String(document.getElementById('heroBoxLv').innerHTML).indexOf('Signore delle Lame') > 0, 'e il rango di quel livello (v1.79: al 12 e il quinto titolo)');
   const cards = document.getElementById('heroCards');
   ok((String(cards.innerHTML).match(/cchip/g) || []).length === MAXC, 'e ' + MAXC + ' caselle: anche quelle vuote si vedono');
   ok((String(cards.innerHTML).match(/empty/g) || []).length === 2, 'due caselle libere con tre carte accese');
@@ -491,15 +492,63 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(String(box.innerHTML).indexOf('livelli') < 0, 'e senza livelli non mostra la casella dei livelli');
 
   // le carte: quando non se ne deve nessuna, il pannello spiega perche
-  HUD.setBoons({ boons: [], resta: 0, liv: 3, manca: 140 }, () => {});
+  HUD.setBoons({ boons: [], resta: 0, liv: 4, manca: 140, prossimo: 6 }, () => {});
   const bsec = document.getElementById('boonSection'), bsub = document.getElementById('boonSub');
-  ok(!bsec.classList.contains('hidden'), 'senza carte da scegliere la sezione resta visibile');
+  ok(!bsec.classList.contains('hidden'), 'senza scelte in sospeso la sezione resta visibile');
   ok(String(document.getElementById('boonTitle').textContent).indexOf('NESSUNA') > 0, 'e il titolo non promette una scelta che non c e');
-  ok(String(bsub.innerHTML).indexOf('140') > 0 && String(bsub.innerHTML).indexOf('livello') > 0, 'e dice quanta XP manca al livello');
-  HUD.setBoons({ boons: [{ id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'rare', desc: 'passa attraverso' }], resta: 3, liv: 7 }, () => {});
-  ok(String(bsub.innerHTML).indexOf('carta 1 di 3') > 0, 'con piu carte dovute dice a che punto sei');
-  ok(String(document.getElementById('boonTitle').textContent).indexOf('SCEGLI') > 0, 'e quando c e da scegliere il titolo torna quello');
-  ok(String(bsub.innerHTML).indexOf('Livello <b>7</b>') >= 0, 'e quale livello l ha pagata');
+  ok(String(bsub.innerHTML).indexOf('140') > 0 && String(bsub.innerHTML).indexOf('livello 6') > 0, 'e dice a che livello arriva la prossima e quanta XP manca');
+  HUD.setBoons({ boons: [], resta: 0, liv: 15, cap: 1, max: 15 }, () => {});
+  ok(String(bsub.innerHTML).indexOf('massimo') > 0, 'al tetto dice che la crescita finisce li');
+  HUD.setBoons({ boons: [{ id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'rare', hero: 'ladro', desc: 'passa attraverso' }], tier: 'rare', tierName: 'Raro', tierColor: '#3aa0ff', scaglione: 2, tot: 4, resta: 1, liv: 6 }, () => {});
+  ok(String(bsub.innerHTML).indexOf('2 di 4') > 0, 'a scelta aperta dice a quale scaglione sei');
+  ok(String(document.getElementById('boonTitle').textContent).indexOf('SCEGLI') > 0, 'e il titolo torna quello della scelta');
+  ok(String((document.getElementById('boonCards').children[0] || {}).innerHTML).indexOf('DELLA TUA CLASSE') > 0, 'e marca quali sono le abilita della tua classe');
+})();
+
+
+// ===== v1.79 — IL MENU A SEZIONI ===========================================================
+(function () {
+  console.log('\n-- v1.79: menu a quattro sezioni, scelta in sospeso, inventario');
+  const L2 = window.GAME.Loot;
+  // le quattro sezioni si sfogliano e una sola resta accesa
+  HUD.mostraSezione('personaggio');
+  ok(document.getElementById('secPersonaggio').classList.contains('hidden') === false, 'la sezione Personaggio si apre');
+  ok(document.getElementById('secRiepilogo').classList.contains('hidden'), 'e le altre si chiudono');
+  ok(document.getElementById('tabPersonaggio').classList.contains('on'), 'il pulsante della sezione aperta e evidenziato');
+  HUD.mostraSezione('riepilogo');
+  ok(!document.getElementById('secRiepilogo').classList.contains('hidden'), 'si torna al riepilogo');
+
+  // finche' c'e' una scelta in sospeso, la mappa successiva non parte
+  const quattro = L2.offerteScaglione('mago', 'epic', {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, desc: 'x' }));
+  HUD.setBoons({ boons: quattro, tier: 'epic', tierName: 'Epico', tierColor: '#b061ff', scaglione: 3, tot: 4, resta: 1, liv: 9 }, () => {});
+  ok(document.getElementById('nextWaveBtn').disabled === true, 'con una scelta aperta il pulsante della mappa e spento');
+  ok(!document.getElementById('tabBadge').classList.contains('hidden'), 'e la sezione Abilita porta il richiamo');
+  ok(String(document.getElementById('goNota').innerHTML).indexOf('ABILIT') > 0, 'con scritto perche');
+  // scelta fatta: si riparte
+  HUD.setBoons({ boons: [], resta: 0, liv: 9, prossimo: 12, manca: 500 }, () => {});
+  ok(document.getElementById('nextWaveBtn').disabled === false, 'scelta l abilita, il pulsante si accende');
+  ok(document.getElementById('tabBadge').classList.contains('hidden'), 'e il richiamo sparisce');
+
+  // l'elenco per scaglione: quattro righe, sempre
+  HUD.setActiveBoons([{ id: 'crit', icon: '🎯', name: 'Occhio di Falco', rarity: 'uncommon', n: 1, desc: 'critico', on: 1 }]);
+  const righe = document.getElementById('abilElenco').innerHTML;
+  ok((righe.match(/ab-sc/g) || []).length === 4, 'l elenco ha una riga per scaglione');
+  ok(righe.indexOf('Occhio di Falco') > 0, 'con dentro l abilita gia presa');
+  ok(righe.indexOf('si sblocca al livello 12') > 0, 'e dice quando arrivano quelle che mancano');
+
+  // l'inventario
+  HUD.setStats({ points: 3, level: 9, rankName: 'Campione', wave: 9, stats: [], inv: {
+    hp: 180, hpMax: 240, vite: 2, monete: 77, uccisi: 40, combo: 9,
+    arma: { nome: 'Arco Corto', icona: '🏹', livello: 0, evo: '', scuola: 'ranged' },
+    gear: [{ slot: 'weapon', slotName: 'Arma', icona: '⚔️', nome: 'Arco Corto', colore: '#8a6534', rango: 1, desc: 'perfora 1' }],
+    belt: [{ id: 'p_cura', nome: 'Pozione di Cura', icona: '🧪', n: 2, max: 3 }, null, null],
+  } }, () => {}, () => {});
+  const inv = document.getElementById('inventario').innerHTML;
+  ok(inv.indexOf('180 / 240 PV') > 0, 'l inventario mostra i PV');
+  ok(inv.indexOf('Arco Corto') > 0, 'l equipaggiamento');
+  ok(inv.indexOf('Pozione di Cura') > 0 && inv.indexOf('2/3') > 0, 'e la cintura con le cariche');
+  ok((inv.match(/Arco Corto/g) || []).length === 1, 'e l arma non e scritta due volte');
+  ok(inv.indexOf('slot 2 vuoto') > 0, 'gli slot vuoti si vedono');
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

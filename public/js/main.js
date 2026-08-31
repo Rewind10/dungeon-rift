@@ -16,7 +16,14 @@
   function showLobby(players) { lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
   function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.startMusic(false); }
 
-  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), (dest) => Net.shopReady(dest || 'wave')); };
+  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
+  // v1.79 — LA BARRA DEL MENU DI FINE ONDATA. Le tre sezioni si sfogliano senza mandare niente al
+  // server; il villaggio e la mappa successiva sono le uniche due che gli parlano.
+  $('tabRiepilogo').onclick = () => HUD.mostraSezione('riepilogo');
+  $('tabPersonaggio').onclick = () => HUD.mostraSezione('personaggio');
+  $('tabAbilita').onclick = () => HUD.mostraSezione('abilita');
+  $('tabVillaggio').onclick = () => { Net.goVillage(); };
+  $('nextWaveBtn').onclick = () => { if ($('nextWaveBtn').disabled) return; Net.shopReady(); HUD.prontoPerOndata(); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
   Net.onWaveStats = (m) => { HUD.setWaveStats(m); };   // v1.78 — riepilogo di fine livello
   $('exitBtn').onclick = () => { Net.exitWave(); HUD.exitPremuto(); };   // v1.78 — arriva solo se hai guadagnato livelli, e una volta per livello
@@ -226,7 +233,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Enter') { const ci = $('chatInput'); if (ci.classList.contains('hidden')) { Input.clearKeys(); ci.classList.remove('hidden'); ci.focus(); } else { const t = ci.value.trim(); if (t) Net.chat(t); ci.value = ''; ci.classList.add('hidden'); Input.clearKeys(); Input.canvas && Input.canvas.focus(); } e.preventDefault(); }
     else if (e.code === 'Escape') { const ci = $('chatInput'); if (!ci.classList.contains('hidden')) { ci.value = ''; ci.classList.add('hidden'); } }
-    else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { Net.shopReady('wave'); HUD.hideShop(); }
+    else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { const b = $('nextWaveBtn'); if (b && !b.disabled) { Net.shopReady(); HUD.prontoPerOndata(); } }
     else if (e.code === 'KeyM') A.toggleMusic();
   });
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

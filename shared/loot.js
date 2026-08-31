@@ -93,44 +93,136 @@
 
   // ===== BOON a scelta (stile Hades): effetti UNICI impilabili =====
   // apply(p): imposta flag/valori letti in Room.js. maxStacks per limitarli.
+  // ===== v1.79 — LE ABILITA' PASSIVE, A SCAGLIONI E PER CLASSE ==================================
+  // Non sono piu' carte pescate a caso a fine ondata. Sono 32 abilita' divise in quattro SCAGLIONI
+  // (non comune, raro, epico, divino) e si sceglie UNA abilita' per scaglione, ai livelli 3, 6, 9 e 12.
+  //
+  // Ogni scaglione mostra QUATTRO abilita': le DUE della tua classe piu' le DUE neutre. Le abilita' di
+  // classe le vede solo quella classe — un mago non sa nemmeno che esistono quelle del guerriero, ed e'
+  // voluto: e' la rigiocabilita' a cambiare personaggio.
+  //
+  // NIENTE IMPILAMENTO: `max` vale 1 per tutte. Con quattro scelte in tutta la run, spendere uno
+  // scaglione per raddoppiare la stessa abilita' sarebbe sempre la mossa sbagliata. Per questo i valori
+  // NON sono quelli di prima: sono circa il doppio della singola copia della v1.78, alzati negli
+  // scaglioni alti. I numeri interni (`+= 2`, `forza 3`) sono la stessa manopola di prima portata al
+  // valore giusto, non un'abilita' presa due volte.
+  //
+  // La griglia completa, coi valori vecchi accanto ai nuovi, sta in PROGRESSIONE-2.md §7.
+  //
+  // Due correzioni di EQUITA' FRA CLASSI, non di grandezza:
+  //  - i bonus ai PV neutri sono PERCENTUALI, non in cifra fissa: il guerriero ha 200 PV e il mago 100,
+  //    "+30 PV" varrebbe il triplo per il mago;
+  //  - il veleno si misura PER BERSAGLIO e non per colpo, se no la stessa abilita' rende il doppio in
+  //    mano al ladro (3 colpi al secondo) rispetto al mago (1,5).
   const BOONS = [
-    { id: 'ricochet', name: 'Rimbalzo', icon: '↩️', rarity: 'uncommon', max: 3, desc: 'I proiettili rimbalzano +1 volta sui muri', apply: p => p.boon.bounce += 1 },
-    { id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'uncommon', max: 3, desc: 'I proiettili perforano +1 nemico', apply: p => p.boon.pierce += 1 },
-    { id: 'chain', name: 'Catena di Fulmini', icon: '⛓️', rarity: 'rare', max: 3, desc: 'I colpi rimbalzano su un nemico vicino (danno {v})', v: p => Math.round(6 + 4 * (p.boon.chain || 0)), apply: p => p.boon.chain = (p.boon.chain || 0) + 1 },
-    { id: 'poison', name: 'Tossina', icon: '☠️', rarity: 'rare', max: 3, desc: 'I colpi avvelenano: danno nel tempo cumulativo', apply: p => p.boon.poison += 1 },
-    { id: 'explode', name: 'Colpi Esplosivi', icon: '💣', rarity: 'epic', max: 2, desc: 'Ogni 5° colpo esplode ad area', apply: p => p.boon.explodeEvery = 5 },
-    { id: 'nova', name: 'Onda di Ritorno', icon: '🌀', rarity: 'epic', max: 2, desc: 'Le uccisioni hanno il 25% di emettere una nova', apply: p => p.boon.killNova += 1 },
-    { id: 'vampire', name: 'Vampirismo', icon: '🩸', rarity: 'rare', max: 3, desc: '+4% del danno inflitto ti cura', apply: p => p.stats.lifesteal += 0.04 },
-    { id: 'multishot', name: 'Sdoppiamento', icon: '🔱', rarity: 'epic', max: 2, desc: '+1 proiettile per colpo', apply: p => p.stats.extraProjectiles += 1 },
-    { id: 'crit', name: 'Occhio di Falco', icon: '🎯', rarity: 'uncommon', max: 3, desc: '+8% critico e +0.4x danno critico', apply: p => { p.stats.critChance += 0.08; p.stats.critMult += 0.4; } },
-    { id: 'giant', name: 'Proiettili Giganti', icon: '⭕', rarity: 'uncommon', max: 2, desc: 'Proiettili più grossi (+colpiscono di più) e +15% danno', apply: p => { p.boon.bulletSize += 2; p.stats.dmgMult += 0.15; } },
-    { id: 'freeze', name: 'Tocco Gelido', icon: '❄️', rarity: 'rare', max: 2, desc: 'I colpi rallentano brevemente i nemici', apply: p => p.boon.slow += 1 },
-    { id: 'thorns', name: 'Aura di Spine', icon: '🌵', rarity: 'uncommon', max: 3, desc: 'Riflette danni a chi ti colpisce in mischia', apply: p => p.boon.thorns += 12 },
-    { id: 'adrenaline', name: 'Adrenalina Pura', icon: '🔥', rarity: 'epic', max: 1, desc: 'Le uccisioni danno +cadenza per 3s (accumula)', apply: p => p.boon.killHaste = 1 },
-    { id: 'overheal', name: 'Scudo Vitale', icon: '💠', rarity: 'rare', max: 2, desc: '+30 PV massimi (non curano) e rigeneri 2 PV/s', apply: p => { p.stats.maxHpFlat += 30; p.stats.regen += 2; } },
-    // ===== NOVITA v1.6 =====
-    { id: 'homing', name: 'Mira Guidata', icon: '🎯', rarity: 'epic', max: 2, desc: 'I proiettili curvano verso i nemici vicini', apply: p => p.boon.homing += 1 },
-    { id: 'greed', name: 'Avidita', icon: '🪙', rarity: 'uncommon', max: 3, desc: '+30% XP raccolta (potenzia le combo)', apply: p => p.stats.xpMult += 0.30 },
-    { id: 'bulwark', name: 'Baluardo', icon: '🧱', rarity: 'rare', max: 3, desc: '-12% a tutti i danni subiti', apply: p => p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.12) },
-    // ===== NOVITA v1.10 =====
-    { id: 'berserk', name: 'Furia Cieca', icon: '😈', rarity: 'epic', max: 2, desc: '+22% danno ma +8% danni subiti', apply: p => { p.stats.dmgMult += 0.22; p.stats.dmgReduce = Math.max(-0.5, p.stats.dmgReduce - 0.08); } },
-    { id: 'swift', name: 'Passo Rapido', icon: '🏃', rarity: 'uncommon', max: 3, desc: '+8% velocita e -6% ricarica scatto', apply: p => { p.stats.speedMult += 0.08; p.stats.cdrMult *= 0.94; } },
-    { id: 'lucky', name: 'Fortuna Sfacciata', icon: '🍀', rarity: 'rare', max: 2, desc: '+10% critico e +20% XP raccolta', apply: p => { p.stats.critChance += 0.10; p.stats.xpMult += 0.20; } },
-    { id: 'juggernaut', name: 'Colosso', icon: '🧍', rarity: 'epic', max: 2, desc: '+45 PV massimi (non curano) e +6% velocita', apply: p => { p.stats.maxHpFlat += 45; p.stats.speedMult += 0.06; } },
-    { id: 'executioner', name: 'Giustiziere', icon: '🪓', rarity: 'epic', max: 2, desc: '+35% danno critico e +5% critico', apply: p => { p.stats.critMult += 0.35; p.stats.critChance += 0.05; } },
-    { id: 'artillery', name: 'Bombardiere', icon: '🚩', rarity: 'rare', max: 2, desc: '+1 proiettile e +10% danno', apply: p => { p.stats.extraProjectiles += 1; p.stats.dmgMult += 0.10; } },
-    // ===== NOVITA v1.51 — dieci poteri nuovi, ispirati ad altri roguelike =====
-    { id: 'crowbar', name: 'Piede di Porco', icon: '⛏️', rarity: 'uncommon', max: 3, desc: '+40% danno sui nemici ancora integri (sopra il 90% dei PV)', apply: p => p.boon.crowbar += 1 },
-    { id: 'longshot', name: 'Tiro Lungo', icon: '🔭', rarity: 'uncommon', max: 3, desc: 'Piu\' lontano e\' il bersaglio, piu\' fai male (+22% a piena gittata)', apply: p => p.boon.longshot += 1 },
-    { id: 'killstep', name: 'Passo di Danza', icon: '💃', rarity: 'uncommon', max: 3, desc: 'Ogni uccisione ti da\' +25% velocita\' per 2s', apply: p => p.boon.killStep += 1 },
-    { id: 'gluttony', name: 'Fame Vorace', icon: '🧲', rarity: 'uncommon', max: 3, desc: 'Raggio di raccolta molto piu\' ampio e +15% XP', apply: p => { p.boon.magnet += 1; p.stats.xpMult += 0.15; } },
-    { id: 'retaliate', name: 'Rappresaglia', icon: '💢', rarity: 'rare', max: 3, desc: 'Quando vieni colpito emetti un\'onda che danneggia e respinge', apply: p => p.boon.retaliate += 1 },
-    { id: 'aegis', name: 'Egida Ostinata', icon: '🧿', rarity: 'rare', max: 2, desc: 'Assorbe completamente un colpo ogni 8s (6s con 2 cariche)', apply: p => p.boon.aegis += 1 },
-    { id: 'corpseblast', name: 'Deflagrazione Cadaverica', icon: '☄️', rarity: 'rare', max: 3, desc: 'I nemici uccisi esplodono e danneggiano chi e\' vicino', apply: p => p.boon.corpseBlast += 1 },
-    { id: 'execute', name: 'Colpo di Grazia', icon: '🗡️', rarity: 'epic', max: 2, desc: 'I nemici sotto il 12% dei PV muoiono all\'istante (boss esclusi)', apply: p => p.boon.execute += 1 },
-    { id: 'echo', name: 'Eco Arcana', icon: '🔊', rarity: 'epic', max: 2, desc: 'Il 20% dei colpi viene sparato una seconda volta, gratis', apply: p => p.boon.echo += 1 },
-    { id: 'defiance', name: 'Ultima Occasione', icon: '⏳', rarity: 'epic', max: 2, desc: 'Invece di cadere risorgi al 50% dei PV. Una carica, si consuma', apply: p => { p.boon.defiance += 1; p.defianceLeft = (p.defianceLeft || 0) + 1; } },
+    // ---- NEUTRE: le vede chiunque -----------------------------------------------------------
+    { id: 'crit', name: 'Occhio di Falco', icon: '🎯', rarity: 'uncommon', hero: '*', max: 1,
+      desc: '+15% critico e +0.5x danno critico',
+      apply: p => { p.stats.critChance += 0.15; p.stats.critMult += 0.5; } },
+    { id: 'swift', name: 'Passo Rapido', icon: '🏃', rarity: 'uncommon', hero: '*', max: 1,
+      desc: '+15% velocita e -12% ricarica dello scatto',
+      apply: p => { p.stats.speedMult += 0.15; p.stats.cdrMult *= 0.88; } },
+    { id: 'poison', name: 'Tossina', icon: '☠️', rarity: 'rare', hero: '*', max: 1,
+      desc: 'I colpi avvelenano: danno nel tempo, per bersaglio',
+      apply: p => { p.boon.poison = Math.max(p.boon.poison, 2); } },
+    { id: 'overheal', name: 'Scudo Vitale', icon: '💠', rarity: 'rare', hero: '*', max: 1,
+      desc: '+25% PV massimi (non curano) e rigeneri 3 PV/s',
+      apply: p => { p.stats.maxHpMult += 0.25; p.stats.regen += 3; } },
+    { id: 'executioner', name: 'Giustiziere', icon: '🪓', rarity: 'epic', hero: '*', max: 1,
+      desc: '+70% danno critico e +10% critico',
+      apply: p => { p.stats.critMult += 0.70; p.stats.critChance += 0.10; } },
+    { id: 'bulwark', name: 'Baluardo', icon: '🧱', rarity: 'epic', hero: '*', max: 1,
+      desc: '-22% a tutti i danni subiti',
+      apply: p => { p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.22); } },
+    { id: 'defiance', name: 'Ultima Occasione', icon: '⏳', rarity: 'divine', hero: '*', max: 1,
+      desc: 'Due volte, invece di cadere risorgi a meta vita con 2s di invulnerabilita',
+      apply: p => { p.boon.defiance += 2; p.defianceLeft = (p.defianceLeft || 0) + 2; } },
+    { id: 'execute', name: 'Colpo di Grazia', icon: '🗡️', rarity: 'divine', hero: '*', max: 1,
+      desc: 'I nemici sotto il 20% dei PV muoiono all istante (boss esclusi)',
+      apply: p => { p.boon.execute += 2; } },
+
+    // ---- GUERRIERO: sta in mezzo alla mischia, la ricompensa e' la folla ---------------------
+    { id: 'heavyarm', name: 'Arma Pesante', icon: '🗡', rarity: 'uncommon', hero: 'guerriero', max: 1,
+      desc: '+25% apertura del fendente e +18% danno',
+      apply: p => { p.perk.arcoPiu = (p.perk.arcoPiu || 0) + 0.25; p.stats.dmgMult += 0.18; } },
+    { id: 'thorns', name: 'Aura di Spine', icon: '🌵', rarity: 'uncommon', hero: 'guerriero', max: 1,
+      desc: 'Chi ti colpisce in mischia si prende 25 danni piu il 10% di quelli che ti ha inflitto',
+      apply: p => { p.boon.thorns += 25; p.boon.thornsPct += 0.10; } },
+    { id: 'vampire', name: 'Vampirismo', icon: '🩸', rarity: 'rare', hero: 'guerriero', max: 1,
+      desc: '+9% del danno inflitto ti cura',
+      apply: p => { p.stats.lifesteal += 0.09; } },
+    { id: 'retaliate', name: 'Rappresaglia', icon: '💢', rarity: 'rare', hero: 'guerriero', max: 1,
+      desc: 'Quando vieni colpito emetti un onda ampia che danneggia e respinge',
+      apply: p => { p.boon.retaliate += 2; } },
+    { id: 'adrenaline', name: 'Adrenalina Pura', icon: '🔥', rarity: 'epic', hero: 'guerriero', max: 1,
+      desc: 'Ogni uccisione da +8% cadenza per 3s, fino a +48%',
+      apply: p => { p.boon.killHaste = 1; } },
+    { id: 'juggernaut', name: 'Colosso', icon: '🧍', rarity: 'epic', hero: 'guerriero', max: 1,
+      desc: '+35% PV massimi (non curano) e +8% velocita',
+      apply: p => { p.stats.maxHpMult += 0.35; p.stats.speedMult += 0.08; } },
+    { id: 'corpseblast', name: 'Deflagrazione Cadaverica', icon: '☄️', rarity: 'divine', hero: 'guerriero', max: 1,
+      desc: 'I nemici uccisi esplodono, ampiamente e a danno pieno',
+      apply: p => { p.boon.corpseBlast += 3; } },
+    { id: 'nova', name: 'Onda di Ritorno', icon: '🌀', rarity: 'divine', hero: 'guerriero', max: 1,
+      desc: 'Meta delle uccisioni emette una nova di proiettili',
+      apply: p => { p.boon.killNova += 2; } },
+
+    // ---- MAGO: pochi colpi, ognuno deve fare rumore ------------------------------------------
+    { id: 'giant', name: 'Bolla Densa', icon: '⭕', rarity: 'uncommon', hero: 'mago', max: 1,
+      desc: 'Bolla molto piu grossa (+35%) e +18% danno',
+      apply: p => { p.boon.bulletSize += 3; p.stats.dmgMult += 0.18; } },
+    { id: 'freeze', name: 'Tocco Gelido', icon: '❄️', rarity: 'uncommon', hero: 'mago', max: 1,
+      desc: 'I colpi rallentano i nemici del 50% per 1,5s',
+      apply: p => { p.boon.slow += 1; } },
+    { id: 'chain', name: 'Catena di Fulmini', icon: '⛓️', rarity: 'rare', hero: 'mago', max: 1,
+      desc: 'Il colpo rimbalza su 2 nemici vicini, al 25% del danno',
+      apply: p => { p.boon.chain += 2; } },
+    { id: 'ricochet', name: 'Rimbalzo', icon: '↩️', rarity: 'rare', hero: 'mago', max: 1,
+      desc: 'Le bolle rimbalzano 2 volte in piu sui muri, senza perdere danno',
+      apply: p => { p.boon.bounce += 2; } },
+    { id: 'explode', name: 'Colpi Esplosivi', icon: '💣', rarity: 'epic', hero: 'mago', max: 1,
+      desc: 'Ogni 3° colpo esplode ad area',
+      apply: p => { p.boon.explodeEvery = 3; } },
+    { id: 'artillery', name: 'Doppia Bolla', icon: '🚩', rarity: 'epic', hero: 'mago', max: 1,
+      desc: '+1 bolla per colpo e +15% danno',
+      apply: p => { p.stats.extraProjectiles += 1; p.stats.dmgMult += 0.15; } },
+    { id: 'echo', name: 'Eco Arcana', icon: '🔊', rarity: 'divine', hero: 'mago', max: 1,
+      desc: 'Il 40% dei colpi viene sparato una seconda volta, gratis',
+      apply: p => { p.boon.echo += 2; } },
+    { id: 'implode', name: 'Implosione', icon: '🌌', rarity: 'divine', hero: 'mago', max: 1,
+      desc: 'Ogni 5° bolla implode: risucchia i nemici vicini e li blocca per 0,8s',
+      apply: p => { p.boon.implodeEvery = 5; } },
+
+    // ---- LADRO: distanza, cadenza, e nessun margine d errore ---------------------------------
+    { id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'uncommon', hero: 'ladro', max: 1,
+      desc: 'Le frecce perforano 2 nemici in piu',
+      apply: p => { p.boon.pierce += 2; } },
+    { id: 'longshot', name: 'Tiro Lungo', icon: '🔭', rarity: 'uncommon', hero: 'ladro', max: 1,
+      desc: 'Piu lontano e il bersaglio, piu fai male (+44% a piena gittata)',
+      apply: p => { p.boon.longshot += 2; } },
+    { id: 'crowbar', name: 'Piede di Porco', icon: '⛏️', rarity: 'rare', hero: 'ladro', max: 1,
+      desc: '+80% danno sui nemici ancora integri (sopra il 90% dei PV)',
+      apply: p => { p.boon.crowbar += 2; } },
+    { id: 'killstep', name: 'Passo di Danza', icon: '💃', rarity: 'rare', hero: 'ladro', max: 1,
+      desc: 'Ogni uccisione da +20% velocita per 3s, fino a +40%',
+      apply: p => { p.boon.killStep += 1; } },
+    { id: 'multishot', name: 'Sdoppiamento', icon: '🔱', rarity: 'epic', hero: 'ladro', max: 1,
+      desc: '+1 freccia per tiro e +10% cadenza',
+      apply: p => { p.stats.extraProjectiles += 1; p.stats.fireRateMult *= 1.10; } },
+    { id: 'homing', name: 'Mira Guidata', icon: '🎯', rarity: 'epic', hero: 'ladro', max: 1,
+      desc: 'Le frecce curvano decisamente verso i nemici vicini',
+      apply: p => { p.boon.homing += 2; } },
+    { id: 'berserk', name: 'Furia Cieca', icon: '😈', rarity: 'divine', hero: 'ladro', max: 1,
+      desc: '+45% danno, ma incassi il 15% in piu',
+      apply: p => { p.stats.dmgMult += 0.45; p.stats.dmgReduce = Math.max(-0.5, p.stats.dmgReduce - 0.15); } },
+    { id: 'aegis', name: 'Egida Ostinata', icon: '🧿', rarity: 'divine', hero: 'ladro', max: 1,
+      desc: 'Assorbe completamente un colpo ogni 5s',
+      apply: p => { p.boon.aegis += 2; } },
   ];
+  // v1.79 — TRE RITIRATE: Avidita, Fortuna Sfacciata e Fame Vorace davano bonus all XP raccolta. Col
+  // tetto ai livelli sono spazzatura per costruzione — al livello 12, dove si sceglie lo scaglione
+  // divino, varrebbero esattamente zero. Se un giorno servissero, il posto giusto e un bonus alle
+  // MONETE gestito dal Banditore, fuori dagli scaglioni.
   const BOON_BY_ID = {}; for (const b of BOONS) BOON_BY_ID[b.id] = b;
 
   // ===== SINERGIE tra Boon (v1.7): possedere entrambi sblocca un effetto potenziato =====
@@ -151,20 +243,23 @@
   }
   const SYNERGY_BY_ID = {}; for (const sy of SYNERGIES) SYNERGY_BY_ID[sy.id] = sy;
 
-  const BOON_CHOICES = 3;  // v1.51 — carte offerte a fine ondata
+  const BOON_CHOICES = 4;  // v1.79 — quattro abilita' in vista: due della tua classe, due neutre
   function pickWeighted(list, rng) { let tot = 0; for (const it of list) tot += (it.weight || 0); let r = (rng ? rng() : Math.random()) * tot; for (const it of list) { r -= (it.weight || 0); if (r <= 0) return it; } return list[list.length - 1]; }
-  // Offre fino a 3 boon casuali (esclude quelli al max), pesati per rarità.
-  function offerBoons(rarityTable, ownedCounts) {
-    const weighted = BOONS.filter(b => (ownedCounts[b.id] || 0) < b.max)
-      .map(b => ({ b, weight: (rarityTable[b.rarity] || { weight: 1 }).weight }));
-    const out = [];
-    for (let i = 0; i < BOON_CHOICES && weighted.length; i++) {  // v1.51: si sceglie 1 di 3 (era 1 di 2 dalla v1.10)
-      const w = pickWeighted(weighted);
-      out.push(w.b);
-      weighted.splice(weighted.indexOf(w), 1);
-    }
-    return out;
+  // v1.79 — LE OFFERTE NON SI SORTEGGIANO PIU'. Lo scaglione decide cosa vedi: le DUE abilita' della tua
+  // classe di quello scaglione, piu' le DUE neutre. Sempre quelle, sempre tutte e quattro. Nascondere una
+  // delle quattro non aggiungerebbe varieta' — con una sola scelta per scaglione aggiungerebbe solo
+  // frustrazione; la varieta' sta nel cambiare classe e nella specializzazione del 15.
+  // L'ordine e' voluto: prima le tue, poi le neutre.
+  function offerteScaglione(heroId, tier, ownedCounts) {
+    const gia = ownedCounts || {};
+    const libera = b => !(gia[b.id] > 0);
+    const mie = BOONS.filter(b => b.rarity === tier && b.hero === heroId && libera(b));
+    const neutre = BOONS.filter(b => b.rarity === tier && b.hero === '*' && libera(b));
+    return mie.concat(neutre);
   }
+  // Tutte le abilita' che una classe puo' incontrare in una run: le sue piu' le neutre. Serve al pannello
+  // delle abilita' e ai test — un mago non deve mai vedere quelle del guerriero.
+  function boonsPerClasse(heroId) { return BOONS.filter(b => b.hero === heroId || b.hero === '*'); }
 
   // ===== EQUIPAGGIAMENTO a slot (v1.8): acquistabile con MONETE. 5 slot x 5 tier. =====
   // Ogni tier aggiunge `per` alle statistiche del giocatore (delta additivo, campi gia esistenti in p.stats).
@@ -181,5 +276,5 @@
     return out;
   }
 
-  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerBoons, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, coinsFor };
+  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerteScaglione, boonsPerClasse, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, coinsFor };
 });

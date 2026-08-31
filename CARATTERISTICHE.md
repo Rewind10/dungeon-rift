@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.78.1`
+**Versione attuale:** `1.79.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -9,6 +9,121 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 > delle sei specializzazioni (dichiarate dal v1.69, per ora esistono solo le passive).
 
 ---
+
+## 🎚️ COME CRESCE IL PERSONAGGIO *(rifatto in v1.79)*
+
+### Il tetto e le quattro scelte
+- **Livello massimo: 15.** Oltre non si sale; l'esperienza raccolta dopo non serve piu' a niente.
+- **Quattro abilita' passive in tutta la partita**, una per **scaglione**, ai livelli **3, 6, 9 e 12**.
+- Ogni scaglione mostra **quattro abilita': due della tua classe e due neutre**. Se ne sceglie **una**.
+- Le abilita' di classe le vede **solo** quella classe: un mago non sa nemmeno che esistono quelle del
+  guerriero. E' voluto — e' la rigiocabilita' a cambiare personaggio.
+- **Niente impilamento**: ogni abilita' si prende una volta sola, e vale circa il doppio di prima.
+- Al **livello 15** si sceglie la **specializzazione** fra due, ed e' passiva.
+
+| Scaglione | Livello | Cosa deve fare |
+|---|---|---|
+| Non comune | 3 | Da' forma al colpo base. Piccola, ma si sente subito. |
+| Raro | 6 | Aggiunge una **regola** a come combatti, non solo una percentuale. |
+| Epico | 9 | Definisce la build, e puo' avere un prezzo o una condizione. |
+| Divino | 12 | **Riscrive una regola** del gioco, e punta verso la specializzazione. |
+
+### La curva dell'esperienza
+Circa il doppio di prima (cumulata al 15: **14.100** contro 6.810), con gli ultimi due scalini i piu'
+cari. Misurato sul gioco, con un giocatore che uccide tutto e raccoglie tutto:
+
+| arriva il livello | 3 | 6 | 9 | 12 | **15** |
+|---|---|---|---|---|---|
+| ondata | 4 | 8 | 11 | 13-14 | **16-17** |
+
+Il livello 15 non arriva prima dell'ondata 16 nemmeno giocando alla perfezione, in nessuna taglia di
+gruppo (misurato da 1 a 6 giocatori: 16,0 - 17,5).
+
+### L'esperienza e' condivisa
+Ogni uccisione vale per **tutti i giocatori vivi**: la crescita e' del gruppo, la corsa alla sfera non e'
+un gioco. Le ondate pero' crescono col gruppo **meno che proporzionalmente** — misurato, un trio genera
+solo il **+27%** di XP totale rispetto a un solista — quindi ognuno riceve il valore pieno moltiplicato
+per un **fattore di gruppo** (1 · 0,80 · 0,69 · 0,58 · 0,52 · 0,50), tarato perche' la curva valga
+identica da 1 a 6 giocatori. Le **monete** no: restano di chi le raccoglie.
+
+### I punti statistica
+**18 in tutta la run** (14 dai livelli, 4 dai ranghi) e **1 punto per livello** di statistica, a
+qualunque altezza. Il conto e' esatto: cappare una statistica costa **12**, portarne una seconda a 6 ne
+costa altri **6**. Cappare **due** statistiche resta impossibile.
+
+### I ranghi
+Cadono insieme agli scaglioni: **3 / 6 / 9 / 12 / 15**. Sei fasce, sei titoli per classe.
+
+| Fascia | Livello | Guerriero | Mago | Ladro |
+|---|---|---|---|---|
+| — | 1-2 | Guerriero | Apprendista | Ladro |
+| I | 3-5 | Guerriero Esperto | Mago Giovane | Furfante |
+| II | 6-8 | Veterano | Mago | Predone |
+| III | 9-11 | Campione | Mago Anziano | Ombra |
+| IV | 12-14 | Signore delle Lame | Magister | Spettro |
+| V | 15 | *(specializzazione)* | *(idem)* | *(idem)* |
+
+## 🎴 LE 32 ABILITA' PASSIVE *(v1.79)*
+
+**Neutre — le vede chiunque**
+
+| Scaglione | | |
+|---|---|---|
+| Non comune | 🎯 Occhio di Falco — +15% critico, +0,5× danno critico | 🏃 Passo Rapido — +15% velocita, -12% scatto |
+| Raro | ☠️ Tossina — veleno di forza 2, per bersaglio | 💠 Scudo Vitale — +25% PV massimi, +3 PV/s |
+| Epico | 🪓 Giustiziere — +70% danno critico, +10% critico | 🧱 Baluardo — -22% danni subiti |
+| Divino | ⏳ Ultima Occasione — due volte risorgi a meta vita | 🗡️ Colpo di Grazia — esecuzione sotto il 20% |
+
+**⚔️ Guerriero** — sta in mezzo alla mischia, la ricompensa e' la folla
+
+| Scaglione | | |
+|---|---|---|
+| Non comune | 🗡 Arma Pesante — +25% apertura, +18% danno | 🌵 Aura di Spine — 25 danni + 10% di quelli subiti |
+| Raro | 🩸 Vampirismo — +9% del danno ti cura | 💢 Rappresaglia — onda ampia quando incassi |
+| Epico | 🔥 Adrenalina Pura — +8% cadenza per uccisione, fino a +48% | 🧍 Colosso — +35% PV massimi, +8% velocita |
+| Divino | ☄️ Deflagrazione Cadaverica — i morti esplodono, a danno pieno | 🌀 Onda di Ritorno — meta delle uccisioni emette una nova |
+
+**🔮 Mago** — pochi colpi, ognuno deve fare rumore
+
+| Scaglione | | |
+|---|---|---|
+| Non comune | ⭕ Bolla Densa — +35% dimensione, +18% danno | ❄️ Tocco Gelido — rallenta del 50% per 1,5s |
+| Raro | ⛓️ Catena di Fulmini — rimbalza su 2 nemici al 25% | ↩️ Rimbalzo — +2 rimbalzi, senza perdere danno |
+| Epico | 💣 Colpi Esplosivi — ogni 3° colpo esplode | 🚩 Doppia Bolla — +1 bolla, +15% danno |
+| Divino | 🔊 Eco Arcana — il 40% dei colpi si ripete gratis | 🌌 Implosione — una bolla ogni 5 risucchia e blocca |
+
+**🏹 Ladro** — distanza, cadenza, e nessun margine d'errore
+
+| Scaglione | | |
+|---|---|---|
+| Non comune | 🏹 Perforazione — +2 nemici perforati | 🔭 Tiro Lungo — +44% a piena gittata |
+| Raro | ⛏️ Piede di Porco — +80% sui nemici integri | 💃 Passo di Danza — +20% velocita per uccisione, fino a +40% |
+| Epico | 🔱 Sdoppiamento — +1 freccia, +10% cadenza | 🎯 Mira Guidata — curvatura forte |
+| Divino | 😈 Furia Cieca — +45% danno, +15% danni subiti | 🧿 Egida Ostinata — assorbe un colpo ogni 5s |
+
+**Le sinergie** restano sei, ognuna raggiungibile da **una sola classe** e a cavallo di **due scaglioni**:
+prenderne una costa meta' delle scelte della run.
+
+**Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace — bonus all'XP raccolta, inutili col tetto.
+
+## 🧭 IL MENU DI FINE ONDATA *(rifatto in v1.79)*
+Quattro sezioni con una barra in basso, e sotto — **da solo e centrato** — il pulsante che fa partire la
+mappa successiva. Separarlo non e' estetica: e' l'unico comando che chiude il menu.
+
+| Sezione | Contenuto |
+|---|---|
+| **📊 Riepilogo** | Le statistiche dell'ondata appena chiusa. Si apre da sola. |
+| **🧍 Personaggio** | Le quattro statistiche da salire, e l'**inventario**: salute, vite, arma, equipaggiamento per slot, cintura delle pozioni. |
+| **🎴 Abilita'** | La scelta in sospeso e l'elenco per scaglione, con scritto quando arrivano quelle che mancano. Solo le tue. |
+| **🏕️ Vai al villaggio** | Ci si entra solo da qui, ed e' sempre visitabile. Mappa condivisa: si entra tutti insieme. **L'uscita riporta al menu.** |
+
+Due regole che il menu fa rispettare da solo: finche' hai una **scelta in sospeso** il pulsante della
+mappa successiva resta **spento**, e la mappa parte **solo** da quel pulsante.
+
+## 🔮 LA CARTOMANTE E' CHIUSA *(v1.79)*
+Struttura, porta e insegna restano nel villaggio; la funzione no. Con quattro abilita' in tutta la run,
+tutte sempre accese, non c'e' piu' niente da accendere o spegnere: il tetto delle cinque carte attive e
+il concetto stesso di carta *spenta* sono spariti con lei. Verra' ridisegnata.
 
 ## ✔ LA MAPPA RIPULITA E IL PULSANTE EXIT *(novita v1.78)*
 - Ucciso l'ultimo nemico l'ondata **non finisce da sola**: la fase diventa **MAPPA RIPULITA**, con la
@@ -24,7 +139,10 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - In cooperativa si aspettano **tutti i giocatori in piedi** (i caduti no: non potrebbero premere
   niente) e il pulsante dice a che punto e' l'attesa. Dopo **120 s** (`EXIT_TIMEOUT`) si esce comunque.
 
-## 🎴 LE CARTE ARRIVANO DAI LIVELLI *(novita v1.78)*
+## 🎴 LE CARTE ARRIVANO DAI LIVELLI *(v1.78 — SUPERATA dalla v1.79)*
+
+> Dalla v1.79 le abilita non arrivano a ogni livello ma solo ai quattro SCAGLIONI (3, 6, 9, 12): vedi la
+> sezione in cima. Questa resta per capire da dove si e passati.
 - **Una carta per livello guadagnato.** Prima ne arrivava una a ogni fine ondata: il potere arrivava
   col calendario, non col merito.
 - Chi sale di tre livelli in un'ondata sceglie **tre carte**, una dopo l'altra: il mazzo si riapre
@@ -34,7 +152,7 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 - Ritmo misurato: la prima carta arriva a fine **seconda** ondata (prima era la prima), ma all'ottava
   un giocatore solo ne ha **10** contro le 8 di prima.
 
-## 📊 IL RIEPILOGO DI FINE LIVELLO *(novita v1.78)*
+## 📊 IL RIEPILOGO DI FINE LIVELLO *(v1.78 — dalla v1.79 e una delle quattro sezioni del menu)*
 In cima al pannello di fine ondata: **nemici uccisi**, **esperienza** e **monete** raccolte in
 quell'ondata, **durata** contro il tempo obiettivo, **livelli** guadagnati, e il **premio del
 cronometro** se sei rimasto sotto. Fuori tempo lo dice, invece di tacere.

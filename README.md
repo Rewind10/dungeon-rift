@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.78.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.79.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -19,10 +19,26 @@ Test: `npm test`
 | Spara | Click sinistro / Spazio |
 | **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
 | **Pozioni della cintura** | 1 / 2 / 3 — il tipo di ogni slot lo scegli dall'Erborista |
-| ~~Abilità 1 / 2~~ | *sospese in v1.66 — torneranno con l'evoluzione delle classi* |
+| ~~Abilità 1 / 2~~ | *slot ai livelli 6 e 12, visibili col lucchetto: non ancora implementate (v1.79)* |
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.79 (quindici livelli, quattro scelte)
+- **🎚️ Tetto ai livelli: 15.** Oltre non si sale, e l'esperienza raccolta dopo non serve piu' a niente.
+  Al 15 si sceglie la **specializzazione** fra due, ed e' passiva.
+- **🎴 Le carte diventano abilita' passive a scaglioni**: **quattro in tutta la partita**, ai livelli
+  **3, 6, 9 e 12**. Ogni scaglione mostra 4 abilita' — 2 della tua classe e 2 neutre — e se ne sceglie 1.
+  Le abilita' di classe le vede solo quella classe. Niente impilamento: i valori sono circa il doppio.
+- **📈 Curva XP raddoppiata** e tarata sulle misure: il livello 15 non arriva prima dell'ondata 16
+  nemmeno giocando alla perfezione.
+- **👥 Esperienza condivisa** fra i giocatori vivi, con un fattore di gruppo misurato: la stessa curva
+  vale da 1 a 6 giocatori. Le monete restano di chi le raccoglie.
+- **◆ 18 punti statistica**, costo fisso di 1 per livello: una statistica al tetto piu' una seconda a 6.
+- **🧭 Menu di fine ondata a quattro sezioni** — Riepilogo · Personaggio (con l'inventario) · Abilita' ·
+  Vai al villaggio — e sotto, da solo, il pulsante della mappa successiva. Dal villaggio si torna al menu.
+- **🔮 La Cartomante e' chiusa**: la struttura resta nel villaggio, la funzione verra' ridisegnata.
+- **🔒 Slot delle abilita' attive** ai livelli 6 e 12: si vedono, spenti col lucchetto.
 
 ## 🆕 Novita v1.78 (l'ondata finisce quando lo decidi tu)
 - **✔ Pulsante EXIT sulla mappa ripulita**: ucciso l'ultimo nemico non si esce di scatto. Compare la

@@ -73,8 +73,8 @@
         <li><b>WASD / frecce</b> — movimento · <b>Mouse</b> — mira · <b>Click sx / Spazio</b> — spara</li>
         <li><b>Tasto destro / Shift</b> — scatto (attraversa i nemici)</li>
         <li><b>M</b> — musica · le abilità Q/E tornano con l’evoluzione delle classi</li>
-        <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ e <b>oggetti</b> 🎁.</li>
-        <li>A fine ondata scegli <b>1 Potere su 3</b> 🎴 e spendi la XP nel negozio (statistiche a costo crescente, con tetto).</li>
+        <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ (condivisa con la squadra) e <b>monete</b> 🪙.</li>
+        <li>Ai livelli <b>3, 6, 9 e 12</b> scegli <b>1 abilità su 4</b> 🎴 (due della tua classe, due per tutti). Al <b>15</b> la specializzazione.</li>
         <li>Porta un'arma a <b>Lv.3</b> con la statistica giusta per <b>evolverla</b>! ✦</li>
         <li><b>20 livelli</b> → MEGA BOSS. Ogni ondata ha un <b>tempo obiettivo</b> ⏱: restaci sotto e prendi XP e monete extra.</li>
       </ul>
@@ -91,33 +91,63 @@
     <button id="changeHeroBtn" class="ghost">Cambia eroe</button>
   </div>
 </div>
+<!-- ===== v1.79 — IL MENU DI FINE ONDATA, A SEZIONI ==========================================
+     Prima era tutto in colonna nella stessa schermata: riepilogo, carte, punti, negozio e destinazione,
+     uno sotto l'altro. Adesso sono QUATTRO sezioni con una barra in basso, e la mappa successiva parte
+     da un pulsante suo, separato e centrato, che non si confonde con le sezioni. -->
 <div id="upgradeScreen" class="hidden">
   <div class="upgrade-inner">
-    <!-- v1.78 — riepilogo dell'ondata appena chiusa -->
-    <div id="waveStats" class="hidden"></div>
-    <div id="rankSection" class="hidden">
-      <h2 id="rankTitle">RANGO</h2>
-      <div class="rank-sub" id="rankSub"></div>
-      <div id="rankCards"></div>
-    </div>
-    <div id="boonSection" class="hidden">
-      <h2 id="boonTitle">🎴 SCEGLI UN POTERE</h2>
-      <div id="boonSub" class="rank-sub"></div>
-      <div id="boonCards"></div>
-    </div>
-    <div id="gearSection" class="hidden">
-      <h2>🪙 EMPORIO — equipaggiamento (monete)</h2>
-      <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
-      <div id="gearCards"></div>
-    </div>
-    <h2>PUNTI — dove metti quello che hai imparato</h2>
-    <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
-    <div id="upgradeCards"></div>
-    <p class="shop-hint">I <b>poteri</b> arrivano salendo di <b>livello</b>: uno per livello guadagnato. I <b>punti</b> si spendono qui: ogni statistica ha un <b>tetto</b> e costa sempre di più — non potrai massimizzare tutto, scegli dove specializzarti. Poi scegli dove andare: <b>avanti</b> con l'ondata successiva, oppure dal <b>fabbro</b> a potenziare l'equipaggiamento con le monete. <b>Spazio</b> = prossima ondata.</p>
-    <div id="shopActions">
-      <button id="shopReadyBtn" class="primary" onclick="window.Net.shopReady('wave'); window.HUD.hideShop();">▶  PROSSIMA ONDATA</button>
-      <button id="shopMarketBtn" class="ghost" onclick="window.Net.shopReady('market'); window.HUD.hideShop();">🏕️  VAI AL VILLAGGIO</button>
-    </div>
+
+    <!-- ---- SEZIONE 1: RIEPILOGO (quella che si apre da sola) ---- -->
+    <section id="secRiepilogo" class="msec">
+      <div id="waveStats" class="hidden"></div>
+      <p class="shop-hint" id="riepilogoNota"></p>
+    </section>
+
+    <!-- ---- SEZIONE 2: PERSONAGGIO ---- -->
+    <section id="secPersonaggio" class="msec hidden">
+      <h2>PUNTI — dove metti quello che hai imparato</h2>
+      <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
+      <div id="upgradeCards"></div>
+      <p class="shop-hint">Un punto per livello, uno per rango: <b>18 in tutta la partita</b>. Ogni statistica costa <b>1 punto</b> per livello e si ferma a 12: potrai portarne <b>una al massimo</b> e una <b>seconda fino a 6</b>. Scegli dove specializzarti.</p>
+      <h2>INVENTARIO</h2>
+      <div id="inventario"></div>
+      <div id="gearSection" class="hidden">
+        <h2>🪙 EMPORIO — equipaggiamento (monete)</h2>
+        <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
+        <div id="gearCards"></div>
+      </div>
+    </section>
+
+    <!-- ---- SEZIONE 3: ABILITA' ---- -->
+    <section id="secAbilita" class="msec hidden">
+      <div id="rankSection" class="hidden">
+        <h2 id="rankTitle">RANGO</h2>
+        <div class="rank-sub" id="rankSub"></div>
+        <div id="rankCards"></div>
+      </div>
+      <div id="boonSection" class="hidden">
+        <h2 id="boonTitle">🎴 SCEGLI UN'ABILITÀ</h2>
+        <div id="boonSub" class="rank-sub"></div>
+        <div id="boonCards"></div>
+      </div>
+      <h2>LE TUE ABILITÀ</h2>
+      <div id="abilElenco"></div>
+    </section>
+
+  </div>
+
+  <!-- ---- la barra delle sezioni: quattro pulsanti, sempre tutti attivi ---- -->
+  <nav id="menuTabs">
+    <button class="mtab on" id="tabRiepilogo">📊 RIEPILOGO</button>
+    <button class="mtab" id="tabPersonaggio">🧍 PERSONAGGIO</button>
+    <button class="mtab" id="tabAbilita">🎴 ABILITÀ<i id="tabBadge" class="hidden">!</i></button>
+    <button class="mtab" id="tabVillaggio">🏕️ VAI AL VILLAGGIO</button>
+  </nav>
+  <!-- ---- e sotto, da solo, quello che fa ripartire il gioco ---- -->
+  <div id="menuGo">
+    <button id="nextWaveBtn" class="primary">▶  PROSSIMA MAPPA</button>
+    <div id="goNota"></div>
   </div>
 </div>
 <div id="endScreen" class="hidden">

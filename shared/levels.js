@@ -21,66 +21,79 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // v1.70 — NESSUN TETTO. La curva resta `107 * L^1,54` ma non si ferma piu' al 20: i costi si calcolano
-  // a richiesta e si tengono in cache man mano che servono, cosi' non c'e' un limite scritto da nessuna
-  // parte. `MAX_LEVEL` non esiste piu': cercarlo nel codice non deve trovare niente.
+  // v1.79 — IL TETTO TORNA, E VALE 15. Dalla 1.70 alla 1.78 non c'era: si saliva finche' c'era XP, e
+  // dall'ondata 12 in poi si saliva a vuoto. Adesso la crescita finisce al 15, dove si sceglie la
+  // specializzazione, e l'XP raccolta dopo non serve piu' a niente — come in un gioco di ruolo.
   const POINTS_PER_LEVEL = 1, POINTS_PER_RANK = 1;
+  const MAX_LEVEL = 15;
 
-  // XP per passare dal livello L-1 al livello L. Arrotondata per essere leggibile a schermo.
-  // NB: arrotondare a 25 sopra i 1000 sembrava piu' pulito, ma oltre il livello 30 la curva cresce di
-  // ~20 XP a livello: due livelli vicini finivano allo stesso prezzo. Un livello non deve MAI costare
-  // quanto il precedente, quindi il passo dell'arrotondamento resta 10.
-  function arrotonda(x) { return x < 100 ? Math.round(x / 5) * 5 : Math.round(x / 10) * 10; }
-  function stepGrezzo(L) { return 107 * (Math.pow(L, 1.54) - Math.pow(L - 1, 1.54)); }
-  const XP_STEP = [0, 0];       // XP_STEP[L] = quanto costa arrivare al livello L
-  const XP_CUM = [0, 0];        // XP_CUM[L]  = XP totale necessaria per essere di livello L
-  function estendiFino(L) {
-    // la monotonia e' garantita a mano, non lasciata all'arrotondamento: un livello non deve MAI costare
-    // quanto o meno del precedente, a nessuna altezza della curva.
-    for (let i = XP_STEP.length; i <= L; i++) {
-      const g = arrotonda(stepGrezzo(i));
-      XP_STEP[i] = i > 2 ? Math.max(g, XP_STEP[i - 1] + 10) : g;
-      XP_CUM[i] = XP_CUM[i - 1] + XP_STEP[i];
-    }
-  }
-  estendiFino(30);              // i primi 30 sono precalcolati: coprono qualunque partita normale
+  // I LIVELLI DOVE SI SCEGLIE UN'ABILITA' PASSIVA, uno per scaglione. Il 15 non e' qui: quello e' la
+  // specializzazione, che e' un'altra cosa.
+  const SCAGLIONI = [
+    { lvl: 3,  tier: 'uncommon' },
+    { lvl: 6,  tier: 'rare' },
+    { lvl: 9,  tier: 'epic' },
+    { lvl: 12, tier: 'divine' },
+  ];
+  const SCAGLIONE_BY_LVL = {}; for (const s of SCAGLIONI) SCAGLIONE_BY_LVL[s.lvl] = s.tier;
+  function tierForLevel(L) { return SCAGLIONE_BY_LVL[L] || null; }
 
-  function levelForXp(xp) {
-    let L = 1;
-    while (true) { estendiFino(L + 1); if (xp < XP_CUM[L + 1]) return L; L++; if (L > 999) return L; }
-  }
-  function xpForLevel(L) { estendiFino(Math.max(1, L)); return XP_CUM[Math.max(1, L)] || 0; }
-  function xpStep(L) { estendiFino(Math.max(2, L)); return XP_STEP[Math.max(2, L)] || 0; }
+  // XP_STEP[L] = quanto costa arrivare al livello L. Non e' piu' una formula: e' una TABELLA scritta a
+  // mano, perche' ogni scalino e' stato scelto guardando quanta esperienza l'ondata corrispondente mette
+  // davvero a terra (misura in PROGRESSIONE-2.md §3). Gli ultimi due scalini sono i piu' cari della
+  // curva: servono a garantire che il livello 15 non arrivi prima dell'ondata 16 nemmeno giocando alla
+  // perfezione. Nel dubbio si toccano gli ULTIMI scalini, non tutta la curva.
+  const XP_STEP = [0, 0, 400, 700, 730, 770, 800, 900, 950, 1050, 1100, 1150, 1200, 1300, 1450, 1600];
+  const XP_CUM = [0, 0];
+  for (let L = 2; L <= MAX_LEVEL; L++) XP_CUM[L] = XP_CUM[L - 1] + XP_STEP[L];
+  // cumulate: 400 · 1100 · 1830 · 2600 · 3400 · 4300 · 5250 · 6300 · 7400 · 8550 · 9750 · 11050 · 12500 · 14100
+
+  function levelForXp(xp) { let L = 1; while (L < MAX_LEVEL && xp >= XP_CUM[L + 1]) L++; return L; }
+  function xpForLevel(L) { return XP_CUM[Math.max(1, Math.min(MAX_LEVEL, L))] || 0; }
+  function xpStep(L) { return XP_STEP[Math.max(2, Math.min(MAX_LEVEL, L))] || 0; }
+  function alTetto(L) { return L >= MAX_LEVEL; }
   // Quanto manca al prossimo livello e a che punto sei fra i due (0..1): serve alla barra dell'HUD.
+  // Al tetto la barra e' piena e `need` vale 0: chi la disegna deve leggere `cap`, non dividere per need.
   function progress(xp) {
-    const L = levelForXp(xp); estendiFino(L + 1);
+    const L = levelForXp(xp);
+    if (L >= MAX_LEVEL) return { level: L, cur: 0, need: 0, frac: 1, cap: true };
     const base = XP_CUM[L], next = XP_CUM[L + 1];
-    return { level: L, cur: xp - base, need: next - base, frac: (xp - base) / (next - base) };
+    return { level: L, cur: xp - base, need: next - base, frac: (xp - base) / (next - base), cap: false };
   }
 
   // ===== RANGHI ==============================================================================
-  // Soglie in livelli: I dal 1, II dal 5, III dal 10, IV dal 15, V dal 20 — cioe' su ogni boss.
-  const RANK_LEVELS = [1, 5, 10, 15, 20];
+  // v1.79 — i ranghi coincidono coi momenti di scelta: 3, 6, 9, 12 e 15. La prima fascia (livelli 1-2)
+  // e' il titolo di partenza e non e' un rango guadagnato; l'ultima (15) non da' un punto ma la
+  // SPECIALIZZAZIONE. In mezzo, quattro ranghi da un punto l'uno: 14 punti dai livelli + 4 dai ranghi
+  // fanno i 18 punti di una run intera (PROGRESSIONE-2.md §12).
+  const RANK_LEVELS = [1, 3, 6, 9, 12, 15];
+  const RANK_SPEC = 6;          // la sesta fascia e' la specializzazione
   function rankForLevel(L) { let r = 1; for (let i = 0; i < RANK_LEVELS.length; i++) if (L >= RANK_LEVELS[i]) r = i + 1; return r; }
   function levelForRank(r) { return RANK_LEVELS[Math.max(0, Math.min(RANK_LEVELS.length - 1, r - 1))]; }
+  // Punti guadagnati salendo di rango: la fascia di partenza e quella della specializzazione non ne danno.
+  function puntiPerRango(r) { return (r >= 2 && r <= 5) ? POINTS_PER_RANK : 0; }
 
+  // Sei fasce, non piu' cinque: la prima e' il titolo con cui si comincia (livelli 1-2), l'ultima e' la
+  // specializzazione e non ha un nome fisso.
   const RANK_NAMES = {
-    guerriero: ['Guerriero', 'Guerriero Esperto', 'Veterano', 'Campione', null],
-    mago: ['Apprendista', 'Mago Giovane', 'Mago', 'Mago Anziano', null],
-    ladro: ['Ladro', 'Furfante', 'Predone', 'Ombra', null],
+    guerriero: ['Guerriero', 'Guerriero Esperto', 'Veterano', 'Campione', 'Signore delle Lame', null],
+    mago: ['Apprendista', 'Mago Giovane', 'Mago', 'Mago Anziano', 'Magister', null],
+    ladro: ['Ladro', 'Furfante', 'Predone', 'Ombra', 'Spettro', null],
   };
-  // Il rango V non ha un nome fisso: e' quello della specializzazione scelta.
   function rankName(heroId, level, specId) {
     const r = rankForLevel(level);
-    if (r >= 5) { const s = SPEC_BY_ID[specId]; return s ? s.name : 'Leggenda'; }
+    if (r >= RANK_SPEC) { const s = SPEC_BY_ID[specId]; return s ? s.name : 'Leggenda'; }
     return (RANK_NAMES[heroId] || RANK_NAMES.guerriero)[r - 1];
   }
 
   // ===== PUNTI ===============================================================================
   // Costo per portare una statistica DA `lvl` A `lvl+1`. Cresce a scaglioni: 1 fino al 4°, 2 fino al
   // 10°, 3 per gli ultimi due. Totale per il tetto: 22 punti, contro i 23 di una run intera.
-  function statPointCost(lvl) { return lvl < 4 ? 1 : (lvl < 10 ? 2 : 3); }
-  function statPointsTo(lvl) { let t = 0; for (let i = 0; i < lvl; i++) t += statPointCost(i); return t; }
+  // v1.79 — COSTO FISSO: 1 punto per livello, a qualunque altezza. Gli scaglioni 1/2/3 sono spariti.
+  // Il conto e' esatto: 18 punti in una run, cappare una statistica ne costa 12 e portarne una seconda
+  // a 6 ne costa 6. Cappare DUE statistiche (24) resta impossibile, che e' la regola voluta.
+  function statPointCost(lvl) { return 1; }
+  function statPointsTo(lvl) { return lvl; }
   // Punti guadagnati arrivando al livello L (senza contare quelli dei boss).
   function pointsForLevel(L) { return Math.max(0, (L - 1) * POINTS_PER_LEVEL); }
 
@@ -137,9 +150,10 @@
   function specsFor(heroId) { return SPECS[heroId] || []; }
 
   return {
-    POINTS_PER_LEVEL, POINTS_PER_RANK, XP_STEP, XP_CUM,
+    POINTS_PER_LEVEL, POINTS_PER_RANK, XP_STEP, XP_CUM, MAX_LEVEL, alTetto,
+    SCAGLIONI, tierForLevel,
     levelForXp, xpForLevel, xpStep, progress,
-    RANK_LEVELS, RANK_NAMES, rankForLevel, levelForRank, rankName,
+    RANK_LEVELS, RANK_NAMES, RANK_SPEC, rankForLevel, levelForRank, rankName, puntiPerRango,
     statPointCost, statPointsTo, pointsForLevel,
     CARDS, CARD_BY_ID, cardsFor, SPECS, SPEC_BY_ID, specsFor,
   };

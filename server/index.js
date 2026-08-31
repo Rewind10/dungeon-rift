@@ -41,7 +41,8 @@ attach(server, (conn) => {
       case C.MSG.TOGGLE_CARD: if (room) room.toggleCard(pid, m.id); break;
       case C.MSG.REST: if (room) room.restAtInn(pid); break;
       case C.MSG.SHOP_READY: if (room) room.shopReady(pid, m.dest); break;
-      case C.MSG.EXIT_WAVE: if (room) room.exitWave(pid); break;   // v1.78 — pulsante EXIT sulla mappa ripulita
+      case C.MSG.EXIT_WAVE: if (room) room.exitWave(pid); break;           // v1.78 — pulsante EXIT sulla mappa ripulita
+      case C.MSG.GO_VILLAGE: if (room) room.vaiAlVillaggio(pid); break;   // v1.79 — sezione Villaggio del menu di fine ondata
       case 'sethero': if (room) { const p = room.players.get(pid); if (p && room.phase === C.PHASE_LOBBY) { const H = require('../shared/heroes.js').HEROES; if (H[m.hero]) { p.heroId = m.hero; p.hero = H[m.hero]; p.maxHp = p.hero.hp; p.hp = p.hero.hp; room.broadcast({ t: C.MSG.EVENT, ev: { t: 'herochange', id: pid, hero: m.hero } }); } } } break;
       case C.MSG.CHAT: if (room) room.broadcast({ t: C.MSG.CHAT, from: (room.players.get(pid) || {}).name || '???', text: String(m.text || '').slice(0, 120) }); break;
       case C.MSG.PING: conn.send(JSON.stringify({ t: C.MSG.PONG, ts: m.ts })); break;

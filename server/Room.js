@@ -37,7 +37,10 @@ function newPerk() {
 // dell'arma (shared/heroes.js -> weapon.school): Forza sul melee, Intelligenza sulla magia, Destrezza sul
 // tiro. Cosi' le classi miste previste in progressione hanno gia' il binario giusto.
 function newStats() {
-  return { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, speedMult: 1, critChance: 0.03, critMult: 2.0,
+  // v1.79 — maxHpMult: i bonus ai PV delle abilita' neutre sono PERCENTUALI, non in cifra fissa. Il
+  // guerriero ha 200 PV e il mago 100: "+30 PV" varrebbe il triplo per il mago. maxHpFlat resta per le
+  // statistiche e per l'equipaggiamento, che sono scelte di quel personaggio.
+  return { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, maxHpMult: 1, speedMult: 1, critChance: 0.03, critMult: 2.0,
     pierce: 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1,
     regen: 0, xpMult: 1, dmgReduce: 0,
     schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } };
@@ -56,6 +59,9 @@ function newBoon() {
     // v1.51 — nuovi poteri
     crowbar: 0, longshot: 0, killStep: 0, magnet: 0, retaliate: 0, aegis: 0, corpseBlast: 0, execute: 0, echo: 0, defiance: 0,
     executeBonus: 0, retaliateWide: 0,
+    // v1.79 — thornsPct: quota del danno subito rimandata al mittente (Aura di Spine).
+    // implodeEvery: ogni quante bolle una implode (Implosione, scaglione divino del mago).
+    thornsPct: 0, implodeEvery: 0,
   };
 }
 
@@ -129,10 +135,10 @@ class Room {
       // dell'oggetto sostituito.
       gear: Gear.startingGear(hero.id), gearBonus: { maxHpFlat: 0, dmgReduce: 0, speedMult: 0 },
       boon: newBoon(), boonsOwned: {}, boonOffer: null, boonPicked: false, boonShot: 0, defianceLeft: 0, aegisT: 0,
-      // v1.78 — LE CARTE SI GUADAGNANO SALENDO DI LIVELLO, non finendo un'ondata. `carteDovute` e' il
-      // debito: sale di uno a ogni livello, scende di uno a ogni carta scelta. Se e' zero il mazzo non si
-      // apre proprio — chi non e' cresciuto non sceglie niente.
-      carteDovute: 0, livelloCarta: 0,
+      // v1.79 — LE ABILITA' PASSIVE SI SCELGONO AGLI SCAGLIONI: livelli 3, 6, 9 e 12. `scaglioniDovuti`
+      // e' la coda delle scelte in sospeso ('uncommon', 'rare', 'epic', 'divine'): si riempie salendo di
+      // livello e si svuota nel menu di fine ondata. Se e' vuota non si sceglie niente.
+      scaglioniDovuti: [],
       // v1.78 — il conto dell'ondata in corso, per il riepilogo di fine livello. Si azzera a ogni ondata:
       // il box racconta QUESTA ondata, non tutta la partita (quella e' la tabella di fine run).
       ondata: { uccisi: 0, xp: 0, monete: 0, livelli: 0 }, exitOk: false,
@@ -152,7 +158,7 @@ class Room {
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.carteDovute = 0; p.livelloCarta = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -322,7 +328,10 @@ class Room {
       // v1.39 — evocazione OWNED (con proprietario) per il tetto di minion del Negromante
       summonMinion(id, x, y, owner) { if (self._postiLiberi() <= 0) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
       countMinions(owner) { let c = 0; for (const mm of self.monsters) { if (!mm.dead && mm.owner === owner) c++; } return c; },
-      melee(m, p, dmg, kn) { self.damagePlayer(p, dmg, m.x, m.y, kn || 1); if (p.boon && p.boon.thorns > 0 && !m.dead) self.damageMonster(m, p.boon.thorns, p.x, p.y, 0, p); },
+      melee(m, p, dmg, kn) { self.damagePlayer(p, dmg, m.x, m.y, kn || 1);
+        // v1.79 — le spine rimandano un forfait PIU' una quota del colpo incassato: cosi' restano utili
+        // anche all'ondata 18, quando i nemici picchiano forte e 25 danni fissi non si notano piu'.
+        if (p.boon && p.boon.thorns > 0 && !m.dead) self.damageMonster(m, Math.round(p.boon.thorns + dmg * (p.boon.thornsPct || 0)), p.x, p.y, 0, p); },
       areaDamage(x, y, r, dmg, color, kn) { self.events.push({ t: 'area', x, y, r, c: color }); for (const p of self.alivePlayers) if (MU.dist(x, y, p.x, p.y) <= r + p.radius) self.damagePlayer(p, dmg, x, y, kn || 1); },
       meteor(x, y, r, dmg) { self.meteors.push({ eid: NEXT++, x, y, r, dmg, t: 1.1, max: 1.1 }); self.events.push({ t: 'meteor_tell', x, y, r }); },
       zone(x, y, r, delay, dmg, color) { self.zones.push({ eid: NEXT++, x, y, r, dmg, t: delay || 0.9, max: delay || 0.9, col: color || '#ff3b3b', done: false }); self.events.push({ t: 'zone_tell', x, y, r, delay: delay || 0.9, c: color || '#ff3b3b' }); },
@@ -437,18 +446,16 @@ class Room {
       this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null;
       for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
-      this._forceNewMap = true; this.nextWave(); return;
+      this._forceNewMap = true; this.riapriMenu(); return;
     }
   }
   // v1.53 — dopo il pannello di fine ondata la DESTINAZIONE la sceglie il giocatore (pulsanti del menu di
   // pausa), non piu' una cadenza fissa ogni N ondate. In co-op vale la PRIMA scelta espressa, coerente con
   // la regola del portale ("il primo che entra decide"). Aggiungere una destinazione nuova = un altro
   // valore di dest qui e un pulsante in piu' in #shopActions.
-  _afterShop() {
-    const dest = this.shopDest; this.shopDest = null;
-    if (dest === 'market' && this.wave < Waves.FINAL_WAVE) this.enterMarket();
-    else this.nextWave();
-  }
+  // v1.79 — dal menu si esce in un modo solo: la mappa successiva. Il villaggio non e' piu' una
+  // destinazione scelta qui, e' una sezione del menu da cui si torna indietro.
+  _afterShop() { this.shopDest = null; this.nextWave(); }
 
   // ===== NPC MERCANTE (v1.11) — neutrale, vende 3 offerte casuali per MONETE =====
   merchantWaresPool() {
@@ -556,7 +563,7 @@ class Room {
     if (p.perk.elusione > 0 && MU.chance(p.perk.elusione)) { this.events.push({ t: 'dodge', x: p.x, y: p.y, who: p.id }); return; }
     // v1.51 — EGIDA OSTINATA: annulla per intero un colpo, poi va in ricarica.
     if (p.boon && p.boon.aegis > 0 && (p.aegisT || 0) <= 0) {
-      p.aegisT = p.boon.aegis >= 2 ? 6 : 8;
+      p.aegisT = p.boon.aegis >= 2 ? 5 : 8;   // v1.79 — Egida Ostinata vale 2: un colpo assorbito ogni 5s
       this.events.push({ t: 'aegis', x: p.x, y: p.y, who: p.id });
       return;
     }
@@ -641,8 +648,8 @@ class Room {
     p.stats.pierce = this.effWeapon(p).pierce || 0;
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
-  effMaxHp(p) { return p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0); }
-  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
   effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
@@ -689,7 +696,11 @@ class Room {
     if (w.melee) { this._meleeSwing(p, w, dmg, crit); return; }
     // colpo esplosivo periodico (boon)
     let explosive = false; if (p.boon.explodeEvery > 0) { p.boonShot++; if (p.boonShot % p.boon.explodeEvery === 0) explosive = true; }
-    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing }, {}));
+    // v1.79 — IMPLOSIONE (scaglione divino del mago): una bolla ogni cinque non esplode verso fuori ma
+    // risucchia verso dentro. Conta i colpi per conto suo, se no due abilita' si contenderebbero lo
+    // stesso contatore e il ritmo di entrambe cambierebbe a seconda di quale hai preso.
+    let implode = false; if (p.boon.implodeEvery > 0) { p.impShot = (p.impShot || 0) + 1; if (p.impShot % p.boon.implodeEvery === 0) implode = true; }
+    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing, implode }, {}));
     const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
@@ -748,7 +759,7 @@ class Room {
       const m = hit[i].m, d = i === 0 ? dmg : Math.max(1, Math.round(dmg * splash));
       const kn = (w.knockback || 0) * p.stats.knockMult;
       this.damageMonster(m, d, p.x, p.y, kn, p, { crit: crit && i === 0, poison: p.boon.poison, slow: p.boon.slow });
-      if (p.boon.chain > 0) this._chain(m, p, p.boon.chain);
+      if (p.boon.chain > 0) this._chain(m, p, p.boon.chain, p.perk.catenaPiena ? d : Math.round(d * 0.25));
     }
     const colpiti = Math.min(hit.length, cap);
     if (p.perk.furia > 0) p.furiaBonus = Math.min(0.40, colpiti * p.perk.furia);   // matura per il PROSSIMO colpo
@@ -935,7 +946,12 @@ class Room {
     this.offerInn(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'rest', x: p.x, y: p.y, who: p.id, hp: c.curabili, spesa: c.spesa, pieno: c.curabili >= c.manca ? 1 : 0 } });
   }
+  // v1.79 — LA CARTOMANTE E' CHIUSA. La struttura resta nel villaggio — porta, interno, insegna, e la
+  // si puo' avvicinare — ma non offre piu' niente: con quattro abilita' passive in tutta la run, tutte
+  // sempre accese, non c'e' piu' niente da accendere o spegnere. Verra' ridisegnata. Il pannello non si
+  // apre nemmeno: `C.CARTOMANTE_ATTIVA` a true riaccende tutto com'era.
   offerSeer(p, near) {
+    if (!C.CARTOMANTE_ATTIVA) { if (near) this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'seer_chiusa' } }); return; }
     const carte = [];
     for (const id in p.boonsOwned) {
       const b = Loot.BOON_BY_ID[id]; const n = p.boonsOwned[id]; if (!b || n <= 0) continue;
@@ -954,6 +970,7 @@ class Room {
   // non nel client, perche' il client puo' mentire.
   toggleCard(pid, cardId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!C.CARTOMANTE_ATTIVA) return;   // v1.79 — chiusa: nemmeno un messaggio costruito a mano la riapre
     if (!this._dallaCartomante(p)) return;
     if (!(p.boonsOwned[cardId] > 0)) return;
     const era = !!p.cardOn[cardId];
@@ -987,13 +1004,16 @@ class Room {
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
     // v1.51 — COLPO DI GRAZIA: esecuzione sotto soglia. Mai sui boss, altrimenti banalizza le ondate 5/10/15/20.
     if (m.hp > 0 && !m.boss && src && src.boon && src.boon.execute > 0) {
-      const thr = 0.08 + 0.04 * src.boon.execute + (src.boon.executeBonus || 0);
+      const thr = 0.08 + 0.06 * src.boon.execute + (src.boon.executeBonus || 0);   // v1.79 — con execute 2: 20%
       if (m.hp <= m.maxHp * thr) { m.hp = 0; this.events.push({ t: 'execute', x: m.x, y: m.y }); }
     }
     if (kn && !m.boss) { const n = MU.norm(m.x - sx, m.y - sy); this.moveCircle(m, n.x * kn * 0.2, n.y * kn * 0.2); }
     if (opts.stun) m.stun = Math.max(m.stun || 0, opts.stun);
-    if (opts.slow) m.slowT = Math.max(m.slowT || 0, 0.7);
-    if (opts.poison) { m.poison = (m.poison || 0) + opts.poison; m.poisonT = 3; m.poisonSrc = src ? src.id : null; }
+    if (opts.slow) m.slowT = Math.max(m.slowT || 0, 1.5);   // v1.79 — Tocco Gelido: 50% per 1,5s
+    // v1.79 — IL VELENO NON SI SOMMA PIU' A OGNI COLPO. Sommandolo, la stessa abilita' rendeva il doppio
+    // in mano al ladro (3 colpi al secondo) rispetto al mago (1,5): non era una scelta di build, era la
+    // cadenza dell arma. Adesso e' una forza PER BERSAGLIO, che il colpo rinnova senza accumulare.
+    if (opts.poison) { m.poison = Math.max(m.poison || 0, opts.poison); m.poisonT = 3; m.poisonSrc = src ? src.id : null; }
     if (src) { src.damageDealt += d; if (src.stats.lifesteal > 0) src.hp = Math.min(this.effMaxHp(src), src.hp + d * src.stats.lifesteal); }
     // hit-stop feedback per crit / colpi grossi
     if (opts.crit) this.events.push({ t: 'hitstop', d: 0.05 });
@@ -1053,7 +1073,7 @@ class Room {
       this._comboReward(src, m);
       if (src.boon.killHaste) { src.killHasteStacks = Math.min(6, (src.killHasteStacks || 0) + 1); src.buffs.killHaste = 3; }
       // v1.51 — PASSO DI DANZA: scatto di velocita' a ogni uccisione (premia chi non si ferma).
-      if (src.boon.killStep > 0) src.buffs.killStep = 2;
+      if (src.boon.killStep > 0) { src.killStepStacks = Math.min(2, (src.killStepStacks || 0) + 1); src.buffs.killStep = 3; }
       // v1.51 — DEFLAGRAZIONE CADAVERICA: il cadavere esplode. Il flag _inCorpse impedisce la catena infinita
       // (esplosione -> uccide -> esplode -> ...): solo il primo cadavere della catena deflagra.
       if (src.boon.corpseBlast > 0 && !this._inCorpse) {
@@ -1086,7 +1106,7 @@ class Room {
     else if (it.kind === 'life') { p.lives += 1; }
     else if (it.kind === 'buff') { p.buffs[it.buff] = it.dur; }
     // v1.70 — anche raccogliere un potenziamento sulla mappa da' esperienza
-    this.addXp(p, C.XP_OGGETTO + this.wave * C.XP_OGGETTO_ONDATA, 'oggetto');
+    this.xpCondivisa(C.XP_OGGETTO + this.wave * C.XP_OGGETTO_ONDATA, 'oggetto');
     this.events.push({ t: 'item_pickup', x: p.x, y: p.y, id: it.id, name: it.name, icon: it.icon, color: it.color, who: p.id, name2: p.name });
   }
   _giveWeapon(p, wt) { if (p.weapon2 && p.weapon2.type === wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, p.weapon2.level + 1); else if (!p.weapon2 || p.weapon2.type !== wt) p.weapon2 = { type: wt, level: 1, evolved: null }; this._checkEvo(p); }
@@ -1098,23 +1118,41 @@ class Room {
   // v1.70 — NESSUN TETTO ai livelli: si sale finche' si accumula esperienza. E l'esperienza non arriva
   // piu' solo dai nemici: casse aperte e oggetti raccolti sulla mappa ne danno, e altre fonti si
   // agganciano qui. `fonte` serve solo a raccontarlo a schermo, non cambia il conto.
+  // v1.79 — L'ESPERIENZA E' CONDIVISA. Ogni uccisione vale per TUTTI i giocatori vivi, non per chi
+  // arriva primo sulla sfera: la crescita e' del gruppo, la corsa al bottino non e' un gioco.
+  // Il fattore `XP_GRUPPO` esiste perche' le ondate crescono col gruppo MENO che proporzionalmente
+  // (misurato: un trio genera solo il +27% di XP totale rispetto a un solista). Senza correzione un
+  // gruppo arriverebbe al tetto con ondate d'anticipo, e la curva sarebbe giusta per una taglia sola.
+  xpCondivisa(v, fonte) {
+    if (v <= 0) return;
+    const vivi = [];
+    for (const p of this.players.values()) if (p.connected && !p.dead) vivi.push(p);
+    if (!vivi.length) return;
+    const k = C.XP_GRUPPO[Math.min(C.XP_GRUPPO.length - 1, vivi.length)] || 1;
+    const q = Math.max(1, Math.round(v * k));
+    for (const p of vivi) this.addXp(p, q, fonte);
+  }
   addXp(p, v, fonte) {
     if (!p || v <= 0) return;
+    // v1.79 — TETTO AL 15: l'esperienza raccolta dopo non serve piu' a niente, come in un gioco di
+    // ruolo. Non si accumula nemmeno nel serbatoio, cosi' la barra resta piena e onesta.
+    if (p.level >= Lv.MAX_LEVEL) return;
     p.xpPool += v;
     if (p.ondata) p.ondata.xp += v;
     const nuovo = Lv.levelForXp(p.xpPool);
     while (p.level < nuovo) {
       p.level++; p.points += Lv.POINTS_PER_LEVEL;
-      // v1.78 — ogni livello vale UNA carta. La scelta non si apre qui: in mezzo alla battaglia nessuno
-      // legge tre carte, e in cooperativa non si puo' mettere in pausa il mondo per uno solo. Resta in
-      // debito e si paga alla fine dell'ondata, una carta per livello guadagnato.
-      p.carteDovute = (p.carteDovute || 0) + 1;
       if (p.ondata) p.ondata.livelli++;
+      // v1.79 — le abilita' passive si scelgono SOLO agli scaglioni: 3, 6, 9 e 12. La scelta non si apre
+      // qui: in mezzo alla battaglia nessuno legge quattro abilita', e in cooperativa non si puo' mettere
+      // in pausa il mondo per uno solo. Resta in coda e si paga nel menu di fine ondata.
+      const tier = Lv.tierForLevel(p.level);
+      if (tier) { p.scaglioniDovuti = p.scaglioniDovuti || []; p.scaglioniDovuti.push(tier); }
       const r = Lv.rankForLevel(p.level);
       if (r > Lv.rankForLevel(p.level - 1)) this._rankUp(p, r);
       // l'evento parte SEMPRE, anche in mezzo alla battaglia: il "LEVEL UP" sopra la testa e il suo
       // jingle sono il momento in cui il giocatore sente di essere cresciuto.
-      this.events.push({ t: 'levelup', x: p.x, y: p.y, who: p.id, lv: p.level, name: p.name, rank: Lv.rankName(p.heroId, p.level, p.spec), carte: p.carteDovute || 0 });
+      this.events.push({ t: 'levelup', x: p.x, y: p.y, who: p.id, lv: p.level, name: p.name, rank: Lv.rankName(p.heroId, p.level, p.spec), tier: tier || '', spec: p.level >= Lv.MAX_LEVEL ? 1 : 0 });
     }
     if (fonte) this.events.push({ t: 'xpfonte', x: p.x, y: p.y, who: p.id, v, k: fonte });
   }
@@ -1124,12 +1162,12 @@ class Room {
   // v1.70 — il rango da' il titolo e un punto. Le CARTE generiche sono state tolte: al loro posto
   // arriveranno le abilita' di classe, sbloccate a livelli specifici. `cardsFor` oggi risponde vuoto,
   // quindi l'offerta semplicemente non parte — nessun ramo da aggiungere quando le abilita' ci saranno.
+  // v1.79 — il rango da' un punto (non la prima fascia, che e' il titolo di partenza, e non l'ultima,
+  // che da' la SPECIALIZZAZIONE). Le carte di rango non esistono: al loro posto ci sono gli scaglioni.
   _rankUp(p, r) {
-    p.points += Lv.POINTS_PER_RANK;
-    const carte = Lv.cardsFor(p.heroId, r).map(c => c.id);
-    if (r >= 5) { p.specOffer = Lv.specsFor(p.heroId).map(x => x.id); p.rankOffer = null; }
-    else { p.rankOffer = carte.length ? carte : null; p.specOffer = null; }
-    this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec) });
+    p.points += Lv.puntiPerRango(r);
+    if (r >= Lv.RANK_SPEC) { p.specOffer = Lv.specsFor(p.heroId).map(x => x.id); p.rankOffer = null; }
+    this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec), spec: r >= Lv.RANK_SPEC ? 1 : 0 });
   }
 
   offerRank(p) {
@@ -1176,7 +1214,7 @@ class Room {
       uccisi: o.uccisi, xp: o.xp, monete: o.monete, livelli: o.livelli,
       durata: +(this.waveDur != null ? this.waveDur : 0).toFixed(1), par: this.parT || 0,
       bonus: this.parPreso && this.parBonus ? this.parBonus : null,
-      carte: p.carteDovute || 0,
+      carte: (p.scaglioniDovuti || []).length,
       livello: p.level, uccisiTot: p.kills, moneteTot: p.coins,
     });
   }
@@ -1188,7 +1226,27 @@ class Room {
       return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : Lv.statPointCost(lvl), lvl, max: Loot.STAT_MAX_LEVEL, maxed };
     });
     const pr = Lv.progress(p.xpPool);
-    this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, points: p.points, xp: p.xpPool, level: p.level, rank: Lv.rankForLevel(p.level), rankName: Lv.rankName(p.heroId, p.level, p.spec), prog: +pr.frac.toFixed(3), stats, wave: this.wave });
+    // v1.79 — la sezione PERSONAGGIO del menu mostra anche l'inventario: arma impugnata, equipaggiamento
+    // per slot, cintura delle pozioni, vite e PV. Viaggia con l'offerta delle statistiche perche' e' la
+    // stessa schermata: due messaggi per un pannello solo si sarebbero disallineati al primo cambiamento.
+    const arma = this.effWeapon(p), tier = this.weaponTier(p);
+    const inv = {
+      arma: { nome: (tier && tier.name) || arma.name || 'Arma', icona: (Loot.WEAPONS[p.weapon2 && p.weapon2.type] || {}).icon || '⚔️',
+              livello: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 ? (p.weapon2.evolved || '') : '', scuola: arma.school || '' },
+      gear: (Gear.slotsFor(p.heroId) || []).map(sl => {
+        const it = Gear.BY_ID[p.gear && p.gear[sl]];
+        return { slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
+                 nome: it ? it.name : '—', colore: it ? it.color : '#6f7890', rango: it ? it.rank : 0, desc: it ? it.desc : '' };
+      }),
+      belt: (p.belt || []).map(sl => {
+        if (!sl) return null;
+        const d = Pot.BY_ID[sl.id];
+        return { id: sl.id, nome: d ? d.name : sl.id, icona: d ? d.icon : '🧪', n: sl.n || 0, max: Pot.MAX_CHARGES };
+      }),
+      vite: p.lives, hp: Math.round(p.hp), hpMax: this.effMaxHp(p),
+      monete: p.coins, uccisi: p.kills, combo: p.comboBest || 0,
+    };
+    this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, points: p.points, xp: p.xpPool, level: p.level, max: Lv.MAX_LEVEL, cap: pr.cap ? 1 : 0, rank: Lv.rankForLevel(p.level), rankName: Lv.rankName(p.heroId, p.level, p.spec), prog: +pr.frac.toFixed(3), stats, wave: this.wave, inv });
   }
   // v1.67 — il fabbro mostra SOLO il catalogo della classe di chi sta guardando, slot per slot. Il client
   // non filtra niente: cio' che non e' della tua classe non attraversa nemmeno la rete.
@@ -1223,19 +1281,35 @@ class Room {
     if (p._nearBnd) this.offerBandit(p, 1);                 // il magazzino e' cambiato: il banco si aggiorna
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: posseduto ? 1 : 0 } });
   }
-  // v1.78 — QUANDO NON SI E' SALITI DI LIVELLO il mazzo non si apre, ma il pannello non deve restare
-  // muto: un riquadro vuoto senza spiegazione si legge come un guasto. Si dice quanto manca al livello.
+  // v1.79 — QUANDO NON C'E' NIENTE DA SCEGLIERE il pannello non deve restare muto: un riquadro vuoto
+  // senza spiegazione si legge come un guasto. Si dice a che livello arriva la prossima scelta e quanta
+  // esperienza manca. Al tetto si dice che non ne arrivano piu'.
   nienteCarta(p) {
     p.boonOffer = null; p.boonPicked = true;
     const pr = Lv.progress(p.xpPool);
-    this.sendTo(p.id, { t: C.MSG.OFFER_BOON, boons: [], resta: 0, liv: p.level, manca: Math.max(0, Math.round(pr.need - pr.cur)) });
+    let prossimo = 0;
+    for (const sc of Lv.SCAGLIONI) if (sc.lvl > p.level) { prossimo = sc.lvl; break; }
+    this.sendTo(p.id, {
+      t: C.MSG.OFFER_BOON, boons: [], resta: 0, liv: p.level,
+      manca: pr.cap ? 0 : Math.max(0, Math.round(pr.need - pr.cur)),
+      prossimo, cap: pr.cap ? 1 : 0, max: Lv.MAX_LEVEL,
+    });
   }
+  // Lo scaglione in cima alla coda decide COSA vedi: le due abilita' della tua classe piu' le due neutre.
+  // Non si sorteggia niente — con una sola scelta per scaglione, nascondere un'opzione non aggiungerebbe
+  // varieta' ma solo frustrazione.
   offerBoon(p) {
-    const choices = Loot.offerBoons(C.RARITY, p.boonsOwned);
+    const coda = p.scaglioniDovuti || [];
+    const tier = coda[0];
+    if (!tier) return this.nienteCarta(p);
+    const choices = Loot.offerteScaglione(p.heroId, tier, p.boonsOwned);
     p.boonOffer = choices.map(b => b.id); p.boonPicked = choices.length === 0;
-    // v1.78 — `resta` e' quante carte restano da scegliere COMPRESA questa, `liv` il livello che l'ha
-    // pagata: servono al pannello per scrivere "Livello 7 — carta 1 di 3" invece di un mazzo muto.
-    this.sendTo(p.id, { t: C.MSG.OFFER_BOON, resta: p.carteDovute || 0, liv: p.level, boons: choices.map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), owned: p.boonsOwned[b.id] || 0, max: b.max })) });
+    const rar = C.RARITY[tier] || {};
+    this.sendTo(p.id, {
+      t: C.MSG.OFFER_BOON, tier, tierName: rar.name || tier, tierColor: rar.color || '#fff',
+      resta: coda.length, liv: p.level, scaglione: Lv.SCAGLIONI.findIndex(x => x.tier === tier) + 1, tot: Lv.SCAGLIONI.length,
+      boons: choices.map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), owned: p.boonsOwned[b.id] || 0, max: b.max })),
+    });
   }
   buyStat(pid, statId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;
@@ -1304,12 +1378,11 @@ class Room {
     const b = Loot.BOON_BY_ID[boonId]; if (!b) return;
     if ((p.boonsOwned[boonId] || 0) >= b.max) return;
     p.boonsOwned[boonId] = (p.boonsOwned[boonId] || 0) + 1; p.boonOffer = null; p.boonPicked = true;
-    // v1.73 — la carta e' TUA comunque, ma si accende solo se c'e' posto fra le ' + C.MAX_CARDS + ' attive.
-    // Con la cintura piena arriva SPENTA invece di bloccare la scelta: cosi' non ti ferma mai a fine ondata,
-    // e ti da' un motivo per passare dalla Cartomante.
-    const gia = !!p.cardOn[boonId];
-    const spenta = !gia && this._carteAccese(p) >= C.MAX_CARDS;
-    if (!spenta) p.cardOn[boonId] = 1;
+    // v1.79 — L'ABILITA' E' SEMPRE ACCESA. Il concetto di carta "spenta" e il tetto delle cinque attive
+    // erano il mestiere della Cartomante, che e' chiusa: con quattro passive in tutta la run non c'e'
+    // niente da scegliere di tenere acceso.
+    p.cardOn[boonId] = 1;
+    const spenta = false;
     const synPrima = Object.keys(p.synActive || {}).length;
     this._recomputeBoons(p);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'boon_ok', id: boonId, name: b.name, icon: b.icon, off: spenta ? 1 : 0 } });
@@ -1317,10 +1390,11 @@ class Room {
     if (Object.keys(p.synActive || {}).length > synPrima)
       for (const id in p.synActive) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'synergy', id: sy.id, name: sy.name, icon: sy.icon, desc: sy.desc } }); }
     this.sendBoons(p);  // v1.51 — aggiorna la barra dei poteri attivi
-    // v1.78 — una carta pagata, un livello in meno da riscuotere. Se il giocatore ha guadagnato piu'
-    // livelli in un'ondata sola il mazzo si riapre subito con tre carte nuove, finche' il debito e' zero.
-    if (p.carteDovute > 0) p.carteDovute--;
-    if (p.carteDovute > 0 && this.phase === C.PHASE_SHOP) this.offerBoon(p);
+    // v1.79 — uno scaglione speso esce dalla coda. Chi ne ha due in sospeso (capita se un'ondata sola
+    // porta dal livello 5 al 7) vede subito il secondo, senza aspettare l'ondata dopo.
+    if (p.scaglioniDovuti && p.scaglioniDovuti.length) p.scaglioniDovuti.shift();
+    if (p.scaglioniDovuti && p.scaglioniDovuti.length && this.phase === C.PHASE_SHOP) this.offerBoon(p);
+    else if (this.phase === C.PHASE_SHOP) this.nienteCarta(p);
   }
   // v1.51 — elenco dei poteri attivi, per la barra in basso nell'HUD. Inviato solo quando cambia qualcosa
   // (scelta di un boon, sinergia, inizio partita): non entra nello snapshot, che gira 20 volte al secondo.
@@ -1330,7 +1404,18 @@ class Room {
     for (const id in (p.synActive || {})) { const sy = Loot.SYNERGY_BY_ID[id]; if (sy) list.push({ id, icon: sy.icon, name: sy.name, n: 1, syn: 1, desc: sy.desc, on: 1 }); }
     this.sendTo(p.id, { t: C.MSG.BOONS, boons: list, max: C.MAX_CARDS, active: this._carteAccese(p) });
   }
-  shopReady(pid, dest) { const p = this.players.get(pid); if (!p) return; p.ready = true; if (dest && !this.shopDest) this.shopDest = dest; }
+  // v1.79 — il pulsante centrale del menu: "sono pronto per la mappa successiva". Non sceglie piu' una
+  // destinazione — il villaggio ha un pulsante suo.
+  shopReady(pid, dest) { const p = this.players.get(pid); if (!p) return; p.ready = true; }
+  // v1.79 — VAI AL VILLAGGIO. E' una mappa condivisa: ci si entra tutti insieme, come si usciva tutti
+  // insieme dal portale. Vale la stessa regola del portale — il primo che decide trascina la stanza.
+  vaiAlVillaggio(pid) {
+    const p = this.players.get(pid); if (!p || !p.connected) return;
+    if (this.phase !== C.PHASE_SHOP) return;
+    if (this.wave >= Waves.FINAL_WAVE) return;
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'al_villaggio', who: pid, name: p.name } });
+    this.enterMarket();
+  }
 
   update(dt) {
     this.time += dt; this.dt = dt; this.flowTimer -= dt;
@@ -1459,8 +1544,11 @@ class Room {
       const monete = Math.round(C.PAR_MONETE + C.PAR_MONETE_ONDATA * this.wave);
       for (const p of this.players.values()) {
         if (!p.connected || p.dead) continue;
-        this.addXp(p, xp, 'tempo'); p.coins += monete;
+        p.coins += monete;
       }
+      // il premio di velocita' e' esperienza come tutte le altre: passa dalla stessa porta, cosi' vale la
+      // stessa curva e lo stesso fattore di gruppo.
+      this.xpCondivisa(xp, 'tempo');
       this.parBonus = { xp, monete };
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'par_ok', wave: this.wave, secondi: +durata.toFixed(1), par: this.parT, xp, monete } });
     }
@@ -1472,7 +1560,7 @@ class Room {
     const recip = this.alivePlayers[0] || [...this.players.values()].find(p => p.connected) || null;
     if (recip) {
       let gx = 0, gc = 0;
-      for (const o of this.groundXp) if (!o.dead) { this.addXp(recip, o.v); gx += o.v; }
+      for (const o of this.groundXp) if (!o.dead) { this.xpCondivisa(o.v); gx += o.v; }
       for (const o of this.groundCoins) if (!o.dead) { recip.coins += o.v; if (recip.ondata) recip.ondata.monete += o.v; gc += o.v; }
       this.groundXp.length = 0; this.groundCoins.length = 0;
       if (gx > 0) this.events.push({ t: 'xp', x: recip.x, y: recip.y - 10, v: gx });
@@ -1487,16 +1575,8 @@ class Room {
       // v1.69 — una scelta alla volta: se c'e' una carta di rango in sospeso, il boon salta questo giro.
       // Il rango arriva sui boss, quindi in pratica alle ondate 5/10/15/20 si sceglie la carta di classe
       // e nelle altre il boon generico, senza mai due mazzi aperti insieme.
-      p.ready = false; p.killHasteStacks = 0;
-      // v1.78 — IL MAZZO SI APRE SOLO SE SEI CRESCIUTO. Prima ogni fine ondata regalava una carta a
-      // prescindere: il potere arrivava col calendario, non col merito. Adesso la fonte e' una sola, il
-      // livello, e chi ne ha presi tre ne sceglie tre.
-      if (this.offerRank(p)) { p.boonOffer = null; p.boonPicked = true; }
-      else if ((p.carteDovute || 0) > 0) this.offerBoon(p);
-      else this.nienteCarta(p);
-      this.inviaRiepilogo(p);
-      this.offerShop(p); this.sendBoons(p);
-      if (C.SHOP_GEAR_ENABLED) this.offerGear(p);  // v1.51 — Emporio a monete nascosto in attesa di ridisegno
+      p.ready = false; p.killHasteStacks = 0; p.killStepStacks = 0;
+      this._inviaPannello(p);
     }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'shop', next: this.wave + 1 } });
   }
@@ -1505,11 +1585,32 @@ class Room {
   // secondi: con l'uscita a pulsante il giocatore puo' girare per la mappa anche un minuto, e senza
   // questa regola si troverebbe il bottino svanito sotto gli occhi proprio mentre lo va a prendere.
   // Il tempo riprende a correre quando ricomincia il combattimento.
+  // v1.79 — TUTTO IL MENU DI FINE ONDATA IN UN POSTO SOLO. Le quattro sezioni (riepilogo, personaggio,
+  // abilita', villaggio) leggono messaggi diversi, e vanno rimandati sia quando l'ondata finisce sia
+  // quando si torna dal villaggio: se stessero scritti in due punti, tornando dal villaggio ne
+  // mancherebbe sempre uno.
+  _inviaPannello(p) {
+    // Una scelta alla volta: la specializzazione del 15 ha la precedenza sullo scaglione.
+    if (this.offerRank(p)) { p.boonOffer = null; p.boonPicked = true; }
+    else if ((p.scaglioniDovuti || []).length > 0) this.offerBoon(p);
+    else this.nienteCarta(p);
+    this.inviaRiepilogo(p);
+    this.offerShop(p); this.sendBoons(p);
+    if (C.SHOP_GEAR_ENABLED) this.offerGear(p);  // v1.51 — Emporio a monete nascosto in attesa di ridisegno
+  }
+  // v1.79 — SI TORNA AL MENU, NON ALL'ONDATA. Dal villaggio si rientra qui: il riepilogo e' quello
+  // dell'ondata appena chiusa (non si ricalcola niente, non si premia niente una seconda volta) e la
+  // prossima mappa parte solo col pulsante apposta.
+  riapriMenu() {
+    this.phase = C.PHASE_SHOP; this.shopTimer = 45;
+    for (const p of this.players.values()) { if (!p.connected) continue; p.ready = false; this._inviaPannello(p); }
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'shop', next: this.wave + 1, dalVillaggio: 1 } });
+  }
   updatePickups(dt) {
     // ATTENZIONE: si ferma solo la SCADENZA, non il resto. Azzerare dt qui spegnerebbe anche la calamita
     // che tira le sfere verso il giocatore, cioe proprio il gesto che questa regola vuole permettere.
     const scade = this.phase === C.PHASE_CLEARED ? 0 : dt;
-    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.addXp(target, o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
+    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.xpCondivisa(o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
     if (this.groundXp.some(o => o.dead)) this.groundXp = this.groundXp.filter(o => !o.dead);
     // Raccolta MONETE (calamita come l'XP)
     for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.alivePlayers) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; if (target.ondata) target.ondata.monete += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
@@ -1518,7 +1619,7 @@ class Room {
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
     for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
         // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
-        this.addXp(p, C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa');
+        this.xpCondivisa(C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa');
         this.bountyTick(p, 'casse', 1);
         break; } } }
     if (this.crates.some(c => c.opened)) this.crates = this.crates.filter(c => !c.opened);
@@ -1533,7 +1634,7 @@ class Room {
       p.potCd = Math.max(0, p.potCd - dt);
       if (p.comboT > 0) { p.comboT -= dt; if (p.comboT <= 0) { p.comboT = 0; p.combo = 0; } }
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
-      for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; } }
+      for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; if (k === 'killStep') p.killStepStacks = 0; } }
       if (p.aegisT > 0) p.aegisT -= dt;  // v1.51 — ricarica dell'Egida Ostinata
       if (p.stats.regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + p.stats.regen * dt);
       // v1.69 — AURA DEL PALADINO: cura i COMPAGNI dentro il cerchio (la riduzione danni la applica
@@ -1667,13 +1768,33 @@ class Room {
       if (this.isWallAt(b.x, b.y)) { if (b.bounce > 0) { b.bounce--; if (this.isWallAt(b.x - b.vx * bdt, b.y)) b.vx *= -1; if (this.isWallAt(b.x, b.y - b.vy * bdt)) b.vy *= -1; } else if (b.grenade) { b.fuse = Math.min(b.fuse, 0.02); } else { b.dead = true; this.events.push({ t: 'spark', x: b.x, y: b.y, c: b.color }); } }
       if (b.life <= 0 && !b.grenade) b.dead = true; if (b.grenade && b.fuse <= 0) { this._explode(b); b.dead = true; continue; } if (b.dead) continue;
       if (b.hostile) { for (const p of this.alivePlayers) { if (p.buffs.iframe || p.buffs.i_invuln) continue; if (MU.circleHit(b.x, b.y, b.r, p.x, p.y, p.radius)) { this.damagePlayer(p, b.dmg, b.x, b.y, 1); if (b.curse) this.cursePlayer(p); b.dead = true; break; } } }
-      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue; const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : 0); if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
+      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue; const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : Math.round(b.dmg * 0.25)); if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
+          if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
     }
     if (this.bullets.some(b => b.dead)) this.bullets = this.bullets.filter(b => !b.dead);
     for (const m of this.monsters) { if (m.bleedT > 0) { m.bleedT -= dt; m.bleedTick = (m.bleedTick || 0) + dt; if (m.bleedTick > 0.5) { m.bleedTick = 0; this.damageMonster(m, m.bleed * 2, m.x, m.y - 1, 0, this.players.get(m.bleedSrc)); } } }
   }
   _explode(b) { this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR }); this._explodeAt(b.x, b.y, b.boomR, b.boomDmg, this.players.get(b.owner)); }
   _explodeAt(x, y, r, dmg, src) { for (const m of this.monsters) if (!m.dead && MU.dist(x, y, m.x, m.y) <= r + m.radius) this.damageMonster(m, dmg, x, y, 120, src); }
+  // v1.79 — IMPLOSIONE. Non e' un'esplosione al contrario per modo di dire: i nemici nel raggio vengono
+  // TIRATI verso il punto d'impatto e restano fermi otto decimi di secondo. Serve a fare quello che al
+  // mago manca — radunare una folla sparsa in un punto solo — non a fare danno, che infatti e' il 60%.
+  // I boss non si spostano: trascinare un boss sarebbe piu' forte di qualunque altra abilita' del gioco.
+  _implodeAt(x, y, r, dmg, src) {
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      const d = MU.dist(x, y, m.x, m.y);
+      if (d > r + m.radius) continue;
+      this.damageMonster(m, dmg, x, y, 0, src);
+      if (m.dead || m.boss) continue;
+      const n = MU.norm(x - m.x, y - m.y);
+      const passo = Math.min(d * 0.6, 120);
+      this.moveCircle(m, n.x * passo, n.y * passo);
+      if (this.isWallAt(m.x, m.y)) this._unstuck(m);
+      m.stun = Math.max(m.stun || 0, 0.8);
+    }
+    this.events.push({ t: 'implode', x, y, r });
+  }
   _toxicBurst(x, y, r, src) { const pz = 1 + (src.boon.poison || 0); for (const m of this.monsters) { if (m.dead) continue; if (MU.dist(x, y, m.x, m.y) <= r + m.radius) { m.poison = Math.max(m.poison || 0, pz); m.poisonT = 3; m.poisonSrc = src.id; } } }
   updateOrbs(dt) { for (const o of this.orbs) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; }
       if (o.turret) { o.fireCd -= dt; let tgt = null, bd = o.range * o.range; for (const m of this.monsters) { if (m.dead) continue; const d2 = MU.dist2(o.x, o.y, m.x, m.y); if (d2 < bd && this.losClear(o.x, o.y, m.x, m.y)) { bd = d2; tgt = m; } } if (tgt) { o.aim = Math.atan2(tgt.y - o.y, tgt.x - o.x); if (o.fireCd <= 0) { o.fireCd = 0.3; const sp = 820; this.bullets.push({ eid: NEXT++, hostile: false, owner: o.owner, x: o.x, y: o.y, vx: Math.cos(o.aim) * sp, vy: Math.sin(o.aim) * sp, r: 5, dmg: o.dmg, color: '#9fe0ff', life: o.range / sp, pierce: 0, knock: 40 }); this.events.push({ t: 'turret_fire', x: o.x, y: o.y, a: o.aim }); } } continue; }

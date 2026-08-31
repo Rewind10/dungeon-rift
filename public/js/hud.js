@@ -139,7 +139,7 @@
     updateBossBar(snap) { const boss = snap.mon.find(m => m.b); const wrap = $('bossBarWrap'); if (boss) { wrap.classList.remove('hidden'); const def = MON[boss.t] || BOSSES[boss.t] || {}; $('bossName').textContent = (def.name || 'BOSS').toUpperCase(); const bar = wrap.querySelector('#bossBar i'); bar.style.width = (100 * Math.max(0, boss.hp / boss.mhp)) + '%'; bar.style.background = boss.mg ? 'linear-gradient(90deg,#ff2d55,#b061ff)' : 'linear-gradient(90deg,#ff2d55,#ff7a3d)'; } else wrap.classList.add('hidden'); },
     killfeed(text) { const kf = $('centerFeed') || $('killfeed'); const el = document.createElement('div'); el.className = 'cf-item'; el.innerHTML = text; kf.appendChild(el); void el.offsetWidth; el.classList.add('show'); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600); while (kf.children.length > 4) kf.removeChild(kf.firstChild); },
     // NEGOZIO (statistiche XP) + BOON
-    showShop() { $('upgradeScreen').classList.remove('hidden'); this._render(); },
+    showShop() { $('upgradeScreen').classList.remove('hidden'); this.mostraSezione(this._sez || 'riepilogo'); this._render(); },
     setStats(data, onBuy, onReady) { this._stats = data; this._buy = onBuy; this._ready = onReady; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     // v1.69 — CARTE DI RANGO. Stesso pannello dei boon, mazzo diverso: qui si sceglie cio' che rende
     // la classe *tua*, non un potenziamento generico. Al rango V le carte sono due e piu' grandi:
@@ -207,62 +207,165 @@
       });
     },
     setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    // ===== v1.79 — IL MENU A SEZIONI ========================================================
+    // Il pannello di fine ondata non e' piu' una colonna sola con tutto dentro: sono quattro sezioni con
+    // una barra in basso. `_sez` e' quella aperta; il riepilogo e' la sezione di default perche' e' quella
+    // che risponde alla domanda che il giocatore ha appena finito di farsi ("com'e' andata?").
+    mostraSezione(nome) {
+      this._sez = nome;
+      const mappa = { riepilogo: 'secRiepilogo', personaggio: 'secPersonaggio', abilita: 'secAbilita' };
+      for (const k in mappa) { const el = $(mappa[k]); if (el) el.classList.toggle('hidden', k !== nome); }
+      const tabs = { riepilogo: 'tabRiepilogo', personaggio: 'tabPersonaggio', abilita: 'tabAbilita' };
+      for (const k in tabs) { const el = $(tabs[k]); if (el) el.classList.toggle('on', k === nome); }
+      const inner = document.querySelector('.upgrade-inner'); if (inner && inner.scrollTop !== undefined) inner.scrollTop = 0;
+    },
+    // C'e' una scelta in sospeso? Finche' c'e', la mappa successiva non parte: uno scaglione saltato per
+    // distrazione non si recupera piu'.
+    _scelteInSospeso() {
+      if (this._rank && this._rank.cards && this._rank.cards.length && !this._rank.picked) return 'spec';
+      if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) return 'abilita';
+      return null;
+    },
     _render() {
       this._renderRank();
-      // BOON row (top)
-      const brow = $('boonCards'); brow.innerHTML = '';
-      // v1.78 — sezione visibile anche a mani vuote, per dire PERCHE' non c'e' nessuna carta.
-      if (this._boons && this._boons.boons && !this._boons.boons.length && this._boons.manca != null && !this._boons.picked) {
+      this._renderAbilita();
+      this._renderPersonaggio();
+      this._renderRiepilogo();
+      this._aggiornaBarra();
+    },
+    _aggiornaBarra() {
+      const sosp = this._scelteInSospeso();
+      const badge = $('tabBadge'); if (badge) badge.classList.toggle('hidden', !sosp);
+      const btn = $('nextWaveBtn'), nota = $('goNota');
+      if (btn) {
+        btn.classList.toggle('off', !!sosp);
+        btn.disabled = !!sosp;
+        btn.textContent = this._pronto ? '⏳  IN ATTESA DEGLI ALTRI' : '▶  PROSSIMA MAPPA';
+      }
+      if (nota) {
+        nota.innerHTML = sosp === 'spec' ? 'Scegli prima la tua <b>specializzazione</b> nella sezione ABILITÀ.'
+          : sosp === 'abilita' ? 'Hai un\'<b>abilità da scegliere</b> nella sezione ABILITÀ.'
+          : (this._pronto ? 'Aspettiamo gli altri giocatori.' : 'Puoi passare dal villaggio prima di ripartire.');
+      }
+      const vil = $('tabVillaggio');
+      if (vil) { const ultima = this._stats && this._stats.wave >= (window.GAME.Constants.FINAL_WAVE || 20); vil.classList.toggle('off', !!ultima); }
+    },
+    _renderRiepilogo() {
+      const nota = $('riepilogoNota'); if (!nota) return;
+      const w = this._stats ? this._stats.wave : 0;
+      nota.innerHTML = 'Da qui puoi guardare il <b>personaggio</b>, spendere i punti, controllare le <b>abilità</b> e passare dal <b>villaggio</b>. '
+        + 'La mappa ' + (w ? (w + 1) : 'successiva') + ' parte solo col pulsante in fondo.';
+    },
+    // ---- SEZIONE ABILITA': la scelta in sospeso, poi quello che hai gia' preso ----
+    _renderAbilita() {
+      const brow = $('boonCards'); if (!brow) return; brow.innerHTML = '';
+      const bs = $('boonSub'), bt = $('boonTitle');
+      if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
         $('boonSection').classList.remove('hidden');
-        const bt0 = $('boonTitle'); if (bt0) bt0.textContent = '🎴 NESSUNA CARTA QUESTA VOLTA';
-        const bs0 = $('boonSub');
-        if (bs0) bs0.innerHTML = 'I poteri arrivano <b>salendo di livello</b>. Al livello ' + ((this._boons.liv || 1) + 1) + ' mancano <b>' + this._boons.manca + ' XP</b>.';
-      } else if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
+        const rar = RAR[this._boons.tier] || {};
+        if (bt) bt.textContent = '🎴 SCEGLI UN\'ABILITÀ';
+        if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 4) + '</b> — '
+          + '<b style="color:' + (this._boons.tierColor || '#fff') + '">' + (this._boons.tierName || '') + '</b>'
+          + ' · livello <b>' + (this._boons.liv || 1) + '</b>'
+          + (this._boons.resta > 1 ? ' <span style="opacity:.75">(ne restano ' + this._boons.resta + ')</span>' : '');
+        this._boons.boons.forEach(b => {
+          const r = RAR[b.rarity] || RAR.common;
+          const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = r.color;
+          const chi = b.hero && b.hero !== '*' ? 'DELLA TUA CLASSE' : 'PER TUTTI';
+          el.innerHTML = `<span class="rar" style="color:${r.color}">${r.name}</span><div class="icon">${b.icon}</div><div class="nm">${b.name}</div><div class="ds">${b.desc}</div><div class="own">${chi}</div>`;
+          el.onclick = () => { if (this._pick) this._pick(b.id); this._boons.picked = true; this._render(); };
+          brow.appendChild(el);
+        });
+      } else if (this._boons && this._boons.boons && !this._boons.boons.length) {
+        // niente da scegliere: si dice PERCHE', se no un riquadro vuoto si legge come un guasto
         $('boonSection').classList.remove('hidden');
-        // v1.78 — le carte arrivano dai LIVELLI: la riga sotto al titolo dice quale livello l'ha pagata e
-        // quante ne restano, se no chi ne ha guadagnati tre non capisce perche' il mazzo si riapre.
-        const bt = $('boonTitle'); if (bt) bt.textContent = '🎴 SCEGLI UN POTERE';
-        const bs = $('boonSub');
-        if (bs) { const r = this._boons.resta || 1, l = this._boons.liv || 0;
-          bs.innerHTML = (l ? 'Livello <b>' + l + '</b> — ' : '') + (r > 1 ? 'carta 1 di ' + r : 'una carta'); }
-        this._boons.boons.forEach(b => { const rar = RAR[b.rarity] || RAR.common; const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = rar.color; el.innerHTML = `<span class="rar" style="color:${rar.color}">${rar.name}</span><div class="icon">${b.icon}</div><div class="nm">${b.name}</div><div class="ds">${b.desc}</div>${b.owned ? `<div class="own">posseduto ×${b.owned}</div>` : ''}`; el.onclick = () => { if (this._pick) this._pick(b.id); this._boons.picked = true; this._render(); }; brow.appendChild(el); });
+        if (bt) bt.textContent = '🎴 NESSUNA SCELTA QUESTA VOLTA';
+        if (bs) bs.innerHTML = this._boons.cap
+          ? 'Sei al <b>livello ' + (this._boons.max || 15) + '</b>, il massimo: la crescita finisce qui.'
+          : (this._boons.prossimo
+            ? 'Le abilità si scelgono ai livelli <b>3, 6, 9 e 12</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
+              + (this._boons.manca ? ', fra <b>' + this._boons.manca + ' XP</b>' : '') + '.'
+            : 'Le abilità si scelgono ai livelli <b>3, 6, 9 e 12</b>.');
       } else { $('boonSection').classList.add('hidden'); }
-      // STAT shop
-      // EMPORIO (equipaggiamento con monete)
+      this._renderElencoAbilita();
+    },
+    // L'elenco per scaglione: quattro righe fisse, cosi' si vede a colpo d'occhio cosa manca ancora.
+    _renderElencoAbilita() {
+      const cont = $('abilElenco'); if (!cont) return;
+      const SC = [
+        { lvl: 3, tier: 'uncommon' }, { lvl: 6, tier: 'rare' },
+        { lvl: 9, tier: 'epic' }, { lvl: 12, tier: 'divine' },
+      ];
+      const prese = (this._active || []).filter(b => !b.syn);
+      const liv = this._stats ? (this._stats.level || 1) : 1;
+      const inArrivo = this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked ? this._boons.tier : null;
+      let html = '';
+      for (const sc of SC) {
+        const r = RAR[sc.tier] || {};
+        const mia = prese.find(b => b.rarity === sc.tier);
+        const corpo = mia
+          ? `<div class="card"><span class="ic">${mia.icon}</span><span><span class="nm">${esc(mia.name)}</span><div class="ds">${mia.desc || ''}</div></span></div>`
+          : (inArrivo === sc.tier ? '<span class="attesa">▲ da scegliere adesso</span>'
+            : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
+        html += `<div class="ab-sc"><span class="lv" style="color:${r.color || '#8d97ab'}">Liv. ${sc.lvl}<br>${r.name || ''}</span>${corpo}</div>`;
+      }
+      cont.innerHTML = html;
+      const syn = (this._active || []).filter(b => b.syn);
+      let sbox = $('abilSyn');
+      if (!sbox && syn.length) { sbox = document.createElement('div'); sbox.id = 'abilSyn'; cont.parentNode.appendChild(sbox); }
+      if (sbox) sbox.innerHTML = syn.map(x => `<span class="syn">${x.icon} <b>${esc(x.name)}</b> — ${x.desc || ''}</span>`).join('');
+    },
+    // ---- SEZIONE PERSONAGGIO: punti, statistiche, inventario ----
+    _renderPersonaggio() {
       const gsec = $('gearSection');
       if (gsec) gsec.classList.toggle('hidden', !(this._gear && this._gear.slots && this._gear.slots.length));
       if (this._gear && this._gear.slots) {
         $('shopCoins').textContent = this._gear.coins;
         this._gearSlots($('gearCards'), this._gear, (id) => { if (this._buyGear) this._buyGear(id); });
       }
-      // v1.51 — le statistiche hanno un TETTO di livello e costi molto piu' ripidi: la carta mostra Lv.x/max
-      // e diventa MAX quando e' esaurita, cosi' si vede a colpo d'occhio dove hai gia' investito.
-      if (this._stats) {
-        // v1.69 — la cifra grande non e' piu' l'XP ma i PUNTI, e accanto ci sono livello e rango: e' li'
-        // che il giocatore capisce a che punto e' della sua storia, non nel totale di esperienza raccolta.
-        $('shopXp').textContent = this._stats.points != null ? this._stats.points : this._stats.xp;
-        const sl = $('shopLevel'); if (sl) sl.textContent = this._stats.level || 1;
-        const sr = $('shopRank'); if (sr) sr.textContent = this._stats.rankName || '';
-        const cont = $('upgradeCards'); cont.innerHTML = '';
-        this._stats.stats.forEach(s => {
-          const punti = this._stats.points != null ? this._stats.points : this._stats.xp;
-          const maxed = !!s.maxed, afford = !maxed && punti >= s.cost;
-          const el = document.createElement('div');
-          el.className = 'uc' + (maxed ? ' maxed' : (afford ? '' : ' disabled'));
-          el.style.borderColor = s.color;
-          const lvlTxt = s.max ? 'Lv.' + s.lvl + '/' + s.max : 'Lv.' + s.lvl;
-          const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">◆ ${s.cost} ${s.cost === 1 ? 'punto' : 'punti'}</div>`;
-          el.innerHTML = `<span class="rar" style="color:${s.color}">${lvlTxt}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div>${foot}`;
-          el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
-          cont.appendChild(el);
-        });
+      if (!this._stats) return;
+      $('shopXp').textContent = this._stats.points != null ? this._stats.points : this._stats.xp;
+      const sl = $('shopLevel'); if (sl) sl.textContent = (this._stats.level || 1) + (this._stats.cap ? ' (max)' : '');
+      const sr = $('shopRank'); if (sr) sr.textContent = this._stats.rankName || '';
+      const cont = $('upgradeCards'); cont.innerHTML = '';
+      this._stats.stats.forEach(s => {
+        const punti = this._stats.points != null ? this._stats.points : this._stats.xp;
+        const maxed = !!s.maxed, afford = !maxed && punti >= s.cost;
+        const el = document.createElement('div');
+        el.className = 'uc' + (maxed ? ' maxed' : (afford ? '' : ' disabled'));
+        el.style.borderColor = s.color;
+        const lvlTxt = s.max ? 'Lv.' + s.lvl + '/' + s.max : 'Lv.' + s.lvl;
+        const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">◆ ${s.cost} ${s.cost === 1 ? 'punto' : 'punti'}</div>`;
+        el.innerHTML = `<span class="rar" style="color:${s.color}">${lvlTxt}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div>${foot}`;
+        el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
+        cont.appendChild(el);
+      });
+      this._renderInventario(this._stats.inv);
+    },
+    _renderInventario(inv) {
+      const cont = $('inventario'); if (!cont) return;
+      if (!inv) { cont.innerHTML = ''; return; }
+      let html = '';
+      html += `<div class="inv-r"><span class="ic">❤️</span><span class="sl">Salute</span><span class="nm">${inv.hp} / ${inv.hpMax} PV</span><span class="ds">${'❤'.repeat(Math.max(0, inv.vite))} ${inv.vite} vite · 🪙 ${inv.monete}</span></div>`;
+      // la riga "in mano" compare SOLO se stai impugnando un'arma raccolta a terra: se no ripeterebbe
+      // parola per parola la riga dell'arma dell'equipaggiamento, due righe sotto.
+      if (inv.arma.livello) {
+        const pips = '●'.repeat(inv.arma.livello) + '○'.repeat(Math.max(0, 3 - inv.arma.livello));
+        html += `<div class="inv-r"><span class="ic">${inv.arma.evo ? '★' : '🏹'}</span><span class="sl">In mano</span><span class="nm">${esc(inv.arma.nome)}</span><span class="ds">${pips}</span></div>`;
       }
+      for (const g of inv.gear || [])
+        html += `<div class="inv-r"><span class="ic">${g.icona}</span><span class="sl">${esc(g.slotName)}</span><span class="nm" style="color:${g.colore}">${esc(g.nome)}</span><span class="ds">${esc(g.desc || '')}</span></div>`;
+      html += '<div class="inv-belt">' + (inv.belt || []).map((b, i) => b
+        ? `<span class="pz">${b.icona} ${esc(b.nome)} <b>${b.n}/${b.max}</b></span>`
+        : `<span class="pz vuoto">slot ${i + 1} vuoto</span>`).join('') + '</div>';
+      cont.innerHTML = html;
     },
     // v1.51 — barra dei POTERI ATTIVI, sopra la barra abilita'. Aggiornata solo quando il server manda
     // l'elenco (scelta di un potere / sinergia / inizio partita), non a ogni frame.
     // v1.73 — la barra dei gettoni in basso e' stata SOSTITUITA dal box del personaggio (updateHeroBox):
     // mostrava le stesse icone senza dire a chi appartenevano ne' quante ne potevi tenere accese.
-    setActiveBoons(list) { this._active = list || []; this._cardMax = 0; this._heroSig = null; this._renderHeroCards(); },
+    setActiveBoons(list) { this._active = list || []; this._cardMax = 0; this._heroSig = null; this._renderHeroCards();
+      if (!$('upgradeScreen').classList.contains('hidden')) this._render(); },
     _renderHeroCards() {
       const wrap = $('heroCards'); if (!wrap) return;
       const max = window.GAME.Constants.MAX_CARDS || 5;
@@ -378,7 +481,10 @@
       }
     },
     onBoonPicked() { if (this._boons) { this._boons.picked = true; this._render(); } },
-    hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; this._rank = null; },
+    hideShop() { $('upgradeScreen').classList.add('hidden'); this._boons = null; this._stats = null; this._gear = null; this._rank = null; this._pronto = false; this._sez = 'riepilogo'; },
+    // v1.79 — premuto PROSSIMA MAPPA il menu NON si chiude: in cooperativa si aspettano gli altri, e
+    // chiudere il pannello lascerebbe il giocatore a fissare una mappa ferma senza sapere perche'.
+    prontoPerOndata() { this._pronto = true; this._aggiornaBarra(); },
     // v1.11 — pannello NPC mercante (compare quando sei vicino)
     showMerchant(wares, onBuy, coins, dark) { this._merchBuy = onBuy; this._merchWares = wares || this._merchWares; this._merchDark = !!dark; const panel = $('merchantPanel'); if (!panel || !this._merchWares) return; panel.classList.remove('hidden'); panel.classList.toggle('dark', !!dark); const hd = $('merchHead'); if (hd) hd.innerHTML = dark ? '\uD83D\uDC80 <b>Mercante Nero</b> \u2014 patti a caro prezzo \u00b7 hai <b id="merchCoins">' + (coins != null ? coins : (this._coins||0)) + '</b> \uD83E\uDE99' : '\uD83E\uDDD9 <b>Mercante Errante</b> \u2014 hai <b id="merchCoins">' + (coins != null ? coins : (this._coins||0)) + '</b> \uD83E\uDE99'; if (coins != null) this._coins = coins; this._renderMerchant(); },
     updateMerchantCoins(coins, dark) { if (coins != null) this._coins = coins; this._renderMerchant(); },

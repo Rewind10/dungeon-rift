@@ -81,18 +81,19 @@ function testLives() {
 function testBoons() {
   console.log('\n[TEST 3] Boon a scelta (effetti unici)');
   const room = new Room('boon'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP;
-  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length > 0, 'offre boon a scelta (' + (p.boonOffer || []).length + ')');
-  // applica boon 'pierce' se offerto, altrimenti forza
-  const pierceBefore = p.boon.pierce; room.boonOfferForce = null;
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pierceBefore + 1, 'boon Perforazione applicato'); assert(p.boonsOwned.pierce === 1, 'conteggio boon aggiornato');
-  // boon chain e verifica effetto in combattimento
-  p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); assert(p.boon.chain === 1, 'boon Catena applicato');
-  // spara e verifica che i proiettili portino i flag boon
-  room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 1 && b.chain === 1, 'i proiettili ereditano i boon');
+  // v1.79 — l'offerta arriva da uno SCAGLIONE: quattro abilita', due della classe e due neutre.
+  p.scaglioniDovuti = ['uncommon'];
+  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'lo scaglione offre quattro abilita (' + (p.boonOffer || []).length + ')');
+  const pierceBefore = p.boon.pierce;
+  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pierceBefore + 2, 'Perforazione applicata col valore nuovo (+2)'); assert(p.boonsOwned.pierce === 1, 'conteggio aggiornato');
+  p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); assert(p.boon.chain === 2, 'Catena di Fulmini applicata (2 rimbalzi)');
+  // spara e verifica che i proiettili portino i flag delle passive
+  room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 2 && b.chain === 2, 'i proiettili ereditano le passive');
   // boon vampire cura
   p.boonOffer = ['vampire']; const ls0 = p.stats.lifesteal; room.pickBoon('b', 'vampire'); assert(p.stats.lifesteal > ls0, 'boon Vampirismo aumenta lifesteal');
-  // max stacks rispettato
-  p.boonsOwned.pierce = 3; p.boonOffer = ['pierce']; const pv = p.boon.pierce; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pv, 'boon al max non applicato oltre');
+  // v1.79 — NIENTE IMPILAMENTO: ogni abilita' si prende una volta sola, e riproporla non fa niente.
+  p.boonOffer = ['pierce']; const pv = p.boon.pierce; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pv, 'la stessa abilita non si prende due volte');
+  assert(Loot.BOONS.every(x => x.max === 1), 'e nessuna abilita e impilabile');
   ok('boon verificati');
 }
 function testWeaponEvo() {
@@ -179,7 +180,7 @@ function testV16() {
   // combo decade nel tempo
   p.combo = 5; p.comboT = 0.05; const dt = 1 / C.TICK_RATE; for (let i = 0; i < 4; i++) room.update(dt); assert(p.combo === 0, 'la combo decade allo scadere del timer');
   // boon homing: i proiettili portano il flag e curvano
-  room.phase = C.PHASE_SHOP; p.boonOffer = ['homing']; room.pickBoon('b', 'homing'); assert(p.boon.homing === 1, 'boon Mira Guidata applicato');
+  room.phase = C.PHASE_SHOP; p.boonOffer = ['homing']; room.pickBoon('b', 'homing'); assert(p.boon.homing === 2, 'Mira Guidata applicata col valore nuovo');
   // scenario deterministico: nessun mostro residuo, mira nota (verso destra), unico bersaglio sotto il proiettile
   // v1.76 — lo scenario va messo in mezzo allo SPAZIO LIBERO. Con la pianta nuova il giocatore puo'
   // trovarsi a ridosso della roccia: il proiettile ci sbatteva entro tre tick, spariva, e il test
@@ -193,12 +194,14 @@ function testV16() {
         if (!lib) break; r++; }
       if (r > bestR) { bestR = r; best = { x: gx, y: gy }; } }
     if (best) { p.x = best.x * C.TILE + C.TILE / 2; p.y = best.y * C.TILE + C.TILE / 2; } }
-  room.monsters.length = 0; room.bullets.length = 0; p.aim = 0; p.input.aim = 0; p.fireCd = 0; room.firePlayerWeapon(p); const hb = room.bullets.find(x => !x.hostile); assert(hb && hb.homing === 1, 'i proiettili ereditano il flag homing');
+  room.monsters.length = 0; room.bullets.length = 0; p.aim = 0; p.input.aim = 0; p.fireCd = 0; room.firePlayerWeapon(p); const hb = room.bullets.find(x => !x.hostile); assert(hb && hb.homing === 2, 'i proiettili ereditano il flag homing (v1.79: forza 2)');
   const tm = room.spawnMonster('skeleton', hb.x + 30, hb.y + 120, { scaling: Waves.scaling(2, 1) });
   const sp0 = Math.hypot(hb.vx, hb.vy) || 720; hb.vx = sp0; hb.vy = 0; // v1.17 — elimina lo spread dell'arma: test deterministico
   const a0 = Math.atan2(hb.vy, hb.vx); for (let i = 0; i < 3; i++) room.updateBullets(dt); const a1 = room.bullets[0] ? Math.atan2(room.bullets[0].vy, room.bullets[0].vx) : a0; assert(Math.abs(a1 - a0) > 0.001, 'il proiettile homing curva verso il bersaglio');
   // boon avidita: aumenta xpMult
-  const g0 = p.stats.xpMult; p.boonOffer = ['greed']; room.pickBoon('b', 'greed'); assert(p.stats.xpMult > g0, 'boon Avidita aumenta la raccolta XP');
+  // v1.79 — Avidita, Fortuna Sfacciata e Fame Vorace sono RITIRATE: col tetto ai livelli un bonus all'XP
+  // raccolta e' spazzatura per costruzione, e allo scaglione divino varrebbe esattamente zero.
+  for (const id of ['greed', 'lucky', 'gluttony']) assert(!Loot.BOON_BY_ID[id], 'il potere ' + id + ' e stato ritirato');
   // boon baluardo: riduce i danni
   const p3 = room.addPlayer('d', { send() {} }, 'D', 'ladro'); p3.boonOffer = ['bulwark']; room.pickBoon('d', 'bulwark'); assert(p3.stats.dmgReduce > 0, 'boon Baluardo riduce i danni');
   p3.buffs = {}; p3.hp = 1000; p3.maxHp = 1000; const h0 = p3.hp; room.damagePlayer(p3, 100, p3.x + 10, p3.y, 0); const dealt = h0 - p3.hp; assert(dealt < 100, 'Baluardo attenua i danni subiti (' + dealt + ' < 100)');
@@ -227,15 +230,12 @@ function testV17() {
   // frost_chain: chain + freeze
   p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); p.boonOffer = ['freeze']; room.pickBoon('b', 'freeze');
   assert(p.synActive.frost_chain === 1 && p.boon.frostChain === 1, 'chain + freeze attiva Catena Gelida');
-  // seeker: homing + pierce. v1.73 — qui si arriverebbe a SEI carte, una oltre il tetto: la sesta arriva
-  // spenta e la sinergia non scatta. Si libera un posto spegnendone una, che e' cio' che si fa giocando.
+  // seeker: homing + pierce. v1.79 — il tetto delle carte accese non esiste piu' (la Cartomante e'
+  // chiusa): ogni abilita' presa e' sempre attiva, e la sinergia scatta appena la coppia e' completa.
   p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); const pierce0 = p.boon.pierce;
   p.boonOffer = ['homing']; room.pickBoon('b', 'homing');
-  assert(!p.cardOn.homing, 'la SESTA carta arriva spenta: il tetto vale anche a fine ondata');
-  assert(!p.synActive.seeker, 'e una carta spenta non completa la sinergia');
-  delete p.cardOn.poison; p.cardOn.homing = 1; room._recomputeBoons(p);   // faccio spazio, come dalla Cartomante
+  assert(!!p.cardOn.homing, 'ogni abilita presa e sempre accesa');
   assert(p.synActive.seeker === 1 && p.boon.pierce === pierce0 + 1, 'homing + pierce attiva Cercatore (+1 perforazione)');
-  assert(!p.synActive.toxic_burst, 'e spegnendo Tossina la sua sinergia si spegne con lei');
   // la sinergia gia attiva non si ri-applica: detectSynergies esclude quelle in synActive
   const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'seeker'), 'la sinergia gia attiva non viene rilevata di nuovo');
   // toxicBurst avvelena ad area
@@ -267,7 +267,7 @@ function testV18() {
   const dt = 1 / C.TICK_RATE; const c0 = p.coins; for (let i = 0; i < 60; i++) room.update(dt); assert(p.coins > c0, 'le monete vengono raccolte avvicinandosi');
   // --- acquisto equipaggiamento ---
   // v1.52 — l'acquisto avviene nella mappa MERCATO, stando vicino al fabbro (non piu' dal pannello di fine ondata).
-  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
   // v1.67 — l'Emporio a livelli e' un catalogo di OGGETTI per classe: si compra un id, non uno slot.
   const Gear = require('../shared/gear.js');
@@ -351,10 +351,11 @@ function testV110() {
   console.log('\n[TEST 14] Novita v1.10 — 2 poteri a scelta, piu boon, emporio 3 slot');
   // --- si sceglie tra ESATTAMENTE 2 poteri ---
   const room = new Room('v110'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame(); room.phase = C.PHASE_SHOP;
-  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 3, 'a fine ondata si sceglie 1 di 3 poteri — v1.51, era 1 di 2 (offerti: ' + (p.boonOffer || []).length + ')');
-  // --- catalogo boon ampliato ---
-  assert(Loot.BOONS.length >= 23, 'il catalogo dei poteri e ampliato (' + Loot.BOONS.length + ')');
-  for (const id of ['berserk', 'swift', 'lucky', 'juggernaut', 'executioner', 'artillery']) assert(Loot.BOON_BY_ID[id], 'nuovo boon presente: ' + id);
+  p.scaglioniDovuti = ['epic'];
+  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'si sceglie 1 di 4 (offerti: ' + (p.boonOffer || []).length + ')');
+  // --- catalogo ---
+  assert(Loot.BOONS.length === 32, 'il catalogo ha 32 abilita (' + Loot.BOONS.length + ')');
+  for (const id of ['berserk', 'swift', 'juggernaut', 'executioner', 'artillery']) assert(Loot.BOON_BY_ID[id], 'abilita presente: ' + id);
   // --- i nuovi boon applicano effetti ---
   const d0 = p.stats.dmgMult; p.boonOffer = ['berserk']; room.pickBoon('b', 'berserk'); assert(p.stats.dmgMult > d0, 'Furia Cieca aumenta il danno');
   const hp0 = room.effMaxHp(p); p.boonOffer = ['juggernaut']; room.pickBoon('b', 'juggernaut'); assert(room.effMaxHp(p) > hp0, 'Colosso aumenta i PV massimi');
@@ -616,11 +617,11 @@ function testV151() {
   const Loot = require('../shared/loot.js');
   const dt = 1 / C.TICK_RATE;
   // --- 1) si sceglie 1 di 3 ---
-  assert(Loot.BOON_CHOICES === 3, 'la costante di offerta e 3 carte');
+  assert(Loot.BOON_CHOICES === 4, 'la costante di offerta e 4 abilita');
   // --- 2) dieci poteri nuovi, tutti applicabili ---
-  const NEW = ['crowbar', 'longshot', 'killstep', 'gluttony', 'retaliate', 'aegis', 'corpseblast', 'execute', 'echo', 'defiance'];
-  assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i 10 nuovi poteri sono nel catalogo');
-  assert(Loot.BOONS.length === 33, 'catalogo a 33 poteri (23 storici + 10 nuovi): ' + Loot.BOONS.length);
+  const NEW = ['crowbar', 'longshot', 'killstep', 'retaliate', 'aegis', 'corpseblast', 'execute', 'echo', 'defiance'];
+  assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i poteri della v1.51 sono ancora nel catalogo');
+  assert(Loot.BOONS.length === 32, 'catalogo a 32 abilita: ' + Loot.BOONS.length);
   assert(NEW.every(id => { const b = Loot.BOON_BY_ID[id]; return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon; }), 'ogni nuovo potere ha icona, descrizione, max e apply');
   assert(new Set(Loot.BOONS.map(b => b.id)).size === Loot.BOONS.length, 'nessun id di potere duplicato');
   // --- 3) il negozio XP e ora una scelta, non un rubinetto ---
@@ -632,8 +633,9 @@ function testV151() {
   const room = new Room('v151');
   const pl = room.addPlayer('b', { send(s) { try { msgs.push(JSON.parse(s)); } catch (e) { } } }, 'B', 'ladro');
   room.startGame();
+  pl.scaglioniDovuti = ['rare'];
   room.offerBoon(pl);
-  assert(pl.boonOffer && pl.boonOffer.length === 3, 'a fine ondata arrivano 3 carte (una sola selezionabile)');
+  assert(pl.boonOffer && pl.boonOffer.length === 4, 'lo scaglione offre 4 abilita, una sola selezionabile');
   // tetto: comprando all infinito ci si ferma a 8
   room.phase = C.PHASE_SHOP; pl.points = 9999999;
   for (let i = 0; i < 25; i++) room.buyStat('b', 'st_for');
@@ -703,7 +705,7 @@ function testV152() {
   const dt = 1 / C.TICK_RATE, T = C.TILE;
   const room = new Room('v152'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   // v1.53 — niente piu' cadenza fissa: al mercato ci si va scegliendolo dal menu di pausa
-  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   assert(room.phase === C.PHASE_MARKET, 'dopo l\'ondata 3 si entra nel MERCATO');
   assert(room.wave === 3, 'il mercato e\' INTERSTIZIALE: non consuma un numero d\'ondata');
   assert(room.monsters.length === 0 && room.pending === 0, 'nel mercato non ci sono nemici');
@@ -727,16 +729,20 @@ function testV152() {
   // uscita: CO-OP, il primo che entra nel portale porta tutti avanti
   p.x = room.map.exit.x * T + T / 2; p.y = room.map.exit.y * T + T / 2;
   const mapBefore = room.map;
+  const ondataPrima = room.wave;
   room._checkMarketExit();
-  assert(room.wave === 4, 'il portale EXIT porta all\'ondata successiva');
-  assert(room.phase !== C.PHASE_MARKET, 'si esce dalla fase mercato');
-  assert(room.map !== mapBefore, 'uscendo dal mercato la mappa viene rigenerata: non si combatte nella stanza del fabbro');
+  // v1.79 — IL PORTALE DEL VILLAGGIO RIPORTA AL MENU, non all'ondata: il villaggio e' una sezione del
+  // menu di fine ondata, e da una sezione si torna indietro.
+  assert(room.wave === ondataPrima, 'uscire dal villaggio non fa avanzare l ondata');
+  assert(room.phase === C.PHASE_SHOP, 'si torna al menu di fine ondata');
+  assert(room._forceNewMap === true, 'ma la mappa e segnata come da rigenerare: non si combattera nella stanza del fabbro');
   assert(!room.gearMerchant, 'il fabbro sparisce fuori dal mercato');
-  // ondate non multiple di 3: si tira dritto
+  // dal menu, il pulsante centrale porta sempre e solo alla mappa successiva
   room.wave = 4; room.phase = C.PHASE_SHOP; room._afterShop();
-  assert(room.phase !== C.PHASE_MARKET && room.wave === 5, 'dopo l\'ondata 4 si passa direttamente alla 5');
+  assert(room.phase !== C.PHASE_MARKET && room.wave === 5, 'dal menu si va all ondata successiva');
+  assert(room.map !== mapBefore, 'e la mappa e nuova');
   // essendo interstiziale, il mercato non consuma mai un'ondata: nemmeno quelle boss
-  room.wave = 15; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 15; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   assert(room.phase === C.PHASE_MARKET && room.wave === 15, 'il mercato SEGUE l\'ondata boss, non la sostituisce');
   // nessun NaN girando nel mercato
   const r2 = new Room('v152b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'ladro'); r2.startGame();
@@ -753,7 +759,7 @@ function testV153() {
   // --- 1) il MERCATO si sceglie, non capita ---
   room.wave = 2; room.phase = C.PHASE_SHOP; room._afterShop();
   assert(room.phase !== C.PHASE_MARKET && room.wave === 3, 'senza scelta si va all ondata successiva');
-  room.wave = 2; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 2; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   assert(room.phase === C.PHASE_MARKET, 'scegliendo "market" si entra dal fabbro, a qualunque ondata');
   assert(room.wave === 2, 'la sosta non consuma un numero d ondata');
 
@@ -773,11 +779,16 @@ function testV153() {
   assert(exitIdx === room.map.exit.y * room.map.w + room.map.exit.x, 'la tile EXIT nella griglia coincide con map.exit');
   assert(room.map.grid[Math.round(room.gearMerchant.y / T - 0.5) * room.map.w + Math.round(room.gearMerchant.x / T - 0.5)] !== C.T_WALL, 'il fabbro non e dentro un muro');
 
-  // --- 3) in co-op vale la PRIMA scelta espressa ---
+  // --- 3) v1.79 — LA DESTINAZIONE NON SI SCEGLIE PIU'. Il villaggio e' una sezione del menu e ci si
+  // entra tutti insieme; il pulsante centrale e' il "pronto" per la mappa successiva.
   const r2 = new Room('v153b'); r2.addPlayer('a', { send() {} }, 'A', 'ladro'); r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
-  r2.wave = 4; r2.phase = C.PHASE_SHOP; r2.shopDest = null;
-  r2.shopReady('a', 'market'); r2.shopReady('c', 'wave');
-  assert(r2.shopDest === 'market', 'in co-op decide chi sceglie per primo');
+  r2.wave = 4; r2.phase = C.PHASE_SHOP;
+  r2.shopReady('a'); assert(r2.phase === C.PHASE_SHOP, 'un solo pronto non fa partire niente');
+  r2.vaiAlVillaggio('a');
+  assert(r2.phase === C.PHASE_MARKET, 'chiunque prema Villaggio ci porta tutta la stanza');
+  const T3 = C.TILE; const pa = r2.players.get('a');
+  pa.x = r2.map.exit.x * T3 + T3 / 2; pa.y = r2.map.exit.y * T3 + T3 / 2; r2._checkMarketExit();
+  assert(r2.phase === C.PHASE_SHOP && r2.wave === 4, 'e uscendo si torna al menu, sulla stessa ondata');
 
   // --- 4) curva XP: apertura piu dolce, coda molto piu dura ---
   const base = 10;
@@ -903,7 +914,7 @@ function testV157() {
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
   const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
-  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa il villaggio');
   assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro');
@@ -1671,7 +1682,7 @@ function testV167() {
   assert(bacch.every(b => b.weapon.fireRate === bacch[0].weapon.fireRate), 'tutte le bacchette hanno la stessa cadenza di base');
   // --- 4) a runtime: cambio libero, ricalcolo da zero, niente roba di altre classi ---
   const room = new Room('v167'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
-  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
   assert(room.effWeapon(p).name === 'Arco Corto', 'il ladro parte con l arco corto');
   const sp0 = room.effSpeed(p);
@@ -1772,73 +1783,66 @@ function testV168() {
   ok('novita v1.68 verificate');
 }
 function testV169() {
-  console.log('\n[TEST 39] Livelli, ranghi e punti (v1.69, rivisti in v1.70)');
+  console.log('\n[TEST 39] Livelli, ranghi e punti — impianto v1.79 (tetto 15, scaglioni, 18 punti)');
   const Lv = require('../shared/levels.js');
-  // --- 1) la scala NON ha piu un tetto: si sale finche si accumula esperienza ---
-  assert(Lv.MAX_LEVEL === undefined, 'il tetto ai livelli non esiste piu');
-  assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(199) === 1, 'sotto la prima soglia si resta al livello 1');
-  assert(Lv.levelForXp(200) === 2, 'a 200 XP si sale al 2');
-  assert(Lv.levelForXp(10670) === 20, 'a 10.670 XP si e di livello 20');
-  assert(Lv.levelForXp(30000) > 20 && Lv.levelForXp(100000) > Lv.levelForXp(30000), 'oltre il 20 si continua a salire');
-  let cresce = true; for (let L = 3; L <= 40; L++) if (Lv.xpStep(L) <= Lv.xpStep(L - 1)) cresce = false;
-  assert(cresce, 'ogni livello costa piu del precedente, anche molto oltre il 20');
+  // --- 1) IL TETTO E' 15 ---
+  assert(Lv.MAX_LEVEL === 15, 'il tetto ai livelli e 15');
+  assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(399) === 1, 'sotto la prima soglia si resta al livello 1');
+  assert(Lv.levelForXp(400) === 2, 'a 400 XP si sale al 2');
+  assert(Lv.levelForXp(14100) === 15, 'a 14.100 XP si e di livello 15');
+  assert(Lv.levelForXp(999999) === 15, 'e oltre non si sale piu, per quanta esperienza si raccolga');
+  let cresce = true; for (let L = 3; L <= 15; L++) if (Lv.xpStep(L) <= Lv.xpStep(L - 1)) cresce = false;
+  assert(cresce, 'ogni livello costa piu del precedente');
+  // gli ultimi due scalini sono i piu' cari: e' cio' che tiene il livello 15 oltre l'ondata 16
+  assert(Lv.xpStep(15) > Lv.xpStep(13) && Lv.xpStep(14) > Lv.xpStep(12), 'gli ultimi due scalini sono i piu ripidi');
   const pr = Lv.progress(Lv.xpForLevel(7) + 100);
-  assert(pr.level === 7 && pr.frac > 0 && pr.frac < 1, 'il progresso fra due livelli e una frazione sensata');
-  // --- 2) i punti ---
-  assert(Lv.pointsForLevel(20) === 19, '19 punti dai primi 20 livelli');
-  assert(Lv.statPointsTo(12) === 22, 'portare una statistica al tetto ne costa 22');
-  assert(Lv.statPointCost(0) === 1 && Lv.statPointCost(5) === 2 && Lv.statPointCost(11) === 3, 'il costo cresce a scaglioni');
-  // --- 3) i ranghi restano, le carte NO ---
-  assert(Lv.rankForLevel(1) === 1 && Lv.rankForLevel(5) === 2 && Lv.rankForLevel(20) === 5, 'i ranghi cadono ogni 5 livelli');
-  assert(Object.keys(Lv.CARD_BY_ID).length === 0, 'le carte di rango sono state rimosse (le sostituiranno le abilita di classe)');
+  assert(pr.level === 7 && pr.frac > 0 && pr.frac < 1 && !pr.cap, 'il progresso fra due livelli e una frazione sensata');
+  const prTop = Lv.progress(Lv.xpForLevel(15) + 5000);
+  assert(prTop.cap === true && prTop.frac === 1 && prTop.need === 0, 'al tetto la barra e piena e non si divide per zero');
+
+  // --- 2) GLI SCAGLIONI: quattro, ai livelli 3, 6, 9 e 12 ---
+  assert(Lv.SCAGLIONI.length === 4, 'gli scaglioni sono quattro');
+  assert(Lv.SCAGLIONI.map(x => x.lvl).join(',') === '3,6,9,12', 'cadono ai livelli 3, 6, 9 e 12');
+  assert(Lv.SCAGLIONI.map(x => x.tier).join(',') === 'uncommon,rare,epic,divine', 'e in ordine: non comune, raro, epico, divino');
+  assert(Lv.tierForLevel(9) === 'epic' && !Lv.tierForLevel(10) && !Lv.tierForLevel(15), 'solo quei quattro livelli danno una scelta');
+
+  // --- 3) I RANGHI: 3/6/9/12/15, con la specializzazione in fondo ---
+  assert(Lv.RANK_LEVELS.join(',') === '1,3,6,9,12,15', 'le fasce sono 1, 3, 6, 9, 12 e 15');
+  assert(Lv.rankForLevel(1) === 1 && Lv.rankForLevel(2) === 1, 'ai livelli 1-2 si porta il titolo di partenza');
+  assert(Lv.rankForLevel(3) === 2 && Lv.rankForLevel(12) === 5 && Lv.rankForLevel(15) === Lv.RANK_SPEC, 'e si sale di fascia a ogni scaglione');
+  assert(Lv.puntiPerRango(1) === 0 && Lv.puntiPerRango(Lv.RANK_SPEC) === 0, 'la prima fascia e quella della specializzazione non danno punti');
+  assert([2, 3, 4, 5].every(r => Lv.puntiPerRango(r) === 1), 'le quattro fasce in mezzo danno un punto ciascuna');
   for (const h of ['guerriero', 'mago', 'ladro']) {
-    assert(Lv.cardsFor(h, 2).length === 0, h + ': nessuna carta da offrire');
-    assert(Lv.specsFor(h).length === 2, h + ' ha ancora due specializzazioni al rango V');
+    assert(Lv.RANK_NAMES[h].length === 6, 'sei titoli per ' + h);
+    assert(Lv.RANK_NAMES[h][4] && Lv.RANK_NAMES[h][5] === null, 'il quinto titolo esiste e il sesto e la specializzazione (' + h + ')');
+    assert(Lv.rankName(h, 13, null) === Lv.RANK_NAMES[h][4], 'al livello 13 si porta il quinto titolo (' + h + ')');
   }
-  // --- 4) a runtime: si sale, si prende un punto, il rango NON offre carte ---
-  const room = new Room('v169'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
-  assert(p.level === 1 && p.points === 0 && p.xpPool === 0, 'si parte al livello 1 senza punti');
-  room.addXp(p, 199); assert(p.level === 1 && p.points === 0, 'sotto soglia non succede niente');
-  room.addXp(p, 1); assert(p.level === 2 && p.points === 1, 'alla soglia si sale e arriva il punto');
-  assert(p.xpPool === 200, 'la XP non si consuma: e una barra, non una valuta');
-  room.addXp(p, Lv.xpForLevel(5) - p.xpPool);
-  assert(p.level === 5 && Lv.rankForLevel(p.level) === 2, 'si arriva al rango II');
-  assert(p.points === 5, 'quattro punti dai livelli piu uno dal rango');
-  assert(p.rankOffer === null, 'ma nessuna carta viene offerta: non ce ne sono piu');
-  // saltare piu' livelli in un colpo solo non deve perdere ne punti ne ranghi
-  const r2 = new Room('v169b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'mago'); r2.startGame();
-  r2.addXp(q, Lv.xpForLevel(11));
-  assert(q.level === 11, 'una botta di XP fa salire di piu livelli in un colpo');
-  assert(q.points === 10 + 2, 'e i punti dei ranghi attraversati ci sono tutti (10 livelli + 2 ranghi)');
-  // --- 5) il bivio del rango V c'e' ancora ---
-  const r3 = new Room('v169c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'ladro'); r3.startGame();
-  r3.addXp(z, Lv.xpForLevel(20));
-  assert(z.level === 20 && z.specOffer && z.specOffer.length === 2, 'al livello 20 arriva il bivio');
-  r3.phase = C.PHASE_SHOP;
-  const crit0 = z.stats.critChance;
-  r3.pickRank('d', 'assassino');
-  assert(z.spec === 'assassino' && z.stats.critChance > crit0, 'la specializzazione viene applicata');
-  const snapZ = r3.snapshot().players.find(x => x.i === 'd');
-  assert(snapZ && snapZ.sp === 'assassino' && snapZ.lvl === 20, 'lo snapshot la porta al client');
-  // e oltre il 20 si continua a salire, senza conversioni in monete
-  const co0 = z.coins;
-  r3.addXp(z, 20000);
-  assert(z.level > 20, 'oltre il rango V il livello continua a salire');
-  assert(z.coins === co0, 'e la XP non si converte piu in monete: non c e piu un tetto da superare');
-  // --- 6) le statistiche si pagano in PUNTI, e la XP non cala mai ---
-  const r4 = new Room('v169d'); const w = r4.addPlayer('e', { send() {} }, 'E', 'guerriero'); r4.startGame();
-  r4.addXp(w, Lv.xpForLevel(6)); r4.phase = C.PHASE_SHOP;
-  const punti0 = w.points, xpPrima = w.xpPool;
-  r4.buyStat('e', 'st_for');
-  assert(w.buys.st_for === 1 && w.points === punti0 - 1, 'il primo livello di una statistica costa 1 punto');
-  assert(w.xpPool === xpPrima, 'e la XP resta dov era');
-  w.points = 0; const b0 = w.buys.st_for;
-  r4.buyStat('e', 'st_for'); assert(w.buys.st_for === b0, 'senza punti non si compra');
-  // --- 7) senza carte in attesa il boon torna normale ---
-  const r6 = new Room('v169f'); const v = r6.addPlayer('g', { send() {} }, 'G', 'mago'); r6.startGame();
-  r6.addXp(v, 250); r6.enterShop();
-  assert(v.boonOffer && v.boonOffer.length, 'a fine ondata il boon viene offerto');
-  ok('livelli e ranghi verificati');
+
+  // --- 4) I PUNTI: 18 esatti, costo fisso 1 ---
+  assert(Lv.statPointCost(0) === 1 && Lv.statPointCost(11) === 1, 'ogni livello di statistica costa 1 punto, a qualunque altezza');
+  assert(Lv.statPointsTo(12) === 12, 'cappare una statistica costa 12 punti');
+  const budget = (Lv.MAX_LEVEL - 1) * Lv.POINTS_PER_LEVEL + [1, 2, 3, 4, 5, 6].reduce((a, r) => a + Lv.puntiPerRango(r), 0);
+  assert(budget === 18, 'in tutta la run si guadagnano 18 punti (' + budget + ')');
+  assert(12 + 6 === budget, 'una statistica al tetto (12) piu una seconda a 6 fanno esattamente il bilancio');
+  assert(12 * 2 > budget, 'e cappare DUE statistiche resta impossibile');
+
+  // --- 5) il conto vero, giocato: 18 punti in mano al livello 15 ---
+  const room = new Room('v169'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
+  room.addXp(p, 99999);
+  assert(p.level === 15, 'con esperienza a volonta si arriva al 15 (' + p.level + ')');
+  assert(p.points === 18, 'e in mano ci sono 18 punti (' + p.points + ')');
+  assert((p.scaglioniDovuti || []).join(',') === 'uncommon,rare,epic,divine', 'con le quattro scelte in coda');
+  assert(p.specOffer && p.specOffer.length === 2, 'e il bivio della specializzazione aperto');
+  const xp0 = p.xpPool; room.addXp(p, 5000);
+  assert(p.xpPool === xp0, 'oltre il tetto l esperienza non si accumula nemmeno');
+  // spendere: una cappata piu una a 6, e non resta niente
+  room.phase = C.PHASE_SHOP;
+  for (let i = 0; i < 12; i++) room.buyStat('b', 'st_des');
+  for (let i = 0; i < 6; i++) room.buyStat('b', 'st_cos');
+  assert(p.buys.st_des === 12 && p.buys.st_cos === 6 && p.points === 0, 'una al tetto, una a 6, zero punti avanzati');
+  room.buyStat('b', 'st_for');
+  assert(!p.buys.st_for, 'e senza punti non si compra piu niente');
+  ok('livelli, scaglioni, ranghi e punti verificati');
 }
 function testV170() {
   console.log('\n[TEST 40] Novita v1.70 — tetto progressivo, XP da piu fonti, LEVEL UP');
@@ -2144,122 +2148,39 @@ function testV172() {
 // (statistiche base -> statistiche comprate -> carte accese -> sinergie), e questi test difendono proprio
 // quello: che spegnere e riaccendere riporti ESATTAMENTE al punto di prima, senza lasciare residui.
 function testV173() {
-  console.log('\n[TEST 43] Novita v1.73 — Cartomante: 5 carte accese, ricalcolo da zero');
-  const conn = { send() {} };
-  const prendi = (r, p, id) => { p.boonOffer = [id]; r.pickBoon(p.id, id); };
-
-  // --- 1) il tetto ---
-  const r = new Room('v173a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame(); r.phase = C.PHASE_SHOP;
-  assert(C.MAX_CARDS === 5, 'il tetto e cinque, e sta nelle costanti');
-  const sette = ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant', 'vampire'];
-  for (const id of sette) prendi(r, p, id);
-  assert(Object.keys(p.boonsOwned).length === 7, 'le carte si prendono tutte: restano tue');
-  assert(r._carteAccese(p) === C.MAX_CARDS, 'ma accese ce ne stanno cinque');
-  assert(!p.cardOn.giant && !p.cardOn.vampire, 'la sesta e la settima arrivano SPENTE, non bloccano la scelta');
-  assert(p.cardOn.ricochet && p.cardOn.thorns, 'le prime cinque restano accese');
-
-  // --- 2) lo stesso tipo preso due volte occupa UN posto solo ---
-  const r2 = new Room('v173b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame(); r2.phase = C.PHASE_SHOP;
-  prendi(r2, q, 'ricochet'); prendi(r2, q, 'ricochet'); prendi(r2, q, 'ricochet');
-  assert(q.boonsOwned.ricochet === 3, 'tre esemplari della stessa carta');
-  assert(r2._carteAccese(q) === 1, 'ma un solo posto occupato: il tetto conta carte DIVERSE');
-  assert(q.boon.bounce === 3, 'e i tre esemplari fanno effetto tutti e tre');
-
-  // --- 3) spegnere toglie DAVVERO l'effetto, riaccendere lo rimette identico ---
-  const r3 = new Room('v173c'); const g = r3.addPlayer('c', conn, 'C', 'guerriero'); r3.startGame(); r3.phase = C.PHASE_SHOP;
-  prendi(r3, g, 'crit'); prendi(r3, g, 'crit');
-  const critAcceso = g.stats.critChance, multAcceso = g.stats.critMult;
-  r3.enterMarket(); assert(!!r3.seer, 'la Cartomante ha un posto nel villaggio');
-  g.x = r3.seer.x + 900; r3.toggleCard('c', 'crit');
-  assert(g.cardOn.crit, 'da lontano il tavolo non risponde');
-  g.x = r3.seer.x; g.y = r3.seer.y;
-  r3.toggleCard('c', 'crit');
-  assert(!g.cardOn.crit, 'spenta');
-  assert(Math.abs(g.stats.critChance - 0.03) < 1e-9, "e il bonus e sparito davvero, non e rimasto attaccato");
-  r3.toggleCard('c', 'crit');
-  assert(Math.abs(g.stats.critChance - critAcceso) < 1e-9 && Math.abs(g.stats.critMult - multAcceso) < 1e-9,
-    'riaccesa: torna ESATTAMENTE come prima, senza raddoppiare ne perdere pezzi');
-  // dieci giri di spegni/accendi non devono derivare di un millesimo
-  for (let i = 0; i < 10; i++) { r3.toggleCard('c', 'crit'); r3.toggleCard('c', 'crit'); }
-  assert(Math.abs(g.stats.critChance - critAcceso) < 1e-9, 'dieci giri non fanno derivare i valori');
-
-  // --- 4) le statistiche comprate coi punti sopravvivono al ricalcolo ---
-  const r4 = new Room('v173d'); const h = r4.addPlayer('d', conn, 'D', 'ladro'); r4.startGame(); r4.phase = C.PHASE_SHOP;
-  h.points = 20; for (let i = 0; i < 4; i++) r4.buyStat('d', 'st_des');
-  const desPrima = h.stats.schoolDmg.ranged;
-  prendi(r4, h, 'swift');
-  r4.enterMarket(); h.x = r4.seer.x; h.y = r4.seer.y;
-  r4.toggleCard('d', 'swift'); r4.toggleCard('d', 'swift');
-  assert(Math.abs(h.stats.schoolDmg.ranged - desPrima) < 1e-9, 'la Destrezza comprata resta intatta dopo il ricalcolo');
-  assert(h.buys.st_des === 4, 'e i livelli comprati non si perdono');
-
-  // --- 5) il limite non si aggira dal client ---
-  const r5 = new Room('v173e'); const k = r5.addPlayer('e', conn, 'E', 'guerriero'); r5.startGame(); r5.phase = C.PHASE_SHOP;
-  for (const id of ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant']) prendi(r5, k, id);
-  r5.enterMarket(); k.x = r5.seer.x; k.y = r5.seer.y;
-  r5.toggleCard('e', 'giant');
-  assert(!k.cardOn.giant && r5._carteAccese(k) === C.MAX_CARDS, 'con cinque accese la sesta non entra');
-  r5.toggleCard('e', 'thorns'); r5.toggleCard('e', 'giant');
-  assert(k.cardOn.giant && !k.cardOn.thorns, 'ma liberando un posto entra');
-  r5.toggleCard('e', 'boon_inesistente');
-  assert(r5._carteAccese(k) === C.MAX_CARDS, 'una carta che non possiedi non si accende');
-
-  // --- 6) i PV: alzare il massimo cura, abbassarlo taglia, e non si guadagna vita a ogni giro ---
-  const r6 = new Room('v173f'); const v = r6.addPlayer('f', conn, 'F', 'guerriero'); r6.startGame(); r6.phase = C.PHASE_SHOP;
-  const max0 = r6.effMaxHp(v);
-  v.hp = 100;
-  prendi(r6, v, 'juggernaut');
-  assert(r6.effMaxHp(v) === max0 + 45, 'Colosso alza il massimo di 45');
-  assert(v.hp === 100, 'ma NON cura (v1.74): rimettere in piedi e mestiere dell Ostessa');
-  r6.enterMarket(); v.x = r6.seer.x; v.y = r6.seer.y;
-  r6.toggleCard('f', 'juggernaut');
-  assert(r6.effMaxHp(v) === max0 && v.hp === 100, 'spegnendolo il massimo torna giu e i PV correnti restano');
-  r6.toggleCard('f', 'juggernaut');
-  assert(v.hp === 100, 'e riaccendendolo restano quelli: niente cura di striscio');
-  v.hp = r6.effMaxHp(v); r6.toggleCard('f', 'juggernaut');
-  assert(v.hp === r6.effMaxHp(v) && v.hp === max0, 'con i PV pieni, spegnere li taglia al nuovo tetto');
-  r6.toggleCard('f', 'juggernaut');
-  assert(v.hp === max0 + 45, 'ma riaccendendolo il taglio torna: la Cartomante non e una tassa sulla vita');
-  const hpA = v.hp; for (let i = 0; i < 8; i++) { r6.toggleCard('f', 'juggernaut'); r6.toggleCard('f', 'juggernaut'); }
-  assert(v.hp === hpA, 'e otto giri non spostano di un punto, ne in su ne in giu');
-
-  // --- 7) Ultima Occasione: la carica spesa non torna spegnendo e riaccendendo ---
-  const r7 = new Room('v173g'); const d = r7.addPlayer('g', conn, 'G', 'mago'); r7.startGame(); r7.phase = C.PHASE_SHOP;
-  prendi(r7, d, 'defiance');
-  assert(d.defianceLeft === 1, 'Ultima Occasione da una carica');
-  d.defianceLeft = 0; d.defianceUsed = 1;                     // consumata giocando
-  r7.enterMarket(); d.x = r7.seer.x; d.y = r7.seer.y;
-  r7.toggleCard('g', 'defiance'); r7.toggleCard('g', 'defiance');
-  assert(d.defianceLeft === 0, 'spegnere e riaccendere NON la resuscita');
-
-  // --- 8) le sinergie seguono le carte accese, in tutti e due i versi ---
-  const r8 = new Room('v173h'); const y = r8.addPlayer('h', conn, 'H', 'mago'); r8.startGame(); r8.phase = C.PHASE_SHOP;
-  prendi(r8, y, 'poison'); prendi(r8, y, 'explode');
-  assert(y.synActive.toxic_burst === 1 && y.boon.toxicBurst === 1, 'due carte accese formano la sinergia');
-  r8.enterMarket(); y.x = r8.seer.x; y.y = r8.seer.y;
-  r8.toggleCard('h', 'poison');
-  assert(!y.synActive.toxic_burst && !y.boon.toxicBurst, 'spegnerne una spegne anche la sinergia e il suo flag');
-  r8.toggleCard('h', 'poison');
-  assert(y.synActive.toxic_burst === 1, 'riaccenderla la rimette');
-
-  // --- 9) cio' che arriva al client ---
-  const inviati = []; const conn9 = { send(s) { inviati.push(JSON.parse(s)); } };
-  const r9 = new Room('v173i'); const z = r9.addPlayer('i', conn9, 'I', 'guerriero'); r9.startGame(); r9.phase = C.PHASE_SHOP;
-  for (const id of ['ricochet', 'pierce', 'crit', 'swift', 'thorns', 'giant']) prendi(r9, z, id);
-  const boons = inviati.filter(m => m.t === C.MSG.BOONS).pop();
-  assert(boons && boons.max === C.MAX_CARDS && boons.active === C.MAX_CARDS, 'il client sa quante ne stanno e quante ne hai accese');
-  assert(boons.boons.some(b => b.id === 'giant' && b.on === 0), 'e sa quale e spenta');
-  r9.enterMarket(); z.x = r9.seer.x; z.y = r9.seer.y; inviati.length = 0; r9.offerSeer(z, 1);
-  const off = inviati.filter(m => m.t === C.MSG.OFFER_SEER).pop();
-  assert(off && off.cards.length === 6, 'il tavolo elenca TUTTE le carte, accese e spente');
-  assert(off.cards.every(c => c.name && c.icon && c.desc !== undefined), 'ognuna con nome, icona e cosa fa');
-  ok('novita v1.73 verificate');
+  console.log('\n[TEST 43] La Cartomante e chiusa (v1.79) — e con lei il tetto delle carte accese');
+  const conn = () => { const box = []; return { box, send(s) { box.push(JSON.parse(s)); } }; };
+  // --- 1) la funzione non risponde piu, nemmeno stando addosso al banco ---
+  const c1 = conn();
+  const room = new Room('v173'); const p = room.addPlayer('b', c1, 'B', 'ladro'); room.startGame();
+  assert(C.CARTOMANTE_ATTIVA === false, 'la manopola dice che e chiusa');
+  room.phase = C.PHASE_MARKET; room.seer = { x: p.x, y: p.y };
+  c1.box.length = 0;
+  room.offerSeer(p, 1);
+  assert(!c1.box.some(m => m.t === C.MSG.OFFER_SEER), 'il tavolo della Cartomante non si apre piu');
+  assert(c1.box.some(m => m.ev && m.ev.t === 'seer_chiusa'), 'ma il gioco dice che la struttura c e e la funzione no');
+  // --- 2) nemmeno un messaggio costruito a mano riapre la porta ---
+  room.phase = C.PHASE_SHOP; p.scaglioniDovuti = ['uncommon'];
+  room.offerBoon(p); room.pickBoon('b', p.boonOffer[0]);
+  const presa = Object.keys(p.boonsOwned)[0];
+  assert(!!presa, 'un abilita e stata presa');
+  room.phase = C.PHASE_MARKET;
+  room.toggleCard('b', presa);
+  assert(p.cardOn[presa] === 1, 'e non si puo spegnere: le abilita sono sempre attive');
+  // --- 3) IL TETTO DELLE CINQUE NON ESISTE PIU: quattro passive, tutte accese ---
+  const r2 = new Room('v173b'); const q = r2.addPlayer('c', conn(), 'C', 'guerriero'); r2.startGame(); r2.phase = C.PHASE_SHOP;
+  for (const t of ['uncommon', 'rare', 'epic', 'divine']) {
+    q.scaglioniDovuti = [t]; r2.offerBoon(q); r2.pickBoon('c', q.boonOffer[0]);
+  }
+  const prese = Object.keys(q.boonsOwned).filter(id => q.boonsOwned[id] > 0);
+  assert(prese.length === 4, 'quattro abilita prese in una run (' + prese.length + ')');
+  assert(prese.every(id => q.cardOn[id] === 1), 'e sono accese tutte e quattro');
+  assert(r2._carteAccese(q) === 4, 'il conteggio delle attive dice quattro');
+  // --- 4) il ricalcolo da zero regge lo stesso: e la rete di sicurezza di tutti i bonus ---
+  const dm = q.stats.dmgMult; r2._recomputeBoons(q);
+  assert(Math.abs(q.stats.dmgMult - dm) < 1e-9, 'ricalcolare da zero non cambia niente (' + dm + ' -> ' + q.stats.dmgMult + ')');
+  ok('la Cartomante e chiusa e le abilita restano sempre attive');
 }
-
-
-// ===================== v1.74 — L'OSTESSA, e la regola sui PV =====================
-// Una bottega semplice e una regola che tocca tutto il gioco: ALZARE IL MASSIMO NON CURA MAI. Senza quella
-// regola l'Ostessa non avrebbe mestiere, perche' un punto di Costituzione la sostituirebbe gratis.
 function testV174() {
   console.log('\n[TEST 44] Novita v1.74 — Ostessa: riposo a pagamento, e i PV massimi non curano');
   const conn = { send() {} };
@@ -2277,15 +2198,14 @@ function testV174() {
   prendi(r, p, 'overheal'); assert(p.hp === 100, 'e nemmeno Scudo Vitale');
   assert(r.effMaxHp(p) > mx0 + 100, 'il massimo pero e cresciuto davvero');
 
-  // --- 2) il debito: spegnere e riaccendere resta neutro ---
-  const r2 = new Room('v174b'); const q = r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame(); r2.phase = C.PHASE_SHOP;
+  // --- 2) v1.79 — le abilita' non si spengono piu' (Cartomante chiusa): il tetto dei PV sale e basta.
+  const r2 = new Room('v174b'); const q = r2.addPlayer('b', conn, 'B', 'guerriero'); r2.startGame(); r2.phase = C.PHASE_SHOP;
+  const mxPrima = r2.effMaxHp(q); q.hp = mxPrima;
   prendi(r2, q, 'juggernaut');
-  r2.enterMarket(); q.x = r2.seer.x; q.y = r2.seer.y;
-  q.hp = r2.effMaxHp(q); const pieno = q.hp;
+  assert(r2.effMaxHp(q) > mxPrima, 'Colosso alza il tetto dei PV');
+  assert(q.hp === mxPrima, 'ma non cura: i PV correnti restano quelli');
   r2.toggleCard('b', 'juggernaut');
-  assert(q.hpDebt === 45, 'spegnendo, i PV tagliati vengono SEGNATI, non persi');
-  r2.toggleCard('b', 'juggernaut');
-  assert(q.hp === pieno && q.hpDebt === 0, 'riaccendendo tornano, e il debito si chiude');
+  assert(q.cardOn.juggernaut === 1 && r2.effMaxHp(q) > mxPrima, 'e non si puo spegnere');
   // ma il debito non restituisce piu' di quanto era stato tolto
   q.hp = 40; r2.toggleCard('b', 'juggernaut'); r2.toggleCard('b', 'juggernaut');
   assert(q.hp === 40, 'se non c era nulla da tagliare non c e nulla da rendere');
@@ -2330,10 +2250,8 @@ function testV174() {
   // --- 4) il riposo comprato cancella il debito, altrimenti sarebbe vita regalata ---
   const r4 = new Room('v174d'); const h = r4.addPlayer('d', conn, 'D', 'guerriero'); r4.startGame(); r4.phase = C.PHASE_SHOP;
   prendi(r4, h, 'juggernaut');
-  r4.enterMarket(); h.x = r4.seer.x; h.y = r4.seer.y; h.hp = r4.effMaxHp(h);
-  r4.toggleCard('d', 'juggernaut');
-  assert(h.hpDebt === 45, 'spegnendo con i PV pieni si apre un debito di 45');
-  h.hp = 100;                                    // poi si combatte e ci si fa male
+  r4.enterMarket();
+  h.hp = 100;                                    // si combatte e ci si fa male
   h.x = r4.innkeeper.x; h.y = r4.innkeeper.y; h.coins = 500;
   r4.restAtInn('d');
   assert(h.hp === r4.effMaxHp(h), 'al focolare si torna al massimo');
@@ -2495,7 +2413,7 @@ function testV1752() {
 
   // --- la stanza vera: si cammina, si arriva da tutti, e nessuna zona resta tagliata fuori ---
   const room = new Room('v1752'); room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
-  room.wave = 3; room.phase = C.PHASE_SHOP; room.shopReady('b', 'market'); room._afterShop();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   const p = [...room.players.values()][0];
   assert(!!room.solids && room.solids.length > 30, 'la stanza carica i corpi del villaggio');
   const r = p.radius * 0.8, mm = room.map;
@@ -2802,6 +2720,7 @@ function testPonteClient() {
 //  4. una sola modalita' (la prova sta nel TEST 5, riscritto)
 //  5. il riepilogo di fine livello
 function testV178() {
+  const Lv2 = require('../shared/levels.js');
   console.log('\n[TEST 51] Novita v1.78 — uscita col pulsante EXIT, carte dai livelli, riepilogo di fine livello');
   const conn = () => { const box = []; return { box, send(s) { box.push(JSON.parse(s)); } }; };
 
@@ -2866,36 +2785,41 @@ function testV178() {
   assert(r45.groundXp.length === sfere && r45.groundCoins.length === soldi,
     'dopo un minuto sulla mappa ripulita la roba a terra e ancora li (' + r45.groundXp.length + '/' + sfere + ' sfere, ' + r45.groundCoins.length + '/' + soldi + ' monete)');
 
-  // --- 5. LE CARTE ARRIVANO DAI LIVELLI ---
+  // --- 5. LE ABILITA' ARRIVANO AGLI SCAGLIONI (v1.79: livelli 3, 6, 9, 12) ---
   const c5 = conn();
   const r5 = new Room('v178e'); const z = r5.addPlayer('a', c5, 'A', 'guerriero'); r5.startGame();
-  assert(z.carteDovute === 0, 'a inizio partita non si deve nessuna carta');
+  assert((z.scaglioniDovuti || []).length === 0, 'a inizio partita non si deve nessuna scelta');
   r5.phase = C.PHASE_COMBAT; r5.monsters.length = 0; r5.pending = 0; c5.box.length = 0;
   r5._checkWaveClear(); r5.exitWave('a');
   const offerte0 = c5.box.filter(m => m.t === C.MSG.OFFER_BOON && m.boons.length);
-  assert(offerte0.length === 0, 'chiudere un ondata senza salire di livello NON regala nessuna carta');
+  assert(offerte0.length === 0, 'chiudere un ondata senza raggiungere uno scaglione NON offre niente');
   const vuoto = c5.box.filter(m => m.t === C.MSG.OFFER_BOON && !m.boons.length);
-  assert(vuoto.length === 1 && vuoto[0].manca > 0, 'ma il pannello dice quanta XP manca al livello');
-  // tre livelli in un ondata = tre carte, una dopo l altra
+  assert(vuoto.length === 1 && vuoto[0].prossimo === 3 && vuoto[0].manca > 0, 'ma il pannello dice a che livello arriva la prossima e quanto manca');
+
+  // due scaglioni in un'ondata sola: si scelgono uno dopo l'altro
   const r6 = new Room('v178f'); const y = r6.addPlayer('a', conn(), 'A', 'mago'); r6.startGame();
   r6.phase = C.PHASE_COMBAT;
-  const primaLv = y.level; r6.addXp(y, 3000);
-  const saliti = y.level - primaLv;
-  assert(saliti >= 3, 'con 3000 XP si sale di almeno tre livelli (' + saliti + ')');
-  assert(y.carteDovute === saliti, 'e si devono altrettante carte (' + y.carteDovute + ')');
+  r6.addXp(y, Lv2.xpForLevel(7));
+  assert(y.level >= 7, 'con l esperienza di sette livelli si arriva almeno al 7 (' + y.level + ')');
+  assert((y.scaglioniDovuti || []).join(',') === 'uncommon,rare', 'e si devono i primi due scaglioni');
   r6.monsters.length = 0; r6.pending = 0; r6._checkWaveClear(); r6.exitWave('a');
-  // il premio di velocita' e' esperienza anche lui: puo' far salire un altro livello proprio mentre si
-  // esce, e allora le carte dovute sono una in piu'. Si misura il debito DOPO l'uscita, non prima.
-  const dovute = y.carteDovute;
-  assert(dovute >= saliti, 'il debito comprende anche i livelli presi col premio di fine ondata (' + dovute + ')');
+  const dovuti = (y.scaglioniDovuti || []).length;
   let scelte = 0;
-  while (y.boonOffer && y.boonOffer.length && scelte < 12) { r6.pickBoon('a', y.boonOffer[0]); scelte++; }
-  assert(scelte === dovute, 'il mazzo si riapre finche le carte dovute non sono finite (' + scelte + '/' + dovute + ')');
-  assert(y.carteDovute === 0, 'poi il debito e chiuso');
-  // e nell ondata dopo, senza livelli, non si offre piu niente
+  while (y.boonOffer && y.boonOffer.length && scelte < 12) {
+    assert(y.boonOffer.length === 4, 'ogni scaglione mostra quattro abilita');
+    r6.pickBoon('a', y.boonOffer[0]); scelte++;
+  }
+  assert(scelte === dovuti, 'il pannello si riapre finche gli scaglioni dovuti non sono finiti (' + scelte + '/' + dovuti + ')');
+  assert((y.scaglioniDovuti || []).length === 0, 'poi la coda e vuota');
+  // le abilita' scelte sono di quelle che il MAGO puo' vedere: mai di un'altra classe
+  for (const id in y.boonsOwned) {
+    const b = Loot.BOON_BY_ID[id];
+    assert(b && (b.hero === 'mago' || b.hero === '*'), 'il mago non puo aver preso ' + id + ' (di ' + (b ? b.hero : '?') + ')');
+  }
+  // e nell'ondata dopo, senza nuovi scaglioni, non si offre piu' niente
   r6.nextWave(); r6.phase = C.PHASE_COMBAT; r6.monsters.length = 0; r6.pending = 0;
   r6._checkWaveClear(); r6.exitWave('a');
-  assert(!(y.boonOffer && y.boonOffer.length), 'ondata successiva senza livelli: nessuna carta');
+  assert(!(y.boonOffer && y.boonOffer.length), 'ondata successiva senza scaglioni: nessuna scelta');
 
   // --- 6. IL RIEPILOGO DI FINE LIVELLO ---
   const c7 = conn();
@@ -2962,6 +2886,141 @@ function testV178() {
   ok('novita v1.78 verificate');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ===================== v1.79 — TETTO 15, SCAGLIONI, XP CONDIVISA, MENU =====================
+// L'impianto nuovo per intero: quello che il giocatore vede (quattro scelte, una per scaglione) e
+// quello che non vede ma regge tutto (la curva, il fattore di gruppo, il tetto).
+function testV179() {
+  console.log('\n[TEST 52] Novita v1.79 — tetto 15, abilita a scaglioni, XP condivisa, menu a sezioni');
+  const Lv = require('../shared/levels.js');
+  const conn = () => { const box = []; return { box, send(s) { box.push(JSON.parse(s)); } }; };
+
+  // --- 1) LA GRIGLIA: 32 abilita, 2 di classe + 2 neutre per scaglione, niente impilamento ---
+  assert(Loot.BOONS.length === 32, 'trentadue abilita in tutto (' + Loot.BOONS.length + ')');
+  for (const h of ['guerriero', 'mago', 'ladro']) {
+    for (const t of ['uncommon', 'rare', 'epic', 'divine']) {
+      const o = Loot.offerteScaglione(h, t, {});
+      assert(o.length === 4, h + '/' + t + ': quattro abilita offerte (' + o.length + ')');
+      assert(o.filter(b => b.hero === h).length === 2, h + '/' + t + ': due sono della sua classe');
+      assert(o.filter(b => b.hero === '*').length === 2, h + '/' + t + ': e due sono neutre');
+      assert(o.every(b => b.rarity === t), h + '/' + t + ': e sono tutte di quello scaglione');
+    }
+    // un mago non deve MAI poter vedere un'abilita' del guerriero
+    const cat = Loot.boonsPerClasse(h);
+    assert(cat.length === 16, h + ': il suo catalogo sono 16 abilita (8 sue + 8 neutre)');
+    assert(cat.every(b => b.hero === h || b.hero === '*'), h + ': e non ci sono abilita di altre classi');
+  }
+  assert(Loot.BOONS.every(b => b.max === 1), 'nessuna abilita e impilabile');
+  assert(new Set(Loot.BOONS.map(b => b.id)).size === 32, 'nessun id duplicato');
+  for (const id of ['greed', 'lucky', 'gluttony']) assert(!Loot.BOON_BY_ID[id], 'ritirata: ' + id);
+
+  // --- 2) LE SINERGIE restano raggiungibili, ognuna da UNA classe sola e in DUE scaglioni diversi ---
+  for (const sy of Loot.SYNERGIES) {
+    const ab = sy.need.map(id => Loot.BOON_BY_ID[id]);
+    assert(ab.every(Boolean), 'la sinergia ' + sy.id + ' punta ad abilita che esistono');
+    const classi = new Set(ab.map(b => b.hero).filter(h => h !== '*'));
+    assert(classi.size <= 1, 'la sinergia ' + sy.id + ' e raggiungibile da una classe sola (' + [...classi].join('+') + ')');
+    assert(new Set(ab.map(b => b.rarity)).size === ab.length, 'e sta a cavallo di scaglioni diversi (' + sy.id + ')');
+  }
+
+  // --- 3) LA SCELTA: una per scaglione, e solo agli scaglioni ---
+  const r1 = new Room('v179a'); const p = r1.addPlayer('a', conn(), 'A', 'guerriero'); r1.startGame();
+  r1.addXp(p, Lv.xpForLevel(3) - 1);
+  assert(p.level === 2 && (p.scaglioniDovuti || []).length === 0, 'al livello 2 non si sceglie niente');
+  r1.addXp(p, 5);
+  assert(p.level === 3 && p.scaglioniDovuti.join(',') === 'uncommon', 'al 3 arriva il primo scaglione');
+  r1.addXp(p, Lv.xpForLevel(5) - p.xpPool);
+  assert(p.level === 5 && p.scaglioniDovuti.length === 1, 'al 4 e al 5 non arriva niente di nuovo');
+  r1.addXp(p, Lv.xpForLevel(12) - p.xpPool);
+  assert(p.scaglioniDovuti.join(',') === 'uncommon,rare,epic,divine', 'e al 12 la coda ha tutti e quattro');
+  r1.phase = C.PHASE_SHOP;
+  let n = 0;
+  while (p.scaglioniDovuti.length && n < 10) { r1.offerBoon(p); r1.pickBoon('a', p.boonOffer[0]); n++; }
+  assert(n === 4, 'si scelgono esattamente quattro abilita in una run (' + n + ')');
+  const prese = Object.keys(p.boonsOwned).map(id => Loot.BOON_BY_ID[id]);
+  assert(new Set(prese.map(b => b.rarity)).size === 4, 'una per scaglione, mai due dello stesso');
+  assert(prese.every(b => b.hero === 'guerriero' || b.hero === '*'), 'e mai una di un altra classe');
+
+  // --- 4) IL TETTO: al 15 si sceglie la specializzazione, e l esperienza smette di contare ---
+  const r2 = new Room('v179b'); const q = r2.addPlayer('a', conn(), 'A', 'mago'); r2.startGame();
+  r2.addXp(q, 99999);
+  assert(q.level === 15 && q.specOffer && q.specOffer.length === 2, 'al 15 arriva il bivio fra due specializzazioni');
+  assert(q.specOffer.every(id => Lv.SPEC_BY_ID[id].hero === 'mago'), 'e sono le due del mago');
+  const pool = q.xpPool; r2.addXp(q, 10000);
+  assert(q.xpPool === pool && q.level === 15, 'oltre il tetto l esperienza non serve piu a niente');
+  r2.phase = C.PHASE_SHOP; r2.pickRank('a', q.specOffer[0]);
+  assert(q.spec === 'arcimago' || q.spec === 'stregone', 'la specializzazione si sceglie e resta');
+  assert(Lv.rankName('mago', 15, q.spec) === Lv.SPEC_BY_ID[q.spec].name, 'e da il titolo del rango V');
+
+  // --- 5) XP CONDIVISA: stessa quantita a tutti, col fattore di gruppo ---
+  for (const np of [1, 2, 3, 6]) {
+    const r = new Room('v179c' + np); const ps = [];
+    for (let i = 0; i < np; i++) ps.push(r.addPlayer('p' + i, conn(), 'P' + i, 'ladro'));
+    r.startGame();
+    r.xpCondivisa(1000);
+    const atteso = Math.max(1, Math.round(1000 * C.XP_GRUPPO[Math.min(C.XP_GRUPPO.length - 1, np)]));
+    assert(ps.every(x => x.xpPool === atteso), np + ' giocatori: tutti prendono ' + atteso + ' XP (' + ps.map(x => x.xpPool).join(',') + ')');
+  }
+  assert(C.XP_GRUPPO[1] === 1, 'il solista prende il valore pieno');
+  let cala = true; for (let i = 2; i < C.XP_GRUPPO.length; i++) if (C.XP_GRUPPO[i] > C.XP_GRUPPO[i - 1]) cala = false;
+  assert(cala, 'e piu si e, meno vale la singola uccisione: le ondate crescono meno che proporzionalmente');
+  // un caduto non prende esperienza
+  const r5 = new Room('v179d'); const a5 = r5.addPlayer('a', conn(), 'A', 'ladro'), b5 = r5.addPlayer('b', conn(), 'B', 'mago');
+  r5.startGame(); b5.dead = true; r5.xpCondivisa(500);
+  assert(a5.xpPool > 0 && b5.xpPool === 0, 'chi e caduto non guadagna esperienza');
+
+  // --- 6) I PUNTI: 18, costo fisso, una cappata e una a 6 ---
+  const r6 = new Room('v179e'); const g = r6.addPlayer('a', conn(), 'A', 'guerriero'); r6.startGame();
+  r6.addXp(g, 99999); r6.phase = C.PHASE_SHOP;
+  assert(g.points === 18, 'diciotto punti a fine crescita (' + g.points + ')');
+  for (let i = 0; i < 20; i++) r6.buyStat('a', 'st_for');
+  assert(g.buys.st_for === 12 && g.points === 6, 'una statistica al tetto costa 12 e ne restano 6');
+  for (let i = 0; i < 20; i++) r6.buyStat('a', 'st_cos');
+  assert(g.buys.st_cos === 6 && g.points === 0, 'la seconda arriva a 6 e il bilancio finisce li');
+
+  // --- 7) IL MENU: dal villaggio si torna al menu, e la mappa parte solo col pulsante ---
+  const c7 = conn();
+  const r7 = new Room('v179f'); const h = r7.addPlayer('a', c7, 'A', 'ladro'); r7.startGame();
+  r7.phase = C.PHASE_COMBAT; r7.monsters.length = 0; r7.pending = 0; r7._checkWaveClear(); r7.exitWave('a');
+  assert(r7.phase === C.PHASE_SHOP, 'chiusa l ondata si e nel menu');
+  const ondata = r7.wave;
+  r7.vaiAlVillaggio('a');
+  assert(r7.phase === C.PHASE_MARKET, 'il pulsante Villaggio porta al villaggio');
+  const T = C.TILE; h.x = r7.map.exit.x * T + T / 2; h.y = r7.map.exit.y * T + T / 2;
+  c7.box.length = 0; r7._checkMarketExit();
+  assert(r7.phase === C.PHASE_SHOP && r7.wave === ondata, 'e uscendo si torna al menu, sulla stessa ondata');
+  // tornando dal villaggio il pannello e' completo: riepilogo, statistiche, abilita'
+  for (const tipo of [C.MSG.WAVE_STATS, C.MSG.OFFER_SHOP, C.MSG.OFFER_BOON, C.MSG.BOONS])
+    assert(c7.box.some(m => m.t === tipo), 'tornando dal villaggio il menu si ricostruisce tutto (' + tipo + ')');
+  r7.shopReady('a'); r7.update(0.1);
+  assert(r7.phase !== C.PHASE_SHOP && r7.wave === ondata + 1, 'e solo il pulsante centrale fa partire la mappa dopo');
+
+  // --- 8) I VALORI NUOVI delle passive, quelli che il motore legge davvero ---
+  const r8 = new Room('v179g'); const m8 = r8.addPlayer('a', conn(), 'A', 'mago'); r8.startGame(); r8.phase = C.PHASE_SHOP;
+  const prendi = (id) => { m8.boonOffer = [id]; r8.pickBoon('a', id); };
+  const hp0 = r8.effMaxHp(m8); prendi('overheal');
+  assert(r8.effMaxHp(m8) === Math.round(hp0 * 1.25), 'Scudo Vitale alza i PV del 25% (percentuale, non cifra fissa)');
+  prendi('chain'); assert(m8.boon.chain === 2, 'Catena di Fulmini: due rimbalzi');
+  prendi('echo'); assert(m8.boon.echo === 2, 'Eco Arcana: il doppio delle repliche');
+  prendi('implode'); assert(m8.boon.implodeEvery === 5, 'Implosione: una bolla ogni cinque');
+  // e l'implosione fa davvero quello che dice
+  r8.phase = C.PHASE_COMBAT;
+  const bersagli = []; for (let i = 0; i < 4; i++) bersagli.push(r8.spawnMonster('skeleton', m8.x + 100 + i * 25, m8.y + 60, { scaling: Waves.scaling(2, 1) }));
+  const cx = m8.x + 140, cy = m8.y + 60;
+  const prima = bersagli.map(b => MU.dist(b.x, b.y, cx, cy));
+  r8._implodeAt(cx, cy, 150, 10, m8);
+  const dopo = bersagli.map(b => MU.dist(b.x, b.y, cx, cy));
+  assert(dopo.every((d, i) => d <= prima[i] + 0.01), 'l implosione tira i nemici verso il punto, non li respinge');
+  assert(bersagli.every(b => b.dead || b.stun > 0), 'e li lascia storditi');
+  // i PV percentuali non favoriscono piu' il mago rispetto al guerriero
+  const rG = new Room('v179h'); const gg = rG.addPlayer('a', conn(), 'A', 'guerriero'); rG.startGame(); rG.phase = C.PHASE_SHOP;
+  const gHp0 = rG.effMaxHp(gg); gg.boonOffer = ['overheal']; rG.pickBoon('a', 'overheal');
+  const guadagnoG = rG.effMaxHp(gg) / gHp0, guadagnoM = r8.effMaxHp(m8) / hp0;
+  assert(Math.abs(guadagnoG - 1.25) < 0.02 && Math.abs(guadagnoM - 1.25) < 0.02,
+    'la stessa abilita vale in proporzione uguale per tutti (guerriero x' + guadagnoG.toFixed(2) + ', mago x' + guadagnoM.toFixed(2) + ')');
+
+  ok('impianto v1.79 verificato');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

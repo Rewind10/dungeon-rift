@@ -1,4 +1,10 @@
-# 🎚️ PROGRESSIONE.md — Livelli, ranghi e punti
+# 🎚️ PROGRESSIONE.md — Livelli, ranghi e punti *(impianto v1.69-1.78)*
+
+> ⛔ **SUPERATO DA [PROGRESSIONE-2.md](PROGRESSIONE-2.md).** Dopo le partite di prova sulla v1.78 l impianto
+> e stato rifatto: tetto ai livelli a 15, carte diventate abilita passive divise in quattro scaglioni
+> (livelli 3/6/9/12), specializzazione al 15, ranghi a 3/6/9/12/15, XP condivisa e curva raddoppiata,
+> Cartomante chiusa, menu di fine ondata a sezioni. **Dove i due documenti si contraddicono vale il
+> secondo.** Questo resta come storia di come ci siamo arrivati e per i numeri misurati sulla v1.68.
 
 > **AGGIORNAMENTO v1.78 — le carte si pagano coi LIVELLI.** Il boon generico non arriva piu a ogni
 > fine ondata: ne arriva **uno per livello guadagnato**, e chi in un ondata sale di tre livelli sceglie
