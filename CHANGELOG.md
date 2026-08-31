@@ -2,6 +2,72 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.77.0] — 2026-08-30 · "Niente cade dal cielo, e le ondate hanno un cronometro"
+
+#### I nemici non lasciano piu' oggetti
+Nessuno: ne' i comuni, ne' gli elite, ne' i boss, ne' la cassa-mima. Prima cadeva un oggetto nel 9%
+delle uccisioni (35% sugli elite, sempre su boss e mime), e fra quelli c'era la **Pozione di Salute**.
+Una cura che arriva gratis dal nulla mentre combatti toglie il mestiere all'**Ostessa**, che si fa
+pagare per rimetterti in piedi, e all'**Erborista**, che si fa pagare per la stessa cosa in boccetta:
+se la cura piove dai mostri, quei due sono decorazione.
+
+Restano **esperienza**, **monete** e quello che c'e' dentro le **casse** — che non sono nemici.
+
+#### Le quattro pozioni forti, dall'Erborista
+Gli effetti rari che cadevano a terra non spariscono: si comprano. Riusano le stesse chiavi che il
+motore leggeva gia' per gli oggetti, quindi l'effetto e' identico — cambia chi te lo da'.
+
+| Pozione | Effetto | Prezzo |
+|---|---|---|
+| 🔺 **Nucleo Instabile** | +50% danno per 12 s | 110 |
+| 💥 **Ira Berserk** | danno raddoppiato e +40% cadenza per 8 s | 185 |
+| ✨ **Egida Divina** | invulnerabile per 5 s | 270 |
+| 💗 **Cuore di Fenice** | +1 vita — **una sola carica per slot** | 240 |
+
+Sono deliberatamente care: la piu' economica costa piu' del doppio della piu' cara fra le sei di
+base, e una sola carica di Egida costa piu' di una cintura intera delle vecchie. La regola e' che una
+risposta potente si **paghi**, non che **capiti**. Il Cuore di Fenice ha un tetto suo di **una**
+carica: tre vite di scorta in cintura renderebbero la morte una formalita'.
+
+#### Il cronometro dell'ondata
+Sotto il nome della mappa compare **⏱ tempo trascorso / tempo obiettivo**. Il colore e' l'informazione:
+**verde** sei dentro, **ambra** ti restano meno di dieci secondi, **spento** obiettivo perso. Chi non
+guarda i numeri legge comunque il colore con la coda dell'occhio.
+
+Il tempo obiettivo **non e' un numero fisso**: un'ondata da 7 mostri e una da 41 non possono avere lo
+stesso limite. Si calcola dal contenuto — `25 s + 3,2 s per mostro, diviso i giocatori in piedi`:
+
+| | ondata 1 (7 mostri) | ondata 3 (15) | ondata 11 (38) | ondata 20 (41) |
+|---|---|---|---|---|
+| da solo | 47 s | 73 s | 147 s | 156 s |
+| in tre | 36 s | 49 s | 83 s | 88 s |
+
+Chi chiude dentro il tempo prende **+25 XP +8 per ondata** e **+12 monete +3 per ondata** — all'ondata
+10 sono 105 XP e 42 monete, quanto un pezzo di equipaggiamento leggero.
+
+Le ondate a **sopravvivenza** sono escluse per costruzione: durano un tempo fisso, non si possono
+chiudere prima, e un premio che tocca sempre non e' un premio. Li' il cronometro conta e basta.
+
+I due numeri (`PAR_BASE` e `PAR_PER_MOSTRO`) sono la manopola, e stanno in `constants.js` con scritto
+cosa fa ciascuno: il primo regala tempo a tutte le ondate, il secondo soprattutto a quelle affollate.
+
+#### Come ho scelto i tempi
+Misurando. Il **pavimento assoluto** — giocatori invincibili che uccidono all'istante — sta fra 1,4 e
+7,6 secondi: i mostri entrano in campo subito, quindi il tempo lo fa il combattimento e non la coda di
+generazione, e un limite basato sul numero di mostri ha senso. Il pilota automatico dei test e' troppo
+scarso per fare da metro (chiude l'ondata 1 in 115 secondi mediani, con punte di 473): i numeri qui
+sopra sono tarati generosi apposta, e restano da ritoccare dopo averci giocato davvero.
+
+#### ✅ Verificato
+**1029 test, 0 falliti**, tre esecuzioni di fila. I nuovi: su 362 nemici uccisi — elite, boss e
+cassa-mima compresi — non cade un solo oggetto, mentre esperienza e monete continuano a cadere; le
+quattro pozioni forti esistono, costano piu' del doppio delle base e coprono i tre effetti che prima
+cadevano a terra; del Cuore di Fenice si compra una carica sola e bevendolo si guadagna una vita; il
+tempo obiettivo scala col numero di mostri; chiudendo in tre secondi il premio scatta e porta monete,
+chiudendo trenta secondi oltre no; e nelle ondate a sopravvivenza il tempo obiettivo non esiste.
+
+---
+
 ### [1.76.1] — 2026-08-30 · "I nemici non si teletrasportano"
 
 Segnalato provando la 1.76: **scappando, ogni tanto i nemici comparivano addosso**. Non era

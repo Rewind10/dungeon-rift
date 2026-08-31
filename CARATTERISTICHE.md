@@ -1,10 +1,41 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.76.1`
+**Versione attuale:** `1.77.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
 ---
+
+## 🚫 DAI NEMICI NON CADE PIU' NIENTE *(novita v1.77)*
+- Nessun oggetto e nessuna pozione, da nessun nemico: ne' comuni, ne' elite, ne' boss, ne' cassa-mima.
+  Prima cadeva qualcosa nel 9% delle uccisioni (35% sugli elite, sempre su boss e mime).
+- Il motivo e' di ruoli: una cura che arriva gratis dal nulla mentre combatti toglie il mestiere
+  all'**Ostessa** e all'**Erborista**, che si fanno pagare per la stessa cosa.
+- Restano **esperienza**, **monete** e il contenuto delle **casse** — che non sono nemici.
+
+## 🧪 LE QUATTRO POZIONI FORTI *(novita v1.77)*
+| Pozione | Effetto | Prezzo |
+|---|---|---|
+| 🔺 Nucleo Instabile | +50% danno per 12 s | 110 |
+| 💥 Ira Berserk | danno raddoppiato e +40% cadenza per 8 s | 185 |
+| ✨ Egida Divina | invulnerabile per 5 s | 270 |
+| 💗 Cuore di Fenice | +1 vita, **una sola carica per slot** | 240 |
+- Sono gli effetti rari che prima cadevano a terra: riusano le stesse chiavi, l'effetto e' identico,
+  cambia chi te lo da'. La piu' economica costa **piu' del doppio** della piu' cara fra le sei di base.
+- Il Cuore di Fenice ha un tetto di **una** carica: tre vite di scorta in cintura renderebbero la morte
+  una formalita'.
+
+## ⏱ IL CRONOMETRO DELL'ONDATA *(novita v1.77)*
+- Sotto il nome della mappa: **tempo trascorso / tempo obiettivo**. Verde sei dentro, ambra ti restano
+  meno di dieci secondi, spento obiettivo perso.
+- Il tempo obiettivo si calcola dal contenuto: **25 s + 3,2 s per mostro, diviso i giocatori in piedi**.
+  Ondata 1 da solo 47 s, ondata 3 da solo 73 s, ondata 20 da solo 156 s; in tre rispettivamente 36, 49
+  e 88 s.
+- Chi chiude dentro il tempo prende **+25 XP +8 per ondata** e **+12 monete +3 per ondata**.
+- Le ondate a **sopravvivenza** sono escluse: durano un tempo fisso, e un premio che tocca sempre non e'
+  un premio.
+- I due numeri stanno in `constants.js` e sono la manopola: `PAR_BASE` regala tempo a tutte le ondate,
+  `PAR_PER_MOSTRO` soprattutto a quelle affollate.
 
 ## 👹 I NEMICI SI VEDONO ARRIVARE, NON COMPARIRE *(novita v1.76.1)*
 - **Il recupero anti-stallo** serve a non lasciare un'ondata aperta per sempre quando un mostro finisce

@@ -156,6 +156,13 @@ class Room {
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
+    // v1.77 — il cronometro parte con l'ondata. Il tempo obiettivo si calcola dal contenuto vero
+    // dell'ondata (mostri in coda piu' quelli gia' in campo) diviso i giocatori in piedi.
+    this.waveT0 = this.time;
+    this.waveMostri = this.pending + this.monsters.filter(x => !x.dead).length;
+    this.parT = (this.mode && this.mode.survive) ? 0
+      : Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * this.waveMostri / Math.max(1, this.alivePlayers.length || 1));
+    this.parPreso = 0;
     this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE, mode: this.mode.id, modeName: this.mode.name, modeColor: this.mode.color, modeDesc: this.mode.desc } });
   }
   spawnTreasure() { const pos = this.randomSpawnPos(); const m = this.spawnMonster('mimic', pos.x, pos.y, { scaling: this.waveScaling }); m.treasure = true; m.awake = true; m.maxHp = Math.round(m.maxHp * 2.4); m.hp = m.maxHp; m.speed = 210; m.escapeT = 26; this.treasure = m; this.events.push({ t: 'treasure_spawn', x: m.x, y: m.y }); }
@@ -767,6 +774,9 @@ class Room {
       const cura = Math.round(mx * it.heal * Pot.healMult(p.buys.st_cos || 0));
       p.hp = Math.min(mx, p.hp + cura);
       this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon, heal: cura });
+    } else if (it.kind === 'life') {
+      p.lives += 1;   // v1.77 — il Cuore di Fenice in boccetta: una carica sola, vedi potions.js
+      this.events.push({ t: 'potion', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, color: it.color, icon: it.icon });
     } else {
       // ASSEGNA, non somma: bere la seconda Furia fa ripartire il timer, non raddoppia l'effetto.
       p.buffs[it.buff] = it.dur * Pot.durMult(p.buys.st_int || 0);
@@ -780,7 +790,7 @@ class Room {
   // non ricalcola nulla, disegna quello che riceve.
   offerPotions(p, near) {
     const belt = p.belt.map(s => s ? { id: s.id, n: s.n } : null);
-    const list = Pot.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost,
+    const list = Pot.POTIONS.map(it => ({ id: it.id, name: it.name, icon: it.icon, color: it.color, cost: it.cost, maxN: it.maxN || Pot.MAX_CHARGES,
       desc: it.desc, dur: it.durTxt, slot: p.belt.findIndex(s => s && s.id === it.id) }));
     this.sendTo(p.id, { t: C.MSG.OFFER_POTION, coins: p.coins, belt, list, max: Pot.MAX_CHARGES, near: near ? 1 : 0 });
   }
@@ -808,8 +818,9 @@ class Room {
     const p = this.players.get(pid); if (!p || p.dead) return;
     if (!this._alBanco(p)) return;
     slot = slot | 0; const s = p.belt[slot]; if (!s) return;
-    if (s.n >= Pot.MAX_CHARGES) return;
-    const it = Pot.BY_ID[s.id]; if (!it || p.coins < it.cost) return;
+    const _it0 = Pot.BY_ID[s.id];
+    if (s.n >= ((_it0 && _it0.maxN) || Pot.MAX_CHARGES)) return;   // v1.77 — alcune pozioni hanno un tetto proprio
+    const it = _it0; if (!it || p.coins < it.cost) return;
     p.coins -= it.cost; s.n++;
     this.offerPotions(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'potion_buy', x: p.x, y: p.y, slot, id: it.id, name: it.name, color: it.color, icon: it.icon, n: s.n } });
@@ -1046,8 +1057,12 @@ class Room {
     const coinVal = Math.max(1, Math.round((m.def.xp || 4) * 0.6 * (m.treasure ? 8 : m.boss ? 6 : m.elite ? 2.2 : 1)));
     const coinPieces = Loot.coinsFor(coinVal, C.COINS);
     for (const cp of coinPieces) { const a = Math.random() * Math.PI * 2, r = (m.boss || m.treasure) ? MU.rand(12, 66) : MU.rand(4, 20); this.groundCoins.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: cp.v, cid: cp.id, t: 30 }); }
-    const dropChance = m.treasure ? 1 : (m.boss ? 1 : (m.elite ? 0.35 : 0.09));
-    if (MU.chance(dropChance)) { const it = Loot.pickWeighted(Loot.ITEMS); this.items.push({ eid: NEXT++, x: m.x, y: m.y, r: 13, id: it.id, t: 30 }); }
+    // v1.77 — I NEMICI NON LASCIANO PIU' OGGETTI NE' POZIONI. Nessuno: ne' i comuni, ne' gli elite,
+    // ne' i boss, ne' la cassa-mima. Una Pozione di Salute che cade dal nulla mentre combatti toglie
+    // il mestiere all'Ostessa (che si fa pagare per rimetterti in piedi) e all'Erborista (che si fa
+    // pagare per la stessa cosa in boccetta). Se la cura arriva gratis dai mostri, quei due sono
+    // decorazione. Le pozioni forti che cadevano di qui sono passate all'Erborista, a caro prezzo.
+    // Restano: esperienza, monete, e quello che c'e' dentro le CASSE — che non sono nemici.
     if (m.treasure) { this.treasure = null; this.events.push({ t: 'treasure_dead', x: m.x, y: m.y }); }
     if (m.boss) this.bossAlive = false;
   }
@@ -1361,6 +1376,19 @@ class Room {
   _waveDone() {
     // v1.72 — l'ondata e' finita: chi non ha perso vite chiude la taglia "Nessun caduto".
     for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
+    // v1.77 — IL PREMIO DI VELOCITA'. Le ondate a sopravvivenza sono escluse per costruzione: durano
+    // un tempo fisso, non si possono chiudere prima, e un premio che tocca sempre non e' un premio.
+    const durata = this.time - (this.waveT0 || this.time);
+    if (this.parT > 0 && durata <= this.parT) {
+      this.parPreso = 1;
+      const xp = Math.round(C.PAR_XP + C.PAR_XP_ONDATA * this.wave);
+      const monete = Math.round(C.PAR_MONETE + C.PAR_MONETE_ONDATA * this.wave);
+      for (const p of this.players.values()) {
+        if (!p.connected || p.dead) continue;
+        this.addXp(p, xp, 'tempo'); p.coins += monete;
+      }
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'par_ok', wave: this.wave, secondi: +durata.toFixed(1), par: this.parT, xp, monete } });
+    }
     if (this.wave >= Waves.FINAL_WAVE) this.victory(); else this.enterShop();
   }
   enterShop() {
@@ -1651,7 +1679,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), wt: +Math.max(0, this.time - (this.waveT0 || this.time)).toFixed(1), wp: this.parT || 0, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

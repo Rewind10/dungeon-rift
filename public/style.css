@@ -48,6 +48,15 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 #zoneName{position:absolute;top:62px;left:50%;transform:translateX(-50%);font-size:11.5px;font-weight:800;
   letter-spacing:3px;text-transform:uppercase;opacity:.75;pointer-events:none;white-space:nowrap;
   text-shadow:0 0 10px rgba(0,0,0,.9),0 1px 2px rgba(0,0,0,.9)}
+/* v1.77 — il cronometro dell'ondata, sotto il nome della mappa. Il colore e' l'informazione:
+   verde = sei dentro il tempo, ambra = ti restano meno di dieci secondi, spento = obiettivo perso.
+   Chi non guarda i numeri legge comunque il colore con la coda dell'occhio. */
+#waveTimer{position:absolute;top:80px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:800;
+  letter-spacing:1.6px;font-variant-numeric:tabular-nums;pointer-events:none;white-space:nowrap;
+  text-shadow:0 0 10px rgba(0,0,0,.9),0 1px 2px rgba(0,0,0,.9);color:#8b93a7}
+#waveTimer.ok{color:#7fe08a}
+#waveTimer.quasi{color:#ffc14a}
+#waveTimer.tardi{color:#6f7890;opacity:.8}
 #phaseInfo{color:var(--gold);font-weight:700;letter-spacing:1px}
 #modeBanner{position:absolute;top:58px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(12,15,26,.85);border:2px solid var(--gold);border-radius:12px;padding:8px 20px;font-size:15px;opacity:0;transition:opacity .3s,transform .3s;backdrop-filter:blur(6px)}
 #modeBanner.show{opacity:1;transform:translateX(-50%) translateY(0)}

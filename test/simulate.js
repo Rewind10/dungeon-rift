@@ -1933,6 +1933,7 @@ function testV171() {
     assert(!ids[it.id], 'ogni pozione ha un id suo: ' + it.id); ids[it.id] = 1;
     assert(it.cost > 0 && it.name && it.icon && it.desc, it.name + ' e completa');
     if (it.kind === 'heal') assert(it.heal > 0, it.name + ' cura una frazione dei PV');
+    else if (it.kind === 'life') assert(it.maxN === 1, it.name + ' e una vita in boccetta: una carica sola, se no la morte diventa una formalita');
     else assert(it.buff && it.dur > 0, it.name + ' ha una chiave di buff e una durata');
   }
   // un buff che nessuno legge non farebbe nulla e nessun test se ne accorgerebbe: qui si controlla
@@ -2575,6 +2576,87 @@ function testV1761() {
   assert(dFin > 500, 'e viene rimesso LONTANO, non addosso al giocatore (' + dFin.toFixed(0) + ' px)');
   ok('novita v1.76.1 verificate');
 }
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV177() {
+  console.log('\n[TEST 49] Novita v1.77 — dai nemici non cade piu niente, e le ondate hanno un cronometro');
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1. NESSUN OGGETTO DAI NEMICI. Ne comuni, ne elite, ne boss, ne la cassa-mima.
+  const room = new Room('v177'); const p = room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
+  room.items.length = 0;
+  let uccisi = 0;
+  for (const [id, opz] of [['skeleton', {}], ['skeleton', { elite: 1 }], ['slime', {}], ['bat_swarm', {}]])
+    for (let k = 0; k < 90; k++) {
+      const m = room.spawnMonster(id, p.x + 40, p.y, { scaling: Waves.scaling(3, 1), elite: opz.elite });
+      if (opz.elite) m.elite = 1;
+      room.killMonster(m, p); uccisi++;
+    }
+  const boss = room.spawnMonster('orc_warlord', p.x + 60, p.y, { scaling: Waves.scaling(10, 1) });
+  boss.boss = true; room.killMonster(boss, p); uccisi++;
+  const mima = room.spawnMonster('mimic', p.x + 60, p.y, { scaling: Waves.scaling(7, 1) });
+  mima.treasure = 1; room.killMonster(mima, p); uccisi++;
+  assert(room.items.length === 0, 'su ' + uccisi + ' nemici uccisi (elite, boss e cassa-mima compresi) non e caduto un solo oggetto (' + room.items.length + ')');
+  // ...ma esperienza e monete devono continuare a cadere, se no si e rotta l economia
+  assert(room.groundXp.length > 0, 'l esperienza continua a cadere');
+  assert(room.groundCoins.length > 0, 'e le monete anche');
+
+  // --- 2. LE POZIONI FORTI SONO DALL ERBORISTA, e costano
+  const forti = Pot.POTIONS.filter(x => x.cost >= 100);
+  assert(forti.length === 4, 'l Erborista ha quattro pozioni forti (' + forti.length + ')');
+  const base = Pot.POTIONS.filter(x => x.cost < 100);
+  const maxBase = Math.max(...base.map(x => x.cost));
+  assert(Math.min(...forti.map(x => x.cost)) > maxBase * 2, 'la piu economica delle forti costa piu del doppio della piu cara delle base');
+  for (const id of ['i_power', 'i_rage', 'i_invuln'])
+    assert(Pot.POTIONS.some(x => x.buff === id), 'l effetto ' + id + ', che prima cadeva a terra, adesso si compra');
+
+  // la vita in boccetta: si beve, da una vita, e non se ne possono tenere tre
+  // si compra solo stando al banco dell'Erborista: si porta la stanza al mercato e il giocatore addosso a lui
+  const r1b = new Room('v177e'); const pb = r1b.addPlayer('a', { send() {} }, 'A', 'ladro'); r1b.startGame();
+  r1b.wave = 3; r1b.phase = C.PHASE_SHOP; r1b.shopReady('a', 'market'); r1b._afterShop();
+  const erb = r1b.map.village.npcs.find(n => n.pot);
+  assert(!!erb, 'l Erborista e nel villaggio');
+  pb.x = erb.x; pb.y = erb.y;
+  pb.coins = 9999; pb.belt[0] = { id: 'p_fenice', n: 0 };
+  r1b.buyPotion('a', 0); r1b.buyPotion('a', 0); r1b.buyPotion('a', 0);
+  assert(pb.belt[0].n === 1, 'del Cuore di Fenice si compra UNA carica sola (' + pb.belt[0].n + ')');
+  const vite0 = pb.lives; pb.potCd = 0;
+  assert(r1b.usePotion(pb, 0) === true, 'e si beve');
+  assert(pb.lives === vite0 + 1, 'e da una vita (' + vite0 + ' -> ' + pb.lives + ')');
+
+  // --- 3. IL CRONOMETRO E IL PREMIO
+  const r2 = new Room('v177b'); const p2 = r2.addPlayer('b', { send() {} }, 'B', 'ladro'); r2.startGame();
+  assert(r2.parT > 0, 'l ondata 1 ha un tempo obiettivo (' + r2.parT + ' s)');
+  assert(r2.waveMostri > 0, 'e sa da quanti mostri e fatta (' + r2.waveMostri + ')');
+  const snap = r2.snapshot();
+  assert(snap.wp === r2.parT && snap.wt >= 0, 'lo snapshot porta cronometro e obiettivo al client (wt ' + snap.wt + ', wp ' + snap.wp + ')');
+  // il tempo obiettivo scala col contenuto: un ondata affollata ne ha di piu
+  const parPochi = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * 7 / 1);
+  const parTanti = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * 41 / 1);
+  assert(parTanti > parPochi * 2, 'il tempo obiettivo scala col numero di mostri (' + parPochi + ' s contro ' + parTanti + ' s)');
+
+  // chiudendo l ondata dentro il tempo, arriva il premio
+  const xp0 = p2.xpTot !== undefined ? p2.xpTot : 0, mon0 = p2.coins;
+  r2.monsters.length = 0; r2.pending = 0; r2.waveT0 = r2.time - 3;   // tre secondi: dentro qualunque obiettivo
+  r2._waveDone();
+  assert(r2.parPreso === 1, 'chiudendo in tre secondi il premio scatta');
+  assert(p2.coins > mon0, 'e porta monete (' + mon0 + ' -> ' + p2.coins + ')');
+
+  // chiudendo fuori tempo, niente premio
+  const r3 = new Room('v177c'); const p3 = r3.addPlayer('c', { send() {} }, 'C', 'ladro'); r3.startGame();
+  const mon3 = p3.coins;
+  r3.monsters.length = 0; r3.pending = 0; r3.waveT0 = r3.time - (r3.parT + 30);
+  r3._waveDone();
+  assert(!r3.parPreso, 'chiudendo trenta secondi oltre l obiettivo il premio non scatta');
+  assert(p3.coins === mon3, 'e le monete restano quelle (' + p3.coins + ')');
+
+  // le ondate a SOPRAVVIVENZA sono escluse: durano un tempo fisso, il premio toccherebbe sempre
+  const r4 = new Room('v177d'); r4.addPlayer('d', { send() {} }, 'D', 'ladro'); r4.startGame();
+  let trovata = 0;
+  for (let w = 1; w <= 20 && !trovata; w++) { const md = Waves.modeForWave(w); if (md && md.survive) trovata = w; }
+  assert(trovata > 0, 'esiste almeno un ondata a sopravvivenza (la ' + trovata + ')');
+  r4.wave = trovata - 1; r4.phase = C.PHASE_SHOP; r4.shopReady('d', 'next'); r4._afterShop();
+  assert(r4.mode.survive > 0 && r4.parT === 0, 'nell ondata a sopravvivenza non c e tempo obiettivo (parT ' + r4.parT + ')');
+  ok('novita v1.77 verificate');
+}
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

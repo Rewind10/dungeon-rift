@@ -48,6 +48,22 @@
       let phase = ph[snap.phase] || '';
       if (snap.phase === 'combat' && snap.mode === 'survival' && snap.survive > 0) phase = 'SOPRAVVIVI: ' + Math.ceil(snap.survive) + 's';
       $('phaseInfo').textContent = phase;
+      // v1.77 — il cronometro dell'ondata e il tempo obiettivo
+      const wt = $('waveTimer');
+      if (wt) {
+        const inCorso = snap.phase === 'combat' || snap.phase === 'boss';
+        if (!inCorso) wt.classList.add('hidden');
+        else {
+          const el = Math.max(0, snap.wt || 0), par = snap.wp || 0;
+          const mm = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+          if (par > 0) {
+            const resta = par - el;
+            wt.textContent = '\u23F1 ' + mm(el) + ' / ' + mm(par);
+            wt.className = resta <= 0 ? 'tardi' : (resta < 10 ? 'quasi' : 'ok');
+          } else { wt.textContent = '\u23F1 ' + mm(el); wt.className = ''; }
+          wt.classList.remove('hidden');
+        }
+      }
       if (me) {
         this._updateVitals(me);
         let chips = `<div class="chip">💀 ${me.k}</div><div class="chip" style="color:#8bffb0">✦ ${me.xp} XP</div><div class="chip" style="color:#ffcf4a" title="monete">🪙 ${me.co || 0}</div>`;
@@ -504,6 +520,7 @@
         el.innerHTML = '<div class="ic">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
           '<div class="ds">' + esc(it.desc) + ' \u00b7 ' + esc(it.dur) + '</div>' +
           (dove >= 0 && !suo ? '<span class="tag">\u2014 già nello slot ' + (dove + 1) + '</span>' : '') +
+          (it.maxN === 1 ? '<span class="tag">\u2014 una carica sola</span>' : '') +
           '</div><div class="cost">\uD83E\uDE99' + it.cost + '</div>';
         if (dove < 0) el.onclick = () => { if (cb.pick) cb.pick(this._potSel, it.id); };
         cat.appendChild(el);

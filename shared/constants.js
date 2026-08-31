@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.76.1',
+    VERSION: '1.77.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -44,6 +44,18 @@
     // aggiungerne una e' una riga sola. Il termine per ondata tiene il passo con l'XP dei mostri, che cresce.
     XP_CASSA: 45, XP_CASSA_ONDATA: 9,
     XP_OGGETTO: 30, XP_OGGETTO_ONDATA: 6,
+    // v1.77 — IL TEMPO OBIETTIVO DELL'ONDATA. Non e' un numero fisso: un'ondata da 7 mostri e una da
+    // 41 non possono avere lo stesso limite. Si calcola dal CONTENUTO — quanti mostri, diviso quanti
+    // giocatori — piu' una base che copre l'ingresso in campo e i primi contatti.
+    //   ondata 1 da solo (7 mostri)  -> 47 s        ondata 3 da solo (15) -> 73 s
+    //   ondata 1 in tre (10 mostri)  -> 36 s        ondata 20 da solo (41) -> 156 s
+    // Misurato: il "pavimento" assoluto (giocatori che uccidono all'istante) sta fra 1,4 e 7,6 s, cioe'
+    // i mostri entrano in campo subito e il tempo lo fa il combattimento, non la coda di generazione.
+    // Questi due numeri sono la manopola: alzare PAR_BASE regala tempo a tutte le ondate, alzare
+    // PAR_PER_MOSTRO regala tempo soprattutto alle ondate affollate.
+    PAR_BASE: 25, PAR_PER_MOSTRO: 3.2,
+    // il premio per chi ci sta dentro, in scala con l'ondata
+    PAR_XP: 25, PAR_XP_ONDATA: 8, PAR_MONETE: 12, PAR_MONETE_ONDATA: 3,
     MAX_ALIVE: 30,
     MAX_ALIVE_CURVE: [8, 10, 12, 14, 16, 18, 21, 23, 26, 30],
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di

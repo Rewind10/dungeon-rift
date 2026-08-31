@@ -49,6 +49,22 @@
       desc: '+60% cadenza', durTxt: '5 s' },
     { id: 'p_rigen', name: 'Rigenerazione', icon: '➕', color: '#4bd66b', cost: 40, kind: 'buff', buff: 'po_regen', dur: 8, cura: 1,
       desc: 'Rigeneri 10 PV/s', durTxt: '8 s' },
+
+    // v1.77 — LE QUATTRO FORTI. Erano gli oggetti rari che cadevano dai nemici; dalla v1.77 i nemici non
+    // lasciano piu' niente, e queste si comprano. Sono deliberatamente CARE: una sola carica di Egida
+    // costa piu' di una cintura intera delle prime sei. La regola e' che una risposta potente si paghi,
+    // non che capiti. Riusano le stesse chiavi di buff che il motore leggeva gia' per gli oggetti
+    // (i_power, i_rage, i_invuln): l'effetto e' identico a quello che cadeva a terra, cambia chi lo da'.
+    { id: 'p_nucleo', name: 'Nucleo Instabile', icon: '🔺', color: '#b061ff', cost: 110, kind: 'buff', buff: 'i_power', dur: 12, off: 1,
+      desc: '+50% danno', durTxt: '12 s' },
+    { id: 'p_ira', name: 'Ira Berserk', icon: '💥', color: '#ff3b3b', cost: 185, kind: 'buff', buff: 'i_rage', dur: 8, off: 1,
+      desc: 'Danno raddoppiato e +40% cadenza', durTxt: '8 s' },
+    { id: 'p_egida', name: 'Egida Divina', icon: '✨', color: '#ffd24a', cost: 270, kind: 'buff', buff: 'i_invuln', dur: 5,
+      desc: 'Invulnerabile', durTxt: '5 s' },
+    // Una vita in boccetta e' la cosa piu' forte del gioco: UNA SOLA carica per slot, se no tre vite di
+    // scorta in cintura renderebbero la morte una formalita'.
+    { id: 'p_fenice', name: 'Cuore di Fenice', icon: '💗', color: '#ff77cc', cost: 240, kind: 'life', dur: 0, maxN: 1,
+      desc: '+1 vita', durTxt: 'una carica sola' },
   ];
   const BY_ID = {}; POTIONS.forEach((p, i) => { BY_ID[p.id] = p; p.idx = i; });
 
