@@ -2,6 +2,34 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.77.2] — 2026-08-30 · "Il cronometro cammina"
+
+Segnalato da Paolo: **a inizio partita il cronometro restava fermo su 0:00**.
+
+Un errore da manuale, e vale la pena scriverlo per esteso. Il tempo trascorso si calcolava cosi':
+
+```js
+this.time - (this.waveT0 || this.time)
+```
+
+Il `||` doveva coprire il caso "waveT0 non ancora impostato". Ma alla **prima ondata** waveT0 vale
+*esattamente* 0 — la partita comincia al tempo zero — e in JavaScript lo zero e' falso: scattava il
+ripiego, il calcolo diventava `this.time - this.time` e il cronometro segnava zero per tutta la
+partita. Dalla seconda ondata in poi funzionava, perche' li' waveT0 e' un numero diverso da zero.
+
+Adesso `waveT0` nasce con la stanza insieme a `parT`, `waveMostri` e `parPreso`: sono sempre numeri
+validi, e il ripiego non serve piu' a niente. Il tempo si calcola e basta.
+
+Il **font del cronometro** passa da 13 a 17 px: a 13 si leggeva male mentre si combatte.
+
+#### ✅ Verificato
+**1033 test, 0 falliti.** La prova nuova si fa sulla **prima** ondata — e' l'unica in cui waveT0 vale
+zero, quindi provarlo a ondata avanzata non avrebbe visto nulla: si lascia scorrere la partita e si
+controlla che a 3, 8 e 15 secondi il cronometro segni 3, 8 e 15. Provata contro il codice col bug:
+**fallisce tutte e tre le letture** (segnava 0 s ogni volta).
+
+---
+
 ### [1.77.1] — 2026-08-30 · "Le vite extra non si comprano dall'Erborista"
 
 Correzione della 1.77, segnalata da Paolo. Il **Cuore di Fenice** era finito nel catalogo

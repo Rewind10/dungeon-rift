@@ -64,6 +64,7 @@ class Room {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
     this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
+    this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
     this.bossAlive = false; this.dt = 1 / C.TICK_RATE; this.mode = Waves.MODES.assault; this.surviveT = 0;
     this.newMap(1234 + (id.charCodeAt ? id.charCodeAt(0) : 0), 1);
@@ -156,6 +157,10 @@ class Room {
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; if (this.mode.treasure) this.spawnTreasure(); }
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
+    // v1.77.2 — ATTENZIONE AL RIPIEGO. Qui c'era scritto `this.time - (this.waveT0 || this.time)`:
+    // alla PRIMA ondata waveT0 vale esattamente 0, che in JavaScript e' falso, quindi scattava il
+    // ripiego e il tempo trascorso risultava sempre zero — il cronometro restava fermo su 0:00 per
+    // tutta la partita. Adesso waveT0 e' sempre un numero valido e non serve nessun ripiego.
     // v1.77 — il cronometro parte con l'ondata. Il tempo obiettivo si calcola dal contenuto vero
     // dell'ondata (mostri in coda piu' quelli gia' in campo) diviso i giocatori in piedi.
     this.waveT0 = this.time;
@@ -1374,7 +1379,7 @@ class Room {
     for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
     // v1.77 — IL PREMIO DI VELOCITA'. Le ondate a sopravvivenza sono escluse per costruzione: durano
     // un tempo fisso, non si possono chiudere prima, e un premio che tocca sempre non e' un premio.
-    const durata = this.time - (this.waveT0 || this.time);
+    const durata = this.time - this.waveT0;
     if (this.parT > 0 && durata <= this.parT) {
       this.parPreso = 1;
       const xp = Math.round(C.PAR_XP + C.PAR_XP_ONDATA * this.wave);
@@ -1675,7 +1680,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), wt: +Math.max(0, this.time - (this.waveT0 || this.time)).toFixed(1), wp: this.parT || 0, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, mode: this.mode.id, survive: +Math.max(0, this.surviveT).toFixed(1), wt: +Math.max(0, this.time - this.waveT0).toFixed(1), wp: this.parT || 0, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

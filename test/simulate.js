@@ -2639,6 +2639,21 @@ function testV177() {
   assert(r2.waveMostri > 0, 'e sa da quanti mostri e fatta (' + r2.waveMostri + ')');
   const snap = r2.snapshot();
   assert(snap.wp === r2.parT && snap.wt >= 0, 'lo snapshot porta cronometro e obiettivo al client (wt ' + snap.wt + ', wp ' + snap.wp + ')');
+
+  // v1.77.2 — IL CRONOMETRO DEVE CAMMINARE, e va provato sulla PRIMA ondata. E' l'unica in cui
+  // waveT0 vale esattamente 0, e `this.time - (this.waveT0 || this.time)` trattava quello zero come
+  // "non impostato": scattava il ripiego e il tempo trascorso restava zero per tutta la partita.
+  // Provarlo a ondata avanzata non avrebbe visto niente, perche' li' waveT0 e' un numero diverso da 0.
+  assert(r2.wave === 1, 'la prova si fa sulla PRIMA ondata: e li che waveT0 vale zero');
+  assert(r2.waveT0 === 0, 'e infatti waveT0 vale ' + r2.waveT0);
+  const letture = [];
+  for (const secondi of [3, 8, 15]) {
+    while (r2.time < secondi) { r2.setInput('b', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); r2.update(dt); }
+    letture.push([secondi, r2.snapshot().wt]);
+  }
+  for (const [atteso, letto] of letture)
+    assert(Math.abs(letto - atteso) < 0.5, 'dopo ' + atteso + ' s il cronometro segna ' + letto + ' s');
+  assert(letture[2][1] > letture[0][1], 'e cammina: da ' + letture[0][1] + ' s a ' + letture[2][1] + ' s');
   // il tempo obiettivo scala col contenuto: un ondata affollata ne ha di piu
   const parPochi = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * 7 / 1);
   const parTanti = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * 41 / 1);
