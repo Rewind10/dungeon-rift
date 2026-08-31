@@ -1,8 +1,12 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.78.0`
+**Versione attuale:** `1.78.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
+
+> ⚠️ **Manopole spente al momento** — quello che il documento descrive ma che nel gioco oggi **non c'e'**:
+> la **Faglia ai margini** (`EDGE_MARGIN: 0`, vedi la sezione *LA FAGLIA E' SPENTA*) e le **abilita' attive**
+> delle sei specializzazioni (dichiarate dal v1.69, per ora esistono solo le passive).
 
 ---
 
@@ -119,7 +123,7 @@ Cento regole del foglio di stile e quindici scritte disegnate sul canvas. Invari
 - Misurato: luminanza mediana da 18 a 48, densita' di contorni dall'1,3% all'8,3% (le battlemap
   dipinte prese a riferimento stanno a 44 e 6,6%).
 
-### La faglia segue la caverna
+### La faglia segue la caverna *(regola valida a faglia accesa: oggi e' spenta — vedi la sezione «LA FAGLIA E' SPENTA»)*
 - La profondita' nel margine si misura dalla **roccia esterna** — quella che confina col bordo della
   mappa — non dai bordi del rettangolo e non dai massi interni. Dietro un masso al centro si sta al
   riparo; contro la parete della caverna no. Fascia profonda due tessere, copertura 34%.
@@ -279,7 +283,23 @@ rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il re
 - Restano chiusi **Cartomante, Banditore e Ostessa** (il Banditore apre in v1.72). Il quarto banchetto, che nel codice si chiamava
   Rigattiere e nei documenti Banditore, ora e' **Banditore** ovunque.
 
-## 🔮 Il fascio della Faglia *(novita v1.65)*
+## 🟣 LA FAGLIA E' SPENTA *(stato attuale, dal v1.78)*
+
+> **La faglia dei margini oggi NON e' attiva.** In `shared/constants.js` la manopola `EDGE_MARGIN` vale
+> **0**: nessuna tessera finisce nella fascia, il bordo non drena vita, l'alone viola non compare e sulla
+> minimappa non c'e' nessuna fascia segnata. Si puo' stare sul bordo quanto si vuole senza perdere un
+> punto ferita.
+>
+> Le due sezioni piu' sotto (*Il fascio della Faglia*, v1.65, e *La Faglia ai margini*, v1.63) descrivono
+> come funziona **quando e' accesa**: il codice c'e' tutto e non e' stato tolto, e' solo a riposo.
+> Per riaccenderla basta rimettere `EDGE_MARGIN` maggiore di zero (le altre manopole — `EDGE_GRACE`,
+> `EDGE_RAMP`, `EDGE_DPS_MIN/MAX`, `EDGE_RECOVER` — sono al loro posto).
+>
+> **I test seguono la manopola, non impongono una scelta**: con `EDGE_MARGIN` a 0 verificano che la
+> faglia sia spenta *davvero* (nessuna tessera nella fascia, venti secondi sul bordo senza perdere un
+> punto ferita, carica a zero); con un valore maggiore di zero verificano che morda come descritto.
+
+## 🔮 Il fascio della Faglia *(novita v1.65)* — *descrizione a faglia accesa*
 - L'effetto che segnalava il danno del bordo era troppo discreto: si vedeva appena. Ora e' un **fascio** che
   esce dalla roccia piu' vicina a te, con filamenti che ti **arrivano addosso** e un nucleo che pulsa — la
   stessa lettura del fascio dello sguardo del Beholder, che a colpo d'occhio si capisce sempre.
@@ -302,7 +322,7 @@ rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il re
 - La **Faglia** ora si vede anche nel mondo e non solo a schermo: il bordo della mappa e' tinto di viola sulla
   roccia — piu' carico negli angoli — e quando la carica sale ne escono **tentacoli**, dal lato piu' vicino a te.
 
-## 🟣 La Faglia ai margini *(novita v1.63)*
+## 🟣 La Faglia ai margini *(novita v1.63)* — *descrizione a faglia accesa*
 - Restare attaccati al **bordo esterno** della mappa era il modo piu' facile di rompere il gioco: con le
   spalle coperte dalla roccia i nemici potevano arrivare solo da un ottavo di cerchio. Misurato: nell'angolo
   si subivano **4,8 volte meno danni** che al centro.

@@ -475,13 +475,13 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 /* il pulsante sta al centro in orizzontale ma un po SOTTO in verticale: al centro esatto coprirebbe
    il tuo personaggio, che sta sempre li, e mentre giri a raccogliere non ti vedresti piu. */
 #exitBtn{position:absolute;left:50%;top:66%;transform:translate(-50%,-50%);pointer-events:auto;
-  font-size:30px;font-weight:900;letter-spacing:7px;padding:19px 62px;border-radius:18px;
+  font-size:15px;font-weight:900;letter-spacing:3.5px;padding:10px 31px;border-radius:9px;
   color:#eafff3;background:linear-gradient(180deg,#31d685,#127040);border:2px solid #8ff0b8;
-  box-shadow:0 14px 40px rgba(0,0,0,.6),0 0 0 6px rgba(49,214,133,.12),0 0 34px rgba(49,214,133,.35);
+  box-shadow:0 7px 20px rgba(0,0,0,.6),0 0 0 3px rgba(49,214,133,.12),0 0 17px rgba(49,214,133,.35);
   text-shadow:0 2px 6px rgba(0,0,0,.55);animation:exitPulse 1.5s ease-in-out infinite}
 #exitBtn:hover{filter:brightness(1.12)}
 #exitBtn.attesa{background:linear-gradient(180deg,#3a4664,#222a42);border-color:#5b6a92;color:#c3cde5;
-  animation:none;letter-spacing:2px;font-size:20px;cursor:default}
+  animation:none;letter-spacing:1px;font-size:11px;cursor:default}
 @keyframes exitPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.045)}}
 /* ===== v1.78 — RIEPILOGO DI FINE LIVELLO =================================================== */
 #waveStats{background:linear-gradient(180deg,rgba(20,26,44,.95),rgba(12,15,26,.95));

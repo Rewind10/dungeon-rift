@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.78.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.78.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -205,7 +205,14 @@ Test: `npm test`
 - **➖ Abilita' Q/E sospese** (erano cucite sui vecchi eroi: torneranno con l'evoluzione dopo il boss),
   **niente piu' armi a terra** e **acquisto armi sospeso** — l'arsenale va ripensato sulle tre scuole.
 
-## 🆕 Novita v1.65 (il fascio della Faglia)
+## 🟣 Stato della Faglia: **spenta**
+
+La faglia dei margini oggi non e' attiva: `EDGE_MARGIN` vale **0** in `shared/constants.js`, quindi il
+bordo della mappa non drena vita e non c'e' nessuna fascia. Il codice non e' stato tolto — si riaccende
+rimettendo `EDGE_MARGIN` maggiore di zero. Le due sezioni qui sotto la descrivono **da accesa**, e i test
+seguono la manopola: a 0 verificano che sia spenta davvero.
+
+## 🆕 Novita v1.65 (il fascio della Faglia) — *da accesa*
 - **🔮 L'effetto del bordo ora si vede davvero**: un **ventaglio** che si apre dalla roccia piu' vicina, con
   filamenti che ti **arrivano addosso** e un nucleo pulsante — lo stesso linguaggio del fascio dello sguardo
   del Beholder. Prima erano tentacoli sottili e passavano inosservati.
@@ -225,7 +232,7 @@ Test: `npm test`
   **tentacoli** escono dal bordo piu' vicino a te.
 - Test: **475 passati, 0 falliti**, piu' una nuova guardia di prestazione che conta le allocazioni del renderer.
 
-## 🆕 Novita v1.63 (la Faglia ai margini)
+## 🆕 Novita v1.63 (la Faglia ai margini) — *da accesa*
 - **🟣 Il bordo della mappa ti consuma** se ci resti: 2,5s di grazia, poi un drenaggio crescente (3 → 20 PV/s).
   Negli **angoli** la grazia dura la meta'. Uscire ferma il danno all'istante — passare non costa niente,
   accamparsi si'.

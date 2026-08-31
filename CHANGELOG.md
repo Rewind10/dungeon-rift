@@ -2,6 +2,31 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.78.1] — 2026-08-31 · "Il pulsante EXIT a misura"
+
+#### ✂️ Pulsante EXIT dimezzato
+Alla prova sul campo era troppo grande. Ridotto del 50% in ogni misura, non solo nel testo — se no
+cambiano le proporzioni e sembra un altro pulsante: testo **30 → 15px**, spaziatura fra le lettere
+**7 → 3,5px**, imbottitura **19/62 → 10/31px**, angoli **18 → 9px**, alone e ombra a meta'. Lo stato
+*in attesa* del multiplayer e' sceso di conseguenza (**20 → 11px**). Resta dov'era: centrato in
+orizzontale e un po' sotto in verticale, per non coprire il personaggio.
+
+#### 🟣 La faglia e' spenta, e adesso i documenti lo dicono
+Nella copia di lavoro `EDGE_MARGIN` vale **0**: il bordo della mappa non drena vita, non c'e' nessuna
+fascia, nessun alone viola, niente sulla minimappa. E' una scelta, non una dimenticanza — ma README e
+CARATTERISTICHE continuavano a descrivere un comportamento che nel gioco non c'e'.
+- **CARATTERISTICHE.md**: avviso in cima al documento con le manopole spente (la faglia e le abilita'
+  attive delle specializzazioni, dichiarate dal v1.69 e mai realizzate), piu' una sezione dedicata; le
+  due sezioni storiche sono marcate *«descrizione a faglia accesa»*.
+- **README.md**: la stessa nota in breve, prima delle sezioni della Faglia.
+- **shared/constants.js**: un commento sopra la manopola dice che e' spenta per scelta e come si
+  riaccende. I valori non sono stati toccati.
+
+Il meccanismo non e' stato rimosso: si riaccende rimettendo `EDGE_MARGIN` sopra lo zero, e i test
+seguono la manopola in tutte e due le posizioni — a 0 verificano che la faglia sia spenta *davvero*
+(nessuna tessera nella fascia, venti secondi sul bordo senza perdere un punto ferita, carica a zero),
+sopra lo zero che morda come descritto.
+
 ### [1.78.0] — 2026-08-31 · "L'ondata finisce quando lo decidi tu"
 
 Cinque richieste in un colpo solo: font piu' leggibili, l'uscita dalla mappa a pulsante invece che di
