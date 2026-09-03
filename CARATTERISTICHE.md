@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.79.0`
+**Versione attuale:** `1.79.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -28,16 +28,24 @@ niente `npm install`, niente asset esterni — grafica, musica ed effetti sono *
 | Epico | 9 | Definisce la build, e puo' avere un prezzo o una condizione. |
 | Divino | 12 | **Riscrive una regola** del gioco, e punta verso la specializzazione. |
 
-### La curva dell'esperienza
-Circa il doppio di prima (cumulata al 15: **14.100** contro 6.810), con gli ultimi due scalini i piu'
-cari. Misurato sul gioco, con un giocatore che uccide tutto e raccoglie tutto:
+### La curva dell'esperienza *(ritarata in v1.79.1)*
+Cumulata al livello 15: **9.470**. La taratura viene dall'esperienza che i mostri di un'ondata mettono
+davvero a terra, **senza combo e senza extra** — la prima versione era tarata su una simulazione a
+uccisioni istantanee, dove la combo restava al massimo e l'XP risultava piu' che doppia di quella vera.
+Condizione garantita dal test: col solo bottino dei nemici il livello **2** arriva entro la **seconda**
+ondata e il primo scaglione (livello **3**) entro la **quarta**. Combo, casse e premio di velocita'
+anticipano; non servono ad arrivarci.
 
-| arriva il livello | 3 | 6 | 9 | 12 | **15** |
-|---|---|---|---|---|---|
-| ondata | 4 | 8 | 11 | 13-14 | **16-17** |
+| livello | 2 | 3 | 6 | 9 | 12 | **15** |
+|---|---|---|---|---|---|---|
+| XP cumulata | 200 | 500 | 2.040 | 4.230 | 6.640 | **9.470** |
+| ondata attesa | 2 | 3-4 | 6-7 | 10-11 | 13-14 | **16-17** |
 
-Il livello 15 non arriva prima dell'ondata 16 nemmeno giocando alla perfezione, in nessuna taglia di
-gruppo (misurato da 1 a 6 giocatori: 16,0 - 17,5).
+### Quanti nemici *(v1.79.1)*
+Il conteggio e `10 + 1,6·ondata`: **12 nemici alla prima ondata** (erano 7), 16 alla quarta, 40 alla
+diciannovesima (erano 39). Le prime ondate quasi raddoppiano, le ultime restano dov'erano. I nemici
+**vivi insieme** non cambiano: quelli li decide il tetto (8 alla prima, 30 dalla decima) e gli altri
+restano in coda — cambia quanto dura l'ondata, non quanti se ne vedono.
 
 ### L'esperienza e' condivisa
 Ogni uccisione vale per **tutti i giocatori vivi**: la crescita e' del gruppo, la corsa alla sfera non e'

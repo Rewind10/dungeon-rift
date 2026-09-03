@@ -38,12 +38,23 @@
   const SCAGLIONE_BY_LVL = {}; for (const s of SCAGLIONI) SCAGLIONE_BY_LVL[s.lvl] = s.tier;
   function tierForLevel(L) { return SCAGLIONE_BY_LVL[L] || null; }
 
-  // XP_STEP[L] = quanto costa arrivare al livello L. Non e' piu' una formula: e' una TABELLA scritta a
-  // mano, perche' ogni scalino e' stato scelto guardando quanta esperienza l'ondata corrispondente mette
-  // davvero a terra (misura in PROGRESSIONE-2.md §3). Gli ultimi due scalini sono i piu' cari della
-  // curva: servono a garantire che il livello 15 non arrivi prima dell'ondata 16 nemmeno giocando alla
-  // perfezione. Nel dubbio si toccano gli ULTIMI scalini, non tutta la curva.
-  const XP_STEP = [0, 0, 400, 700, 730, 770, 800, 900, 950, 1050, 1100, 1150, 1200, 1300, 1450, 1600];
+  // XP_STEP[L] = quanto costa arrivare al livello L. Non e' una formula: e' una TABELLA scritta a mano,
+  // perche' ogni scalino e' stato scelto guardando quanta esperienza l'ondata corrispondente mette
+  // davvero a terra.
+  //
+  // v1.79.1 — RITARATA, ED E' STATO UN ERRORE DI MISURA. La prima taratura veniva da una simulazione in
+  // cui il giocatore uccideva tutto ISTANTANEAMENTE: cosi' facendo la combo restava incollata al massimo
+  // (x2,5) e l'esperienza risultava piu' che doppia di quella vera. Sul campo, alla quinta ondata si era
+  // ancora di livello 2. La misura onesta e' l'XP che i mostri di un'ondata mettono a terra senza combo:
+  // 102 alla prima ondata, 598 cumulate alla quarta, 6.394 alla sedicesima (col conteggio nuovo dei
+  // nemici, v1.79.1). Su quella base — piu' un margine ragionevole per combo, casse e premio di velocita' —
+  // il livello 15 costa 9.470 invece di 14.100, e i primi due scalini sono tarati perche il livello 2
+  // arrivi entro la SECONDA ondata e il primo scaglione (il 3) entro la QUARTA, coi soli nemici uccisi:
+  // e la condizione che il TEST 53 verifica ondata per ondata.
+  //
+  // Gli ultimi scalini restano i piu' cari: sono loro a tenere il 15 nell'ultimo quarto di partita.
+  // Nel dubbio si toccano quelli, non tutta la curva.
+  const XP_STEP = [0, 0, 200, 300, 420, 520, 600, 680, 740, 770, 780, 800, 830, 880, 950, 1000];
   const XP_CUM = [0, 0];
   for (let L = 2; L <= MAX_LEVEL; L++) XP_CUM[L] = XP_CUM[L - 1] + XP_STEP[L];
   // cumulate: 400 · 1100 · 1830 · 2600 · 3400 · 4300 · 5250 · 6300 · 7400 · 8550 · 9750 · 11050 · 12500 · 14100

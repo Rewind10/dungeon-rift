@@ -2,6 +2,60 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.79.1] — 2026-09-03 · "Le prime ondate erano vuote, e la curva era tarata su una misura sbagliata"
+
+Segnalazione dal campo: *«alla quinta ondata, uccidendo solo nemici, ero ancora al secondo livello»*, e le
+prime ondate erano troppo facili. Sono lo stesso problema visto da due lati.
+
+#### L'errore di misura, detto per intero
+La curva della 1.79 era stata tarata su una simulazione in cui il giocatore uccideva tutto
+**istantaneamente**. Uccidendo tutto insieme la **combo** resta incollata al massimo (x2,5), e l'XP che
+ne usciva era piu' che doppia di quella vera: 21.925 in una partita contro le **10.900** che i mostri
+mettono davvero a terra. Su quel numero gonfiato il livello 15 costava 14.100 — cioe' **piu' di tutta
+l'esperienza esistente nella partita**: irraggiungibile per costruzione.
+
+La misura onesta e' l'XP che i mostri di un'ondata lasciano a terra, **senza combo e senza extra**. Sotto
+c'e' quella, ondata per ondata, e adesso e' un test.
+
+#### 👾 Piu' nemici, e presto
+Il conteggio passa da `5 + 1,8·ondata` a **`10 + 1,6·ondata`**: base piu' alta, pendenza piu' bassa.
+
+| ondata | 1 | 2 | 3 | 4 | 6 | 9 | 14 | 19 |
+|---|---|---|---|---|---|---|---|---|
+| prima | 7 | 9 | 10 | 12 | 16 | 21 | 30 | 39 |
+| **adesso** | **12** | **13** | **15** | **16** | **20** | **24** | **32** | **40** |
+
+Le prime ondate quasi raddoppiano; le ultime restano dov'erano, perche' li' il ritmo andava bene. Il
+numero di nemici **vivi insieme** non cambia — quello lo decide il tetto (8 alla prima ondata, 30 dalla
+decima) e i mostri in eccesso restano in coda: cambia quanto dura l'ondata, non quanti se ne vedono.
+
+#### 📉 La curva, ritarata sul numero vero
+Il livello 15 costa **9.470** invece di 14.100, e i primi scalini sono molto piu' bassi.
+
+| livello | 2 | 3 | 6 | 9 | 12 | 15 |
+|---|---|---|---|---|---|---|
+| prima | 400 | 1.100 | 3.400 | 6.300 | 9.750 | 14.100 |
+| **adesso** | **200** | **500** | **2.040** | **4.230** | **6.640** | **9.470** |
+
+I due scalini d'apertura sono tarati su una condizione precisa, verificata dal test: **col solo bottino
+dei nemici**, senza combo, senza casse e senza premio di velocita', il livello **2** arriva entro la
+**seconda** ondata e il primo scaglione (livello **3**) entro la **quarta**. Tutto quello che si guadagna
+in piu' — combo, casse, tempo obiettivo — anticipa, non serve ad arrivarci.
+
+Cosa mette a terra ogni ondata adesso, misurato (solo nemici, niente combo):
+
+| ondata | 1 | 2 | 3 | 4 | 6 | 9 | 12 | 16 | 19 |
+|---|---|---|---|---|---|---|---|---|---|
+| XP | 103 | 119 | 158 | 213 | 293 | 383 | 535 | 659 | 745 |
+| cumulata | 103 | 222 | 380 | 593 | 1.406 | 2.467 | 3.960 | 6.377 | 8.500 |
+
+#### Il test che impedisce che ricapiti
+Nuovo controllo che confronta **le due cose fra loro** invece di fidarsi di una simulazione: quanto
+un'ondata mette a terra contro quanto costa il livello. Verifica che le prime quattro ondate bastino per
+il primo scaglione, che le prime due bastino per il livello 2, e che il costo del livello 15 stia fra il
+60% e il 100% di tutta l'esperienza della partita — sopra e' irraggiungibile, sotto si arriva al tetto a
+meta' gioco. **1179 controlli**, tutti verdi.
+
 ### [1.79.0] — 2026-08-31 · "Quindici livelli, quattro scelte"
 
 La versione piu' grossa dalla 1.69: cambia come cresce il personaggio, come si spende quello che

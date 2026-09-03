@@ -47,7 +47,14 @@
     return p;
   }
 
-  function scaling(w, players) { const p = Math.max(1, players); return { hp: 1 + w * 0.15 + (p - 1) * 0.14, dmg: 1 + w * 0.055, speed: 1 + Math.min(0.30, w * 0.015), count: Math.round((5 + w * 1.8) * (0.78 + p * 0.22)), eliteChance: Math.min(0.26, 0.03 + w * 0.019) }; }
+  // v1.79.1 — QUANTI NEMICI. Era `5 + 1,8·ondata`: sette mostri alla prima ondata, nove alla seconda.
+  // Alla prova sul campo le prime ondate erano una passeggiata, e siccome l'esperienza viene da li', erano
+  // anche una carestia: l'ondata 1 metteva a terra 60 XP contro i 400 che allora costava il livello 2.
+  // Adesso e' `10 + 1,6·ondata`: la base parte alta e la pendenza scende, cosi' le PRIME ondate quasi
+  // raddoppiano (7 → 12, 9 → 13, 10 → 15) e le ULTIME restano dov'erano (39 → 40 alla diciannovesima), che
+  // erano gia' tarate bene. Il numero di mostri VIVI insieme non cambia: quello lo decide MAX_ALIVE_CURVE,
+  // e i mostri in eccesso restano in coda.
+  function scaling(w, players) { const p = Math.max(1, players); return { hp: 1 + w * 0.15 + (p - 1) * 0.14, dmg: 1 + w * 0.055, speed: 1 + Math.min(0.30, w * 0.015), count: Math.round((10 + w * 1.6) * (0.78 + p * 0.22)), eliteChance: Math.min(0.26, 0.03 + w * 0.019) }; }
   function isBossWave(w) { return w > 0 && w % BOSS_EVERY === 0; }
   function bossForWave(w, players) {
     let def;

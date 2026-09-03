@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.79.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.79.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -30,8 +30,10 @@ Test: `npm test`
 - **🎴 Le carte diventano abilita' passive a scaglioni**: **quattro in tutta la partita**, ai livelli
   **3, 6, 9 e 12**. Ogni scaglione mostra 4 abilita' — 2 della tua classe e 2 neutre — e se ne sceglie 1.
   Le abilita' di classe le vede solo quella classe. Niente impilamento: i valori sono circa il doppio.
-- **📈 Curva XP raddoppiata** e tarata sulle misure: il livello 15 non arriva prima dell'ondata 16
-  nemmeno giocando alla perfezione.
+- **📈 Curva XP** tarata sull'esperienza che le ondate mettono davvero a terra *(ritarata in v1.79.1)*:
+  il livello 2 arriva entro la seconda ondata e il primo scaglione entro la quarta, coi soli nemici uccisi.
+- **👾 Prime ondate piu' piene** *(v1.79.1)*: da 7 a 12 nemici alla prima, da 12 a 16 alla quarta; le
+  ultime restano dov'erano.
 - **👥 Esperienza condivisa** fra i giocatori vivi, con un fattore di gruppo misurato: la stessa curva
   vale da 1 a 6 giocatori. Le monete restano di chi le raccoglie.
 - **◆ 18 punti statistica**, costo fisso di 1 per livello: una statistica al tetto piu' una seconda a 6.

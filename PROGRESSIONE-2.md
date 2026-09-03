@@ -1,6 +1,10 @@
 # 🎚️ PROGRESSIONE-2.md — Il nuovo impianto (cap 15, abilità passive a scaglioni, menu di fine ondata)
 
-> **STATO: IMPLEMENTATA nella v1.79.0.** Quello che segue e la specifica da cui e nata; il gioco oggi
+> **STATO: IMPLEMENTATA nella v1.79.0, RITARATA nella v1.79.1.** ⚠️ La curva XP del §3 e il numero di
+> nemici sono cambiati: la prima taratura veniva da una simulazione a uccisioni istantanee (combo
+> incollata al massimo) e chiedeva piu esperienza di quanta ne esista nella partita. I numeri buoni sono
+> nel CHANGELOG alla voce 1.79.1 — livello 15 a 9.470 XP, nemici `10 + 1,6·ondata`. Il resto
+> dell impianto (scaglioni, tetto, punti, menu) e come scritto qui. Quello che segue e la specifica da cui e nata; il gioco oggi
 > la rispetta, e le differenze introdotte scrivendo il codice sono annotate dove ci sono. Le misure di
 > verifica (in che ondata arriva ogni livello, con gruppi da 1 a 6) stanno nel CHANGELOG alla voce 1.79.0.
 >

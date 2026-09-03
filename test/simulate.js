@@ -1787,9 +1787,9 @@ function testV169() {
   const Lv = require('../shared/levels.js');
   // --- 1) IL TETTO E' 15 ---
   assert(Lv.MAX_LEVEL === 15, 'il tetto ai livelli e 15');
-  assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(399) === 1, 'sotto la prima soglia si resta al livello 1');
-  assert(Lv.levelForXp(400) === 2, 'a 400 XP si sale al 2');
-  assert(Lv.levelForXp(14100) === 15, 'a 14.100 XP si e di livello 15');
+  assert(Lv.levelForXp(0) === 1 && Lv.levelForXp(199) === 1, 'sotto la prima soglia si resta al livello 1');
+  assert(Lv.levelForXp(200) === 2, 'a 200 XP si sale al 2');
+  assert(Lv.levelForXp(9470) === 15, 'a 9.470 XP si e di livello 15');
   assert(Lv.levelForXp(999999) === 15, 'e oltre non si sale piu, per quanta esperienza si raccolga');
   let cresce = true; for (let L = 3; L <= 15; L++) if (Lv.xpStep(L) <= Lv.xpStep(L - 1)) cresce = false;
   assert(cresce, 'ogni livello costa piu del precedente');
@@ -3021,6 +3021,54 @@ function testV179() {
   ok('impianto v1.79 verificato');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ===================== v1.79.1 — PIU' NEMICI PRESTO, E LA CURVA CHE CI STA DIETRO ==========
+// La v1.79 aveva tarato la curva su una misura sbagliata (uccisioni istantanee = combo incollata al
+// massimo): sul campo, alla quinta ondata si era ancora di livello 2. Qui si fissa il rapporto vero fra
+// quello che le ondate mettono a terra e quello che i livelli costano, cosi' non puo' ricapitare.
+function testV1791() {
+  console.log('\n[TEST 53] v1.79.1 — le prime ondate sono piu' + "'" + ` piene, e la curva ci sta dietro`);
+  const Lv = require('../shared/levels.js');
+  // --- 1) piu' nemici presto, gli stessi alla fine ---
+  const n = (w) => Waves.scaling(w, 1).count;
+  assert(n(1) >= 11, 'la prima ondata ha almeno 11 nemici (' + n(1) + ', erano 7)');
+  assert(n(4) >= 15, 'la quarta ne ha almeno 15 (' + n(4) + ', erano 12)');
+  assert(n(19) >= 38 && n(19) <= 44, 'la diciannovesima resta dov era (' + n(19) + ', erano 39)');
+  let cresce = true; for (let w = 2; w <= 20; w++) if (n(w) <= n(w - 1)) cresce = false;
+  assert(cresce, 'e la curva del numero cresce sempre');
+  // il numero di VIVI insieme non cambia: quello lo decide il tetto, non il conteggio dell ondata
+  const room = new Room('v1791'); room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
+  room.wave = 1; assert(room.tettoVivi() === C.MAX_ALIVE_CURVE[0], 'alla prima ondata il tetto dei vivi e sempre ' + C.MAX_ALIVE_CURVE[0]);
+
+  // --- 2) L'ESPERIENZA CHE UN ONDATA METTE DAVVERO A TERRA, senza combo ---
+  // Questa e' la misura che era stata sbagliata: si conta l'xp dei mostri dell'ondata, punto.
+  const Mon = require('../shared/monsters.js');
+  const xpOndata = (w, giri) => {
+    let tot = 0;
+    for (let k = 0; k < giri; k++) {
+      const l = Waves.buildWave(w, 1, Waves.modeForWave(w)).list;
+      for (const it of l) tot += Math.round((Mon.MONSTERS[it.type].xp || 0) * (it.elite ? 2.5 : 1));
+    }
+    return Math.round(tot / giri);
+  };
+  const o1 = xpOndata(1, 40);
+  assert(o1 > 85, 'la prima ondata mette a terra almeno 85 XP (' + o1 + ', erano 60)');
+  // e la prima scelta deve arrivare presto: il livello 3 costa meno di quello che danno le prime quattro
+  let cum = 0; for (let w = 1; w <= 4; w++) cum += xpOndata(w, 30);
+  assert(Lv.xpForLevel(3) < cum, 'il primo scaglione (livello 3, ' + Lv.xpForLevel(3) + ' XP) arriva entro la quarta ondata (' + cum + ' a terra)');
+  assert(Lv.xpForLevel(2) < xpOndata(1, 30) + xpOndata(2, 30), 'e il livello 2 entro la seconda');
+
+  // --- 3) IL RAPPORTO CHE NON DEVE PIU' SBALLARE ---
+  // Tutta l'esperienza che le venti ondate mettono a terra, contro quello che costa arrivare al 15.
+  let tutta = 0;
+  for (let w = 1; w <= 19; w++) tutta += Waves.isBossWave(w) ? 500 : xpOndata(w, 20);
+  tutta += 2400;  // il MEGA BOSS finale
+  const rapporto = tutta / Lv.xpForLevel(15);
+  assert(rapporto > 1.0 && rapporto < 1.6,
+    'il livello 15 costa fra il 60% e il 100% di tutta l esperienza della partita (rapporto ' + rapporto.toFixed(2) + '): ' +
+    'sopra e irraggiungibile, sotto si arriva al tetto a meta gioco');
+  ok('conteggio dei nemici e curva verificati uno contro l altro');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
