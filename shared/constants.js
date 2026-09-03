@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.79.1',
+    VERSION: '1.79.2',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -64,8 +64,14 @@
     // fretta: e' l'anti-AFK. Chi vuole raccogliere con calma ha tutto questo tempo, chi si e' alzato dalla
     // sedia non blocca gli altri per sempre.
     EXIT_TIMEOUT: 120,
-    MAX_ALIVE: 30,
-    MAX_ALIVE_CURVE: [8, 10, 12, 14, 16, 18, 21, 23, 26, 30],
+    // v1.79.2 — I NEMICI DI UN'ONDATA SI VEDONO TUTTI. C'era una curva che teneva in campo 8 mostri alla
+    // prima ondata, 10 alla seconda e cosi' via fino a 30: gli altri restavano in coda. Risultato: si
+    // aggiungevano nemici all'ondata e a schermo non cambiava niente — dodici in lista, otto davanti.
+    // Adesso il tetto e' UNO SOLO e alto: quaranta. Tutte le ondate in singolo ci stanno sotto (la
+    // diciannovesima ne ha 40), quindi si vedono tutti; in gruppo, dove le ondate scalano, l'eccesso
+    // continua a entrare in coda man mano che si fa posto.
+    MAX_ALIVE: 40,
+    MAX_ALIVE_CURVE: null,
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
     // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).
     // v1.56 — le distanze di fabbro e portale non si calcolano piu' a runtime: il villaggio e' disegnato

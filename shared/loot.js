@@ -117,23 +117,28 @@
   const BOONS = [
     // ---- NEUTRE: le vede chiunque -----------------------------------------------------------
     { id: 'crit', name: 'Occhio di Falco', icon: '🎯', rarity: 'uncommon', hero: '*', max: 1,
-      desc: '+15% critico e +0.5x danno critico',
-      apply: p => { p.stats.critChance += 0.15; p.stats.critMult += 0.5; } },
+      desc: '+10% probabilita di critico',
+      apply: p => { p.stats.critChance += 0.10; } },
     { id: 'swift', name: 'Passo Rapido', icon: '🏃', rarity: 'uncommon', hero: '*', max: 1,
-      desc: '+15% velocita e -12% ricarica dello scatto',
-      apply: p => { p.stats.speedMult += 0.15; p.stats.cdrMult *= 0.88; } },
+      desc: '+10% velocita e -8% ricarica dello scatto',
+      apply: p => { p.stats.speedMult += 0.10; p.stats.cdrMult *= 0.92; } },
+    // v1.79.2 — il veleno non e' piu' una "forza" astratta: fa il 5% del danno del COLPO al secondo,
+    // per tre secondi e per bersaglio. Cosi' vale uguale per tutte le classi (un'arma che picchia forte
+    // avvelena forte) e si legge come un numero vero.
     { id: 'poison', name: 'Tossina', icon: '☠️', rarity: 'rare', hero: '*', max: 1,
-      desc: 'I colpi avvelenano: danno nel tempo, per bersaglio',
-      apply: p => { p.boon.poison = Math.max(p.boon.poison, 2); } },
+      desc: 'I colpi avvelenano: +5% del danno al secondo per 3s',
+      apply: p => { p.boon.poison = 1; p.boon.poisonQuota = 0.05; } },
+    // v1.79.2 — niente piu' rigenerazione: 3 PV/s era una cura continua e gratis, e toglieva il mestiere
+    // all'Ostessa esattamente come facevano gli oggetti che cadevano dai nemici prima della v1.77.
     { id: 'overheal', name: 'Scudo Vitale', icon: '💠', rarity: 'rare', hero: '*', max: 1,
-      desc: '+25% PV massimi (non curano) e rigeneri 3 PV/s',
-      apply: p => { p.stats.maxHpMult += 0.25; p.stats.regen += 3; } },
+      desc: '-5% a tutti i danni subiti',
+      apply: p => { p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.05); } },
     { id: 'executioner', name: 'Giustiziere', icon: '🪓', rarity: 'epic', hero: '*', max: 1,
-      desc: '+70% danno critico e +10% critico',
-      apply: p => { p.stats.critMult += 0.70; p.stats.critChance += 0.10; } },
+      desc: '+5% critico e +30% danno critico',
+      apply: p => { p.stats.critChance += 0.05; p.stats.critMult += 0.30; } },
     { id: 'bulwark', name: 'Baluardo', icon: '🧱', rarity: 'epic', hero: '*', max: 1,
-      desc: '-22% a tutti i danni subiti',
-      apply: p => { p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.22); } },
+      desc: '-10% a tutti i danni subiti',
+      apply: p => { p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.10); } },
     { id: 'defiance', name: 'Ultima Occasione', icon: '⏳', rarity: 'divine', hero: '*', max: 1,
       desc: 'Due volte, invece di cadere risorgi a meta vita con 2s di invulnerabilita',
       apply: p => { p.boon.defiance += 2; p.defianceLeft = (p.defianceLeft || 0) + 2; } },
@@ -143,11 +148,14 @@
 
     // ---- GUERRIERO: sta in mezzo alla mischia, la ricompensa e' la folla ---------------------
     { id: 'heavyarm', name: 'Arma Pesante', icon: '🗡', rarity: 'uncommon', hero: 'guerriero', max: 1,
-      desc: '+25% apertura del fendente e +18% danno',
-      apply: p => { p.perk.arcoPiu = (p.perk.arcoPiu || 0) + 0.25; p.stats.dmgMult += 0.18; } },
-    { id: 'thorns', name: 'Aura di Spine', icon: '🌵', rarity: 'uncommon', hero: 'guerriero', max: 1,
-      desc: 'Chi ti colpisce in mischia si prende 25 danni piu il 10% di quelli che ti ha inflitto',
-      apply: p => { p.boon.thorns += 25; p.boon.thornsPct += 0.10; } },
+      desc: '+8% danno',
+      apply: p => { p.stats.dmgMult += 0.08; } },
+    // v1.79.2 — al posto di Aura di Spine, che faceva la stessa cosa di Rappresaglia (farsi colpire per
+    // fare danno) ed era quindi una scelta finta. Questa premia il mestiere vero del guerriero: stare in
+    // mezzo. Il tetto e' basso apposta — deve pagare la posizione, non sostituire il danno.
+    { id: 'ampio', name: 'Colpo Ampio', icon: '🪓', rarity: 'uncommon', hero: 'guerriero', max: 1,
+      desc: 'Ogni nemico in piu colpito dal fendente aggiunge +5% danno al colpo (fino a +15%)',
+      apply: p => { p.boon.ampio = 0.05; } },
     { id: 'vampire', name: 'Vampirismo', icon: '🩸', rarity: 'rare', hero: 'guerriero', max: 1,
       desc: '+9% del danno inflitto ti cura',
       apply: p => { p.stats.lifesteal += 0.09; } },
@@ -181,43 +189,50 @@
       desc: 'Le bolle rimbalzano 2 volte in piu sui muri, senza perdere danno',
       apply: p => { p.boon.bounce += 2; } },
     { id: 'explode', name: 'Colpi Esplosivi', icon: '💣', rarity: 'epic', hero: 'mago', max: 1,
-      desc: 'Ogni 3° colpo esplode ad area',
-      apply: p => { p.boon.explodeEvery = 3; } },
-    { id: 'artillery', name: 'Doppia Bolla', icon: '🚩', rarity: 'epic', hero: 'mago', max: 1,
-      desc: '+1 bolla per colpo e +15% danno',
-      apply: p => { p.stats.extraProjectiles += 1; p.stats.dmgMult += 0.15; } },
-    { id: 'echo', name: 'Eco Arcana', icon: '🔊', rarity: 'divine', hero: 'mago', max: 1,
-      desc: 'Il 40% dei colpi viene sparato una seconda volta, gratis',
-      apply: p => { p.boon.echo += 2; } },
-    { id: 'implode', name: 'Implosione', icon: '🌌', rarity: 'divine', hero: 'mago', max: 1,
-      desc: 'Ogni 5° bolla implode: risucchia i nemici vicini e li blocca per 0,8s',
-      apply: p => { p.boon.implodeEvery = 5; } },
+      desc: 'Ogni 4° colpo esplode: 35% del danno in un raggio di 90px',
+      apply: p => { p.boon.explodeEvery = 4; p.boon.explodeQuota = 0.35; } },
+    // v1.79.2 — al posto di Doppia Bolla (+1 proiettile: era solo "spara di piu"). Questa premia il mago
+    // che si pianta e piazza il colpo, che e' il suo modo di combattere.
+    { id: 'concentra', name: 'Concentrazione', icon: '🧠', rarity: 'epic', hero: 'mago', max: 1,
+      desc: 'Stando fermo mezzo secondo, il colpo successivo fa +10% danno',
+      apply: p => { p.boon.concentra = 0.10; } },
+    // v1.79.2 — al posto di Eco Arcana (il 40% dei colpi raddoppiato: danno gratis e senza condizioni).
+    // Questa si autolimita: senza uccisioni non fa niente, e le figlie non si dividono a loro volta.
+    { id: 'frattura', name: 'Frattura Arcana', icon: '🔮', rarity: 'divine', hero: 'mago', max: 1,
+      desc: 'La bolla che uccide si divide in due bolle minori (50% del danno)',
+      apply: p => { p.boon.frattura = 1; } },
+    // v1.79.2 — al posto di Implosione. Zero danno: controlla lo spazio, che e' quello che al mago manca.
+    { id: 'lentezza', name: 'Campo di Lentezza', icon: '⏳', rarity: 'divine', hero: 'mago', max: 1,
+      desc: 'I nemici entro 200px si muovono il 25% piu lenti',
+      apply: p => { p.boon.lentezza = 200; } },
 
     // ---- LADRO: distanza, cadenza, e nessun margine d errore ---------------------------------
     { id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'uncommon', hero: 'ladro', max: 1,
-      desc: 'Le frecce perforano 2 nemici in piu',
-      apply: p => { p.boon.pierce += 2; } },
+      desc: 'Le frecce perforano un nemico in piu',
+      apply: p => { p.boon.pierce += 1; } },
     { id: 'longshot', name: 'Tiro Lungo', icon: '🔭', rarity: 'uncommon', hero: 'ladro', max: 1,
-      desc: 'Piu lontano e il bersaglio, piu fai male (+44% a piena gittata)',
-      apply: p => { p.boon.longshot += 2; } },
-    { id: 'crowbar', name: 'Piede di Porco', icon: '⛏️', rarity: 'rare', hero: 'ladro', max: 1,
-      desc: '+80% danno sui nemici ancora integri (sopra il 90% dei PV)',
-      apply: p => { p.boon.crowbar += 2; } },
+      desc: 'Piu lontano e il bersaglio, piu fai male (+10% a piena gittata)',
+      apply: p => { p.boon.longshot = 0.45; } },
+    // v1.79.2 — il ladro rifatto come CLASSE (ladro/assassino), non come somma di percentuali: colpire da
+    // dietro, far sanguinare, sparire. Al posto di Piede di Porco, che premiava solo l'apertura.
+    { id: 'spalle', name: 'Colpo alle Spalle', icon: '🗡', rarity: 'rare', hero: 'ladro', max: 1,
+      desc: '+20% danno sui nemici che non ti stanno guardando',
+      apply: p => { p.perk.spalle = Math.max(p.perk.spalle || 0, 0.20); } },
     { id: 'killstep', name: 'Passo di Danza', icon: '💃', rarity: 'rare', hero: 'ladro', max: 1,
-      desc: 'Ogni uccisione da +20% velocita per 3s, fino a +40%',
+      desc: 'Ogni uccisione da +15% velocita per 2,5s, fino a +30%',
       apply: p => { p.boon.killStep += 1; } },
-    { id: 'multishot', name: 'Sdoppiamento', icon: '🔱', rarity: 'epic', hero: 'ladro', max: 1,
-      desc: '+1 freccia per tiro e +10% cadenza',
-      apply: p => { p.stats.extraProjectiles += 1; p.stats.fireRateMult *= 1.10; } },
-    { id: 'homing', name: 'Mira Guidata', icon: '🎯', rarity: 'epic', hero: 'ladro', max: 1,
-      desc: 'Le frecce curvano decisamente verso i nemici vicini',
-      apply: p => { p.boon.homing += 2; } },
-    { id: 'berserk', name: 'Furia Cieca', icon: '😈', rarity: 'divine', hero: 'ladro', max: 1,
-      desc: '+45% danno, ma incassi il 15% in piu',
-      apply: p => { p.stats.dmgMult += 0.45; p.stats.dmgReduce = Math.max(-0.5, p.stats.dmgReduce - 0.15); } },
-    { id: 'aegis', name: 'Egida Ostinata', icon: '🧿', rarity: 'divine', hero: 'ladro', max: 1,
-      desc: 'Assorbe completamente un colpo ogni 5s',
-      apply: p => { p.boon.aegis += 2; } },
+    { id: 'lamasporca', name: 'Lama Sporca', icon: '🩸', rarity: 'epic', hero: 'ladro', max: 1,
+      desc: 'I colpi critici aprono un emorragia: 20% del colpo in 3s',
+      apply: p => { p.boon.bleedCrit = 0.20; } },
+    { id: 'ombra', name: 'Passo d Ombra', icon: '🌫', rarity: 'epic', hero: 'ladro', max: 1,
+      desc: 'Dopo uno scatto, il primo colpo entro 1,5s e critico garantito',
+      apply: p => { p.boon.ombraDash = 1.5; } },
+    { id: 'puntovitale', name: 'Punto Vitale', icon: '🎯', rarity: 'divine', hero: 'ladro', max: 1,
+      desc: 'Ogni 5° colpo e un critico garantito',
+      apply: p => { p.boon.critOgni = 5; } },
+    { id: 'scomparsa', name: 'Uscita di Scena', icon: '🌑', rarity: 'divine', hero: 'ladro', max: 1,
+      desc: 'Sotto il 30% dei PV sparisci dalla vista per 1,5s (una volta ogni 20s)',
+      apply: p => { p.boon.scomparsa = 1.5; } },
   ];
   // v1.79 — TRE RITIRATE: Avidita, Fortuna Sfacciata e Fame Vorace davano bonus all XP raccolta. Col
   // tetto ai livelli sono spazzatura per costruzione — al livello 12, dove si sceglie lo scaglione
@@ -229,11 +244,13 @@
   const SYNERGIES = [
     { id: 'toxic_burst', name: 'Deflagrazione Tossica', icon: '🧪', need: ['poison', 'explode'], desc: 'Le esplosioni diffondono veleno', apply: p => p.boon.toxicBurst = 1 },
     { id: 'frost_chain', name: 'Catena Gelida', icon: '🧊', need: ['chain', 'freeze'], desc: 'Le catene di fulmini rallentano i nemici', apply: p => p.boon.frostChain = 1 },
-    { id: 'seeker', name: 'Cercatore', icon: '🔮', need: ['homing', 'pierce'], desc: 'I proiettili guidati perforano +1 nemico', apply: p => p.boon.pierce += 1 },
+    // v1.79.2 — Mira Guidata non esiste piu': al suo posto la coppia del ladro che ha davvero senso,
+    // perforare e far sanguinare. L'emorragia arriva anche a chi sta dietro al primo bersaglio.
+    { id: 'frecce_sporche', name: 'Frecce Sporche', icon: '🩸', need: ['pierce', 'lamasporca'], desc: 'L emorragia colpisce anche i nemici perforati dietro al primo', apply: p => p.boon.bleedCrit += 0.10 },
     { id: 'bloodlust', name: 'Sete di Sangue', icon: '🩸', need: ['vampire', 'adrenaline'], desc: '+6% cura dal danno inflitto', apply: p => p.stats.lifesteal += 0.06 },
     // v1.51 — legano i poteri nuovi a quelli storici
-    { id: 'headhunter', name: 'Cacciatore di Teste', icon: '🎯', need: ['execute', 'crowbar'], desc: 'La soglia del Colpo di Grazia sale di 6 punti', apply: p => p.boon.executeBonus = 0.06 },
-    { id: 'shockwave', name: 'Onda d\'Urto', icon: '🌊', need: ['retaliate', 'thorns'], desc: 'L\'onda di Rappresaglia e\' molto piu\' ampia', apply: p => p.boon.retaliateWide = 1 },
+    { id: 'headhunter', name: 'Cacciatore di Teste', icon: '🎯', need: ['execute', 'spalle'], desc: 'La soglia del Colpo di Grazia sale di 6 punti', apply: p => p.boon.executeBonus = 0.06 },
+    { id: 'shockwave', name: 'Onda d\'Urto', icon: '🌊', need: ['retaliate', 'ampio'], desc: 'L\'onda di Rappresaglia e\' molto piu\' ampia', apply: p => p.boon.retaliateWide = 1 },
   ];
   // Ritorna le sinergie appena attivate (need tutti posseduti) non ancora presenti in activeIds.
   function detectSynergies(ownedCounts, activeIds) {

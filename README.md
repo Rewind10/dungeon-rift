@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.79.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.79.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.79.2 (i nemici si vedono tutti, passive ritarate, tre Beholder)
+- **👁 Tutti i nemici in campo**: il tetto dei vivi e uno solo e alto (40). Prima una curva ne teneva 8
+  alla prima ondata e gli altri in coda: si aggiungevano nemici e a schermo non cambiava niente.
+- **🎴 Passive ritarate**: quasi ognuna faceva due cose, adesso ne fa una. Via la rigenerazione di Scudo
+  Vitale (era una cura gratis e continua), il veleno diventa una quota del colpo.
+- **🆕 Cinque abilita nuove** al posto di altrettante sbagliate: Colpo Ampio (guerriero), Concentrazione,
+  Frattura Arcana e Campo di Lentezza (mago), e il **ladro rifatto come classe** — Colpo alle Spalle,
+  Lama Sporca, Passo d'Ombra, Punto Vitale, Uscita di Scena.
+- **👁 Tre Beholder dipinti**: Occhio Viola (ondata 9), di Carne (12), Spettrale (15). Dipinti a codice,
+  non piu marionette raster, e adesso **attaccano davvero**: raggio che consuma vita da lontano, morso da
+  vicino.
+- **🗡 Via il Troll delle Caverne** e via l'**Offerta di Sangue** del Mercante Errante (+2 vite a meta
+  monete: chi ne aveva poche le prendeva quasi gratis).
 
 ## 🆕 Novita v1.79 (quindici livelli, quattro scelte)
 - **🎚️ Tetto ai livelli: 15.** Oltre non si sale, e l'esperienza raccolta dopo non serve piu' a niente.

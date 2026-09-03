@@ -196,7 +196,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   const map = MG.generate(4242, 10);
   R.setMap(map);
 
-  const TYPES = ['skeleton', 'slime', 'darkmage', 'cave_brute', 'spore_fungus', 'bone_roller', 'bat_swarm', 'wisp', 'occhio'];
+  const TYPES = ['skeleton', 'slime', 'darkmage', 'spore_fungus', 'bone_roller', 'bat_swarm', 'wisp', 'occhio'];
   const N = 60;
   const cx = map.spawn.x, cy = map.spawn.y;
   const mon = [];
@@ -378,7 +378,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
 
   // --- il tavolo ---
   let toccata = null;
-  const tutte = [carta('ricochet', 3, 1), carta('crit', 2, 1), carta('execute', 1, 1), carta('aegis', 1, 1), carta('thorns', 1, 1), carta('giant', 1, 0)];
+  const tutte = [carta('ricochet', 3, 1), carta('crit', 2, 1), carta('execute', 1, 1), carta('spalle', 1, 1), carta('lamasporca', 1, 1), carta('giant', 1, 0)];
   HUD.showSeer({ near: 1, max: MAXC, active: 5, cards: tutte, syn: [{ id: 's', icon: '🔗', name: 'Tempesta', desc: 'x' }] }, (id) => { toccata = id; });
   const panel = document.getElementById('seerPanel');
   ok(!panel.classList.contains('hidden'), 'il tavolo si apre');

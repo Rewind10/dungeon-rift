@@ -2459,119 +2459,109 @@
     // poi sovrappone l'IRIDE centrale che SEGUE il bersaglio e si DILATA in attacco, gli occhi delle eyestalks
     // che AVVAMPANO nel colore dello sguardo ATTIVO (m.gk: weaken/slow/sunder) e un edge-glow magenta pulsante.
     // Il contesto e' gia' traslato su (m.x, m.y). Mirror non necessario (simmetrico).
+    // ===== v1.79.2 — I BEHOLDER, DIPINTI ====================================================
+    // Erano una marionetta: un ritaglio raster con l'iride incollata sopra. Adesso sono dipinti a codice
+    // come la caverna — strati di macchie morbide dal buio al chiaro, bordo sporco, venature, iride
+    // bagnata — e sono tre creature della stessa famiglia con tre palette. Un solo disegno, tre colori:
+    // se un domani ne servisse un quarto basta aggiungere una riga a PAL_OCCHI.
+    _macchia(ctx, x, y, rx, ry, col, a, rot) {
+      ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); ctx.globalAlpha = a;
+      const g = this._grad('occ|' + col + '|' + Math.round(Math.max(rx, ry)), () => {
+        const q = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(rx, ry));
+        q.addColorStop(0, col); q.addColorStop(0.62, col); q.addColorStop(1, 'rgba(0,0,0,0)'); return q;
+      });
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 7); ctx.fill(); ctx.restore();
+    },
+    // un peduncolo: si assottiglia, ondeggia, e finisce in un occhietto acceso
+    _peduncolo(ctx, cx, cy, ang, L, w, base, luce, t, i) {
+      let px = cx, py = cy; const seg = 8;
+      for (let k = 1; k <= seg; k++) {
+        const p = k / seg;
+        const a = ang + Math.sin(p * 2.2 + t * 1.8 + i * 1.3) * 0.40 * p;
+        const x = cx + Math.cos(a) * L * p, y = cy + Math.sin(a) * L * p - Math.sin(p * Math.PI) * w * 0.6;
+        const ww = w * (1 - p * 0.60);
+        this._macchia(ctx, x, y, ww, ww * 0.92, base, 0.95);
+        if (k > seg - 3) this._macchia(ctx, x, y, ww * 0.7, ww * 0.65, luce, 0.35);
+        px = x; py = y;
+      }
+      this._macchia(ctx, px, py, w * 0.60, w * 0.58, '#fbe9f6', 0.9);
+      this._macchia(ctx, px, py, w * 0.32, w * 0.31, luce, 1);
+      this._macchia(ctx, px, py, w * 1.7, w * 1.6, luce, 0.20);
+      ctx.fillStyle = '#12040f'; ctx.beginPath(); ctx.arc(px + Math.cos(ang) * w * 0.12, py + Math.sin(ang) * w * 0.12, Math.max(0.6, w * 0.16), 0, 7); ctx.fill();
+    },
     _beholderPuppet(ctx, m, r, def, atk, moving, dir) {
-      const reg = PUPPETS.beholder; reg.load(); const img = reg.imgs.body; const man = reg.man; const t = this.time;
-      const swing = Math.sin((atk || 0) * Math.PI);
+      const t = this.time;
+      const PAL = {
+        viola:   { buio: '#2a0f24', medio: '#5d2453', chiaro: '#8f3d7c', luce: '#ff6fd0', iride: '#8a0f5e', vena: '#3d1436', ped: '#4d1f43', sclera: '#f7ead9' },
+        carne:   { buio: '#2b1410', medio: '#6b2e26', chiaro: '#a2503f', luce: '#ffb08a', iride: '#7a1f12', vena: '#3c1a14', ped: '#4a221b', sclera: '#f3e2cf' },
+        spettro: { buio: '#071016', medio: '#12303f', chiaro: '#2a5876', luce: '#ffb347', iride: '#ff6a2b', vena: '#0d222e', ped: '#16303f', sclera: '#0a1a22' },
+      };
+      const P = PAL[def.dipinto] || PAL.viola;
+      const spettrale = def.dipinto === 'spettro';
       const GAZE = { weaken: '#ff7a5a', slow: '#5ad0ff', sunder: '#c48cff' };
-      const gcolHex = GAZE[m.gk] || def.eye || '#ff5ad0';
-      const gcol = this._hexToRgb(gcolHex);
-      if (!reg.ready || !img) { // fallback: alone + iride finche' carica
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        const gr = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.3); gr.addColorStop(0, this._rgba(gcolHex, 0.6)); gr.addColorStop(1, this._rgba(gcolHex, 0));
-        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, r * 1.3, 0, 7); ctx.fill(); ctx.restore(); return;
+      const gcolHex = GAZE[m.gk] || def.eye || P.luce;
+      const swing = Math.sin((atk || 0) * Math.PI);
+      const bob = Math.sin(t * 1.8 + m.e) * r * 0.06;
+      // dove guarda: l'occhio segue la direzione della creatura
+      const ang = (m.f != null ? m.f : 0);
+      const cx = 0, cy = bob;
+
+      // ---- peduncoli, dietro alla massa ----
+      const NP = spettrale ? 8 : 6;
+      for (let i = 0; i < NP; i++) {
+        const a = -Math.PI + 0.35 + i * (Math.PI - 0.7) / (NP - 1) + Math.sin(t * 1.1 + i) * 0.10;
+        this._peduncolo(ctx, cx, cy - r * 0.30, a, r * (1.35 + 0.20 * Math.sin(t * 1.6 + i * 2.1)), r * 0.145, P.ped, gcolHex, t, i);
       }
-      const base = (2.6 * r) / Math.max(img.width, img.height);   // il corpo ~2.6*raggio
-      // v1.59 — stato per-entita': serve per le cose che non sono funzioni pure del tempo
-      // (l'inclinazione va smorzata, le saccadi devono TENERE la posizione fra uno scatto e l'altro).
-      const ST = this._behS = this._behS || {};
-      const S = ST[m.e] = ST[m.e] || { lean: 0, sx: 1, sy: 0, sacT: 0, gk: m.gk, flare: 0, lt: t };
-      const dt = Math.max(0.001, Math.min(0.05, t - S.lt)); S.lt = t;
-
-      // (1) INCLINAZIONE nella direzione del moto: prima ondeggiava identico fermo o in corsa.
-      const leanT = moving ? Math.cos(dir || 0) * 0.17 : 0;
-      S.lean += (leanT - S.lean) * Math.min(1, dt * 6);
-
-      // (4) TELEGRAFO del cambio sguardo. gt arriva dal server: 0 = sta per cambiare.
-      // Il corpo si contrae PRIMA (anticipo leggibile), poi lampeggia quando e' cambiato.
-      const gt = (m.gt != null) ? m.gt : 1;
-      const tell = gt < 0.16 ? (1 - gt / 0.16) : 0;
-      if (S.gk !== m.gk) { S.gk = m.gk; S.flare = 1; }
-      S.flare = Math.max(0, S.flare - dt * 2.4);
-      const squash = tell * 0.11 + S.flare * 0.07;
-
-      const breath = 0.03 * Math.sin(t * 1.7 + m.e);              // respiro gelatinoso
-      let sx = base * (1 + breath - squash * 0.55), sy = base * (1 - breath + squash);
-      const rot = 0.05 * Math.sin(t * 0.8 + m.e) + S.lean;
-      const bob = -3 * Math.sin(t * 1.7 + m.e) - swing * r * 0.06;
-      const act = 0.5 + 0.4 * Math.sin(t * 3.4 + m.e) + (moving ? 0.15 : 0) + swing * 0.45 + tell * 0.55 + S.flare * 0.55;
-
-      // ombra morbida sotto (fluttua)
-      ctx.save(); ctx.filter = 'blur(' + Math.max(1, r * 0.12).toFixed(1) + 'px)'; ctx.fillStyle = 'rgba(0,0,0,0.34)';
-      ctx.beginPath(); ctx.ellipse(0, r * 1.02, r * 0.72, r * 0.2, 0, 0, 7); ctx.fill(); ctx.restore();
-
-      // (2) EYESTALKS come APPENDICI, disegnate DIETRO il corpo cosi' spuntano da dietro il bulbo.
-      // Prima erano 7 aloni fissi: tutto si muoveva in blocco. Ora ogni stelo ha frequenza e fase sue,
-      // quindi non tornano mai in sincrono; nel telegrafo si drizzano e si allungano.
-      const NST = 7;
-      for (let i = 0; i < NST; i++) {
-        const a0 = -Math.PI * 0.5 + (i - (NST - 1) / 2) * 0.40;
-        const rate = 1.55 + (i % 4) * 0.47, ph = i * 1.93 + m.e * 0.31;
-        const sway = Math.sin(t * rate + ph) * (0.22 - tell * 0.18);
-        const len = r * (0.70 + 0.15 * Math.sin(t * rate * 0.7 + ph)) * (1 + tell * 0.25);
-        const a = a0 + sway;
-        const bx0 = Math.cos(a0) * r * 0.50, by0 = Math.sin(a0) * r * 0.50 - r * 0.16 + bob;
-        const ex = Math.cos(a) * (r * 0.50 + len), ey = Math.sin(a) * (r * 0.50 + len) - r * 0.16 + bob;
-        const bend = Math.sin(t * rate + ph) * len * 0.30;
-        const mxc = (bx0 + ex) / 2 + Math.cos(a + 1.5708) * bend, myc = (by0 + ey) / 2 + Math.sin(a + 1.5708) * bend;
-        ctx.save(); ctx.lineCap = 'round';
-        ctx.strokeStyle = 'rgba(34,10,30,.95)'; ctx.lineWidth = Math.max(2, r * 0.115);
-        ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.quadraticCurveTo(mxc, myc, ex, ey); ctx.stroke();
-        ctx.strokeStyle = this._rgba(gcolHex, 0.22 + 0.28 * Math.min(1, act)); ctx.lineWidth = Math.max(1, r * 0.045);
-        ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.quadraticCurveTo(mxc, myc, ex, ey); ctx.stroke();
+      // ---- la massa: strati di macchie, dal buio al chiaro ----
+      if (spettrale) {
+        for (let i = 0; i < 14; i++) { const a = t * 0.3 + i * 0.45, rr = r * (0.7 + 0.3 * Math.sin(t * 1.1 + i * 1.7));
+          this._macchia(ctx, cx + Math.cos(a) * rr * 0.5, cy + Math.sin(a) * rr * 0.45, r * 0.32, r * 0.28, P.medio, 0.45); }
+      }
+      this._macchia(ctx, cx, cy, r * 1.08, r * 1.00, P.buio, spettrale ? 0.85 : 1);
+      this._macchia(ctx, cx, cy + r * 0.10, r * 0.97, r * 0.90, P.medio, spettrale ? 0.8 : 1);
+      this._macchia(ctx, cx - r * 0.10, cy - r * 0.08, r * 0.80, r * 0.72, P.chiaro, 0.40);
+      this._macchia(ctx, cx - r * 0.24, cy - r * 0.28, r * 0.68, r * 0.56, P.chiaro, 0.75);
+      this._macchia(ctx, cx - r * 0.34, cy - r * 0.40, r * 0.34, r * 0.26, P.luce, 0.30);
+      if (!spettrale) {
+        // bordo sporco: e' quello che toglie l'aria di plastica
+        for (let i = 0; i < 14; i++) { const a = (i * 2.399 + m.e) % 6.283; const rr = r * (0.93 + ((i * 37) % 11) / 90);
+          this._macchia(ctx, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.94, r * 0.10, r * 0.08, (i % 2) ? P.buio : P.medio, 0.45); }
+        // venature
+        ctx.save(); ctx.globalAlpha = 0.22; ctx.strokeStyle = P.vena; ctx.lineWidth = Math.max(1, r * 0.05); ctx.lineCap = 'round';
+        for (let i = 0; i < 8; i++) { const a = i * 0.78 + 0.4; ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * r * 0.34, cy + Math.sin(a) * r * 0.32);
+          ctx.quadraticCurveTo(cx + Math.cos(a + 0.5) * r * 0.66, cy + Math.sin(a + 0.5) * r * 0.62, cx + Math.cos(a + 0.15) * r * 0.92, cy + Math.sin(a + 0.15) * r * 0.86);
+          ctx.stroke(); }
         ctx.restore();
-        const R0 = r * 0.145 * (0.85 + 0.35 * Math.sin(t * 5 + i));
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        const gr0 = ctx.createRadialGradient(ex, ey, 0, ex, ey, R0 * 2.6);
-        gr0.addColorStop(0, this._rgba(gcolHex, Math.min(1, 0.85 * act))); gr0.addColorStop(0.5, this._rgba(gcolHex, 0.38 * Math.min(1, act))); gr0.addColorStop(1, this._rgba(gcolHex, 0));
-        ctx.fillStyle = gr0; ctx.beginPath(); ctx.arc(ex, ey, R0 * 2.6, 0, 7); ctx.fill(); ctx.restore();
-        ctx.fillStyle = '#fff0fb'; ctx.beginPath(); ctx.arc(ex, ey, R0 * 0.5, 0, 7); ctx.fill();
-        ctx.fillStyle = '#120612'; ctx.beginPath(); ctx.arc(ex + Math.cos(m.f) * R0 * 0.26, ey + Math.sin(m.f) * R0 * 0.26, R0 * 0.22, 0, 7); ctx.fill();
-      }
-
-      // corpo raster
-      ctx.save(); ctx.rotate(rot);
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(img, -img.width * sx / 2, -img.height * sy / 2 + bob, img.width * sx, img.height * sy);
-      ctx.restore();
-
-      // ---- IRIDE: (3) MICROSACCADI invece dell'inseguimento fluido. L'occhio scatta e poi TIENE:
-      // e' lo scatto a farlo sembrare vivo, il moto continuo lo faceva sembrare una torretta.
-      const cx = man.core ? (man.core[0] - man.centerX) * base : 0;
-      const cy = man.core ? (man.core[1] - man.centerY) * base + bob : bob + r * 0.15;
-      S.sacT -= dt;
-      if (S.sacT <= 0) {
-        S.sacT = 0.28 + ((m.e * 37) % 7) * 0.09 + Math.random() * 0.26;
-        const j = 0.24; S.sx = Math.cos(m.f) + (Math.random() - 0.5) * j; S.sy = Math.sin(m.f) + (Math.random() - 0.5) * j;
-      }
-      const look = 0.16 * r, fx = S.sx * look, fy2 = S.sy * look;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const irisR = r * (0.42 + swing * 0.06);
-      const ig = ctx.createRadialGradient(cx + fx * 0.4, cy + fy2 * 0.4, 1, cx + fx * 0.4, cy + fy2 * 0.4, irisR);
-      ig.addColorStop(0, this._rgba(gcolHex, 0.55)); ig.addColorStop(0.55, this._rgba(gcolHex, 0.30)); ig.addColorStop(1, this._rgba(gcolHex, 0));
-      ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(cx + fx * 0.4, cy + fy2 * 0.4, irisR, 0, 7); ctx.fill();
-      ctx.restore();
-      const pupR = r * (0.14 + swing * 0.16);
-      ctx.fillStyle = '#080308'; ctx.beginPath(); ctx.arc(cx + fx, cy + fy2, pupR, 0, 7); ctx.fill();
-      ctx.fillStyle = this._rgba(gcolHex, 0.9); ctx.beginPath(); ctx.arc(cx + fx - pupR * 0.3, cy + fy2 - pupR * 0.3, pupR * 0.28, 0, 7); ctx.fill();
-
-      // ---- (3b) PALPEBRA: un occhio che non ammicca mai e' un occhio finto. Periodo irregolare per entita'.
-      const per = 4.2 + ((m.e * 13) % 9) * 0.42;
-      const bt2 = (t + m.e * 0.7) % per;
-      const blink = bt2 < 0.17 ? Math.sin((bt2 / 0.17) * Math.PI) : 0;
-      if (blink > 0.02) {
-        const R3 = irisR * 1.4, k = R3 * blink;
-        ctx.save(); ctx.fillStyle = '#1b0c18';
-        ctx.beginPath(); ctx.moveTo(cx - R3, cy - R3); ctx.lineTo(cx + R3, cy - R3); ctx.lineTo(cx + R3, cy - R3 + k);
-        ctx.quadraticCurveTo(cx, cy - R3 + k * 1.3, cx - R3, cy - R3 + k); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(cx - R3, cy + R3); ctx.lineTo(cx + R3, cy + R3); ctx.lineTo(cx + R3, cy + R3 - k);
-        ctx.quadraticCurveTo(cx, cy + R3 - k * 1.3, cx - R3, cy + R3 - k); ctx.closePath(); ctx.fill();
+        // bocca dentata: si spalanca quando morde
+        const apri = 1 + swing * 1.6;
+        this._macchia(ctx, cx, cy + r * 0.66, r * 0.40, r * 0.15 * apri, '#170611', 0.92);
+        ctx.save(); ctx.fillStyle = '#efe2cc';
+        for (let i = 0; i < 8; i++) { const x = cx - r * 0.33 + i * r * 0.095; ctx.beginPath();
+          ctx.moveTo(x, cy + r * 0.56); ctx.lineTo(x + r * 0.045, cy + r * 0.56); ctx.lineTo(x + r * 0.022, cy + r * (0.56 + 0.12 * apri)); ctx.closePath(); ctx.fill(); }
         ctx.restore();
       }
-
-      // ---- edge-glow pulsante (avvampa se colpito/attacca/cambia sguardo) ----
+      // ---- l'occhio ----
+      const ex = cx + Math.cos(ang) * r * 0.09, ey = cy - r * 0.04 + Math.sin(ang) * r * 0.07;
+      this._macchia(ctx, ex, ey, r * 0.56, r * 0.50, '#1b0a16', spettrale ? 0.9 : 1);
+      this._macchia(ctx, ex, ey, r * 0.50, r * 0.45, P.sclera, 1);
+      if (!spettrale) {
+        ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = P.vena;
+        for (let i = 0; i < 12; i++) { const a = i * 0.52; ctx.beginPath(); ctx.moveTo(ex, ey);
+          ctx.lineTo(ex + Math.cos(a) * r * 0.49, ey + Math.sin(a) * r * 0.44);
+          ctx.lineTo(ex + Math.cos(a + 0.16) * r * 0.49, ey + Math.sin(a + 0.16) * r * 0.44); ctx.fill(); }
+        ctx.restore();
+      }
+      const ix = ex + Math.cos(ang) * r * 0.15, iy = ey + Math.sin(ang) * r * 0.13;
+      this._macchia(ctx, ix, iy, r * 0.27, r * 0.27, gcolHex, 1);
+      this._macchia(ctx, ix, iy, r * 0.20, r * 0.20, P.iride, 1);
+      ctx.fillStyle = '#080106'; ctx.beginPath(); ctx.arc(ix, iy, r * 0.105, 0, 7); ctx.fill();
+      this._macchia(ctx, ix - r * 0.085, iy - r * 0.095, r * 0.075, r * 0.055, '#ffffff', 0.9);
+      this._macchia(ctx, ex, ey - r * 0.32, r * 0.24, r * 0.075, '#ffffff', 0.18);
+      // ---- alone: avvampa quando il raggio e' attivo o quando incassa ----
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const pr = 0.10 + 0.06 * Math.sin(t * 3 + m.e) + swing * 0.18 + tell * 0.22 + S.flare * 0.26 + (m.fl > 0 ? 0.35 : 0);
-      const R2 = r * 1.32; const eg = ctx.createRadialGradient(0, bob, r * 0.6, 0, bob, R2);
+      const pr = 0.08 + 0.05 * Math.sin(t * 3 + m.e) + (m.gz ? 0.20 : 0) + swing * 0.16 + (m.fl > 0 ? 0.30 : 0);
+      const R2 = r * 1.34, eg = ctx.createRadialGradient(0, bob, r * 0.6, 0, bob, R2);
       eg.addColorStop(0, this._rgba(gcolHex, 0)); eg.addColorStop(0.84, this._rgba(gcolHex, Math.min(0.6, pr))); eg.addColorStop(1, this._rgba(gcolHex, 0));
       ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, bob, R2, 0, 7); ctx.fill(); ctx.restore();
     },

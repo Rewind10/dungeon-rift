@@ -2,6 +2,94 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.79.2] — 2026-09-03 · "I nemici si vedono tutti, le passive smettono di essere regali"
+
+#### 👁 I nemici di un'ondata si vedono TUTTI
+C'era una curva che teneva in campo 8 mostri alla prima ondata, 10 alla seconda, fino a 30 dalla decima:
+gli altri restavano in coda. Cosi' alzare il numero dei nemici non cambiava niente a schermo — dodici in
+lista, otto davanti. Adesso il tetto e' **uno solo e alto: 40**. In singolo nessuna ondata lo supera (la
+diciannovesima ne ha quaranta tondi), quindi si vedono tutti; in gruppo, dove le ondate scalano, l'eccesso
+continua a entrare in coda man mano che si fa posto. Misurato: 0,10 ms medi e 3,5 ms di picco per tick
+contro i 33 disponibili, con 24 mostri in campo.
+
+#### 🗡 Il Troll delle Caverne esce dal gioco
+Non compare piu' in nessuna ondata e non e' piu' nel bestiario. La definizione resta nel file — sprite
+sheet, slam ad area, la sua IA — ma non e' raggiungibile: buttare quel lavoro non serviva a niente. Gli
+archetipi che venivano dopo di lui si fanno avanti di un'ondata ciascuno (Fungo alla 4, Pipistrelli alla
+5, Sfera d'Ossa alla 6, Fuoco Fatuo alla 7), se no la rampa restava con un buco.
+
+#### 🩸 L'Offerta di Sangue esce dal Mercante Errante
+Dava **+2 vite in cambio di meta' delle monete**. Non era un prezzo: chi ne aveva quaranta ne pagava
+venti e si portava a casa due vite — cioe' proprio chi non se le sarebbe dovute permettere. Tolta, con un
+test che verifica che non si possano comprare vite cosi' nemmeno costruendo il messaggio a mano.
+
+#### 🎴 Le passive: ritarate, e cinque rifatte da zero
+Erano troppo forti, e il difetto era sistematico: quasi ognuna faceva **due cose** ("+15% critico **e**
++0,5× danno critico"), cioe' erano due carte in una.
+
+| Abilita' | Prima | Adesso |
+|---|---|---|
+| 🎯 Occhio di Falco | +15% critico **e** +0,5× critico | **+10% critico** |
+| 🏃 Passo Rapido | +15% vel., −12% scatto | **+10%, −8%** |
+| ☠️ Tossina | "forza 2" astratta | **5% del danno del colpo al secondo per 3s** |
+| 💠 Scudo Vitale | +25% PV **e 3 PV/s** | **−5% danni subiti, nessuna cura** |
+| 🪓 Giustiziere | +70% critico **e** +10% | **+5% critico e +30% danno critico** |
+| 🧱 Baluardo | −22% | **−10%** |
+| 🗡 Arma Pesante | +25% arco **e** +18% danno | **+8% danno** |
+| 🔭 Tiro Lungo | +44% a piena gittata | **+10%** |
+| 🏹 Perforazione | +2 nemici | **+1** |
+
+**La rigenerazione di Scudo Vitale era il caso peggiore**: 3 PV al secondo sono una cura continua e
+gratis, e toglievano il mestiere all'Ostessa esattamente come facevano gli oggetti che cadevano dai nemici
+prima della v1.77.
+
+**Il veleno adesso e' una quota del colpo**, non un numero fisso: cosi' non diventa irrilevante
+all'ondata 15 ne' sproporzionato alla prima, e vale uguale per il mago (che picchia forte e lento) e per
+il ladro (che picchia piano e veloce) — prima, a colpi al secondo, il ladro ne otteneva il doppio.
+
+#### 🆕 Cinque abilita' nuove, al posto di altrettante sbagliate
+- ⚔️ **Colpo Ampio** *(guerriero, non comune)* — ogni nemico in piu' colpito dal fendente aggiunge +5% a
+  quel colpo, fino a +15%. Sostituisce **Aura di Spine**, che faceva la stessa cosa di Rappresaglia
+  (farsi colpire per fare danno) ed era quindi una scelta finta.
+- 🧠 **Concentrazione** *(mago, epico)* — mezzo secondo fermo e il colpo dopo fa +10%. Si consuma: e' un
+  colpo piazzato, non uno stato. Sostituisce **Doppia Bolla** (+1 proiettile: era solo "spara di piu'").
+- 🔮 **Frattura Arcana** *(mago, divino)* — la bolla che **uccide** si spacca in due bolle al 50%. Si
+  autolimita, e le figlie non si dividono a loro volta. Sostituisce **Eco Arcana** (40% dei colpi
+  raddoppiati: danno gratis, senza condizioni).
+- ⏳ **Campo di Lentezza** *(mago, divino)* — i nemici entro 200 px si muovono il 25% piu' lenti. Zero
+  danno: controlla lo spazio, che e' quello che al mago manca. Sostituisce **Implosione**.
+- Il **ladro** e' stato rifatto come classe, non come somma di percentuali: 🗡 **Colpo alle Spalle**
+  (+20% su chi non ti guarda), 🩸 **Lama Sporca** (i critici aprono un'emorragia del 20% in 3s), 🌫 **Passo
+  d'Ombra** (dopo lo scatto il primo colpo e' critico garantito), 🎯 **Punto Vitale** (un critico ogni
+  cinque colpi), 🌑 **Uscita di Scena** (sotto il 30% dei PV sparisci dalla vista per 1,5s, ogni 20s).
+  Escono **Piede di Porco**, **Sdoppiamento**, **Mira Guidata**, **Furia Cieca** ed **Egida Ostinata**.
+
+Due sinergie hanno cambiato coppia perche' puntavano ad abilita' che non ci sono piu': **Frecce Sporche**
+(Perforazione + Lama Sporca) al posto di Cercatore, **Cacciatore di Teste** ora su Colpo alle Spalle, e
+**Onda d'Urto** su Colpo Ampio. Restano sei, ognuna raggiungibile da una classe sola.
+
+#### 👁 I tre Beholder, dipinti e finalmente pericolosi
+Il Beholder era **una marionetta** — un ritaglio raster con l'iride incollata sopra — e soprattutto **non
+attaccava**: applicava debuff e basta, quindi gli si poteva restare davanti tutto il giorno. Adesso sono
+**tre creature della stessa famiglia**, dipinte a codice come la caverna (strati di macchie dal buio al
+chiaro, bordo sporco, venature, iride bagnata, peduncoli con l'occhietto acceso in punta):
+
+| | PV | Danno | Raggio | Morso | Entra |
+|---|---|---|---|---|---|
+| 👁 **Occhio Viola** | 120 | 13 | 320 px, 45% | 90 px | ondata **9** |
+| 👁 **Occhio di Carne** | 210 | 18 | 340 px, 50% | 105 px | ondata **12** |
+| 👁 **Occhio Spettrale** | 260 | 22 | 400 px, 60%, **attraversa i muri** | 95 px | ondata **15** |
+
+Stesso mestiere per tutti e tre: il raggio ruota i tre debuff **e consuma vita** finche' ti tiene nel
+cono; sotto la distanza di morso smette di guardare e **azzanna**. Una cosa alla volta.
+
+#### I test
+**1272 controlli** (+62). Fra i nuovi: ogni passiva verificata per quello che c'e' scritto sulla carta
+(il fendente largo che cresce col numero di nemici e si ferma a +15%, la concentrazione che si carica da
+fermo e si consuma col colpo, l'emorragia che parte solo sui critici, la sparizione che non si ripete
+finche' la ricarica non e' finita), la famiglia dei Beholder con la scala di pericolo crescente, il raggio
+che fa male e il morso che scatta da vicino, e il tetto dei vivi che non nasconde piu' meta' dell'ondata.
+
 ### [1.79.1] — 2026-09-03 · "Le prime ondate erano vuote, e la curva era tarata su una misura sbagliata"
 
 Segnalazione dal campo: *«alla quinta ondata, uccidendo solo nemici, ero ancora al secondo livello»*, e le

@@ -61,7 +61,11 @@ function newBoon() {
     executeBonus: 0, retaliateWide: 0,
     // v1.79 — thornsPct: quota del danno subito rimandata al mittente (Aura di Spine).
     // implodeEvery: ogni quante bolle una implode (Implosione, scaglione divino del mago).
-    thornsPct: 0, implodeEvery: 0,
+    thornsPct: 0, implodeEvery: 0, poisonQuota: 0,
+    // v1.79.2 — le abilita' rifatte: fendente largo (guerriero), concentrazione/frattura/lentezza (mago),
+    // emorragia sui critici, critico dopo lo scatto, critico ogni N colpi, sparizione sotto soglia (ladro).
+    ampio: 0, explodeQuota: 0, concentra: 0, frattura: 0, lentezza: 0,
+    bleedCrit: 0, ombraDash: 0, critOgni: 0, scomparsa: 0,
   };
 }
 
@@ -339,6 +343,10 @@ class Room {
       emit(ev) { self.events.push(ev); },
       GAZE_TICK: C.GAZE_TICK,
       gaze(m, p, kind) { self.gazePlayer(p, kind); },
+      // v1.79.2 — IL BEHOLDER ADESSO ATTACCA. Prima applicava solo debuff: potevi restargli davanti tutto
+      // il giorno e non ti succedeva niente. Il raggio fa danno a ogni tick finche' ti tiene nel cono, e
+      // sotto la distanza di morso smette di guardarti e ti azzanna.
+      gazeHit(m, p, dmg) { self.damagePlayer(p, dmg, m.x, m.y, 0); self.events.push({ t: 'gaze_hit', x: p.x, y: p.y, d: dmg }); },
     };
   }
   // v1.69 — OMBRA: chi e' nascosto non viene proprio considerato come bersaglio. Se pero' sono TUTTI
@@ -346,13 +354,15 @@ class Room {
   // v1.69 — quanti posti restano sotto il tetto dei vivi. I mostri morti sono ancora nell'array finche'
   // non viene filtrato, quindi contarli farebbe rifiutare comparse che invece ci starebbero.
   _postiLiberi() { let vivi = 0; for (const m of this.monsters) if (!m.dead) vivi++; return this.tettoVivi() - vivi; }
-  // v1.70 — quanti nemici possono stare in campo a QUESTA ondata. La curva sta in constants.js e finisce
-  // sul tetto massimo: da li' in poi resta piatta.
+  // v1.79.2 — quanti nemici possono stare in campo insieme: un numero solo, quaranta, uguale a ogni
+  // ondata. La curva che li centellinava nelle prime ondate e' stata tolta — teneva nascosta meta'
+  // dell'ondata proprio dove serviva vedere che i nemici erano aumentati. Se un giorno tornasse una
+  // curva, basta rimettere MAX_ALIVE_CURVE a un array e questa funzione la rilegge.
   tettoVivi() {
     const cur = C.MAX_ALIVE_CURVE;
-    if (!cur || !cur.length) return C.MAX_ALIVE || 30;
+    if (!cur || !cur.length) return C.MAX_ALIVE || 40;
     const w = Math.max(1, this.wave | 0);
-    return w >= cur.length ? (C.MAX_ALIVE || 30) : cur[w - 1];
+    return w >= cur.length ? (C.MAX_ALIVE || 40) : cur[w - 1];
   }
   _nearestPlayer(x, y) {
     let best = null, bd = Infinity;
@@ -514,7 +524,9 @@ class Room {
       { id: 'pact_glass', name: 'Patto di Cristallo', icon: '🔮', color: '#ff6ad5', cost: 55, kind: 'pact_glass', desc: '+30% cadenza, ma +12% danni subiti' },
       { id: 'pact_leech', name: 'Patto Sanguinario', icon: '🩸', color: '#a4133c', cost: 70, kind: 'pact_leech', desc: '+10% vampirismo, ma -8% velocita' },
       { id: 'pact_swift', name: 'Patto dell\'Ombra', icon: '💨', color: '#9b5de5', cost: 55, kind: 'pact_swift', desc: '+18% velocita, ma -12% danno' },
-      { id: 'blood_coin', name: 'Offerta di Sangue', icon: '🩸', color: '#c1121f', cost: 40, kind: 'blood_coin', desc: '+2 vite, ma perdi meta delle monete' },
+      // v1.79.2 — QUI C'ERA L'OFFERTA DI SANGUE: +2 vite in cambio di meta' delle monete. Il prezzo non
+      // era un prezzo: chi aveva poche monete pagava poco o niente e si portava a casa due vite, cioe'
+      // esattamente chi non se le sarebbe dovute permettere. Tolta.
       { id: 'dark_relic', name: 'Reliquia Maledetta', icon: '💀', color: '#7b2cbf', cost: 90, kind: 'dark_relic', desc: 'Un Potere subito, ma -20 PV massimi' },
       { id: 'gamble', name: 'Azzardo del Diavolo', icon: '🎲', color: '#ffba08', cost: 30, kind: 'gamble', desc: 'Effetto casuale: benedizione o maledizione' },
     ];
@@ -549,7 +561,6 @@ class Room {
     else if (w.kind === 'pact_glass') { p.stats.fireRateMult += 0.30; p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.12; note = 'Fragile ma letale'; }
     else if (w.kind === 'pact_leech') { p.stats.lifesteal += 0.10; p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.08); note = 'Assetato'; }
     else if (w.kind === 'pact_swift') { p.stats.speedMult += 0.18; p.stats.dmgMult = Math.max(0.3, p.stats.dmgMult - 0.12); note = 'Rapido come un\'ombra'; }
-    else if (w.kind === 'blood_coin') { p.lives += 2; p.coins = Math.floor(p.coins / 2); note = 'Sangue per vita'; }
     else if (w.kind === 'dark_relic') { p.stats.maxHpFlat = Math.max(-p.maxHp + 20, p.stats.maxHpFlat - 20); if (p.hp > this.effMaxHp(p)) p.hp = this.effMaxHp(p); this.offerBoon(p); note = 'Potere maledetto'; }
     else if (w.kind === 'gamble') { const good = Math.random() < 0.5; if (good) { const r = Math.random(); if (r < 0.34) { p.stats.dmgMult += 0.25; note = 'Benedizione: +25% danno!'; } else if (r < 0.67) { p.stats.maxHpFlat += 40; note = 'Benedizione: +40 PV massimi!'; } else { p.lives += 1; note = 'Benedizione: +1 vita!'; } } else { const r = Math.random(); if (r < 0.5) { p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.10; note = 'Maledizione: +10% danni subiti'; } else { p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.10); note = 'Maledizione: -10% velocita'; } } }
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'dark_buy', id: w.id, name: w.name, icon: w.icon, color: w.color, note, x: p.x, y: p.y } });
@@ -599,6 +610,12 @@ class Room {
     }
     p.hp -= d; const n = MU.norm(p.x - sx, p.y - sy); p.vx += n.x * 40 * kn; p.vy += n.y * 40 * kn; p.hitFlash = 0.15;
     this.events.push({ t: 'phit', x: p.x, y: p.y, d });
+    // v1.79.2 — USCITA DI SCENA: scendendo sotto il 30% dei PV il ladro sparisce dalla vista dei mostri.
+    // Non cura e non annulla il colpo: da' i secondi per sganciarsi, ed e' la sua unica via d'uscita.
+    if (p.hp > 0 && p.boon && p.boon.scomparsa > 0 && (p.scomparsaCd || 0) <= 0 && p.hp < this.effMaxHp(p) * 0.30) {
+      p.buffs.hidden = Math.max(p.buffs.hidden || 0, p.boon.scomparsa); p.scomparsaCd = 20;
+      this.events.push({ t: 'scomparsa', x: p.x, y: p.y, who: p.id, dur: p.boon.scomparsa });
+    }
     // v1.51 — RAPPRESAGLIA: farsi colpire diventa una risposta, non solo una perdita. Scatta anche sul colpo fatale.
     if (p.boon && p.boon.retaliate > 0) {
       const rad = (p.boon.retaliateWide ? 150 : 100) + 20 * p.boon.retaliate;
@@ -695,12 +712,19 @@ class Room {
     // dare tre archi diversi allo stesso personaggio.
     if (w.melee) { this._meleeSwing(p, w, dmg, crit); return; }
     // colpo esplosivo periodico (boon)
+    // v1.79.2 — CONCENTRAZIONE: mezzo secondo fermo e il colpo dopo pesa di piu'. Si consuma: e' un colpo
+    // piazzato, non uno stato permanente di chi gioca fermo.
+    if (p.boon.concentra > 0 && (p.fermoT || 0) >= 0.5) { dmg = Math.round(dmg * (1 + p.boon.concentra)); p.fermoT = 0; this.events.push({ t: 'concentra', x: p.x, y: p.y, who: p.id }); }
+    // v1.79.2 — PUNTO VITALE (ogni N colpi) e PASSO D'OMBRA (il primo colpo dopo lo scatto): critici
+    // garantiti. Si contano qui, dove il colpo parte davvero.
+    if (p.boon.critOgni > 0) { p.critShot = (p.critShot || 0) + 1; if (p.critShot % p.boon.critOgni === 0) crit = true; }
+    if (p.boon.ombraDash > 0 && (p.ombraT || 0) > 0) { crit = true; p.ombraT = 0; }
     let explosive = false; if (p.boon.explodeEvery > 0) { p.boonShot++; if (p.boonShot % p.boon.explodeEvery === 0) explosive = true; }
     // v1.79 — IMPLOSIONE (scaglione divino del mago): una bolla ogni cinque non esplode verso fuori ma
     // risucchia verso dentro. Conta i colpi per conto suo, se no due abilita' si contenderebbero lo
     // stesso contatore e il ritmo di entrambe cambierebbe a seconda di quale hai preso.
     let implode = false; if (p.boon.implodeEvery > 0) { p.impShot = (p.impShot || 0) + 1; if (p.impShot % p.boon.implodeEvery === 0) implode = true; }
-    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison, slow: p.boon.slow, homing: p.boon.homing, implode }, {}));
+    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison ? Math.max(1, Math.round((ov.dmg != null ? ov.dmg : dmg) * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow, homing: p.boon.homing, implode, frattura: p.boon.frattura }, {}));
     const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
@@ -755,10 +779,13 @@ class Room {
     hit.sort((x, y) => x.d - y.d);
     const cap = (C.MELEE_MAX_TARGETS || 5) + (p.perk.sfondamento ? 2 : 0);
     const splash = p.perk.sfondamento ? 0.70 : (C.MELEE_SPLASH || 0.55);
+    // v1.79.2 — COLPO AMPIO: piu' nemici prende lo stesso fendente, piu' quel fendente fa male. Il bonus
+    // si calcola PRIMA di distribuire il danno, se no il primo bersaglio non ne beneficerebbe.
+    if (p.boon.ampio > 0) { const extra = Math.min(3, Math.max(0, Math.min(hit.length, cap) - 1)); dmg = Math.round(dmg * (1 + p.boon.ampio * extra)); }
     for (let i = 0; i < hit.length && i < cap; i++) {
       const m = hit[i].m, d = i === 0 ? dmg : Math.max(1, Math.round(dmg * splash));
       const kn = (w.knockback || 0) * p.stats.knockMult;
-      this.damageMonster(m, d, p.x, p.y, kn, p, { crit: crit && i === 0, poison: p.boon.poison, slow: p.boon.slow });
+      this.damageMonster(m, d, p.x, p.y, kn, p, { crit: crit && i === 0, poison: p.boon.poison ? Math.max(1, Math.round(d * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow });
       if (p.boon.chain > 0) this._chain(m, p, p.boon.chain, p.perk.catenaPiena ? d : Math.round(d * 0.25));
     }
     const colpiti = Math.min(hit.length, cap);
@@ -783,6 +810,7 @@ class Room {
       p.buffs.dash = 0.12;
     }
     if (p.perk.ombra > 0) p.buffs.hidden = p.perk.ombra;         // OMBRA: i nemici smettono di vederti
+    if (p.boon.ombraDash > 0) p.ombraT = p.boon.ombraDash;       // v1.79.2 — PASSO D'OMBRA: il colpo dopo lo scatto e' critico
     this.events.push({ t: 'ability', k: 'dash', x: p.x, y: p.y });
   }
 
@@ -1010,9 +1038,16 @@ class Room {
     if (kn && !m.boss) { const n = MU.norm(m.x - sx, m.y - sy); this.moveCircle(m, n.x * kn * 0.2, n.y * kn * 0.2); }
     if (opts.stun) m.stun = Math.max(m.stun || 0, opts.stun);
     if (opts.slow) m.slowT = Math.max(m.slowT || 0, 1.5);   // v1.79 — Tocco Gelido: 50% per 1,5s
+    // v1.79.2 — LAMA SPORCA: un critico apre un'emorragia che vale il 20% del colpo, spalmato su 3s.
+    // Non si somma a se stessa: si rinnova, se no bastava sparare veloce per moltiplicarla.
+    if (opts.crit && src && src.boon && src.boon.bleedCrit > 0) {
+      m.bleed = Math.max(m.bleed || 0, Math.max(1, Math.round(d * src.boon.bleedCrit / 6)));
+      m.bleedT = 3; m.bleedSrc = src.id;
+    }
     // v1.79 — IL VELENO NON SI SOMMA PIU' A OGNI COLPO. Sommandolo, la stessa abilita' rendeva il doppio
     // in mano al ladro (3 colpi al secondo) rispetto al mago (1,5): non era una scelta di build, era la
     // cadenza dell arma. Adesso e' una forza PER BERSAGLIO, che il colpo rinnova senza accumulare.
+    // v1.79.2 — `opts.poison` non e' piu' una forza ma il DANNO AL SECONDO gia' calcolato dal colpo.
     if (opts.poison) { m.poison = Math.max(m.poison || 0, opts.poison); m.poisonT = 3; m.poisonSrc = src ? src.id : null; }
     if (src) { src.damageDealt += d; if (src.stats.lifesteal > 0) src.hp = Math.min(this.effMaxHp(src), src.hp + d * src.stats.lifesteal); }
     // hit-stop feedback per crit / colpi grossi
@@ -1631,6 +1666,11 @@ class Room {
     for (const p of this.players.values()) {
       if (!p.connected) continue;
       p.fireCd = Math.max(0, p.fireCd - dt); p.cdQ = Math.max(0, p.cdQ - dt); p.cdE = Math.max(0, p.cdE - dt); p.cdDash = Math.max(0, p.cdDash - dt);
+      // v1.79.2 — quanto sei fermo (Concentrazione: conta il movimento CHIESTO, non quello ottenuto, se no
+      // bastava spingersi contro un muro), la finestra del critico dopo lo scatto e la ricarica dell'uscita.
+      p.fermoT = (Math.abs(p.input.mx) < 0.01 && Math.abs(p.input.my) < 0.01) ? (p.fermoT || 0) + dt : 0;
+      if (p.ombraT > 0) p.ombraT = Math.max(0, p.ombraT - dt);
+      if (p.scomparsaCd > 0) p.scomparsaCd = Math.max(0, p.scomparsaCd - dt);
       p.potCd = Math.max(0, p.potCd - dt);
       if (p.comboT > 0) { p.comboT -= dt; if (p.comboT <= 0) { p.comboT = 0; p.combo = 0; } }
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
@@ -1735,8 +1775,12 @@ class Room {
     const ctx = this.makeCtx(); const tf = this.bulletTime ? this.bulletTime.factor : 1;
     for (const m of this.monsters) { if (m.dead) continue; if (m.hitFlash) m.hitFlash = Math.max(0, m.hitFlash - dt);
       // veleno (boon)
-      if (m.poison > 0 && m.poisonT > 0) { m.poisonT -= dt; m.poisonTick = (m.poisonTick || 0) + dt; if (m.poisonTick > 0.5) { m.poisonTick = 0; this.damageMonster(m, m.poison * 2, m.x, m.y - 1, 0, this.players.get(m.poisonSrc)); if (m.dead) continue; } }
+      // v1.79.2 — il veleno fa una QUOTA DEL COLPO che l'ha applicato (5% al secondo), non un numero
+      // fisso: cosi' non diventa irrilevante all'ondata 15 ne' sproporzionato alla prima.
+      if (m.poison > 0 && m.poisonT > 0) { m.poisonT -= dt; m.poisonTick = (m.poisonTick || 0) + dt; if (m.poisonTick > 0.5) { m.poisonTick = 0; this.damageMonster(m, Math.max(1, Math.round(m.poison * 0.5)), m.x, m.y - 1, 0, this.players.get(m.poisonSrc)); if (m.dead) continue; } }
       let slow = 1; if (m.slowT > 0) { m.slowT -= dt; slow = 0.5; }
+      // v1.79.2 — CAMPO DI LENTEZZA: un'aura passiva attorno al mago. Non fa danno: rende lo spazio suo.
+      for (const q of this.alivePlayers) { if (!(q.boon && q.boon.lentezza > 0)) continue; if (MU.dist2(q.x, q.y, m.x, m.y) <= q.boon.lentezza * q.boon.lentezza) { slow *= 0.75; break; } }
       const ld = dt * tf; const pd = ctx.dt; ctx.dt = ld; AI.update(m, ctx); ctx.dt = pd; let cu = 1; const np = this._nearestPlayer(m.x, m.y); if (np) { const nd = MU.dist(m.x, m.y, np.x, np.y); if (nd > 340) cu = 1 + Math.min(1.1, (nd - 340) / 420); }
       const px0 = m.x, py0 = m.y; const wantMove = (Math.abs(m.mx) + Math.abs(m.my)) > 4; // v1.43 — misura intento vs spostamento reale
       // v1.61 — ATTRAVERSA I MURI (def.phasing, Fuoco Fatuo): niente moveCircle, niente _unstuck, niente
@@ -1768,8 +1812,17 @@ class Room {
       if (this.isWallAt(b.x, b.y)) { if (b.bounce > 0) { b.bounce--; if (this.isWallAt(b.x - b.vx * bdt, b.y)) b.vx *= -1; if (this.isWallAt(b.x, b.y - b.vy * bdt)) b.vy *= -1; } else if (b.grenade) { b.fuse = Math.min(b.fuse, 0.02); } else { b.dead = true; this.events.push({ t: 'spark', x: b.x, y: b.y, c: b.color }); } }
       if (b.life <= 0 && !b.grenade) b.dead = true; if (b.grenade && b.fuse <= 0) { this._explode(b); b.dead = true; continue; } if (b.dead) continue;
       if (b.hostile) { for (const p of this.alivePlayers) { if (p.buffs.iframe || p.buffs.i_invuln) continue; if (MU.circleHit(b.x, b.y, b.r, p.x, p.y, p.radius)) { this.damagePlayer(p, b.dmg, b.x, b.y, 1); if (b.curse) this.cursePlayer(p); b.dead = true; break; } } }
-      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue; const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : Math.round(b.dmg * 0.25)); if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
-          if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
+      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue; const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : Math.round(b.dmg * 0.25));
+          // v1.79.2 — FRATTURA ARCANA: se la bolla ha ucciso, si spacca in due bolle minori. Le figlie
+          // portano `figlia` e non si dividono a loro volta: senza quel freno una folla fitta genererebbe
+          // una reazione a catena senza fine.
+          if (m.dead && b.frattura && !b.figlia && src) {
+            const ang0 = Math.atan2(b.vy, b.vx), vel = Math.hypot(b.vx, b.vy) || 320;
+            for (const dv of [-0.45, 0.45]) { const a2 = ang0 + dv;
+              this.bullets.push({ eid: NEXT++, hostile: false, owner: b.owner, x: m.x, y: m.y, vx: Math.cos(a2) * vel, vy: Math.sin(a2) * vel, r: Math.max(4, b.r * 0.7), dmg: Math.max(1, Math.round(b.dmg * 0.5)), color: b.color, life: 0.55, crit: false, pierce: 0, knock: 0, bubble: b.bubble, figlia: 1 }); }
+            this.events.push({ t: 'frattura', x: m.x, y: m.y, c: b.color });
+          } if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
+          if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || (src && src.boon.explodeQuota) || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
     }
     if (this.bullets.some(b => b.dead)) this.bullets = this.bullets.filter(b => !b.dead);
     for (const m of this.monsters) { if (m.bleedT > 0) { m.bleedT -= dt; m.bleedTick = (m.bleedTick || 0) + dt; if (m.bleedTick > 0.5) { m.bleedTick = 0; this.damageMonster(m, m.bleed * 2, m.x, m.y - 1, 0, this.players.get(m.bleedSrc)); } } }

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.79.1`
+**Versione attuale:** `1.79.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -41,11 +41,11 @@ anticipano; non servono ad arrivarci.
 | XP cumulata | 200 | 500 | 2.040 | 4.230 | 6.640 | **9.470** |
 | ondata attesa | 2 | 3-4 | 6-7 | 10-11 | 13-14 | **16-17** |
 
-### Quanti nemici *(v1.79.1)*
+### Quanti nemici *(v1.79.1, tetto rivisto in v1.79.2)*
 Il conteggio e `10 + 1,6·ondata`: **12 nemici alla prima ondata** (erano 7), 16 alla quarta, 40 alla
 diciannovesima (erano 39). Le prime ondate quasi raddoppiano, le ultime restano dov'erano. I nemici
-**vivi insieme** non cambiano: quelli li decide il tetto (8 alla prima, 30 dalla decima) e gli altri
-restano in coda — cambia quanto dura l'ondata, non quanti se ne vedono.
+**vivi insieme** li decide il tetto, che dalla v1.79.2 e **uno solo: 40**. In singolo nessuna ondata lo
+supera, quindi si vedono tutti; in gruppo l eccesso resta in coda — cambia quanto dura l'ondata, non quanti se ne vedono.
 
 ### L'esperienza e' condivisa
 Ogni uccisione vale per **tutti i giocatori vivi**: la crescita e' del gruppo, la corsa alla sfera non e'
@@ -71,25 +71,29 @@ Cadono insieme agli scaglioni: **3 / 6 / 9 / 12 / 15**. Sei fasce, sei titoli pe
 | IV | 12-14 | Signore delle Lame | Magister | Spettro |
 | V | 15 | *(specializzazione)* | *(idem)* | *(idem)* |
 
-## 🎴 LE 32 ABILITA' PASSIVE *(v1.79)*
+## 🎴 LE 32 ABILITA' PASSIVE *(ritarate in v1.79.2)*
+
+Regola della taratura: **un'abilita', un effetto**. Prima quasi ognuna ne faceva due — "+15% critico *e*
++0,5x danno critico" — cioe' erano due carte in una, ed e' per questo che il personaggio finiva troppo
+forte.
 
 **Neutre — le vede chiunque**
 
 | Scaglione | | |
 |---|---|---|
-| Non comune | 🎯 Occhio di Falco — +15% critico, +0,5× danno critico | 🏃 Passo Rapido — +15% velocita, -12% scatto |
-| Raro | ☠️ Tossina — veleno di forza 2, per bersaglio | 💠 Scudo Vitale — +25% PV massimi, +3 PV/s |
-| Epico | 🪓 Giustiziere — +70% danno critico, +10% critico | 🧱 Baluardo — -22% danni subiti |
+| Non comune | 🎯 Occhio di Falco — +10% critico | 🏃 Passo Rapido — +10% velocita, -8% scatto |
+| Raro | ☠️ Tossina — veleno: 5% del danno del colpo al secondo, per 3s | 💠 Scudo Vitale — -5% danni subiti |
+| Epico | 🪓 Giustiziere — +5% critico e +30% danno critico | 🧱 Baluardo — -10% danni subiti |
 | Divino | ⏳ Ultima Occasione — due volte risorgi a meta vita | 🗡️ Colpo di Grazia — esecuzione sotto il 20% |
 
 **⚔️ Guerriero** — sta in mezzo alla mischia, la ricompensa e' la folla
 
 | Scaglione | | |
 |---|---|---|
-| Non comune | 🗡 Arma Pesante — +25% apertura, +18% danno | 🌵 Aura di Spine — 25 danni + 10% di quelli subiti |
+| Non comune | 🗡 Arma Pesante — +8% danno | 🪓 Colpo Ampio — +5% per ogni nemico in piu nello stesso fendente (max +15%) |
 | Raro | 🩸 Vampirismo — +9% del danno ti cura | 💢 Rappresaglia — onda ampia quando incassi |
 | Epico | 🔥 Adrenalina Pura — +8% cadenza per uccisione, fino a +48% | 🧍 Colosso — +35% PV massimi, +8% velocita |
-| Divino | ☄️ Deflagrazione Cadaverica — i morti esplodono, a danno pieno | 🌀 Onda di Ritorno — meta delle uccisioni emette una nova |
+| Divino | ☄️ Deflagrazione Cadaverica — i morti esplodono | 🌀 Onda di Ritorno — meta delle uccisioni emette una nova |
 
 **🔮 Mago** — pochi colpi, ognuno deve fare rumore
 
@@ -97,22 +101,39 @@ Cadono insieme agli scaglioni: **3 / 6 / 9 / 12 / 15**. Sei fasce, sei titoli pe
 |---|---|---|
 | Non comune | ⭕ Bolla Densa — +35% dimensione, +18% danno | ❄️ Tocco Gelido — rallenta del 50% per 1,5s |
 | Raro | ⛓️ Catena di Fulmini — rimbalza su 2 nemici al 25% | ↩️ Rimbalzo — +2 rimbalzi, senza perdere danno |
-| Epico | 💣 Colpi Esplosivi — ogni 3° colpo esplode | 🚩 Doppia Bolla — +1 bolla, +15% danno |
-| Divino | 🔊 Eco Arcana — il 40% dei colpi si ripete gratis | 🌌 Implosione — una bolla ogni 5 risucchia e blocca |
+| Epico | 💣 Colpi Esplosivi — ogni 4° colpo esplode al 35% in 90px | 🧠 Concentrazione — mezzo secondo fermo: +10% al colpo dopo |
+| Divino | 🔮 Frattura Arcana — la bolla che uccide si divide in due (50%) | ⏳ Campo di Lentezza — i nemici entro 200px vanno il 25% piu lenti |
 
-**🏹 Ladro** — distanza, cadenza, e nessun margine d'errore
+**🏹 Ladro / assassino** — colpire da dietro, far sanguinare, sparire
 
 | Scaglione | | |
 |---|---|---|
-| Non comune | 🏹 Perforazione — +2 nemici perforati | 🔭 Tiro Lungo — +44% a piena gittata |
-| Raro | ⛏️ Piede di Porco — +80% sui nemici integri | 💃 Passo di Danza — +20% velocita per uccisione, fino a +40% |
-| Epico | 🔱 Sdoppiamento — +1 freccia, +10% cadenza | 🎯 Mira Guidata — curvatura forte |
-| Divino | 😈 Furia Cieca — +45% danno, +15% danni subiti | 🧿 Egida Ostinata — assorbe un colpo ogni 5s |
+| Non comune | 🏹 Perforazione — +1 nemico perforato | 🔭 Tiro Lungo — +10% a piena gittata |
+| Raro | 🗡 Colpo alle Spalle — +20% su chi non ti sta guardando | 💃 Passo di Danza — +15% velocita per uccisione, fino a +30% |
+| Epico | 🩸 Lama Sporca — i critici aprono un emorragia (20% del colpo in 3s) | 🌫 Passo d'Ombra — dopo lo scatto, il primo colpo e critico |
+| Divino | 🎯 Punto Vitale — ogni 5° colpo e un critico garantito | 🌑 Uscita di Scena — sotto il 30% dei PV sparisci per 1,5s (ogni 20s) |
 
 **Le sinergie** restano sei, ognuna raggiungibile da **una sola classe** e a cavallo di **due scaglioni**:
-prenderne una costa meta' delle scelte della run.
+🌊 Onda d'Urto (Colpo Ampio + Rappresaglia) · 🩸 Sete di Sangue (Vampirismo + Adrenalina) · 🧊 Catena
+Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Esplosivi) · 🩸 Frecce Sporche
+(Perforazione + Lama Sporca) · 🎯 Cacciatore di Teste (Colpo alle Spalle + Colpo di Grazia).
 
-**Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace — bonus all'XP raccolta, inutili col tetto.
+**Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace *(bonus XP, inutili col tetto)*, e in
+v1.79.2 🌵 Aura di Spine, ⛏️ Piede di Porco, 🔱 Sdoppiamento, 🎯 Mira Guidata, 😈 Furia Cieca, 🧿 Egida
+Ostinata, 🚩 Doppia Bolla, 🔊 Eco Arcana, 🌌 Implosione.
+
+## 👁 I TRE BEHOLDER *(v1.79.2)*
+Erano uno solo, disegnato come una marionetta di pezzi raster, e **non attaccavano**: applicavano debuff e
+basta. Adesso sono tre creature della stessa famiglia, **dipinte a codice** come la caverna, e mordono.
+
+| | PV | Danno | Raggio | Morso | Entra |
+|---|---|---|---|---|---|
+| 👁 Occhio Viola | 120 | 13 | 320 px, 45% del danno a tick | 90 px | ondata 9 |
+| 👁 Occhio di Carne | 210 | 18 | 340 px, 50% | 105 px | ondata 12 |
+| 👁 Occhio Spettrale | 260 | 22 | 400 px, 60%, attraversa i muri | 95 px | ondata 15 |
+
+Il raggio ruota i tre sguardi (indebolimento, rallentamento, corrosione) **e consuma vita** finche' ti
+tiene nel cono; sotto la distanza di morso smette di guardare e azzanna. Una cosa alla volta.
 
 ## 🧭 IL MENU DI FINE ONDATA *(rifatto in v1.79)*
 Quattro sezioni con una barra in basso, e sotto — **da solo e centrato** — il pulsante che fa partire la

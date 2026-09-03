@@ -31,7 +31,17 @@
     // v1.49 — BEHOLDER (id 'occhio'): reintrodotto. Bulbo oculare fluttuante con eye-stalks e tentacoli
     // tutt'intorno (render _eyeF). NON spara: il suo attacco e' lo SGUARDO (debuff nel campo visivo, gazer).
     // Le EYESTALKS RUOTANO -> alterna ciclicamente i 3 tipi di sguardo (weaken/slow/sunder); fascio ricolorato.
-    occhio: { id: 'occhio', name: 'Beholder', tier: 3, hp: 130, speed: 92, radius: 22, dmg: 16, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 24, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff5ad0', shape: 'beholder', puppet: true, beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 340, strafeDist: 240, gazeCycle: 4, eliteHp: 1.9, maxAlive: 8 },  // v1.49 — reso col RENDER PUPPET raster (illustrazione ritagliata) + iris che segue
+    // ===== v1.79.2 — I TRE BEHOLDER ============================================================
+    // Erano uno solo, disegnato come una marionetta di pezzi raster e senza attacchi veri. Adesso sono
+    // TRE creature della stessa famiglia, dipinte a codice (`dipinto: true`), con lo stesso mestiere —
+    // raggio che debilita E fa male da lontano, morso da vicino — e tre taglie di pericolo. Entrano in
+    // ondate diverse, cosi' la famiglia si presenta un pezzo per volta invece che tutta insieme.
+    // A — OCCHIO VIOLA: il piu' debole, il primo che si incontra.
+    occhio: { id: 'occhio', name: 'Occhio Viola', tier: 3, hp: 120, speed: 92, radius: 21, dmg: 13, atkRange: 320, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 22, weight: 9, color: '#7a2f6a', color2: '#2a1022', eye: '#ff6fd0', shape: 'beholder', dipinto: 'viola', beholder: true, aura: 2.4, gazeFov: 0.6, gazeRange: 320, gazeDmg: 0.45, biteRange: 90, biteCd: 1.2, biteMul: 1.4, strafeDist: 240, gazeCycle: 4, eliteHp: 1.9, maxAlive: 8 },
+    // B — OCCHIO DI CARNE: piu' resistente, morde piu' forte, sta piu' vicino.
+    occhio_carne: { id: 'occhio_carne', name: 'Occhio di Carne', tier: 3, hp: 210, speed: 86, radius: 24, dmg: 18, atkRange: 340, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 34, weight: 7, color: '#6b2e26', color2: '#2b1410', eye: '#ffb08a', shape: 'beholder', dipinto: 'carne', beholder: true, aura: 2.6, gazeFov: 0.62, gazeRange: 340, gazeDmg: 0.5, biteRange: 105, biteCd: 1.1, biteMul: 1.6, strafeDist: 210, gazeCycle: 4, eliteHp: 1.8, maxAlive: 6 },
+    // C — OCCHIO SPETTRALE: il piu' pericoloso. Raggio piu' lungo e piu' pesante, e attraversa i muri.
+    occhio_spettro: { id: 'occhio_spettro', name: 'Occhio Spettrale', tier: 3, hp: 260, speed: 100, radius: 23, dmg: 22, atkRange: 400, atkCd: 1.0, ai: 'gazer', atk: 'gaze', xp: 46, weight: 5, color: '#12303f', color2: '#071016', eye: '#ffb347', shape: 'beholder', dipinto: 'spettro', beholder: true, phasing: true, aura: 2.8, gazeFov: 0.66, gazeRange: 400, gazeDmg: 0.6, biteRange: 95, biteCd: 1.0, biteMul: 1.7, strafeDist: 280, gazeCycle: 3.2, eliteHp: 1.7, maxAlive: 5 },
     // v1.58 — FUNGO SPORIFERO: immobile. Vive dove nasce e semina zone di spore dove ti trovi: e' il nemico
     // che punisce chi resta fermo, ruolo che al roster mancava. Zero animazione di camminata (non cammina).
     spore_fungus: { id: 'spore_fungus', name: 'Fungo Sporifero', tier: 1, hp: 110, speed: 0, radius: 20, dmg: 11, atkRange: 340, atkCd: 3.1, ai: 'sentry', atk: 'zone', xp: 12, weight: 0, color: '#2f3a24', color2: '#151c10', eye: '#c8ff6a', shape: 'fungus', front: true, fungus: true, immobile: true, sightRange: 340, spores: 2, zoneRadius: 62, zoneDelay: 1.05, zoneMult: 1.0, projColor: '#a6ff3a', eliteHp: 2.0 },
@@ -58,6 +68,10 @@
     lich_king: { id: 'lich_king', name: 'Re Lich', tier: 4, boss: true, hp: 2200, speed: 116, radius: 30, dmg: 26, atkRange: 420, atkCd: 1.1, ai: 'boss_lich', atk: 'ranged', xp: 200, weight: 0, color: '#2f4a6a', color2: '#12233a', eye: '#7dffea', shape: 'lich', projSpeed: 280, projColor: '#7dffea', summon: 'skeleton', summonCd: 5, summonCount: 5, shieldCd: 7, shieldTime: 3.5 },
     mega_dragon: { id: 'mega_dragon', name: 'AZ\'GAROTH, il Divoratore di Mondi', tier: 6, boss: true, mega: true, hp: 9000, speed: 104, radius: 52, dmg: 52, atkRange: 520, atkCd: 0.9, ai: 'boss_dragon', atk: 'special', xp: 800, weight: 0, color: '#5a0d2a', color2: '#2a0512', eye: '#ff2d55', shape: 'dragon', projSpeed: 340, projColor: '#ff2d55', enrageAtHp: 0.4 },
   };
-  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'cave_brute', 'spore_fungus', 'bone_roller', 'wisp', 'occhio'];
+  // v1.79.2 — 'cave_brute' (il Troll delle Caverne) e' fuori dal bestiario: non compare piu' in nessuna
+  // ondata. La sua definizione resta qui sopra — con lo sprite-sheet, lo slam ad area e la sua IA — perche'
+  // toglierla butterebbe via del lavoro che potrebbe tornare utile, ma non e' piu' raggiungibile: non e' in
+  // ORDER e non e' nel pool delle ondate.
+  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'spore_fungus', 'bone_roller', 'wisp', 'occhio', 'occhio_carne', 'occhio_spettro'];
   return { MONSTERS, BOSSES, ORDER };
 });

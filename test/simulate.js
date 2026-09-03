@@ -85,10 +85,10 @@ function testBoons() {
   p.scaglioniDovuti = ['uncommon'];
   room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'lo scaglione offre quattro abilita (' + (p.boonOffer || []).length + ')');
   const pierceBefore = p.boon.pierce;
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pierceBefore + 2, 'Perforazione applicata col valore nuovo (+2)'); assert(p.boonsOwned.pierce === 1, 'conteggio aggiornato');
+  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pierceBefore + 1, 'Perforazione applicata col valore nuovo (+1)'); assert(p.boonsOwned.pierce === 1, 'conteggio aggiornato');
   p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); assert(p.boon.chain === 2, 'Catena di Fulmini applicata (2 rimbalzi)');
   // spara e verifica che i proiettili portino i flag delle passive
-  room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 2 && b.chain === 2, 'i proiettili ereditano le passive');
+  room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 1 && b.chain === 2, 'i proiettili ereditano le passive');
   // boon vampire cura
   p.boonOffer = ['vampire']; const ls0 = p.stats.lifesteal; room.pickBoon('b', 'vampire'); assert(p.stats.lifesteal > ls0, 'boon Vampirismo aumenta lifesteal');
   // v1.79 — NIENTE IMPILAMENTO: ogni abilita' si prende una volta sola, e riproporla non fa niente.
@@ -179,25 +179,20 @@ function testV16() {
   assert(hi.tot > lo.tot, 'ad alto combo la stessa uccisione rende piu XP (' + hi.tot + ' > ' + lo.tot + ')');
   // combo decade nel tempo
   p.combo = 5; p.comboT = 0.05; const dt = 1 / C.TICK_RATE; for (let i = 0; i < 4; i++) room.update(dt); assert(p.combo === 0, 'la combo decade allo scadere del timer');
-  // boon homing: i proiettili portano il flag e curvano
-  room.phase = C.PHASE_SHOP; p.boonOffer = ['homing']; room.pickBoon('b', 'homing'); assert(p.boon.homing === 2, 'Mira Guidata applicata col valore nuovo');
-  // scenario deterministico: nessun mostro residuo, mira nota (verso destra), unico bersaglio sotto il proiettile
-  // v1.76 — lo scenario va messo in mezzo allo SPAZIO LIBERO. Con la pianta nuova il giocatore puo'
-  // trovarsi a ridosso della roccia: il proiettile ci sbatteva entro tre tick, spariva, e il test
-  // "curva verso il bersaglio" falliva una volta su quattro senza che ci fosse niente di rotto.
-  { let best = null, bestR = 0;
-    for (let gy = 3; gy < room.map.h - 3; gy++) for (let gx = 3; gx < room.map.w - 3; gx++) {
-      let r = 0;
-      while (r < 5) { let lib = true;
-        for (let dy = -(r + 1); dy <= r + 1 && lib; dy++) for (let dx = -(r + 1); dx <= r + 1; dx++)
-          if (room.map.grid[(gy + dy) * room.map.w + (gx + dx)] === C.T_WALL) { lib = false; break; }
-        if (!lib) break; r++; }
-      if (r > bestR) { bestR = r; best = { x: gx, y: gy }; } }
-    if (best) { p.x = best.x * C.TILE + C.TILE / 2; p.y = best.y * C.TILE + C.TILE / 2; } }
-  room.monsters.length = 0; room.bullets.length = 0; p.aim = 0; p.input.aim = 0; p.fireCd = 0; room.firePlayerWeapon(p); const hb = room.bullets.find(x => !x.hostile); assert(hb && hb.homing === 2, 'i proiettili ereditano il flag homing (v1.79: forza 2)');
-  const tm = room.spawnMonster('skeleton', hb.x + 30, hb.y + 120, { scaling: Waves.scaling(2, 1) });
-  const sp0 = Math.hypot(hb.vx, hb.vy) || 720; hb.vx = sp0; hb.vy = 0; // v1.17 — elimina lo spread dell'arma: test deterministico
-  const a0 = Math.atan2(hb.vy, hb.vx); for (let i = 0; i < 3; i++) room.updateBullets(dt); const a1 = room.bullets[0] ? Math.atan2(room.bullets[0].vy, room.bullets[0].vx) : a0; assert(Math.abs(a1 - a0) > 0.001, 'il proiettile homing curva verso il bersaglio');
+  room.phase = C.PHASE_SHOP;   // il resto del test compra ancora abilita: la stanza deve restare nel menu
+  // v1.79.2 — Mira Guidata e' stata tolta (era troppo forte e non c'entrava col ladro). Al suo posto,
+  // qui si verifica FRATTURA ARCANA: la bolla che uccide si spacca in due, e le figlie non si dividono.
+  const rm = new Room('frat'); const pm = rm.addPlayer('m', { send() {} }, 'M', 'mago'); rm.startGame();
+  rm.phase = C.PHASE_SHOP; pm.boonOffer = ['frattura']; rm.pickBoon('m', 'frattura');
+  assert(pm.boon.frattura === 1, 'Frattura Arcana applicata');
+  rm.phase = C.PHASE_COMBAT; rm.monsters.length = 0; rm.bullets.length = 0;
+  const vitt = rm.spawnMonster('skeleton', pm.x + 60, pm.y, { scaling: Waves.scaling(1, 1) }); vitt.hp = 1;
+  rm.bullets.push({ eid: 99991, hostile: false, owner: 'm', x: vitt.x - 6, y: vitt.y, vx: 300, vy: 0, r: 8, dmg: 50, color: '#fff', life: 1, crit: false, pierce: 0, knock: 0, frattura: 1 });
+  rm.updateBullets(1 / C.TICK_RATE);
+  const figlie = rm.bullets.filter(x => x.figlia);
+  assert(vitt.dead, 'la bolla uccide il bersaglio');
+  assert(figlie.length === 2, 'e si spacca in due bolle minori (' + figlie.length + ')');
+  assert(figlie.every(f => f.dmg <= 25 && !f.frattura), 'le figlie fanno meta danno e non si dividono a loro volta');
   // boon avidita: aumenta xpMult
   // v1.79 — Avidita, Fortuna Sfacciata e Fame Vorace sono RITIRATE: col tetto ai livelli un bonus all'XP
   // raccolta e' spazzatura per costruzione, e allo scaglione divino varrebbe esattamente zero.
@@ -230,14 +225,13 @@ function testV17() {
   // frost_chain: chain + freeze
   p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); p.boonOffer = ['freeze']; room.pickBoon('b', 'freeze');
   assert(p.synActive.frost_chain === 1 && p.boon.frostChain === 1, 'chain + freeze attiva Catena Gelida');
-  // seeker: homing + pierce. v1.79 — il tetto delle carte accese non esiste piu' (la Cartomante e'
-  // chiusa): ogni abilita' presa e' sempre attiva, e la sinergia scatta appena la coppia e' completa.
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); const pierce0 = p.boon.pierce;
-  p.boonOffer = ['homing']; room.pickBoon('b', 'homing');
-  assert(!!p.cardOn.homing, 'ogni abilita presa e sempre accesa');
-  assert(p.synActive.seeker === 1 && p.boon.pierce === pierce0 + 1, 'homing + pierce attiva Cercatore (+1 perforazione)');
-  // la sinergia gia attiva non si ri-applica: detectSynergies esclude quelle in synActive
-  const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'seeker'), 'la sinergia gia attiva non viene rilevata di nuovo');
+  // v1.79.2 — la coppia del ladro adesso e' Perforazione + Lama Sporca (Mira Guidata e' stata tolta).
+  // Ogni abilita' presa e' sempre attiva: il tetto delle carte accese non esiste piu'.
+  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce');
+  p.boonOffer = ['lamasporca']; room.pickBoon('b', 'lamasporca'); const bl0 = p.boon.bleedCrit;
+  assert(!!p.cardOn.lamasporca, 'ogni abilita presa e sempre accesa');
+  assert(p.synActive.frecce_sporche === 1 && p.boon.bleedCrit > 0.10, 'Perforazione + Lama Sporca attiva Frecce Sporche (' + bl0 + ')');
+  const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'frecce_sporche'), 'la sinergia gia attiva non viene rilevata di nuovo');
   // toxicBurst avvelena ad area
   const tp = room.addPlayer('d', { send() {} }, 'D', 'ladro'); tp.boon.toxicBurst = 1; tp.boon.poison = 1;
   const tm = room.spawnMonster('skeleton', tp.x + 20, tp.y, { scaling: Waves.scaling(2, 1) }); tm.poison = 0;
@@ -355,11 +349,11 @@ function testV110() {
   room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'si sceglie 1 di 4 (offerti: ' + (p.boonOffer || []).length + ')');
   // --- catalogo ---
   assert(Loot.BOONS.length === 32, 'il catalogo ha 32 abilita (' + Loot.BOONS.length + ')');
-  for (const id of ['berserk', 'swift', 'juggernaut', 'executioner', 'artillery']) assert(Loot.BOON_BY_ID[id], 'abilita presente: ' + id);
-  // --- i nuovi boon applicano effetti ---
-  const d0 = p.stats.dmgMult; p.boonOffer = ['berserk']; room.pickBoon('b', 'berserk'); assert(p.stats.dmgMult > d0, 'Furia Cieca aumenta il danno');
+  for (const id of ['swift', 'juggernaut', 'executioner', 'ampio', 'spalle']) assert(Loot.BOON_BY_ID[id], 'abilita presente: ' + id);
+  // --- i boon applicano effetti ---
+  const d0 = p.stats.dmgMult; p.boonOffer = ['longshot']; room.pickBoon('b', 'longshot'); assert(p.boon.longshot > 0, 'Tiro Lungo applicato');
   const hp0 = room.effMaxHp(p); p.boonOffer = ['juggernaut']; room.pickBoon('b', 'juggernaut'); assert(room.effMaxHp(p) > hp0, 'Colosso aumenta i PV massimi');
-  const cm0 = p.stats.critMult; p.boonOffer = ['executioner']; room.pickBoon('b', 'executioner'); assert(p.stats.critMult > cm0, 'Giustiziere aumenta il danno critico');
+  const cc0 = p.stats.critChance; p.boonOffer = ['executioner']; room.pickBoon('b', 'executioner'); assert(p.stats.critChance > cc0, 'Giustiziere aumenta la probabilita di critico');
   // --- v1.67: l'emporio a livelli non esiste piu' (catalogo per classe in shared/gear.js) ---
   assert(!Loot.GEAR && !Loot.GEAR_BY_SLOT && !Loot.gearCost, 'l emporio generico a livelli e stato rimosso da loot.js');
   const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
@@ -426,9 +420,13 @@ function testV112() {
   const dmg0 = p.stats.dmgMult, mhp0 = room.effMaxHp(p); room.buyDark('b', 'pact_berserk');
   assert(p.stats.dmgMult > dmg0, 'il Patto del Berserker aumenta il danno');
   assert(room.effMaxHp(p) < mhp0, 'il Patto del Berserker riduce i PV massimi (il prezzo del patto)');
-  // offerta di sangue: +vite ma dimezza monete
-  room.darkMerchant.wares[1] = Object.assign({}, room.darkWaresPool().find(w => w.kind === 'blood_coin'));
-  p.coins = 200; const lv0 = p.lives; room.buyDark('b', 'blood_coin'); assert(p.lives === lv0 + 2, 'l\'offerta di sangue da +2 vite'); assert(p.coins < 200 - 40, 'l\'offerta di sangue dimezza le monete');
+  // v1.79.2 — L'OFFERTA DI SANGUE E' STATA TOLTA: dava due vite in cambio di meta' delle monete, e chi
+  // ne aveva poche le prendeva quasi gratis. Non deve esistere piu' da nessuna parte.
+  assert(!room.darkWaresPool().some(w => w.kind === 'blood_coin'), 'l offerta di sangue non e piu nel catalogo del Mercante Errante');
+  p.coins = 200; const lv0 = p.lives;
+  room.darkMerchant.wares[1] = { id: 'blood_coin', name: 'x', cost: 40, kind: 'blood_coin' };
+  room.buyDark('b', 'blood_coin');
+  assert(p.lives === lv0, 'e nemmeno costruendo l offerta a mano si comprano vite');
   // prossimita invia offerta dark
   sent.length = 0; p._nearDark = false; p.x = room.darkMerchant.x; p.y = room.darkMerchant.y; room.updateDarkMerchant(dt);
   assert(sent.some(m => m.t === C.MSG.OFFER_MERCHANT && m.dark && m.near), 'avvicinandosi arriva l\'offerta del mercante nero');
@@ -504,9 +502,10 @@ function testV142() {
   assert(br && br.ai === 'brute' && br.atk === 'melee', 'Bruto ha IA brute (slam) da mischia');
   assert(br && br.hp >= 180 && br.speed <= 80 && br.dmg >= 20, 'Bruto e un TANK: molti PV, lento, danno alto');
   assert(br && br.slamRadius > 0, 'Bruto ha un raggio di SLAM ad area');
-  assert(Mon.ORDER.includes('cave_brute'), 'cave_brute e presente nell\'ORDER del bestiario');
-  // v1.50 — il Troll entra nel pool dall'ondata 4 (la comparsa dal primo stage era temporanea)
-  assert(Waves.poolForWave(4).some(x => x.id === 'cave_brute'), 'Troll nel pool dall ondata 4');
+  // v1.79.2 — IL TROLL E' USCITO DAL GIOCO. La definizione resta (sprite-sheet, slam, IA) e si puo'
+  // ancora generare a mano — i controlli qui sotto lo fanno — ma non e' nel bestiario ne' in nessuna ondata.
+  assert(!Mon.ORDER.includes('cave_brute'), 'cave_brute non e piu nell ORDER del bestiario');
+  for (let w = 1; w <= 20; w++) assert(!Waves.poolForWave(w).some(x => x.id === 'cave_brute'), 'e non compare in nessuna ondata (ondata ' + w + ')');
   // si genera e lo slam colpisce ad area emettendo l'evento con eid (per l'animazione client)
   const room = new Room('v142'); const pl = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   const m = room.spawnMonster('cave_brute', pl.x + 40, pl.y, { scaling: Waves.scaling(4, 1) });
@@ -588,7 +587,7 @@ function testV149() {
   const oc = Mon.MONSTERS.occhio;
   assert(!!oc, 'il Beholder (occhio) esiste nel roster');
   assert(oc && oc.ai === 'gazer' && oc.atk === 'gaze', 'Beholder usa IA gazer (Sguardo, niente proiettili)');
-  assert(oc && oc.puppet && oc.shape === 'beholder', 'Beholder reso col RENDER PUPPET raster (shape beholder)');
+  assert(oc && oc.dipinto === 'viola' && !oc.puppet, 'v1.79.2 — il Beholder e DIPINTO a codice, non piu una marionetta raster');
   assert(oc && oc.gazeFov > 0 && oc.gazeRange > 0, 'ha un campo visivo (gazeFov + gazeRange)');
   assert(oc && oc.gazeCycle > 0, 'le eyestalks RUOTANO: alterna il tipo di sguardo (gazeCycle)');
   assert(Mon.ORDER.indexOf('occhio') >= 0, 'occhio presente nell ORDER del bestiario');
@@ -619,8 +618,8 @@ function testV151() {
   // --- 1) si sceglie 1 di 3 ---
   assert(Loot.BOON_CHOICES === 4, 'la costante di offerta e 4 abilita');
   // --- 2) dieci poteri nuovi, tutti applicabili ---
-  const NEW = ['crowbar', 'longshot', 'killstep', 'retaliate', 'aegis', 'corpseblast', 'execute', 'echo', 'defiance'];
-  assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i poteri della v1.51 sono ancora nel catalogo');
+  const NEW = ['longshot', 'killstep', 'retaliate', 'corpseblast', 'execute', 'defiance'];
+  assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i poteri storici rimasti sono nel catalogo');
   assert(Loot.BOONS.length === 32, 'catalogo a 32 abilita: ' + Loot.BOONS.length);
   assert(NEW.every(id => { const b = Loot.BOON_BY_ID[id]; return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon; }), 'ogni nuovo potere ha icona, descrizione, max e apply');
   assert(new Set(Loot.BOONS.map(b => b.id)).size === Loot.BOONS.length, 'nessun id di potere duplicato');
@@ -677,12 +676,13 @@ function testV150() {
   assert(p1.length === 1 && p1[0] === 'skeleton', 'ondata 1: solo lo sciame base (Zombie Putrido)');
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
-  assert(!at(3).includes('cave_brute') && at(4).includes('cave_brute'), 'Troll introdotto all ondata 4');
-  assert(!at(5).includes('bat_swarm') && at(6).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 6');
-  assert(!at(7).includes('wisp') && at(8).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 8');
-  assert(!at(9).includes('occhio') && at(10).includes('occhio'), 'Beholder introdotto all ondata 10');
-  // v1.61.1 — la rampa non salta piu' nessuna ondata da 1 a 8: un archetipo nuovo per ondata.
-  for (let w = 1; w <= 8; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
+  // v1.79.2 — tolto il Troll, gli archetipi dietro di lui si sono fatti avanti di un'ondata.
+  assert(!at(3).includes('spore_fungus') && at(4).includes('spore_fungus'), 'Fungo introdotto all ondata 4');
+  assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 5');
+  assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 7');
+  assert(!at(8).includes('occhio') && at(9).includes('occhio'), 'Beholder introdotto all ondata 9');
+  // la rampa non salta nessuna ondata da 1 a 7: un archetipo nuovo per ondata.
+  for (let w = 1; w <= 7; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -992,8 +992,8 @@ function testV158() {
   // ---------- BEHOLDER: tardi e col tetto ----------
   const oc = Mon.MONSTERS.occhio;
   assert(oc.maxAlive === 8, 'il Beholder ha un tetto di 8 presenze contemporanee');
-  assert(!Waves.poolForWave(9).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 10');
-  assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 10');
+  assert(!Waves.poolForWave(8).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 9');
+  assert(Waves.poolForWave(9).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 9');
   const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'ladro'); r4.startGame();
   r4.pending = 0; r4.waveList = []; r4.monsters.length = 0;
   for (let i = 0; i < 12; i++) { const t = r4._capType('occhio'); const pos = r4.randomSpawnPos();
@@ -1004,8 +1004,8 @@ function testV158() {
 
   // ---------- la rampa resta monotona e ordinata ----------
   const at2 = w => Waves.poolForWave(w).map(x => x.id);
-  assert(!at2(4).includes('spore_fungus') && at2(5).includes('spore_fungus'), 'Fungo introdotto all ondata 5');
-  assert(!at2(6).includes('bone_roller') && at2(7).includes('bone_roller'), 'Sfera d\'Ossa introdotta all ondata 7');
+  assert(!at2(3).includes('spore_fungus') && at2(4).includes('spore_fungus'), 'Fungo introdotto all ondata 4');
+  assert(!at2(5).includes('bone_roller') && at2(6).includes('bone_roller'), 'Sfera d\'Ossa introdotta all ondata 6');
   let mono2 = true; for (let w = 1; w < 20; w++) { const a = at2(w), b = at2(w + 1); if (!a.every(id => b.includes(id))) mono2 = false; }
   assert(mono2, 'la rampa resta monotona con i nemici nuovi');
   // niente NaN con tutti i nuovi in campo
@@ -1401,8 +1401,8 @@ function testV161() {
   // Il Fuoco Fatuo sta dopo, perche' toglie una risposta che a quel punto il giocatore ha gia imparato:
   // mettersi al riparo. Arrivare prima sarebbe una regola tolta prima di averla insegnata.
   const at = w => Waves.poolForWave(w).map(x => x.id);
-  assert(!at(5).includes('bat_swarm') && at(6).includes('bat_swarm'), 'il Nugolo entra dall ondata 6');
-  assert(!at(7).includes('wisp') && at(8).includes('wisp'), 'il Fuoco Fatuo entra dall ondata 8');
+  assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'il Nugolo entra dall ondata 5');
+  assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'il Fuoco Fatuo entra dall ondata 7');
   assert(!at(1).includes('bat_swarm') && !at(1).includes('wisp'), 'nessuno dei due e piu nell ondata 1');
   const wBat = Waves.poolForWave(6).find(x => x.id === 'bat_swarm').weight;
   const wWisp = Waves.poolForWave(8).find(x => x.id === 'wisp').weight;
@@ -1531,7 +1531,7 @@ function testV160() {
   assert(man.blend > 0, 'e dichiarata la dissolvenza fra animazioni');
 
   // BEHOLDER dall ondata 10
-  assert(!Waves.poolForWave(9).some(x => x.id === 'occhio'), 'niente Beholder alla 9');
+  assert(!Waves.poolForWave(8).some(x => x.id === 'occhio'), 'niente Beholder alla 8');
   assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder dalla 10');
   assert(Mon.MONSTERS.occhio.maxAlive === 8, 'il tetto di 8 presenze resta');
   ok('novita v1.60 verificate');
@@ -1711,7 +1711,7 @@ function testV167() {
 function testV168() {
   console.log('\n[TEST 38] Novita v1.68 — tetto a 30 vivi con coda, e snapshot magro');
   // --- 1) il tetto e' 30 e l'ondata NON perde nessuno: gli altri restano in coda ---
-  assert(C.MAX_ALIVE === 30, 'il tetto dei nemici vivi e 30');
+  assert(C.MAX_ALIVE === 40, 'il tetto dei nemici vivi e 40');
   const room = new Room('v168'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.wave = 17; room.mode = Waves.modeForWave(17); room.phase = C.PHASE_COMBAT;
   const w = Waves.buildWave(20, 6, room.mode);      // ondata volutamente enorme: 80+ nemici
@@ -1847,22 +1847,25 @@ function testV169() {
 function testV170() {
   console.log('\n[TEST 40] Novita v1.70 — tetto progressivo, XP da piu fonti, LEVEL UP');
   const Lv = require('../shared/levels.js');
-  // --- 1) il tetto dei nemici e' una CURVA, non un numero ---
+  // --- 1) v1.79.2 — IL TETTO E' UNO SOLO, ALTO, UGUALE A OGNI ONDATA ---
+  // Prima era una curva (8 alla prima ondata, 30 dalla decima): teneva in coda meta' dell'ondata proprio
+  // dove serviva vedere che i nemici erano aumentati.
   const room = new Room('v170'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
-  const attesi = [8, 10, 12, 14, 16, 18, 21, 23, 26, 30];
-  for (let w = 1; w <= 10; w++) { room.wave = w; assert(room.tettoVivi() === attesi[w - 1], 'ondata ' + w + ': il tetto e ' + attesi[w - 1] + ' (letto ' + room.tettoVivi() + ')'); }
-  room.wave = 11; assert(room.tettoVivi() === C.MAX_ALIVE, 'dalla 10ª in poi resta il tetto massimo');
-  room.wave = 30; assert(room.tettoVivi() === C.MAX_ALIVE, 'e non lo supera mai');
-  let cresce = true; for (let w = 2; w <= 10; w++) { room.wave = w; const a = room.tettoVivi(); room.wave = w - 1; if (a <= room.tettoVivi()) cresce = false; }
-  assert(cresce, 'la curva cresce a ogni ondata');
-  // --- 2) alla terza ondata NON si arriva a 30 vivi ---
+  assert(C.MAX_ALIVE === 40, 'il tetto dei nemici vivi e 40');
+  for (const w of [1, 2, 5, 10, 19, 30]) { room.wave = w; assert(room.tettoVivi() === 40, 'ondata ' + w + ': il tetto e 40 (letto ' + room.tettoVivi() + ')'); }
+  // e in singolo NESSUNA ondata supera il tetto: si vedono tutti, sempre
+  for (let w = 1; w <= 19; w++) if (!Waves.isBossWave(w))
+    assert(Waves.scaling(w, 1).count <= C.MAX_ALIVE, 'ondata ' + w + ' in singolo ci sta tutta in campo (' + Waves.scaling(w, 1).count + ')');
+  // --- 2) in GRUPPO le ondate crescono e l eccesso resta in coda, senza perdere nessuno ---
   const r2 = new Room('v170b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
-  r2.wave = 3; r2.mode = Waves.modeForWave(3); r2.phase = C.PHASE_COMBAT;
-  const w3 = Waves.buildWave(3, 6, r2.mode); r2.waveList = w3.list; r2.waveScaling = w3.scaling; r2.pending = w3.list.length; r2._peakAlive = 0;
+  r2.wave = 12; r2.mode = Waves.modeForWave(12); r2.phase = C.PHASE_COMBAT;
+  const w3 = Waves.buildWave(12, 6, r2.mode); r2.waveList = w3.list; r2.waveScaling = w3.scaling; r2.pending = w3.list.length; r2._peakAlive = 0;
+  assert(w3.list.length > C.MAX_ALIVE, 'in sei, l ondata 12 ha piu nemici del tetto (' + w3.list.length + ')');
   const dt = 1 / C.TICK_RATE; let picco = 0;
   for (let i = 0; i < C.TICK_RATE * 45; i++) { q.hp = r2.effMaxHp(q); q.down = false; q.dead = false; r2.update(dt); let vivi = 0; for (const m of r2.monsters) if (!m.dead) vivi++; picco = Math.max(picco, vivi); }
-  assert(picco <= 12, 'alla terza ondata non se ne vedono mai piu di 12 (picco ' + picco + ')');
-  assert(picco >= 8, 'ma l arena si riempie comunque (picco ' + picco + ')');
+  assert(picco <= C.MAX_ALIVE, 'in campo non se ne vedono mai piu di 40 (picco ' + picco + ')');
+  assert(picco >= 20, 'ma l arena si riempie davvero (picco ' + picco + ')');
+  assert(r2.pending > 0 || r2.monsters.length > 0, 'e quelli in eccesso restano in coda, non spariscono');
   // --- 3) l esperienza arriva da piu fonti ---
   const r3 = new Room('v170c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'mago'); r3.startGame();
   r3.wave = 4;
@@ -2997,26 +3000,27 @@ function testV179() {
   // --- 8) I VALORI NUOVI delle passive, quelli che il motore legge davvero ---
   const r8 = new Room('v179g'); const m8 = r8.addPlayer('a', conn(), 'A', 'mago'); r8.startGame(); r8.phase = C.PHASE_SHOP;
   const prendi = (id) => { m8.boonOffer = [id]; r8.pickBoon('a', id); };
-  const hp0 = r8.effMaxHp(m8); prendi('overheal');
-  assert(r8.effMaxHp(m8) === Math.round(hp0 * 1.25), 'Scudo Vitale alza i PV del 25% (percentuale, non cifra fissa)');
+  // v1.79.2 — Scudo Vitale non alza piu' i PV ne' rigenera: da' resistenza, e basta.
+  const dr0 = m8.stats.dmgReduce; prendi('overheal');
+  assert(Math.abs(m8.stats.dmgReduce - (dr0 + 0.05)) < 1e-9, 'Scudo Vitale da -5% ai danni subiti');
+  assert(m8.stats.regen === 0, 'e non rigenera piu un solo PV');
   prendi('chain'); assert(m8.boon.chain === 2, 'Catena di Fulmini: due rimbalzi');
-  prendi('echo'); assert(m8.boon.echo === 2, 'Eco Arcana: il doppio delle repliche');
-  prendi('implode'); assert(m8.boon.implodeEvery === 5, 'Implosione: una bolla ogni cinque');
-  // e l'implosione fa davvero quello che dice
-  r8.phase = C.PHASE_COMBAT;
-  const bersagli = []; for (let i = 0; i < 4; i++) bersagli.push(r8.spawnMonster('skeleton', m8.x + 100 + i * 25, m8.y + 60, { scaling: Waves.scaling(2, 1) }));
-  const cx = m8.x + 140, cy = m8.y + 60;
-  const prima = bersagli.map(b => MU.dist(b.x, b.y, cx, cy));
-  r8._implodeAt(cx, cy, 150, 10, m8);
-  const dopo = bersagli.map(b => MU.dist(b.x, b.y, cx, cy));
-  assert(dopo.every((d, i) => d <= prima[i] + 0.01), 'l implosione tira i nemici verso il punto, non li respinge');
-  assert(bersagli.every(b => b.dead || b.stun > 0), 'e li lascia storditi');
-  // i PV percentuali non favoriscono piu' il mago rispetto al guerriero
+  prendi('concentra'); assert(m8.boon.concentra === 0.10, 'Concentrazione: +10% al colpo piazzato');
+  prendi('lentezza'); assert(m8.boon.lentezza === 200, 'Campo di Lentezza: raggio 200');
+  // il campo rallenta davvero i nemici vicini, e non quelli lontani
+  r8.phase = C.PHASE_COMBAT; r8.monsters.length = 0;
+  const vicino = r8.spawnMonster('skeleton', m8.x + 120, m8.y, { scaling: Waves.scaling(2, 1) });
+  const lontano = r8.spawnMonster('skeleton', m8.x + 900, m8.y, { scaling: Waves.scaling(2, 1) });
+  vicino.awake = true; lontano.awake = true;
+  const pv = { x: vicino.x, y: vicino.y }, pl = { x: lontano.x, y: lontano.y };
+  for (let i = 0; i < C.TICK_RATE; i++) r8.update(1 / C.TICK_RATE);
+  const dv = MU.dist(vicino.x, vicino.y, pv.x, pv.y), dl = MU.dist(lontano.x, lontano.y, pl.x, pl.y);
+  assert(dv < dl, 'chi e dentro al campo si muove meno di chi e fuori (' + dv.toFixed(0) + ' contro ' + dl.toFixed(0) + ' px)');
+  // le abilita' che alzano i PV in percentuale restano equilibrate fra classi: lo verifica Colosso,
+  // che e' rimasto percentuale (il guerriero ha 200 PV, il mago 100).
   const rG = new Room('v179h'); const gg = rG.addPlayer('a', conn(), 'A', 'guerriero'); rG.startGame(); rG.phase = C.PHASE_SHOP;
-  const gHp0 = rG.effMaxHp(gg); gg.boonOffer = ['overheal']; rG.pickBoon('a', 'overheal');
-  const guadagnoG = rG.effMaxHp(gg) / gHp0, guadagnoM = r8.effMaxHp(m8) / hp0;
-  assert(Math.abs(guadagnoG - 1.25) < 0.02 && Math.abs(guadagnoM - 1.25) < 0.02,
-    'la stessa abilita vale in proporzione uguale per tutti (guerriero x' + guadagnoG.toFixed(2) + ', mago x' + guadagnoM.toFixed(2) + ')');
+  const gHp0 = rG.effMaxHp(gg); gg.boonOffer = ['juggernaut']; rG.pickBoon('a', 'juggernaut');
+  assert(Math.abs(rG.effMaxHp(gg) / gHp0 - 1.35) < 0.02, 'Colosso alza i PV in proporzione, non in cifra fissa');
 
   ok('impianto v1.79 verificato');
 }
@@ -3037,7 +3041,8 @@ function testV1791() {
   assert(cresce, 'e la curva del numero cresce sempre');
   // il numero di VIVI insieme non cambia: quello lo decide il tetto, non il conteggio dell ondata
   const room = new Room('v1791'); room.addPlayer('a', { send() {} }, 'A', 'ladro'); room.startGame();
-  room.wave = 1; assert(room.tettoVivi() === C.MAX_ALIVE_CURVE[0], 'alla prima ondata il tetto dei vivi e sempre ' + C.MAX_ALIVE_CURVE[0]);
+  // v1.79.2 — e adesso si vedono TUTTI: il tetto (40) sta sopra al numero dell'ondata.
+  room.wave = 1; assert(room.tettoVivi() >= n(1), 'alla prima ondata ci stanno in campo tutti e ' + n(1) + ' i nemici');
 
   // --- 2) L'ESPERIENZA CHE UN ONDATA METTE DAVVERO A TERRA, senza combo ---
   // Questa e' la misura che era stata sbagliata: si conta l'xp dei mostri dell'ondata, punto.
@@ -3069,6 +3074,155 @@ function testV1791() {
   ok('conteggio dei nemici e curva verificati uno contro l altro');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ===================== v1.79.2 — LE PASSIVE RIFATTE ========================================
+// Erano troppo forti e alcune erano doppioni. Qui si verificano una per una quelle nuove, e soprattutto
+// che facciano quello che c'e' scritto sulla carta — che e' la cosa che il giocatore legge.
+function testV1792() {
+  console.log('\n[TEST 54] v1.79.2 — passive ritarate e rifatte');
+  const conn = () => ({ send() {} });
+  const nuova = (eroe, id) => { const r = new Room('p' + id); const p = r.addPlayer('a', conn(), 'A', eroe); r.startGame(); r.phase = C.PHASE_SHOP; p.boonOffer = [id]; r.pickBoon('a', id); return { r, p }; };
+
+  // --- le tarature semplici ---
+  { const { p } = nuova('ladro', 'crit'); assert(Math.abs(p.stats.critChance - (0.03 + 0.10)) < 1e-9, 'Occhio di Falco: +10% critico e basta'); }
+  { const { p } = nuova('ladro', 'executioner'); assert(Math.abs(p.stats.critChance - 0.08) < 1e-9 && Math.abs(p.stats.critMult - 2.30) < 1e-9, 'Giustiziere: +5% critico e +30% danno critico'); }
+  { const { p } = nuova('ladro', 'bulwark'); assert(Math.abs(p.stats.dmgReduce - 0.10) < 1e-9, 'Baluardo: -10%'); }
+  { const { p } = nuova('ladro', 'overheal'); assert(Math.abs(p.stats.dmgReduce - 0.05) < 1e-9 && p.stats.regen === 0, 'Scudo Vitale: -5% e nessuna cura'); }
+  { const { p } = nuova('guerriero', 'heavyarm'); assert(Math.abs(p.stats.dmgMult - 1.08) < 1e-9 && !p.perk.arcoPiu, 'Arma Pesante: +8% danno, niente altro'); }
+
+  // --- TOSSINA: una quota del colpo, non un numero fisso ---
+  { const { r, p } = nuova('mago', 'poison');
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
+    const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(3, 1) }); m.hp = m.maxHp = 5000;
+    r.damageMonster(m, 200, p.x, p.y, 0, p, { poison: Math.round(200 * 0.05) });
+    assert(m.poison === 10, 'il veleno vale il 5% del colpo (' + m.poison + ' su 200)');
+    const hp0 = m.hp; for (let i = 0; i < C.TICK_RATE * 2; i++) r.update(1 / C.TICK_RATE);
+    assert(m.hp < hp0, 'e fa danno nel tempo (' + (hp0 - m.hp) + ' in due secondi)'); }
+
+  // --- GUERRIERO: Colpo Ampio, piu' nemici piu' male, col tetto ---
+  { const { r, p } = nuova('guerriero', 'ampio');
+    assert(p.boon.ampio === 0.05, 'Colpo Ampio applicato');
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
+    const solo = r.spawnMonster('skeleton', p.x + 50, p.y, { scaling: Waves.scaling(2, 1) }); solo.hp = solo.maxHp = 9000;
+    p.aim = 0; p.fireCd = 0; solo.x = p.x + 50; solo.y = p.y;
+    let hp0 = solo.hp; r._meleeSwing(p, r.effWeapon(p), 100, false); const danno1 = hp0 - solo.hp;
+    // gli altri tre vanno messi PIU LONTANI, se no uno di loro diventa il bersaglio piu vicino e quello
+    // che misuriamo passa a prendere lo splash: misureremmo l ordine dei bersagli, non il bonus.
+    for (let i = 0; i < 3; i++) { const m = r.spawnMonster('skeleton', p.x + 72 + i * 6, p.y + 10 + i * 8, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000; }
+    // il primo fendente lo ha respinto: va rimesso davanti, se no il piu vicino diventa un altro
+    solo.x = p.x + 50; solo.y = p.y;
+    hp0 = solo.hp; r._meleeSwing(p, r.effWeapon(p), 100, false); const danno4 = hp0 - solo.hp;
+    assert(danno4 > danno1, 'colpendone quattro il fendente fa piu male che colpendone uno (' + danno1 + ' -> ' + danno4 + ')');
+    assert(danno4 <= Math.round(danno1 * 1.15) + 1, 'ma non oltre il +15% (' + danno4 + ')'); }
+
+  // --- MAGO: Concentrazione si carica da fermo e si consuma ---
+  { const { r, p } = nuova('mago', 'concentra');
+    r.phase = C.PHASE_COMBAT; p.input.mx = 0; p.input.my = 0;
+    for (let i = 0; i < C.TICK_RATE; i++) r.update(1 / C.TICK_RATE);
+    assert(p.fermoT >= 0.5, 'stando fermo la concentrazione si carica (' + p.fermoT.toFixed(2) + 's)');
+    r.bullets.length = 0; p.fireCd = 0; r.firePlayerWeapon(p);
+    const carico = r.bullets.find(x => !x.hostile);
+    assert(p.fermoT === 0, 'e il colpo la consuma');
+    r.bullets.length = 0; p.fireCd = 0; r.firePlayerWeapon(p);
+    const scarico = r.bullets.find(x => !x.hostile);
+    assert(carico && scarico && carico.dmg > scarico.dmg, 'il colpo piazzato fa piu male del successivo (' + carico.dmg + ' > ' + scarico.dmg + ')'); }
+
+  // --- LADRO: Colpo alle Spalle, Lama Sporca, Passo d Ombra, Punto Vitale, Uscita di Scena ---
+  { const { r, p } = nuova('ladro', 'spalle');
+    assert(p.perk.spalle === 0.20, 'Colpo alle Spalle: +20%');
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
+    const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000;
+    m.facing = 0; let hp0 = m.hp; r.damageMonster(m, 100, m.x + 50, m.y, 0, p, {}); const davanti = hp0 - m.hp;
+    hp0 = m.hp; r.damageMonster(m, 100, m.x - 50, m.y, 0, p, {}); const dietro = hp0 - m.hp;
+    assert(dietro > davanti, 'da dietro fa piu male (' + dietro + ' contro ' + davanti + ')'); }
+  { const { r, p } = nuova('ladro', 'lamasporca');
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
+    const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000;
+    r.damageMonster(m, 100, p.x, p.y, 0, p, { crit: false });
+    assert(!m.bleedT, 'un colpo normale non fa sanguinare');
+    r.damageMonster(m, 100, p.x, p.y, 0, p, { crit: true });
+    assert(m.bleedT > 0 && m.bleed > 0, 'un critico apre l emorragia (' + m.bleed + '/mezzo secondo)'); }
+  { const { r, p } = nuova('ladro', 'ombra');
+    r.phase = C.PHASE_COMBAT; p.cdDash = 0; r.useDash(p);
+    assert(p.ombraT > 0, 'lo scatto apre la finestra del critico'); }
+  { const { r, p } = nuova('ladro', 'puntovitale');
+    assert(p.boon.critOgni === 5, 'Punto Vitale: un critico ogni cinque colpi');
+    r.phase = C.PHASE_COMBAT; r.bullets.length = 0;
+    let critici = 0;
+    for (let k = 0; k < 10; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); const b = r.bullets.find(x => !x.hostile); if (b && b.crit) critici++; }
+    assert(critici >= 2, 'su dieci colpi almeno due sono critici garantiti (' + critici + ')'); }
+  { const { r, p } = nuova('ladro', 'scomparsa');
+    r.phase = C.PHASE_COMBAT; p.hp = Math.round(r.effMaxHp(p) * 0.35); p.buffs = {};
+    r.damagePlayer(p, Math.round(r.effMaxHp(p) * 0.10), p.x + 30, p.y, 0);
+    assert(p.buffs.hidden > 0, 'sotto il 30% dei PV si sparisce dalla vista');
+    assert(p.scomparsaCd > 0, 'e parte la ricarica');
+    const cd = p.scomparsaCd; p.buffs.hidden = 0;
+    r.damagePlayer(p, 5, p.x + 30, p.y, 0);
+    assert(!p.buffs.hidden, 'e non si ripete finche la ricarica non e finita'); }
+
+  // --- LE SINERGIE puntano tutte ad abilita che esistono ---
+  for (const sy of Loot.SYNERGIES) {
+    const ab = sy.need.map(id => Loot.BOON_BY_ID[id]);
+    assert(ab.every(Boolean), 'la sinergia ' + sy.name + ' punta ad abilita esistenti (' + sy.need.join(' + ') + ')');
+    const classi = new Set(ab.map(b => b.hero).filter(h => h !== '*'));
+    assert(classi.size <= 1, 'ed e raggiungibile da una classe sola (' + sy.name + ')');
+  }
+  ok('passive rifatte verificate');
+}
+
+// ===================== v1.79.2 — I TRE BEHOLDER =============================================
+// Erano uno solo, dipinto come una marionetta, e soprattutto NON ATTACCAVANO: si poteva restare davanti
+// a un Beholder tutto il giorno e non succedeva niente. Adesso sono tre, dipinti a codice, e mordono.
+function testBeholder179() {
+  console.log('\n[TEST 55] v1.79.2 — i tre Beholder: dipinti, e adesso attaccano');
+  const Mon = require('../shared/monsters.js');
+  const TRE = ['occhio', 'occhio_carne', 'occhio_spettro'];
+  // --- 1) la famiglia ---
+  for (const id of TRE) {
+    const d = Mon.MONSTERS[id];
+    assert(!!d, 'esiste ' + id);
+    assert(d.ai === 'gazer' && d.beholder, id + ': stessa IA e stessa famiglia');
+    assert(d.dipinto && !d.puppet, id + ': dipinto a codice, niente marionetta');
+    assert(d.gazeDmg > 0 && d.biteRange > 0, id + ': ha il raggio che fa danno E il morso');
+    assert(Mon.ORDER.includes(id), id + ': e nel bestiario');
+  }
+  const [A, B, Cc] = TRE.map(id => Mon.MONSTERS[id]);
+  assert(A.hp < B.hp && B.hp < Cc.hp, 'la scala di pericolo cresce: viola < carne < spettrale (' + A.hp + ' < ' + B.hp + ' < ' + Cc.hp + ')');
+  assert(A.dmg < B.dmg && B.dmg < Cc.dmg, 'e anche il danno');
+  assert(A.xp < B.xp && B.xp < Cc.xp, 'e l esperienza che valgono');
+  // --- 2) entrano in ondate diverse, uno per volta ---
+  const at = w => Waves.poolForWave(w).map(x => x.id);
+  assert(!at(8).includes('occhio') && at(9).includes('occhio'), 'il Viola entra alla 9');
+  assert(!at(11).includes('occhio_carne') && at(12).includes('occhio_carne'), 'quello di Carne alla 12');
+  assert(!at(14).includes('occhio_spettro') && at(15).includes('occhio_spettro'), 'lo Spettrale alla 15');
+  // --- 3) IL RAGGIO FA MALE ---
+  const room = new Room('beh179'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
+  room.phase = C.PHASE_COMBAT; room.monsters.length = 0;
+  const spot = losSpot(room, p, 220);
+  const occ = room.spawnMonster('occhio', spot.x, spot.y, { scaling: Waves.scaling(9, 1) });
+  occ.awake = true; occ.facing = Math.atan2(p.y - occ.y, p.x - occ.x); occ.gazeKind = 'weaken';
+  p.hp = room.effMaxHp(p); const hp0 = p.hp; p.buffs = {};
+  for (let i = 0; i < C.TICK_RATE * 3; i++) { p.input = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }; room.update(1 / C.TICK_RATE); if (p.hp < hp0) break; }
+  assert(p.hp < hp0, 'restare nel raggio costa vita (' + (hp0 - p.hp) + ' danni)');
+  // --- 4) DA VICINO MORDE, e smette di guardare ---
+  const r2 = new Room('beh179b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'guerriero'); r2.startGame();
+  r2.phase = C.PHASE_COMBAT; r2.monsters.length = 0;
+  const occ2 = r2.spawnMonster('occhio_carne', q.x + 60, q.y, { scaling: Waves.scaling(12, 1) });
+  occ2.awake = true; occ2.atkT = 0;
+  q.hp = r2.effMaxHp(q); const hq0 = q.hp; q.buffs = {};
+  let morso = false;
+  for (let i = 0; i < C.TICK_RATE * 3; i++) {
+    occ2.x = q.x + 60; occ2.y = q.y;   // lo si tiene addosso: si misura il morso, non l inseguimento
+    q.input = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false };
+    r2.update(1 / C.TICK_RATE);
+    if (r2.events.some(e => e.t === 'bite')) morso = true;
+    if (morso && q.hp < hq0) break;
+  }
+  assert(morso, 'sotto la distanza ravvicinata azzanna');
+  assert(q.hp < hq0, 'e il morso fa danno (' + (hq0 - q.hp) + ')');
+  assert(!occ2.gazeActive, 'mentre morde non sta guardando: una cosa alla volta');
+  ok('i tre Beholder verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

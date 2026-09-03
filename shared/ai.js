@@ -170,12 +170,24 @@
       const fov = m.def.gazeFov || 0.6;
       const ang = Math.atan2(p.y - m.y, p.x - m.x);
       let diff = Math.abs(((ang - m.facing + Math.PI) % (Math.PI * 2)) - Math.PI);
+      // v1.79.2 — MORSO: sotto la distanza ravvicinata il Beholder smette di guardare e attacca. Un
+      // nemico che ti debilita ma non ti tocca mai non e' una minaccia: e' un fastidio.
+      const morso = m.def.biteRange || 90;
+      if (d <= morso + p.radius) {
+        m.gazeActive = 0;
+        m.atkT = (m.atkT || 0);
+        if (m.atkT <= 0) { m.atkT = m.def.biteCd || 1.2; ctx.melee(m, p, Math.round((m.dmg || m.def.dmg) * (m.def.biteMul || 1.4)), 1.2); ctx.emit({ t: 'bite', x: m.x, y: m.y, tx: p.x, ty: p.y, c: m.def.eye }); }
+        return;
+      }
       const inView = d <= range && diff <= fov && ctx.losClear(m.x, m.y, p.x, p.y);
       if (inView) {
         if (!m.gazeKind) m.gazeKind = ['weaken', 'slow', 'sunder'][(Math.random() * 3) | 0];
         m.gazeActive = 1; m.gazeTx = p.x; m.gazeTy = p.y;
         m.gazeTick = (m.gazeTick || 0) - ctx.dt;
-        if (m.gazeTick <= 0) { m.gazeTick = ctx.GAZE_TICK || 0.4; ctx.gaze(m, p, m.gazeKind); }
+        if (m.gazeTick <= 0) { m.gazeTick = ctx.GAZE_TICK || 0.4; ctx.gaze(m, p, m.gazeKind);
+          // il raggio non e' piu' solo un debuff: consuma vita finche' resti esposto
+          if (ctx.gazeHit && m.def.gazeDmg) ctx.gazeHit(m, p, Math.max(1, Math.round((m.dmg || m.def.dmg) * m.def.gazeDmg)));
+        }
       } else { m.gazeActive = 0; }
     },
     // v1.58 — SENTINELLA (Fungo Sporifero): non si muove MAI. Nessun ciclo di camminata da animare, e in

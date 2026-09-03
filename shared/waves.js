@@ -35,15 +35,20 @@
   // rimaste nel codice appiattendo la rampa di difficolta'.
   function poolForWave(w) {
     const p = []; const add = (id, x) => { if (MONSTERS[id]) p.push({ id, weight: x }); };
+    // v1.79.2 — IL TROLL DELLE CAVERNE E' USCITO dal pool. Era il tank con lo slam ad area
+    // dall'ondata 4: tolto per scelta. Gli archetipi che venivano dopo si fanno avanti di un'ondata
+    // ciascuno, cosi' la rampa non lascia un buco dove c'era lui e ogni ondata continua a portare
+    // qualcosa di nuovo. La definizione resta in monsters.js ma non e' piu' raggiungibile da qui.
     add('skeleton', 40);                  // sciame mischia — sempre presente
     if (w >= 2) add('slime', 16);         // blob acido, si divide alla morte
     if (w >= 3) add('darkmage', 12);      // caster / evocatore
-    if (w >= 4) add('cave_brute', 8);     // tank con slam ad area
-    if (w >= 5) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
-    if (w >= 6) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro
-    if (w >= 7) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
-    if (w >= 8) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta
-    if (w >= 10) add('occhio', 9);        // debuffer tier 3, dal secondo boss, col tetto di 8 vivi (def.maxAlive)
+    if (w >= 4) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
+    if (w >= 5) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro
+    if (w >= 6) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
+    if (w >= 7) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta
+    if (w >= 9) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi
+    if (w >= 12) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino
+    if (w >= 15) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo
     return p;
   }
 
