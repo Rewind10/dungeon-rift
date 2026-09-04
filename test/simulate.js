@@ -3009,13 +3009,19 @@ function testV179() {
   prendi('lentezza'); assert(m8.boon.lentezza === 200, 'Campo di Lentezza: raggio 200');
   // il campo rallenta davvero i nemici vicini, e non quelli lontani
   r8.phase = C.PHASE_COMBAT; r8.monsters.length = 0;
-  const vicino = r8.spawnMonster('skeleton', m8.x + 120, m8.y, { scaling: Waves.scaling(2, 1) });
-  const lontano = r8.spawnMonster('skeleton', m8.x + 900, m8.y, { scaling: Waves.scaling(2, 1) });
-  vicino.awake = true; lontano.awake = true;
-  const pv = { x: vicino.x, y: vicino.y }, pl = { x: lontano.x, y: lontano.y };
+  // v1.80 — si misura LO STESSO nemico, dallo STESSO punto, col campo acceso e col campo spento. Prima
+  // il confronto era fra un nemico vicino e uno a 900 px: reggeva solo perche' i lontani correvano di
+  // piu' (il recupero di distanza, spento nella v1.80), e senza quello il test diventava un lancio di dadi.
+  const dentro = r8.spawnMonster('skeleton', m8.x + 120, m8.y, { scaling: Waves.scaling(2, 1) });
+  dentro.awake = true; dentro.impegnato = 1;
+  const p0 = { x: dentro.x, y: dentro.y };
   for (let i = 0; i < C.TICK_RATE; i++) r8.update(1 / C.TICK_RATE);
-  const dv = MU.dist(vicino.x, vicino.y, pv.x, pv.y), dl = MU.dist(lontano.x, lontano.y, pl.x, pl.y);
-  assert(dv < dl, 'chi e dentro al campo si muove meno di chi e fuori (' + dv.toFixed(0) + ' contro ' + dl.toFixed(0) + ' px)');
+  const dLento = MU.dist(dentro.x, dentro.y, p0.x, p0.y);
+  dentro.x = p0.x; dentro.y = p0.y; m8.boon.lentezza = 0;   // stesso punto, campo spento
+  for (let i = 0; i < C.TICK_RATE; i++) r8.update(1 / C.TICK_RATE);
+  const dPieno = MU.dist(dentro.x, dentro.y, p0.x, p0.y);
+  m8.boon.lentezza = 200;
+  assert(dLento < dPieno * 0.92, 'dentro al campo lo stesso nemico si muove meno (' + dLento.toFixed(0) + ' contro ' + dPieno.toFixed(0) + ' px in un secondo)');
   // le abilita' che alzano i PV in percentuale restano equilibrate fra classi: lo verifica Colosso,
   // che e' rimasto percentuale (il guerriero ha 200 PV, il mago 100).
   const rG = new Room('v179h'); const gg = rG.addPlayer('a', conn(), 'A', 'guerriero'); rG.startGame(); rG.phase = C.PHASE_SHOP;

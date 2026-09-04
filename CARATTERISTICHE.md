@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.80.0`
+**Versione attuale:** `1.80.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -144,8 +144,25 @@ muro da 0,8 s).
 inseguirti. Il **Fuoco Fatuo** attraversa i muri e va in linea retta, non gli serve il flusso. La **Sfera
 d'Ossa** dalla v1.80 rotola piano verso di te finche' non ti trova, poi si carica e parte.
 
-**Quanto ci mettono ad arrivare** (giocatore fermo, in singolo, nemici entro 620 px sul totale vivo):
-ondata 1 → 12/12 in 20 s; ondata 3 → 25/27 in 15 s; ondata 6 → 32/40 in 20 s.
+### Il tetto alla folla
+
+Cercarti non vuol dire arrivarti addosso tutti insieme. Solo i **`FOLLA_MAX` = 6 piu' vicini** a ciascun
+giocatore hanno il permesso di avvicinarsi; gli altri risalgono fino all'**`ANELLO_ATTESA` = 900 px** e
+li' girano, fuori dallo sguardo. L'assegnazione si rifa' ogni 0,4 s in ordine di distanza, quindi il
+rimpiazzo e' automatico: **uccidi quello che hai addosso e il piu' vicino fra quelli in attesa si avvia.**
+
+| Eccezione | Perche' |
+|---|---|
+| chi ti **vede** | un nemico che ti ha davanti agli occhi e si gira a passeggiare non e' un gioco piu' facile, e' un gioco rotto |
+| chi e' **in mezzo a un'azione** (rotolata, slam, balzo) | interromperla a meta' si vedrebbe |
+| i **boss** e gli **immobili** | non sono folla |
+
+Quando ne restano pochi sono tutti dentro il tetto, e ti cercano tutti: la coda di fine ondata non esiste.
+
+**Quanto ci mettono ad arrivare, e quanti** (giocatore fermo, in singolo, nemici entro 620 px sul totale
+vivo): ondata 1 → 6/12 a 20 s; ondata 3 → 6/15 a 45 s; ondata 6 → 9/20 a 45 s (l'eccedenza sono quelli che
+ti vedono). Il **recupero di distanza** che faceva correre i lontani fino a 2,1x e' **spento** dalla v1.80:
+serviva quando vagavano a caso, adesso farebbe arrivare l'ondata in blocco.
 
 **Non compaiono, arrivano**: la regola della v1.76.1 non e' stata toccata — nessun nemico in vista guadagna
 distanza di scatto, e il recupero anti-stallo sposta solo chi e' davvero bloccato, oltre i 950 px e fuori

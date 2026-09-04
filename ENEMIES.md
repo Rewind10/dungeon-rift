@@ -767,6 +767,13 @@ git tag vX.Y.Z
   vede e 0,95 di chi investiga). Vale per `swarm`, `blob`, `brute`, `flock` e per la `roller` fuori vista.
   `wander` resta come ripiego di `caccia`: nessun giocatore vivo, oppure mostro incastrato (0,8 s di spinta
   senza spostamento → 1,6 s di vagabondaggio, poi riprova). Il `sentry` (Fungo) resta l'unico immobile.
+- **Tetto alla folla (v1.80).** `Room._assegnaFolla()` gira ogni 0,4 s: per ogni giocatore ordina i mostri
+  per distanza e marca `m.impegnato = 1` ai primi `C.FOLLA_MAX` (6), `0` agli altri. In `AI.update()` chi
+  ha `impegnato === 0` non esegue il proprio comportamento ma `attesa(m, ctx)`: oltre `C.ANELLO_ATTESA`
+  (900 px) risale con `caccia(0.6)`, dentro l'anello `wander(0.5)`. Esenti: `def.immobile`, `def.boss`,
+  chi e' a meta' di un'azione (`rolling`/`winding`/`lunge`) e chi vede il giocatore (`vedeIl`, come
+  `perceive` ma senza toccare la memoria). L'anti-stallo di `Room` salta chi sta aspettando il turno: non
+  e' bloccato. Spento anche il recupero di distanza (`cu`, fino a 2,1x oltre 340 px).
 - **Brute FOV-slam:** in vista+gittata avvia `m.winding` (wind-up) ed **emette `slam_wind` (con eid)** per l'anim;
   al `windT ≥ winding*0.62` applica `areaDamage(slamRadius, dmg, colore, slamKnock)` ed **emette `slam`** (FX).
   Def: `sightRange 400, memory 4, slamWind 0.72, slamKnock 4.2, slamRadius 104, atkRange 70`.

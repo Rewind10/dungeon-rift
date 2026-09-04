@@ -2,7 +2,7 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
-### [1.80.0] — 2026-09-04 · "I nemici ti cercano"
+### [1.80.1] — 2026-09-04 · "I nemici ti cercano"
 
 #### 🐾 Chi non ti vede adesso ti CERCA
 Il difetto stava in una riga scritta nella v1.43: il nemico che non ti vedeva sceglieva **un punto a caso
@@ -27,27 +27,57 @@ Cambia anche la **Sfera d'Ossa**: prima, finche' non ti vedeva, restava piantata
 sempre. Adesso rotola piano verso di te finche' non ti trova, e allora si carica e parte. Il **Fungo
 Sporifero** resta immobile: e' il suo mestiere, ed e' l'unico.
 
+#### 👥 Ti cercano, ma non ti seppelliscono
+Alla prima prova cercavano **tutti insieme**: con un giocatore fermo l'intera ondata gli era addosso in
+venti secondi. Non e' difficolta', e' una valanga. Adesso c'e' un tetto: solo i **`FOLLA_MAX` = 6 piu'
+vicini** a ciascun giocatore hanno il permesso di farsi sotto. Gli altri risalgono fino all'**anello
+d'attesa** (900 px, appena fuori dallo sguardo) e li' girano finche' non si libera un posto — e un posto
+si libera **quando ne uccidi uno**: l'ordine e' la distanza, quindi il piu' vicino fra quelli in attesa si
+avvia da solo.
+
+Due eccezioni, e sono la regola non un buco: chi ti **vede** viene addosso comunque (un nemico che ti ha
+davanti agli occhi e si gira a passeggiare sarebbe un gioco rotto, non un gioco piu' facile), e chi e' in
+mezzo a un'azione gia' partita (rotolata, slam, balzo) la finisce.
+
+Quando ne restano pochi sono tutti dentro il tetto: **la coda di fine ondata non esiste piu'**.
+
+#### 🐌 Spento il recupero di distanza
+Chi stava oltre 340 px correva fino a **2,1x** per rientrare. Serviva quando i lontani vagavano a caso;
+adesso che ti cercano tutti faceva arrivare l'ondata in blocco. Spento: chi e' lontano cammina come
+chiunque altro, e l'ondata arriva a scaglioni. Un test verifica che non torni.
+
 #### 📏 Misurato
-Giocatore fermo e invulnerabile, in singolo, nemici entro 620 px sul totale vivo:
+Giocatore fermo e invulnerabile, in singolo, **nemici entro 620 px** sul totale vivo:
 
 | | 5 s | 10 s | 15 s | 20 s | 45 s |
 |---|---|---|---|---|---|
-| ondata 1 | 3/12 | 7/12 | 9/12 | **12/12** | 12/12 |
-| ondata 3 | 1/13 | 12/21 | 25/27 | 29/31 | **31/31** |
-| ondata 6 | 2/15 | 12/24 | 24/32 | 32/40 | **33/40** |
+| ondata 1 | 0/12 | 2/12 | 5/12 | **6**/12 | 6/12 |
+| ondata 3 | 1/15 | 3/15 | 3/15 | 5/15 | **6**/15 |
+| ondata 6 | 1/14 | 4/20 | 6/20 | 6/20 | **9**/20 |
+
+Il numero si assesta sul tetto; l'eccedenza dell'ondata 6 sono quelli che ti vedono (Beholder e maghi
+oscuri tengono la distanza e restano in vista). Verificato anche nel browser: prima erano **12 addosso a
+0:22**, adesso sono **6 a 0:40** e gli altri cinque sono ancora in giro per la mappa.
 
 Prima della modifica i bot dei test restavano **fermi all'ondata 2 dopo 240 s** di partita simulata: non
-perche' fossero forti, ma perche' non trovavano piu' nessuno da uccidere. Adesso le partite simulate
-arrivano all'ondata 2/3/4 (1/3/6 bot) e finiscono.
+perche' fossero forti, ma perche' non trovavano piu' nessuno da uccidere. Adesso le partite finiscono, e
+col tetto alla folla il bot in singolo sopravvive **93 s invece di 43**.
 
 #### 🚫 E non compaiono: arrivano
 La regola della v1.76.1 vale ancora e il suo test e' verde: in 25 secondi di fuga **nessun nemico in vista
 si avvicina di scatto**. Il recupero anti-stallo (mostro davvero bloccato, oltre 640 px, fermo da 5 s) resta
 dov'era e sposta solo fuori dallo sguardo, oltre i 950 px. Test aggiunto ([TEST 56]): uno scheletro messo a
 oltre 700 px **dietro la roccia**, senza linea di vista, arriva addosso al giocatore entro 30 s e ci arriva
-**camminando**, tick per tick.
+**camminando**, tick per tick; dieci nemici sparsi si avvicinano ma **non superano mai il tetto** addosso
+al giocatore; uccidendone tre, tre di quelli in attesa si avviano.
 
-**1281 test passati, 0 falliti.**
+#### 🧪 Un test che era un lancio di dadi
+Il **Campo di Lentezza** si verificava confrontando un nemico dentro al campo con uno a 900 px: reggeva
+solo perche' quello lontano correva di piu' per il recupero di distanza. Spento quello, il test passava a
+seconda del caso. Adesso misura **lo stesso nemico, dallo stesso punto, col campo acceso e col campo
+spento** — e la differenza e' quella dichiarata.
+
+**1286 test passati, 0 falliti.**
 
 ### [1.79.2] — 2026-09-03 · "I nemici si vedono tutti, le passive smettono di essere regali"
 
