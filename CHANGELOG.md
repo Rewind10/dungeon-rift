@@ -2,6 +2,53 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.80.0] — 2026-09-04 · "I nemici ti cercano"
+
+#### 🐾 Chi non ti vede adesso ti CERCA
+Il difetto stava in una riga scritta nella v1.43: il nemico che non ti vedeva sceglieva **un punto a caso
+entro 350 px** e ci camminava. Su una mappa da 64x46 tile questo vuol dire che meta' dell'ondata gira in un
+angolo dove non passerai mai — l'ondata si trascina e tu la vai a raccogliere pezzo per pezzo.
+
+Adesso chi non ti vede segue **lo stesso campo di flusso** dell'inseguimento (ricostruito verso tutti i
+giocatori vivi ogni 0,12 s: e' pathfinding vero, non una linea retta) ma **piu' piano**. Vederti continua a
+contare, perche' chi ti vede corre e chi ti fiuta cammina:
+
+| | velocita' |
+|---|---|
+| ti vede | 1,00 |
+| ha la tua ultima posizione in memoria (*investiga*) | 0,95 |
+| **ti cerca e basta** (nuovo) | **0,68 – 0,90** secondo l'archetipo |
+
+Il vagabondaggio non e' stato cancellato: resta come **ripiego** per i due casi in cui la caccia non porta
+da nessuna parte — nessun giocatore vivo, oppure il mostro e' incastrato e il flusso continua a spingerlo
+contro lo stesso muro (dopo 0,8 s di spinta a vuoto vaga per 1,6 s e riprova).
+
+Cambia anche la **Sfera d'Ossa**: prima, finche' non ti vedeva, restava piantata dov'era ad aspettare per
+sempre. Adesso rotola piano verso di te finche' non ti trova, e allora si carica e parte. Il **Fungo
+Sporifero** resta immobile: e' il suo mestiere, ed e' l'unico.
+
+#### 📏 Misurato
+Giocatore fermo e invulnerabile, in singolo, nemici entro 620 px sul totale vivo:
+
+| | 5 s | 10 s | 15 s | 20 s | 45 s |
+|---|---|---|---|---|---|
+| ondata 1 | 3/12 | 7/12 | 9/12 | **12/12** | 12/12 |
+| ondata 3 | 1/13 | 12/21 | 25/27 | 29/31 | **31/31** |
+| ondata 6 | 2/15 | 12/24 | 24/32 | 32/40 | **33/40** |
+
+Prima della modifica i bot dei test restavano **fermi all'ondata 2 dopo 240 s** di partita simulata: non
+perche' fossero forti, ma perche' non trovavano piu' nessuno da uccidere. Adesso le partite simulate
+arrivano all'ondata 2/3/4 (1/3/6 bot) e finiscono.
+
+#### 🚫 E non compaiono: arrivano
+La regola della v1.76.1 vale ancora e il suo test e' verde: in 25 secondi di fuga **nessun nemico in vista
+si avvicina di scatto**. Il recupero anti-stallo (mostro davvero bloccato, oltre 640 px, fermo da 5 s) resta
+dov'era e sposta solo fuori dallo sguardo, oltre i 950 px. Test aggiunto ([TEST 56]): uno scheletro messo a
+oltre 700 px **dietro la roccia**, senza linea di vista, arriva addosso al giocatore entro 30 s e ci arriva
+**camminando**, tick per tick.
+
+**1281 test passati, 0 falliti.**
+
 ### [1.79.2] — 2026-09-03 · "I nemici si vedono tutti, le passive smettono di essere regali"
 
 #### 👁 I nemici di un'ondata si vedono TUTTI

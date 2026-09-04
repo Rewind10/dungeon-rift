@@ -762,6 +762,11 @@ git tag vX.Y.Z
 - `wander(m, ctx, sm)`: sceglie un bersaglio casuale raggiungibile (`!isWallAt && losClear`), lo raggiunge, ne prende
   uno nuovo a target raggiunto / timer scaduto / **incastro** (poco spostamento reale tra i tick, `_wstuck`).
 - `swarm` (zombie) e `brute` ora fanno: **vede → insegue/attacca**, **memoria → investiga**, **altrimenti → vaga**.
+- ⚠️ **SUPERATO dalla v1.80** — l'ultimo ramo non e' piu' *vaga* ma **cerca**: `caccia(m, ctx, sm)` segue lo
+  stesso campo di flusso di `seek` a velocita' ridotta (0,68-0,90 secondo l'archetipo, contro 1,00 di chi ti
+  vede e 0,95 di chi investiga). Vale per `swarm`, `blob`, `brute`, `flock` e per la `roller` fuori vista.
+  `wander` resta come ripiego di `caccia`: nessun giocatore vivo, oppure mostro incastrato (0,8 s di spinta
+  senza spostamento → 1,6 s di vagabondaggio, poi riprova). Il `sentry` (Fungo) resta l'unico immobile.
 - **Brute FOV-slam:** in vista+gittata avvia `m.winding` (wind-up) ed **emette `slam_wind` (con eid)** per l'anim;
   al `windT ≥ winding*0.62` applica `areaDamage(slamRadius, dmg, colore, slamKnock)` ed **emette `slam`** (FX).
   Def: `sightRange 400, memory 4, slamWind 0.72, slamKnock 4.2, slamRadius 104, atkRange 70`.

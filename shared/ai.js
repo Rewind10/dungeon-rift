@@ -41,6 +41,35 @@
     if (MU.dist(mon.x, mon.y, mon.lkx, mon.lky) < 44) { mon.seeT = 0; return false; }
     seek(mon, ctx, 0.95); return true;
   }
+  // v1.80 — CACCIA: il nemico che non ti vede non vaga piu' a caso, ti CERCA. Segue lo stesso campo di
+  // flusso dell'inseguimento (ricostruito verso tutti i giocatori ogni 0.12 s) ma a velocita' ridotta:
+  // vederti conta ancora, perche' chi ti vede corre e chi ti fiuta cammina. Su una mappa grande questo
+  // e' l'unica cosa che tiene insieme l'ondata: senza, meta' dei mostri gira in un angolo che non vedrai
+  // mai. Il vagabondaggio resta come RIPIEGO per i due casi in cui la caccia non porta da nessuna parte:
+  // nessun giocatore vivo, oppure il mostro e' incastrato e il flusso continua a spingerlo contro il muro.
+  function caccia(mon, ctx, sm = 0.75) {
+    if (mon._cacciaBlk > 0) { mon._cacciaBlk -= ctx.dt; wander(mon, ctx, sm); return; }
+    if (mon._cpx != null && (Math.abs(mon.mx) + Math.abs(mon.my)) > 1 && MU.dist(mon.x, mon.y, mon._cpx, mon._cpy) < 0.6) mon._cstuck = (mon._cstuck || 0) + ctx.dt; else mon._cstuck = 0;
+    mon._cpx = mon.x; mon._cpy = mon.y;
+    if (mon._cstuck > 0.8) { mon._cstuck = 0; mon._cacciaBlk = 1.6; mon.wx = null; wander(mon, ctx, sm); return; }
+    if (!ctx.nearest(mon)) { wander(mon, ctx, sm); return; }
+    seek(mon, ctx, sm);
+  }
+  // v1.80 — ATTESA: chi e' oltre il tetto della folla non sparisce dall'altra parte della mappa e non
+  // ti viene addosso: risale fino all'anello e li' gira. Resta a portata di richiamo — appena si libera
+  // un posto e' a pochi secondi da te — ma sta fuori dallo sguardo.
+  function attesa(mon, ctx) {
+    const p = ctx.nearest(mon);
+    if (p && MU.dist(mon.x, mon.y, p.x, p.y) > (ctx.ANELLO || 900)) { caccia(mon, ctx, 0.6); return; }
+    wander(mon, ctx, 0.5);
+  }
+  // Vede il giocatore? Come perceive, ma senza toccare la memoria: serve solo a decidere se uno che
+  // sta aspettando il turno puo' restare fermo. Chi ti ha in vista non aspetta niente.
+  function vedeIl(mon, ctx) {
+    const p = ctx.nearest(mon); if (!p) return false;
+    const r = mon.def.sightRange || mon.def.gazeRange || mon.def.atkRange || 560;
+    return MU.dist(mon.x, mon.y, p.x, p.y) <= r && ctx.losClear(mon.x, mon.y, p.x, p.y);
+  }
   function melee(mon, ctx, p, dm = 1, kn = 1) { if (!p) return; const d = MU.dist(mon.x, mon.y, p.x, p.y); if (d <= mon.def.atkRange + p.radius && mon.atkT <= 0) { ctx.melee(mon, p, mon.dmg * dm, kn); mon.atkT = mon.def.atkCd; ctx.emit({ t: 'melee', e: mon.eid, x: mon.x, y: mon.y, f: mon.facing, id: mon.type }); } }
   const behaviors = {
     // v1.43 — Zombie: insegue e si avventa SOLO se ti vede (senseRange + LOS); ricorda l'ultima posizione e
@@ -52,7 +81,7 @@
       if (sees) {
         if (m.lungeT <= 0 && d < 220 && d > 40) { const n = MU.norm(p.x - m.x, p.y - m.y); m.ldx = n.x; m.ldy = n.y; m.lunge = 0.28; m.lungeT = MU.rand(2.2, 4.0); ctx.emit({ t: 'lunge', e: m.eid, x: m.x, y: m.y, f: Math.atan2(n.y, n.x) }); return; }
         seek(m, ctx, 1); melee(m, ctx, p);
-      } else if (!investigate(m, ctx)) { wander(m, ctx, 0.6); }
+      } else if (!investigate(m, ctx)) { caccia(m, ctx, 0.82); }
     },
     charger(m, ctx) { const p = ctx.nearest(m); const e = m.hp / m.maxHp <= (m.def.enrageAtHp || 0); seek(m, ctx, e ? (m.def.enrageSpeed || 1.5) : 1); melee(m, ctx, p, e ? (m.def.enrageDmg || 1.4) : 1, 1.4); if (e && !m.enraged) { m.enraged = true; ctx.emit({ t: 'enrage', x: m.x, y: m.y }); } },
     shielded(m, ctx) { const p = ctx.nearest(m); seek(m, ctx, 1); if (p) m.facing = Math.atan2(p.y - m.y, p.x - m.x); melee(m, ctx, p); },
@@ -100,7 +129,7 @@
     // un ventaglio di BOLLE D'ACIDO ad ALTO danno. Il contatto ravvicinato fa comunque danno (melee). Se non ti vede, VAGA.
     blob(m, ctx) {
       const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 560);
-      if (!sees) { if (!investigate(m, ctx)) wander(m, ctx, 0.55); return; }
+      if (!sees) { if (!investigate(m, ctx)) caccia(m, ctx, 0.72); return; }
       const range = m.def.atkRange || 150;
       if (d > range * 0.72) seek(m, ctx, 1); else stop(m, p);   // striscia fin quando è a tiro, poi si pianta
       if (m.atkT <= 0 && d <= range && ctx.losClear(m.x, m.y, p.x, p.y)) {
@@ -148,7 +177,7 @@
           ctx.emit({ t: 'slam_wind', e: m.eid, x: m.x, y: m.y, dur }); stop(m, p); return;
         }
         seek(m, ctx, 1);
-      } else if (!investigate(m, ctx)) { wander(m, ctx, 0.5); }
+      } else if (!investigate(m, ctx)) { caccia(m, ctx, 0.68); }
     },
     flanker(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } m.blinkT = (m.blinkT || 0) - ctx.dt; const d = MU.dist(m.x, m.y, p.x, p.y); if (m.blinkT <= 0 && d > 120 && d < 520) { const bx = p.x - Math.cos(p.facing || 0) * 60, by = p.y - Math.sin(p.facing || 0) * 60; if (!ctx.isWallAt(bx, by)) { ctx.emit({ t: 'blink_out', x: m.x, y: m.y }); m.x = bx; m.y = by; m.blinkT = m.def.blinkCd || 3.2; m.stun = 0.35; ctx.emit({ t: 'blink_in', x: m.x, y: m.y }); } } if (m.stun > 0) { m.stun -= ctx.dt; m.mx = m.my = 0; stop(m, p); } else { seek(m, ctx, 1); melee(m, ctx, p, 1, 1.2); } },
     strafer(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); const id = m.def.strafeDist || 210; const toP = MU.norm(p.x - m.x, p.y - m.y); let rad = 0; if (d < id - 30) rad = -1; else if (d > id + 30) rad = 1; if (m.orbit === undefined) m.orbit = Math.random() < 0.5 ? 1 : -1; const tg = { x: -toP.y * m.orbit, y: toP.x * m.orbit }; const n = MU.norm(toP.x * rad + tg.x, toP.y * rad + tg.y); m.mx = n.x * m.speed; m.my = n.y * m.speed; m.facing = Math.atan2(p.y - m.y, p.x - m.x); if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { if ((m.burstN = (m.burstN || 0) + 1) % 2 === 0) { ctx.spread(m, toP.x, toP.y, 3, 0.14, m.def.projSpeed, Math.round(m.dmg * 0.8), m.def.projColor); } else { ctx.shoot(m, toP.x, toP.y, m.def.projSpeed, m.dmg, m.def.projColor); } m.atkT = m.def.atkCd; } },
@@ -219,7 +248,8 @@
         m.mx = m.my = 0; m.rollCd = (m.rollCd || 0) - ctx.dt;
         m.facing = Math.atan2(p.y - m.y, p.x - m.x);
         if (m.rollCd > 0) { m.windT = 0; return; }
-        if (d > (m.def.sightRange || 470) || !ctx.losClear(m.x, m.y, p.x, p.y)) { m.windT = 0; return; }
+        // v1.80 — se non ti vede non resta piantato ad aspettare: rotola piano verso di te finche' non ti trova.
+        if (d > (m.def.sightRange || 470) || !ctx.losClear(m.x, m.y, p.x, p.y)) { m.windT = 0; caccia(m, ctx, 0.55); return; }
         if (!m.windT) ctx.emit({ t: 'roll_wind', e: m.eid, x: m.x, y: m.y, dur: m.def.rollWind || 0.62 });
         m.windT = (m.windT || 0) + ctx.dt;
         if (m.windT >= (m.def.rollWind || 0.62)) {
@@ -243,7 +273,7 @@
     // e' una serpentina — difficile da colpire in linea retta senza guidare il tiro.
     flock(m, ctx) {
       const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 620);
-      if (!sees) { if (!investigate(m, ctx)) wander(m, ctx, 0.8); return; }
+      if (!sees) { if (!investigate(m, ctx)) caccia(m, ctx, 0.9); return; }
       seek(m, ctx, 1);
       if (m.wv == null) m.wv = Math.random() * 6.283;      // fase iniziale casuale: due nugoli non ondeggiano uguale
       m.wv += ctx.dt * (m.def.weave || 2.7);
@@ -289,6 +319,16 @@
       else if (m.phase === 'sweep') { stop(m, p); if (m.windup > 0) m.windup -= ctx.dt; else { ctx.areaDamage(m.x, m.y, mega ? 180 : 150, m.dmg * 1.3, '#ff6a1f', 3.4); ctx.emit({ t: 'slam', x: m.x, y: m.y, r: mega ? 180 : 150 }); m.phase = 'chase'; m.phaseT = 1.4; } }
     },
   };
-  function update(mon, ctx) { mon.atkT = (mon.atkT || 0) - ctx.dt; if (mon.stun > 0 && mon.def.ai !== 'flanker') { mon.stun -= ctx.dt; mon.mx = mon.my = 0; return; } (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx); }
-  return { update, behaviors };
+  function update(mon, ctx) {
+    mon.atkT = (mon.atkT || 0) - ctx.dt;
+    if (mon.stun > 0 && mon.def.ai !== 'flanker') { mon.stun -= ctx.dt; mon.mx = mon.my = 0; return; }
+    // v1.80 — TETTO ALLA FOLLA: solo i piu' vicini si fanno sotto (Room assegna mon.impegnato), gli
+    // altri aspettano il turno all'anello. Non si applica a chi e' immobile per mestiere, ai boss, a
+    // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
+    // a meta' si vedrebbe.
+    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0;
+    if (mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
+    (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx);
+  }
+  return { update, behaviors, caccia, wander, attesa };
 });

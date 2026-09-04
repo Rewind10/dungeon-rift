@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.79.2',
+    VERSION: '1.80.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -71,6 +71,14 @@
     // diciannovesima ne ha 40), quindi si vedono tutti; in gruppo, dove le ondate scalano, l'eccesso
     // continua a entrare in coda man mano che si fa posto.
     MAX_ALIVE: 40,
+    // v1.80 — TETTO ALLA FOLLA. I nemici ti cercano, ma non si fanno sotto tutti insieme: solo i
+    // FOLLA_MAX piu' vicini a ciascun giocatore si avvicinano davvero. Gli altri risalgono fino
+    // all'ANELLO_ATTESA e li' girano, fuori dallo sguardo, finche' non si libera un posto — e un
+    // posto si libera quando ne uccidi uno. Cosi' l'ondata arriva a scaglioni invece che in blocco.
+    // Chi ti VEDE fa eccezione e viene addosso comunque: un nemico che ti ha davanti agli occhi e si
+    // gira a passeggiare non e' un gioco piu' facile, e' un gioco rotto.
+    FOLLA_MAX: 6,
+    ANELLO_ATTESA: 900,
     MAX_ALIVE_CURVE: null,
     // v1.53 — il MERCATO non ha piu' una cadenza fissa: e' una DESTINAZIONE che si sceglie dal menu di
     // pausa fra un'ondata e l'altra. Resta interstiziale (non consuma un numero d'ondata).

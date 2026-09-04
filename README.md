@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.79.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.80.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.80 (i nemici ti cercano)
+- **🐾 Chi non ti vede ti CERCA.** Prima sceglieva un punto a caso entro 350 px: su una mappa grande meta'
+  dell'ondata girava dove non saresti mai passato. Adesso segue il campo di flusso verso di te, ma **piu'
+  piano di chi ti vede** (0,68-0,90 contro 1,00): vederti conta ancora.
+- **⚫ La Sfera d'Ossa non aspetta piu'**: rotola piano finche' non ti trova, poi si carica e parte. Il
+  Fungo Sporifero resta l'unico immobile, perche' e' il suo mestiere.
+- **🚫 Nessuno compare addosso**: la regola della v1.76.1 vale ancora, i nemici li vedi **arrivare**.
 
 ## 🆕 Novita v1.79.2 (i nemici si vedono tutti, passive ritarate, tre Beholder)
 - **👁 Tutti i nemici in campo**: il tetto dei vivi e uno solo e alto (40). Prima una curva ne teneva 8

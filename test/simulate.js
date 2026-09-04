@@ -3223,6 +3223,121 @@ function testBeholder179() {
   ok('i tre Beholder verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 56 — v1.80: i nemici ti CERCANO
+// Il difetto era questo: chi non ti vedeva sceglieva un punto a caso entro 350 px e ci andava.
+// Su una mappa da 64x46 tile questo vuol dire che meta' dell'ondata gira in un angolo dove non
+// passerai mai, e l'ondata si trascina. Adesso chi non ti vede segue il campo di flusso verso di
+// te, piu' piano di chi ti vede. Le due cose da provare sono che ARRIVA e che NON COMPARE.
+// ============================================================================
+function testV180() {
+  console.log('\n[TEST 56] v1.80 — i nemici ti cercano, ma non si fanno sotto tutti insieme');
+  const dt = 1 / C.TICK_RATE;
+  const AI = require('../shared/ai.js');
+
+  // --- 1) la caccia esiste, e va piu' piano dell'inseguimento a vista ---
+  assert(typeof AI.caccia === 'function', 'shared/ai.js espone la caccia');
+  {
+    const fake = { dt, flowStep: () => ({ x: 1, y: 0, d: 5 }), nearest: () => ({ x: 900, y: 0, radius: 14 }), isWallAt: () => false, losClear: () => true };
+    const a = { x: 0, y: 0, mx: 0, my: 0, speed: 100, def: {} };
+    const b = { x: 0, y: 0, mx: 0, my: 0, speed: 100, def: {} };
+    AI.caccia(a, fake, 0.75);
+    AI.behaviors.charger(b, Object.assign({}, fake, { melee() {}, emit() {} }));
+    const va = Math.hypot(a.mx, a.my), vb = Math.hypot(b.mx, b.my);
+    assert(va > 40, 'chi caccia si muove davvero (' + va.toFixed(0) + ' px/s)');
+    assert(va < vb, 'ma piu' + String.fromCharCode(39) + ' piano di chi ti vede (' + va.toFixed(0) + ' < ' + vb.toFixed(0) + '): vederti conta ancora');
+  }
+
+  // --- 2) messo lontano e SENZA linea di vista, il nemico arriva ---
+  // Si prova il caso peggiore: fuori dalla portata dei sensi (sightRange 560) e dietro la roccia.
+  const room = new Room('v180'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero'); room.startGame();
+  room.pending = 0; room.waveList = []; room.monsters.length = 0;
+  let spot = null;
+  for (let ty = 1; ty < room.map.h - 1 && !spot; ty++) for (let tx = 1; tx < room.map.w - 1; tx++) {
+    const x = (tx + 0.5) * C.TILE, y = (ty + 0.5) * C.TILE;
+    if (room.isWallAt(x, y)) continue;
+    const d = MU.dist(x, y, p.x, p.y);
+    if (d < 700 || d > 1500) continue;
+    if (room.losClear(p.x, p.y, x, y)) continue;   // deve essere nascosto: non ti vede e non lo vedi
+    spot = { x, y }; break;
+  }
+  assert(!!spot, 'trovato un angolo lontano e cieco da cui partire');
+  const m = room.spawnMonster('skeleton', spot.x, spot.y, { scaling: Waves.scaling(1, 1) });
+  m.awake = true;
+  const d0 = MU.dist(m.x, m.y, p.x, p.y);
+  let peggioScatto = 0, scatti = 0;
+  let dMin = d0;
+  for (let i = 0; i < C.TICK_RATE * 30 && !m.dead; i++) {
+    const pr = MU.dist(m.x, m.y, p.x, p.y);
+    p.hp = room.effMaxHp(p);                        // fermo e immortale: si misura l IA, non lo scontro
+    room.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+    room.update(dt);
+    const po = MU.dist(m.x, m.y, p.x, p.y);
+    if (po < dMin) dMin = po;
+    // niente teletrasporti sotto gli occhi: il guadagno per tick resta quello che le gambe consentono
+    // (con il recupero di distanza previsto in Room, fino a 2.1x) finche' il mostro e in vista.
+    if (po <= 900) { const g = pr - po, max = (m.speed || 120) * dt * 1.5 + 10; if (g > max) { scatti++; if (g > peggioScatto) peggioScatto = g; } }
+  }
+  assert(dMin < 160, 'in 30 s ti raggiunge partendo da ' + d0.toFixed(0) + ' px al buio (arriva a ' + dMin.toFixed(0) + ' px)');
+  assert(scatti === 0, 'e ci arriva camminando, non comparendo (' + scatti + ' scatti, il peggiore ' + peggioScatto.toFixed(0) + ' px/tick)');
+
+  // --- 3) l ondata converge: dieci scheletri sparsi non restano sparsi ---
+  const r2 = new Room('v180b'); const q = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
+  r2.pending = 0; r2.waveList = []; r2.monsters.length = 0;
+  let messi = 0;
+  for (let k = 0; k < 40 && messi < 10; k++) {
+    const a = (k / 40) * Math.PI * 2, rr = 700 + (k % 5) * 130;
+    const x = q.x + Math.cos(a) * rr, y = q.y + Math.sin(a) * rr;
+    if (x < C.TILE || y < C.TILE || x > (r2.map.w - 1) * C.TILE || y > (r2.map.h - 1) * C.TILE) continue;
+    if (r2.isWallAt(x, y)) continue;
+    const mm = r2.spawnMonster('skeleton', x, y, { scaling: Waves.scaling(1, 1) }); mm.awake = true; messi++;
+  }
+  assert(messi >= 6, 'ci sono abbastanza nemici sparsi per la prova (' + messi + ')');
+  const media = () => { let s = 0, n = 0; for (const x of r2.monsters) if (!x.dead) { s += MU.dist(x.x, x.y, q.x, q.y); n++; } return n ? s / n : 0; };
+  const addosso = () => { let v = 0; for (const x of r2.monsters) if (!x.dead && MU.dist(x.x, x.y, q.x, q.y) < 620) v++; return v; };
+  const mediaPrima = media();
+  let picco = 0;
+  for (let i = 0; i < C.TICK_RATE * 40; i++) {
+    for (const x of r2.monsters) x.hp = x.maxHp;    // nessuno muore: si misura la convergenza, non lo scontro
+    q.hp = r2.effMaxHp(q);
+    r2.setInput('b', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+    r2.update(dt);
+    const a = addosso(); if (a > picco) picco = a;
+  }
+  const mediaDopo = media();
+  assert(mediaDopo < mediaPrima * 0.55, 'in 40 s il branco si avvicina: distanza media da ' + mediaPrima.toFixed(0) + ' a ' + mediaDopo.toFixed(0) + ' px');
+  // ...ma NON si accalcano tutti: il tetto della folla lascia passare i piu' vicini e tiene gli altri
+  // all anello. Il margine e per chi ti VEDE, che viene addosso comunque: e la regola, non un buco.
+  assert(picco <= C.FOLLA_MAX + 4, 'e non si accalcano: mai piu' + String.fromCharCode(39) + ' di ' + picco + ' addosso su ' + messi + ' (tetto ' + C.FOLLA_MAX + ')');
+  assert(picco >= 4, 'ma qualcuno arriva davvero (' + picco + ')');
+
+  // --- 3-bis) il posto si libera uccidendo: chi aspetta prende il turno ---
+  {
+    let vivi = r2.monsters.filter(x => !x.dead);
+    const impegnatiPrima = vivi.filter(x => x.impegnato === 1).length;
+    const attesaPrima = vivi.filter(x => x.impegnato === 0).length;
+    assert(attesaPrima > 0, 'con dieci nemici qualcuno sta aspettando il turno (' + attesaPrima + ')');
+    for (const x of vivi.filter(y => y.impegnato === 1).slice(0, 3)) { x.dead = true; }
+    r2._assegnaFolla();
+    const impegnatiDopo = r2.monsters.filter(x => !x.dead && x.impegnato === 1).length;
+    assert(impegnatiDopo >= Math.min(C.FOLLA_MAX, r2.monsters.filter(x => !x.dead).length), 'uccidendone tre, tre che aspettavano si avviano (impegnati ' + impegnatiPrima + ' -> ' + impegnatiDopo + ')');
+  }
+
+  // --- 3-ter) nessun recupero di distanza: chi e lontano cammina come chiunque altro ---
+  assert(!/cu = 1 \+ Math\.min/.test(fs.readFileSync(__dirname + '/../server/Room.js', 'utf8')), 'il recupero di distanza (fino a 2,1x oltre i 340 px) e spento');
+
+  // --- 4) chi e fermo per mestiere resta fermo: il Fungo non insegue nessuno ---
+  const r3 = new Room('v180c'); const z = r3.addPlayer('c', { send() {} }, 'C', 'mago'); r3.startGame();
+  r3.pending = 0; r3.waveList = []; r3.monsters.length = 0;
+  const sp = losSpot(r3, z, 420);
+  const fun = r3.spawnMonster('spore_fungus', sp.x, sp.y, { scaling: Waves.scaling(4, 1) }); fun.awake = true;
+  const fx = fun.x, fy = fun.y;
+  for (let i = 0; i < C.TICK_RATE * 8 && !fun.dead; i++) { z.hp = r3.effMaxHp(z); r3.setInput('c', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); r3.update(dt); }
+  assert(MU.dist(fun.x, fun.y, fx, fy) < 20, 'il Fungo Sporifero resta piantato dov e (' + MU.dist(fun.x, fun.y, fx, fy).toFixed(0) + ' px)');
+
+  ok('la caccia verificata: arrivano a scaglioni, li vedi arrivare, e non ti seppelliscono');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

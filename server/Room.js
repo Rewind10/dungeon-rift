@@ -324,6 +324,7 @@ class Room {
     return {
       dt: this.dt, now: this.time,
       nearest(m) { return self._nearestPlayer(m.x, m.y); },
+      ANELLO: C.ANELLO_ATTESA,
       flowStep(m) { if (!self.flow) return { x: 0, y: 0, d: -1 }; const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0; return PF.stepDir(self.flow, self.map.grid, self.map.w, self.map.h, gx, gy); },
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
       isWallAt: (x, y) => self.isWallAt(x, y),
@@ -1452,10 +1453,38 @@ class Room {
     this.enterMarket();
   }
 
+  // v1.80 — CHI SI FA SOTTO. Ogni 0,4 s si guarda chi e' piu' vicino a ciascun giocatore: i primi
+  // C.FOLLA_MAX hanno il permesso di avvicinarsi (mon.impegnato = 1), gli altri aspettano all'anello.
+  // L'ordine e' la distanza, quindi il rimpiazzo e' automatico: uccidi quello che hai addosso e il
+  // piu' vicino fra quelli in attesa prende il suo posto e si avvia. Quando ne restano pochi sono
+  // tutti dentro il tetto, e allora ti cercano tutti: la coda di fine ondata non esiste piu'.
+  _assegnaFolla() {
+    const ap = this.alivePlayers;
+    if (!ap.length) { for (const m of this.monsters) m.impegnato = 1; return; }
+    const code = new Map();
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      m.impegnato = 0;
+      let best = null, bd = Infinity;
+      for (const p of ap) { const d = MU.dist2(m.x, m.y, p.x, p.y); if (d < bd) { bd = d; best = p; } }
+      if (!best) { m.impegnato = 1; continue; }
+      m._dFolla = bd;
+      let q = code.get(best.id); if (!q) { q = []; code.set(best.id, q); }
+      q.push(m);
+    }
+    const tetto = C.FOLLA_MAX || 6;
+    for (const q of code.values()) {
+      q.sort((a, b) => a._dFolla - b._dFolla);
+      for (let i = 0; i < q.length && i < tetto; i++) q[i].impegnato = 1;
+    }
+  }
+
   update(dt) {
     this.time += dt; this.dt = dt; this.flowTimer -= dt;
     if (this.flowTimer <= 0) { this.flowTimer = 0.12; const t = this.alivePlayers.map(p => ({ gx: (p.x / C.TILE) | 0, gy: (p.y / C.TILE) | 0 })); if (t.length) this.flow = PF.build(this.map.grid, this.map.w, this.map.h, t); }
     const inCombat = (this.phase === C.PHASE_COMBAT || this.phase === C.PHASE_BOSS);
+    this.follaTimer = (this.follaTimer || 0) - dt;
+    if (this.follaTimer <= 0) { this.follaTimer = 0.4; this._assegnaFolla(); }
     // v1.78 — qui c'era il timer della modalita' Sopravvivenza e, piu' sotto, il suo rifornimento
     // continuo di mostri. Tolta la modalita', sono spariti tutti e due insieme al campo `surviveT`.
     // v1.68 — il tetto dei vivi e' sceso da 50 a 30 e i nemici in eccesso restano in CODA: l'ondata non
@@ -1494,6 +1523,7 @@ class Room {
       const ap = this.alivePlayers;
       if (ap.length) for (const m of this.monsters) {
         if (m.dead || (m.def && m.def.immobile)) continue;
+        if (m.impegnato === 0) { m._fermoT = 0; m._avvicinaMin = undefined; continue; }   // v1.80 — non e' bloccato: sta aspettando il turno
         let d = Infinity, vicino = null;
         for (const p of ap) { const dd = MU.dist(m.x, m.y, p.x, p.y); if (dd < d) { d = dd; vicino = p; } }
         if (m._avvicinaMin === undefined || d < m._avvicinaMin - 40) { m._avvicinaMin = d; m._fermoT = 0; continue; }
@@ -1781,7 +1811,7 @@ class Room {
       let slow = 1; if (m.slowT > 0) { m.slowT -= dt; slow = 0.5; }
       // v1.79.2 — CAMPO DI LENTEZZA: un'aura passiva attorno al mago. Non fa danno: rende lo spazio suo.
       for (const q of this.alivePlayers) { if (!(q.boon && q.boon.lentezza > 0)) continue; if (MU.dist2(q.x, q.y, m.x, m.y) <= q.boon.lentezza * q.boon.lentezza) { slow *= 0.75; break; } }
-      const ld = dt * tf; const pd = ctx.dt; ctx.dt = ld; AI.update(m, ctx); ctx.dt = pd; let cu = 1; const np = this._nearestPlayer(m.x, m.y); if (np) { const nd = MU.dist(m.x, m.y, np.x, np.y); if (nd > 340) cu = 1 + Math.min(1.1, (nd - 340) / 420); }
+      const ld = dt * tf; const pd = ctx.dt; ctx.dt = ld; AI.update(m, ctx); ctx.dt = pd; const cu = 1;   // v1.80 — RECUPERO DI DISTANZA SPENTO: chi stava oltre 340 px correva fino a 2,1x per rientrare. Serviva quando i lontani vagavano a caso; adesso che ti cercano tutti faceva arrivare l'ondata in blocco. Senza, arriva a scaglioni.
       const px0 = m.x, py0 = m.y; const wantMove = (Math.abs(m.mx) + Math.abs(m.my)) > 4; // v1.43 — misura intento vs spostamento reale
       // v1.61 — ATTRAVERSA I MURI (def.phasing, Fuoco Fatuo): niente moveCircle, niente _unstuck, niente
       // anti-incastro — quelle tre cose esistono per RIMETTERE FUORI dai muri, qui il muro non conta.
