@@ -92,6 +92,15 @@
         R.burst(ev.x, ev.y, '#ffcf5a', 28, 300, 0.5); R.burst(ev.x, ev.y + 6, '#7a5a3a', 20, 160, 0.65);
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
+      // v1.81 — LA LARVA SCOPPIA: il corpo si apre in uno sbuffo di spore, poi la zona telegrafata (che
+      // arriva con lo stesso evento zone_tell di tutti) fa il conto alla rovescia sul pavimento.
+      case 'larva_pop': R.burst(ev.x, ev.y, ev.c || '#e8ff6a', 18, 150, 0.55); R.ring(ev.x, ev.y, ev.c || '#e8ff6a', 5, 26, 0.3); break;
+      // v1.81 — LO SPETTRO SI SFASA. Tre eventi, uno per momento: si annuncia (anello che si stringe
+      // addosso a lui), sparisce, riappare. Senza questi tre e' un teletrasporto muto — cioe' il difetto
+      // che abbiamo tolto nella v1.76.1.
+      case 'blink_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.38); R.ring(ev.x, ev.y, ev.c || '#9fe8ff', 3, 30, ev.dur || 0.38); R.burst(ev.x, ev.y, ev.c || '#9fe8ff', 8, 60, 0.4); break;
+      case 'blink_out': R.ring(ev.x, ev.y, ev.c || '#9fe8ff', 6, 46, 0.28); R.burst(ev.x, ev.y, ev.c || '#9fe8ff', 16, 190, 0.45); break;
+      case 'blink_in': R.ring(ev.x, ev.y, ev.c || '#9fe8ff', 7, 54, 0.32); R.burst(ev.x, ev.y, ev.c || '#9fe8ff', 20, 210, 0.5); R.addShake(3); break;
       case 'zone_hit': A.explosion(); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 8, ev.r, 0.4); R.burst(ev.x, ev.y, ev.c || '#ff5a5a', 22, 230, 0.5); R.addShake(6); break;
       case 'lunge': R.hitAttack(ev.e, 0.3); R.burst(ev.x, ev.y, '#ffd9a0', 6, 130, 0.25); break;
       case 'melee': R.hitAttack(ev.e, 0.32); break; // v1.26 — swing d'attacco

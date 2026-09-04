@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.70.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.81.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -39,12 +39,22 @@ per i nemici d'ondata).
 | 1 | 🟢 Zombie Putrido | 40 |
 | 2 | 🟢 Melma Corrosiva | 16 |
 | 3 | 🟣 Negromante | 12 |
-| 4 | 🟠 Troll delle Caverne | 8 |
-| 5 | 🍄 Fungo Sporifero | 10 |
-| 6 | 🦇 Nugolo di Pipistrelli | 10 |
-| 7 | 💀 Sfera d'Ossa | 9 |
-| 8 | 🔵 Fuoco Fatuo | 8 |
-| 10 | 👁️ Beholder *(max 8 vivi)* | 9 |
+| 4 | 🍄 Fungo Sporifero | 10 |
+| 5 | 🦇 Nugolo di Pipistrelli | 10 |
+| 6 | 💀 Sfera d'Ossa | 9 |
+| 7 | 🔵 Fuoco Fatuo | 8 |
+| 8 | 👁️ Occhio Viola *(max 8 vivi)* | 9 |
+| 9 | 🐛 **Larva Fetida** | 11 |
+| 10 | 👁️ Occhio di Carne *(max 6)* | 7 |
+| 11 | 👻 **Spettro** | 8 |
+| 12 | 👁️ Occhio Spettrale *(max 5)* | 5 |
+
+> 🗓️ **Aggiornata in v1.81.** Il **Troll delle Caverne** e' uscito dal pool nella v1.79.2 (la def resta in
+> `monsters.js` ma non e' raggiungibile) e gli archetipi che venivano dopo di lui si sono fatti avanti di
+> un'ondata. Nella v1.81 i tre Beholder si sono fatti avanti a loro volta (8 / 10 / 12, erano 9 / 12 / 15) e
+> sono entrate **Larva Fetida** (9) e **Spettro** (11): adesso ogni ondata dalla 1 alla 12 porta un
+> archetipo nuovo. Prima la rampa si fermava alla settima e le ondate 8, 10, 11, 13, 14 e dalla 16 in poi
+> non aggiungevano nulla.
 
 **Perché in quest'ordine** *(v1.61.1)*. Il **Nugolo** sta prima della **Sfera d'Ossa**: insegnano la stessa
 cosa da due lati opposti — mirare dove il nemico *sarà*. Il Nugolo lo chiede col **tiro** (serpeggia: bisogna
@@ -199,6 +209,8 @@ L'unico nemico contro cui mettersi al riparo non serve a niente.
 | 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 10+ (max 8) |
 | 🦇 Nugolo di Pipistrelli | `bat_swarm` | 1 | 76 | 175 | 24 | 6 | 30 | flock | sciame volante | 6+ |
 | 🔵 Fuoco Fatuo | `wisp` | 2 | 68 | 74 | 15 | 9 | 96 | drifter | inseguitore / attraversa muri | 8+ |
+| 🐛 Larva Fetida | `larva` | 2 | 66 | 104 | 17 | 9 | 36 | swarm | scoppia alla morte (104 px, 0,75 s, x2,4) | 9+ |
+| 👻 Spettro | `spettro` | 2 | 132 | 138 | 19 | 15 | 46 | wraith | si sfasa alle tue spalle | 11+ |
 | 🟢 Melma Minore *(divisione)* | `slime_mini` | 0 | 34 | 66 | 13 | 7 | 110 | blob | evocato | — |
 | 🟢 Zombie Minore | `zombie_mini` | 0 | 26 | 120 | 12 | 8 | 34 | swarm | evocato | — |
 

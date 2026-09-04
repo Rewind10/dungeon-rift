@@ -2252,6 +2252,7 @@
       else if (def.roller) { this._rollerF(ctx, m, rr, def, atk); }   // v1.58 — rotola: l'animazione e una rotazione
       else if (def.bats) { this._batsF(ctx, m, rr, def, atk); }       // v1.61 — sciame: 11 sagome in orbita, nessuna camminata
       else if (def.wisp) { this._wispF(ctx, m, rr, def, atk); }       // v1.61 — fiamma sospesa: sinusoidi, nessun frame
+      else if (def.larva) { const pv = moveInfo(m.e); this._larvaF(ctx, m, rr, def, atk, !!pv.on, pv.dir); }   // v1.81 — sacco gonfio dipinto a macchie
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
         if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0, pv)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }
@@ -2488,6 +2489,68 @@
       this._macchia(ctx, px, py, w * 0.32, w * 0.31, luce, 1);
       this._macchia(ctx, px, py, w * 1.7, w * 1.6, luce, 0.20);
       ctx.fillStyle = '#12040f'; ctx.beginPath(); ctx.arc(px + Math.cos(ang) * w * 0.12, py + Math.sin(ang) * w * 0.12, Math.max(0.6, w * 0.16), 0, 7); ctx.fill();
+    },
+    // ===== v1.81 — LA LARVA FETIDA, DIPINTA ================================================
+    // Stessa tecnica dei Beholder e della caverna: strati di macchie morbide dal buio al chiaro, bordo
+    // sporco, niente contorno netto. E' un sacco basso e teso, segmentato, che striscia: il nucleo
+    // dentro la pelle PULSA, e piu' e' vicino il momento in cui la uccidi piu' la luce si vede — e'
+    // l'unico avviso che quando cade lascera' un buco nel pavimento. Nessun asset, solo codice.
+    _larvaF(ctx, m, r, def, atk, moving, dir) {
+      const t = this.time, e = (m.e || 0) * 0.7;
+      const P = { buio: '#141b06', medio: '#3d4d15', chiaro: '#768c26', orlo: '#a8c23e', luce: '#e8ff6a', vena: '#232f0a' };
+      const ang = (dir != null && moving) ? dir : (m.f || 0);
+      const resp = 1 + Math.sin(t * 2.6 + e) * 0.045;
+      const gonf = 0.5 + 0.5 * Math.sin(t * 3.1 + e);          // la sacca si gonfia e si sgonfia
+      ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(0, r * 0.46, r * 0.92, r * 0.30, 0, 0, 7); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.rotate(ang); ctx.scale(1, resp);
+      const seg = 6, len = 1.30, W = r * 0.92;
+      const cx = i => (0.62 - (i / (seg - 1)) * len) * r;
+      const wid = i => W * (1 - Math.pow(i / (seg - 1), 1.5) * 0.62);
+      const off = i => Math.sin(t * 7.5 + e + (i / seg) * 2.4) * r * (moving ? 0.09 : 0.03) * (i / (seg - 1) + 0.25);
+      // 1) massa scura: la sagoma, dalla coda alla testa
+      for (let i = seg - 1; i >= 0; i--) { const w = wid(i); this._macchia(ctx, cx(i), off(i), w, w * 0.86, P.buio, 1); }
+      // 2) il nucleo dentro la pelle: una luce sola, al centro del corpo, che pulsa
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      this._macchia(ctx, r * 0.02, 0, W * (0.62 + gonf * 0.14), W * 0.50, P.luce, 0.22 + gonf * 0.20);
+      this._macchia(ctx, r * 0.02, 0, W * 0.34, W * 0.26, P.luce, 0.26 + gonf * 0.24);
+      ctx.restore();
+      // 3) volume: mezzitoni e luce in alto a sinistra (la luce della caverna viene dall alto)
+      for (let i = seg - 1; i >= 0; i--) {
+        const w = wid(i), o = off(i);
+        this._macchia(ctx, cx(i) + w * 0.06, o - w * 0.18, w * 0.80, w * 0.56, P.medio, 0.85);
+        this._macchia(ctx, cx(i) + w * 0.10, o - w * 0.34, w * 0.50, w * 0.28, P.chiaro, 0.60);
+        this._macchia(ctx, cx(i) + w * 0.12, o - w * 0.44, w * 0.26, w * 0.13, P.orlo, 0.45);
+      }
+      // 4) solchi fra i segmenti: e quello che lo fa leggere come un verme e non come una macchia
+      ctx.save(); ctx.globalAlpha = 0.55; ctx.strokeStyle = P.vena; ctx.lineCap = 'round';
+      for (let i = 1; i < seg; i++) {
+        const w = (wid(i) + wid(i - 1)) * 0.5, x = (cx(i) + cx(i - 1)) * 0.5, o = (off(i) + off(i - 1)) * 0.5;
+        ctx.lineWidth = Math.max(1, w * 0.16);
+        ctx.beginPath(); ctx.ellipse(x, o, w * 0.16, w * 0.72, 0, -1.15, 1.15); ctx.stroke();
+      }
+      ctx.restore();
+      // 5) zampette: sei uncini che spingono quando striscia
+      ctx.strokeStyle = P.vena; ctx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) for (const k of [-1, 1]) {
+        const w = wid(i), px = cx(i) + r * 0.06, py = k * w * 0.62;
+        const sw = Math.sin(t * 9 + e + i * 1.2 + (k > 0 ? 1.7 : 0)) * r * (moving ? 0.16 : 0.05);
+        ctx.lineWidth = Math.max(1.3, r * 0.10);
+        ctx.beginPath(); ctx.moveTo(px, py * 0.72); ctx.quadraticCurveTo(px + sw * 0.5, py, px + sw, py + k * r * 0.10); ctx.stroke();
+      }
+      // 6) testa: due occhietti accesi e le mandibole
+      const hx = r * 0.70;
+      ctx.strokeStyle = P.vena; ctx.lineWidth = Math.max(1.2, r * 0.10);
+      for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(hx - r * 0.04, k * r * 0.20); ctx.quadraticCurveTo(hx + r * 0.20, k * r * 0.22, hx + r * 0.26, k * r * 0.06); ctx.stroke(); }
+      for (const k of [-1, 1]) {
+        ctx.fillStyle = '#0b1004'; ctx.beginPath(); ctx.ellipse(hx - r * 0.02, k * r * 0.20, r * 0.10, r * 0.075, 0, 0, 7); ctx.fill();
+        this._macchia(ctx, hx + r * 0.01, k * r * 0.20, r * 0.055, r * 0.045, P.luce, 0.95);
+        this._macchia(ctx, hx + r * 0.01, k * r * 0.20, r * 0.16, r * 0.13, P.luce, 0.22);
+      }
+      // 7) pelle bagnata
+      this._macchia(ctx, r * 0.22, -r * 0.40, r * 0.34, r * 0.10, '#e8f7b0', 0.22);
+      ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; this._macchia(ctx, 0, 0, r * 1.7, r * 1.2, P.luce, 0.07 + gonf * 0.06); ctx.restore();
     },
     _beholderPuppet(ctx, m, r, def, atk, moving, dir) {
       const t = this.time;

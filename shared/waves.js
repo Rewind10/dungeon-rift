@@ -46,9 +46,17 @@
     if (w >= 5) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro
     if (w >= 6) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
     if (w >= 7) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta
-    if (w >= 9) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi
-    if (w >= 12) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino
-    if (w >= 15) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo
+    // v1.81 — LA RAMPA ANTICIPATA. Prima il gioco smetteva di presentare cose all'ondata 7: dopo
+    // arrivavano solo i tre Beholder (9, 12, 15) e le ondate 8, 10, 11, 13, 14 e dalla 16 in poi non
+    // portavano NIENTE di nuovo. All'ondata 19 la composizione era identica a quella della 15. Adesso
+    // ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era, e i Beholder si
+    // fanno avanti: il Viola alla 8, quello di Carne alla 10, lo Spettrale alla 12 — cosi' il piu'
+    // lavorato dei tre non compare a cinque ondate dalla fine.
+    if (w >= 8) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi  (era 9)
+    if (w >= 9) add('larva', 11);           // Larva Fetida — scoppia quando la uccidi              (nuovo)
+    if (w >= 10) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino          (era 12)
+    if (w >= 11) add('spettro', 8);         // Spettro — si sfasa e riemerge alle tue spalle        (nuovo)
+    if (w >= 12) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo (era 15)
     return p;
   }
 

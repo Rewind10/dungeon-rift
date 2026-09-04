@@ -146,12 +146,26 @@
     wraith(m, ctx) {
       const p = ctx.nearest(m);
       m.blinkT = (m.blinkT != null ? m.blinkT : MU.rand(2.4, 4.2)) - ctx.dt;
+      // v1.81 — PRIMA DI SFASARSI SI ANNUNCIA. Senza questo mezzo secondo lo Spettro sparirebbe e
+      // ricomparirebbe nello stesso fotogramma: identico, a schermo, al teletrasporto che abbiamo
+      // tolto nella v1.76.1. Cosi' invece si pianta, sfarfalla (evento blink_wind → il client fa
+      // l'anello che si stringe) e SOLO DOPO se ne va. Lo vedi partire e sai dove guardare.
+      if (m.sfasa > 0) {
+        m.sfasa -= ctx.dt; stop(m, p);
+        if (m.sfasa > 0) return;
+        m.blinkGo = 1;
+      }
+      if (p && m.blinkT <= 0 && !m.blinkGo && (m.def.blinkWind || 0) > 0) {
+        const dd = MU.dist(m.x, m.y, p.x, p.y);
+        if (dd > 96 && dd < 480) { m.sfasa = m.def.blinkWind; stop(m, p); ctx.emit({ t: 'blink_wind', e: m.eid, x: m.x, y: m.y, dur: m.sfasa, c: m.def.eye }); return; }
+      }
       if (p && m.blinkT <= 0) {
+        m.blinkGo = 0;
         const d = MU.dist(m.x, m.y, p.x, p.y);
         if (d > 96 && d < 480) {
           const n = MU.norm(p.x - m.x, p.y - m.y);
           const tx = p.x - n.x * 72, ty = p.y - n.y * 72;
-          if (!ctx.isWallAt(tx, ty)) { ctx.emit({ t: 'blink_out', x: m.x, y: m.y }); m.x = tx; m.y = ty; ctx.emit({ t: 'blink_in', x: m.x, y: m.y }); m.stun = 0.18; m.blinkT = m.def.blinkCd || MU.rand(3.0, 5.0); return; }
+          if (!ctx.isWallAt(tx, ty)) { ctx.emit({ t: 'blink_out', x: m.x, y: m.y, c: m.def.eye }); m.x = tx; m.y = ty; ctx.emit({ t: 'blink_in', x: m.x, y: m.y, c: m.def.eye }); m.stun = 0.30; m.blinkT = m.def.blinkCd || MU.rand(3.0, 5.0); return; }
         }
         m.blinkT = 0.6;
       }

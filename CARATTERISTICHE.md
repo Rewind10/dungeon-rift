@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.80.1`
+**Versione attuale:** `1.81.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -121,6 +121,42 @@ Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Es
 **Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace *(bonus XP, inutili col tetto)*, e in
 v1.79.2 🌵 Aura di Spine, ⛏️ Piede di Porco, 🔱 Sdoppiamento, 🎯 Mira Guidata, 😈 Furia Cieca, 🧿 Egida
 Ostinata, 🚩 Doppia Bolla, 🔊 Eco Arcana, 🌌 Implosione.
+
+## 🪜 LA RAMPA DEGLI ARCHETIPI *(rifatta in v1.81)*
+
+Ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era. Una volta entrato non esce
+piu' dal pool, e nessuna ondata resta senza novita':
+
+| Ondata | Entra | Cosa insegna |
+|---:|---|---|
+| 1 | Zombie Putrido | la mischia di base |
+| 2 | Melma Corrosiva | si divide: uccidere non basta |
+| 3 | Negromante | bersaglio prioritario, evoca |
+| 4 | Fungo Sporifero | nega il terreno: non stare fermo |
+| 5 | Nugolo di Pipistrelli | serpeggia: guida il tiro |
+| 6 | Sfera d'Ossa | carica dritta: togliti di lato |
+| 7 | Fuoco Fatuo | attraversa i muri: il riparo non basta |
+| **8** | **Occhio Viola** *(era 9)* | il raggio consuma vita: esci dal cono |
+| **9** | **Larva Fetida** *(nuova)* | **non stare incollato a chi stai finendo** |
+| **10** | **Occhio di Carne** *(era 12)* | lo stesso, ma piu' duro e piu' vicino |
+| **11** | **Spettro** *(nuovo)* | **si sfasa alle tue spalle: la distanza non salva** |
+| **12** | **Occhio Spettrale** *(era 15)* | raggio lungo, e passa nella roccia |
+
+Prima della v1.81 la rampa si fermava alla settima: le ondate 8, 10, 11, 13, 14 e tutte dalla 16 alla 19
+non portavano niente, e all'ondata 19 la composizione del pool era identica a quella della 15.
+
+### 🐛 Larva Fetida
+Corre addosso come uno zombi e da sola fa poco male: il punto e' la sua morte. Quando cade lascia a terra
+il cerchio telegrafato delle zone, che detona dopo **0,75 s** su **104 px** per **2,4x il suo danno**. Chi
+arretra di un passo non prende niente. Le zone fanno male ai giocatori e non ai mostri: niente catene.
+
+### 👻 Spettro
+Torna dalla v1.32 (era uscito nella v1.37). Rapido in mischia, ogni **4,6 s** circa si sfasa e riemerge
+**alle tue spalle** attraverso la roccia. Lo sfasamento ha tre momenti visibili — si annuncia (0,38 s
+fermo, anello che si stringe), sparisce, riappare — e dopo il rientro resta stordito 0,30 s prima di
+colpire: non e' un teletrasporto, e' un'abilita' che vedi partire.
+
+---
 
 ## 🐾 COME TI CERCANO I NEMICI *(v1.80)*
 

@@ -1093,6 +1093,16 @@ class Room {
       }
       if (n > 0) this.events.push({ t: 'split', x: m.x, y: m.y, c: m.def.eye });
     }
+    // v1.81 — LA LARVA SCOPPIA. Non un colpo immediato: lascia a terra la stessa zona telegrafata che
+    // usano il mago oscuro e il fungo, che detona dopo `ritardo` secondi. L'esplosione e' quindi una cosa
+    // che VEDI arrivare e da cui puoi uscire: punisce chi resta incollato al nemico che sta finendo, non
+    // chi passava di li'. Le zone fanno male ai giocatori e non ai mostri, quindi niente reazioni a catena.
+    if (m.def.esplode) {
+      const e = m.def.esplode, rit = e.ritardo || 0.75;
+      this.zones.push({ eid: 0, x: m.x, y: m.y, r: e.r || 100, dmg: Math.max(1, Math.round((m.dmg || m.def.dmg) * (e.mul || 2))), t: rit, max: rit, col: m.def.eye, done: false });
+      this.events.push({ t: 'zone_tell', x: m.x, y: m.y, r: e.r || 100, delay: rit, c: m.def.eye });
+      this.events.push({ t: 'larva_pop', x: m.x, y: m.y, c: m.def.eye });
+    }
     this.events.push({ t: 'mkill', x: m.x, y: m.y, id: m.type, f: +(m.facing || 0).toFixed(2), boss: m.boss, elite: m.elite, mega: m.mega });
     if (m.boss || m.elite) this.events.push({ t: 'hitstop', d: m.mega ? 0.16 : (m.boss ? 0.12 : 0.06) });
     if (src) {

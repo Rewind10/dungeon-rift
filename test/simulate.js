@@ -463,8 +463,10 @@ function testV113() {
 function testV139() {
   console.log('\n[TEST 18] Novita v1.39 — Negromante PUPPET (sfere debilitanti nel campo visivo + evoca zombi minori) & migliorie');
   const Mon = require('../shared/monsters.js');
-  // roster PUPPET: zombie + negromante (entrambi puppet); spettro/occhio restano rimossi
-  for (const id of ['spettro']) assert(!Mon.MONSTERS[id], 'nemico vettoriale ancora rimosso: ' + id); // v1.49 — occhio reintrodotto (Beholder)
+  // roster PUPPET: zombie + negromante (entrambi puppet). v1.81 — lo Spettro e' TORNATO (era uscito
+  // nella v1.37 col taglio del bestiario a un archetipo solo): il disegno _spettroF e l IA wraith non
+  // erano mai stati buttati, e adesso rientra in pool all ondata 11.
+  assert(!!Mon.MONSTERS.spettro && Mon.MONSTERS.spettro.ai === 'wraith', 'lo Spettro e tornato nel bestiario');
   assert(Mon.ORDER[0] === 'skeleton' && Mon.ORDER.includes('darkmage'), 'ORDER parte dallo sciame base e contiene il Negromante');
   const z = Mon.MONSTERS.skeleton, dm = Mon.MONSTERS.darkmage, mn = Mon.MONSTERS.zombie_mini;
   assert(z && z.puppet && z.shape === 'ghoul', 'Zombie Putrido = puppet ghoul');
@@ -680,9 +682,9 @@ function testV150() {
   assert(!at(3).includes('spore_fungus') && at(4).includes('spore_fungus'), 'Fungo introdotto all ondata 4');
   assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 5');
   assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 7');
-  assert(!at(8).includes('occhio') && at(9).includes('occhio'), 'Beholder introdotto all ondata 9');
-  // la rampa non salta nessuna ondata da 1 a 7: un archetipo nuovo per ondata.
-  for (let w = 1; w <= 7; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
+  assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'Beholder introdotto all ondata 8 (v1.81: era la 9)');
+  // v1.81 — la rampa non salta nessuna ondata da 1 a 12: un archetipo nuovo per ogni ondata.
+  for (let w = 1; w <= 12; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -992,8 +994,8 @@ function testV158() {
   // ---------- BEHOLDER: tardi e col tetto ----------
   const oc = Mon.MONSTERS.occhio;
   assert(oc.maxAlive === 8, 'il Beholder ha un tetto di 8 presenze contemporanee');
-  assert(!Waves.poolForWave(8).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 9');
-  assert(Waves.poolForWave(9).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 9');
+  assert(!Waves.poolForWave(7).some(x => x.id === 'occhio'), 'niente Beholder prima dell ondata 8');
+  assert(Waves.poolForWave(8).some(x => x.id === 'occhio'), 'Beholder nel pool dall ondata 8');
   const r4 = new Room('v158d'); r4.addPlayer('b', { send() {} }, 'B', 'ladro'); r4.startGame();
   r4.pending = 0; r4.waveList = []; r4.monsters.length = 0;
   for (let i = 0; i < 12; i++) { const t = r4._capType('occhio'); const pos = r4.randomSpawnPos();
@@ -1531,8 +1533,8 @@ function testV160() {
   assert(man.blend > 0, 'e dichiarata la dissolvenza fra animazioni');
 
   // BEHOLDER dall ondata 10
-  assert(!Waves.poolForWave(8).some(x => x.id === 'occhio'), 'niente Beholder alla 8');
-  assert(Waves.poolForWave(10).some(x => x.id === 'occhio'), 'Beholder dalla 10');
+  assert(!Waves.poolForWave(7).some(x => x.id === 'occhio'), 'niente Beholder alla 7');
+  assert(Waves.poolForWave(8).some(x => x.id === 'occhio'), 'Beholder dalla 8');
   assert(Mon.MONSTERS.occhio.maxAlive === 8, 'il tetto di 8 presenze resta');
   ok('novita v1.60 verificate');
 }
@@ -3197,9 +3199,9 @@ function testBeholder179() {
   assert(A.xp < B.xp && B.xp < Cc.xp, 'e l esperienza che valgono');
   // --- 2) entrano in ondate diverse, uno per volta ---
   const at = w => Waves.poolForWave(w).map(x => x.id);
-  assert(!at(8).includes('occhio') && at(9).includes('occhio'), 'il Viola entra alla 9');
-  assert(!at(11).includes('occhio_carne') && at(12).includes('occhio_carne'), 'quello di Carne alla 12');
-  assert(!at(14).includes('occhio_spettro') && at(15).includes('occhio_spettro'), 'lo Spettrale alla 15');
+  assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'il Viola entra alla 8');
+  assert(!at(9).includes('occhio_carne') && at(10).includes('occhio_carne'), 'quello di Carne alla 10');
+  assert(!at(11).includes('occhio_spettro') && at(12).includes('occhio_spettro'), 'lo Spettrale alla 12');
   // --- 3) IL RAGGIO FA MALE ---
   const room = new Room('beh179'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
   room.phase = C.PHASE_COMBAT; room.monsters.length = 0;

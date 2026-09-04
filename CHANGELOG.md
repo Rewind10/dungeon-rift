@@ -2,6 +2,57 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.81.0] — 2026-09-04 · "La rampa non si ferma piu' alla settima"
+
+#### 📉 Il problema, misurato
+Il gioco smetteva di presentare cose all'**ondata 7**. Dopo arrivavano solo i tre Beholder (9, 12, 15): le
+ondate **8, 10, 11, 13, 14 e tutte dalla 16 alla 19 non portavano niente di nuovo**, e all'ondata 19 la
+composizione del pool era **identica** a quella della 15 — stesso 32% di Zombi, stesse percentuali per tutti.
+L'ultimo terzo della partita era la stessa ondata con piu' numeri, proprio dove il personaggio finisce di
+crescere (il livello 15 arriva verso la sedicesima). L'Occhio Spettrale, il nemico piu' lavorato del
+bestiario, compariva alla 15 e aveva **quattro ondate di vita** prima del drago.
+
+#### 🪜 La rampa, anticipata
+Adesso **ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era**:
+
+| Ondata | Entra | | Ondata | Entra |
+|---:|---|---|---:|---|
+| 1 | Zombie Putrido | | 7 | Fuoco Fatuo |
+| 2 | Melma Corrosiva | | **8** | **Occhio Viola** *(era la 9)* |
+| 3 | Negromante | | **9** | **🆕 Larva Fetida** |
+| 4 | Fungo Sporifero | | **10** | **Occhio di Carne** *(era la 12)* |
+| 5 | Nugolo di Pipistrelli | | **11** | **🆕 Spettro** |
+| 6 | Sfera d'Ossa | | **12** | **Occhio Spettrale** *(era la 15)* |
+
+#### 🐛 Larva Fetida *(ondata 9)*
+Ti corre addosso come uno zombi e da sola fa poco male. Il punto e' la sua morte: quando cade **si gonfia e
+scoppia**. Non subito — lascia a terra il cerchio telegrafato che usano gia' il Negromante e il Fungo, e
+detona **dopo 0,75 s** su un raggio di **104 px** per **2,4 volte il suo danno**. Insegna una cosa sola e la
+insegna bene: *non stare incollato al nemico che stai finendo.* Chi arretra di un passo non prende niente, e
+le zone fanno male ai giocatori e non ai mostri, quindi niente reazioni a catena.
+
+Disegnata a codice come i Beholder e la caverna: sei segmenti di macchie morbide dal buio al chiaro, solchi
+fra un segmento e l'altro, sei uncini che spingono quando striscia, mandibole, e il **nucleo che pulsa sotto
+la pelle tesa** — l'unico avviso che quando cade lascera' un buco nel pavimento. Nessun asset nuovo.
+
+#### 👻 Spettro *(ondata 11)*
+C'era nella **v1.32**, e' uscito nella **v1.37** quando il bestiario fu ridotto a un archetipo solo. Il suo
+disegno (`_spettroF`) e la sua IA (`wraith`) non erano mai stati buttati: **torna quello**. Avanza rapido in
+mischia e ogni tanto **si sfasa e riemerge alle tue spalle**, attraverso la roccia. Toglie la sicurezza
+della distanza.
+
+**Lo sfasamento e' stato reso leggibile**, perche' com'era sarebbe stato esattamente il difetto tolto nella
+v1.76.1: spariva e ricompariva **nello stesso fotogramma**, e nessuno dei tre eventi (`blink_out`,
+`blink_in`) era gestito dal client — un teletrasporto muto. Adesso ci sono tre momenti distinti: **si
+annuncia** (0,38 s piantato, anello che si stringe addosso a lui, evento `blink_wind`), **sparisce** (anello
++ sbuffo), **riappare** (anello + sbuffo + scossone) e resta stordito 0,30 s prima di colpire. Lo vedi
+partire e sai dove guardare.
+
+#### 🧪 Test
+**1293 passati, 0 falliti.** La rampa e' verificata ondata per ondata: dalla 1 alla 12 il pool deve avere
+esattamente tanti archetipi quante sono le ondate — se un domani se ne aggiunge uno lasciando un buco, il
+test lo dice.
+
 ### [1.80.1] — 2026-09-04 · "I nemici ti cercano"
 
 #### 🐾 Chi non ti vede adesso ti CERCA

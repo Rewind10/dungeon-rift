@@ -58,6 +58,16 @@
     // v1.61 — FUOCO FATUO: primo nemico che IGNORA I MURI (def.phasing). Non lo semini spezzando la linea
     // di vista: ti trova sempre, ma e' lento, quindi la risposta e' muoversi. Quando ti raggiunge DRENA
     // (danno + si cura di leech). Dentro la roccia accelera e non puo' drenare: non ci resta mai dentro.
+    // v1.81 — LARVA FETIDA: corre addosso come uno zombi, ma non e' il colpo che da' che devi temere:
+    // e' la sua morte. Quando cade si gonfia e SCOPPIA — non subito, dopo tre quarti di secondo, e sul
+    // pavimento resta il cerchio che vedi accendersi. Insegna una cosa sola e la insegna bene: non stare
+    // incollato al nemico che stai finendo. Chi arretra di un passo non prende niente.
+    larva: { id: 'larva', name: 'Larva Fetida', tier: 2, hp: 66, speed: 104, radius: 17, dmg: 9, atkRange: 36, atkCd: 1.2, ai: 'swarm', atk: 'melee', xp: 14, weight: 0, color: '#46561a', color2: '#1b2408', eye: '#e8ff6a', shape: 'larva', larva: true, sightRange: 560, memory: 3, esplode: { r: 104, mul: 2.4, ritardo: 0.75 }, eliteHp: 1.5 },
+    // v1.81 — SPETTRO: c'era nella v1.32, e' uscito nella v1.37 quando il bestiario fu ridotto a un
+    // archetipo solo. Il disegno non e' mai stato buttato (_spettroF) e nemmeno la sua IA (wraith):
+    // torna quello, con lo SFASAMENTO reso leggibile. Avanza rapido in mischia e ogni tanto si sfasa e
+    // riemerge ALLE TUE SPALLE attraverso la roccia. Toglie la sicurezza della distanza.
+    spettro: { id: 'spettro', name: 'Spettro', tier: 2, hp: 132, speed: 138, radius: 19, dmg: 15, atkRange: 46, atkCd: 0.95, ai: 'wraith', atk: 'melee', xp: 26, weight: 0, color: '#5b6fa8', color2: '#141a2c', eye: '#9fe8ff', shape: 'spettro', front: true, aura: 1.8, sightRange: 640, memory: 4.5, blinkCd: 4.6, blinkWind: 0.38, eliteHp: 1.6 },
     wisp: { id: 'wisp', name: 'Fuoco Fatuo', tier: 2, hp: 68, speed: 74, radius: 15, dmg: 9, atkRange: 96, atkCd: 0.9, ai: 'drifter', atk: 'melee', xp: 15, weight: 0, color: '#123a3a', color2: '#06181a', eye: '#7dffea', shape: 'wisp', wisp: true, puppet: true, aura: 2.6, phasing: true, leech: 0.9, bobAmp: 6, eliteHp: 1.7 },
     // v1.30 — Mimic MANTENUTO solo come CASSA: non entra nel pool delle ondate (weight 0),
     // compare esclusivamente dalle casse-mima e dalla modalità TESORO. Sprite top-down a forziere.
@@ -72,6 +82,6 @@
   // ondata. La sua definizione resta qui sopra — con lo sprite-sheet, lo slam ad area e la sua IA — perche'
   // toglierla butterebbe via del lavoro che potrebbe tornare utile, ma non e' piu' raggiungibile: non e' in
   // ORDER e non e' nel pool delle ondate.
-  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'spore_fungus', 'bone_roller', 'wisp', 'occhio', 'occhio_carne', 'occhio_spettro'];
+  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'spore_fungus', 'bone_roller', 'wisp', 'larva', 'spettro', 'occhio', 'occhio_carne', 'occhio_spettro'];
   return { MONSTERS, BOSSES, ORDER };
 });
