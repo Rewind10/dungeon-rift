@@ -1120,6 +1120,28 @@
         for (const e of (this.map.village.extras || [])) this._drawVendor(ctx, e, { noLabel: 1 }); }   // v1.75 — gente del villaggio  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
       if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
+      // v1.81 — LE RAGNATELE. Sono pavimento, non un effetto: si disegnano sotto a tutto, con i fili
+      // veri (raggi + spirali irregolari) e non un cerchio pieno, se no si confondono con le zone che
+      // fanno danno. Sbiadiscono man mano che scadono: quanto e' pallida dice quanto le resta.
+      for (const w of (world.tele || [])) {
+        // I FILI SONO BIANCHI, non del colore del ragno. Con tre ragni in campo tre tele colorate una
+        // sopra l'altra sembravano un incantesimo; la seta e' seta. Del ragno resta solo un velo di
+        // tinta nel riempimento, che dice QUALE tela e' senza gridarlo.
+        const a = 0.14 + w.p * 0.36;
+        ctx.save(); ctx.translate(w.x, w.y); ctx.globalAlpha = a;
+        const gr = ctx.createRadialGradient(0, 0, 2, 0, 0, w.r);
+        gr.addColorStop(0, this._rgba(w.c || '#cfe0ea', 0.10)); gr.addColorStop(0.7, this._rgba(w.c || '#cfe0ea', 0.05)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, w.r, w.r * 0.62, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#e6eef4'; ctx.lineWidth = 0.9; ctx.globalAlpha = a * 0.60;
+        const NR = 9;
+        for (let i = 0; i < NR; i++) { const an = (i / NR) * Math.PI * 2 + (w.x % 7) * 0.1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(an) * w.r, Math.sin(an) * w.r * 0.62); ctx.stroke(); }
+        for (let k = 1; k <= 4; k++) {
+          const q = k / 4; ctx.beginPath();
+          for (let i = 0; i <= NR; i++) { const an = (i / NR) * Math.PI * 2 + (w.x % 7) * 0.1; const d = q * (1 + Math.sin(an * 3 + k) * 0.07); const px = Math.cos(an) * w.r * d, py = Math.sin(an) * w.r * 0.62 * d; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+          ctx.closePath(); ctx.stroke();
+        }
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
       for (const z of (world.zones || [])) { const cc = z.c || '#ff3b3b'; const gr = ctx.createRadialGradient(z.x, z.y, 2, z.x, z.y, z.r); gr.addColorStop(0, 'rgba(255,60,60,' + (0.10 + z.p * 0.28) + ')'); gr.addColorStop(0.75, 'rgba(255,60,60,' + (0.06 + z.p * 0.18) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.fill(); ctx.strokeStyle = cc; ctx.globalAlpha = 0.4 + z.p * 0.55; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(z.x, z.y, z.r * z.p, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
       for (const mt of world.met) { ctx.strokeStyle = 'rgba(255,120,40,' + (0.4 + mt.p * 0.5) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r, 0, 7); ctx.stroke(); ctx.fillStyle = 'rgba(255,80,20,' + (mt.p * 0.35) + ')'; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r * mt.p, 0, 7); ctx.fill(); }
       for (const o of world.orbs) this._drawOrb(ctx, o);
@@ -2253,6 +2275,7 @@
       else if (def.bats) { this._batsF(ctx, m, rr, def, atk); }       // v1.61 — sciame: 11 sagome in orbita, nessuna camminata
       else if (def.wisp) { this._wispF(ctx, m, rr, def, atk); }       // v1.61 — fiamma sospesa: sinusoidi, nessun frame
       else if (def.larva) { const pv = moveInfo(m.e); this._larvaF(ctx, m, rr, def, atk, !!pv.on, pv.dir); }   // v1.81 — sacco gonfio dipinto a macchie
+      else if (def.ragno) { const pv = moveInfo(m.e); this._ragnoDip(ctx, m, rr, def, atk, !!pv.on, pv.dir); }   // v1.81 — otto zampe dipinte a macchie
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
         if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0, pv)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk); } }
@@ -2551,6 +2574,104 @@
       this._macchia(ctx, r * 0.22, -r * 0.40, r * 0.34, r * 0.10, '#e8f7b0', 0.22);
       ctx.restore();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; this._macchia(ctx, 0, 0, r * 1.7, r * 1.2, P.luce, 0.07 + gonf * 0.06); ctx.restore();
+    },
+    // ===== v1.81 — I TRE RAGNI DELLE VOLTE, DIPINTI =========================================
+    // Stessa tecnica della caverna, dei Beholder e della Larva: solo macchie morbide sovrapposte, dal
+    // buio al chiaro, nessun contorno chiuso. La lettura viene dalla SAGOMA — otto zampe che si piegano
+    // sopra il corpo e ricadono a terra, addome ovale dietro, cefalotorace basso davanti col grappolo di
+    // otto occhi. Un disegno solo, tre palette: se un domani ne servisse un quarto e' una riga in PAL_RAGNO.
+    PAL_RAGNO: {
+      vedova: { buio: '#08070c', chit: '#1e1a24', chiaro: '#4a3550', orlo: '#8f6f9c', segno: '#c8203a', occhio: '#ff3b52', alone: '#ff4d6a', pelo: '#160f1c' },
+      cripta: { buio: '#0b0906', chit: '#261c12', chiaro: '#4a3720', orlo: '#8a6a3c', segno: '#d8a03a', occhio: '#ffc247', alone: '#ffb03a', pelo: '#1a1109' },
+      veleno: { buio: '#070f0a', chit: '#152a1c', chiaro: '#2f5637', orlo: '#6ba268', segno: '#a6ff3a', occhio: '#c8ff5a', alone: '#9bff4d', pelo: '#0c1a10' },
+    },
+    // una zampa: femore che esce di lato e SALE (il ginocchio sta piu' in alto del corpo, come nei ragni
+    // veri), tibia che ricade a terra e finisce a punta. `lato` e' +1 a destra, -1 a sinistra: e' quello
+    // che tiene le otto zampe da tutt'e due le parti invece che ammucchiate su un fianco.
+    _zampaRagno(ctx, x0, y0, lato, sp, L1, L2, gin, w, P, luce) {
+      const kx = x0 + lato * Math.cos(sp) * L1, ky = y0 + Math.sin(sp) * L1 - gin;
+      const fx = kx + lato * L2 * 1.15, fy = ky + L2 * 1.15;
+      // le macchie vanno FITTE e larghe: a passo largo la zampa si legge come una collana di palline.
+      const n1 = 26, n2 = 30;
+      for (let i = 1; i <= n1; i++) {
+        const p = i / n1;
+        const x = x0 + (kx - x0) * p, y = y0 + (ky - y0) * p - Math.sin(p * Math.PI) * gin * 0.16;
+        const ww = w * 1.45 * (1 - p * 0.22);
+        this._macchia(ctx, x, y, ww, ww, P.chit, 0.55);
+        if (luce) this._macchia(ctx, x - lato * ww * 0.28, y - ww * 0.34, ww * 0.46, ww * 0.30, P.chiaro, 0.16);
+      }
+      for (let i = 1; i <= n2; i++) {
+        const p = i / n2;
+        const x = kx + (fx - kx) * p, y = ky + (fy - ky) * p;
+        const ww = w * 1.30 * (0.86 - p * 0.72);
+        this._macchia(ctx, x, y, ww, ww, P.chit, 0.55);
+        if (luce && p < 0.6) this._macchia(ctx, x - lato * ww * 0.28, y - ww * 0.32, ww * 0.40, ww * 0.28, P.chiaro, 0.14);
+      }
+      if (luce) this._macchia(ctx, fx, fy, w * 0.16, w * 0.13, P.orlo, 0.40);
+    },
+    _ragnoDip(ctx, m, r, def, atk, moving, dir) {
+      const t = this.time, e = (m.e || 0) * 0.8;
+      const P = this.PAL_RAGNO[def.pal] || this.PAL_RAGNO.vedova;
+      const flip = Math.cos(m.f || 0) < 0 ? -1 : 1;
+      const sw = Math.sin((atk || 0) * Math.PI);
+      const passo = moving ? 1 : 0.16;
+      const bob = Math.sin(t * (moving ? 7.5 : 1.8) + e) * r * (moving ? 0.05 : 0.02);
+      ctx.save(); ctx.scale(flip, 1); ctx.translate(0, bob);
+      ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(0, r * 0.66, r * 1.25, r * 0.26, 0, 0, 7); ctx.fill(); ctx.restore();
+      const SP = [-0.82, -0.34, 0.10, 0.52];          // apertura delle quattro zampe, dall'alto in basso
+      const zampa = (i, lato, luce) => {
+        const on = Math.sin(t * 6.2 + i * 1.9 + (lato > 0 ? 2.8 : 0) + e) * passo;
+        this._zampaRagno(ctx, lato * r * 0.16, -r * 0.02,
+          lato, SP[i] + on * 0.13,
+          r * (0.72 + i * 0.06), r * (0.58 + i * 0.06),
+          r * (0.44 + on * 0.18) * (1 - i * 0.14),
+          r * (0.105 - i * 0.008), P, luce);
+      };
+      for (let i = 3; i >= 0; i--) { zampa(i, -1, false); zampa(i, 1, false); }   // le zampe di la'
+      // ADDOME: ovale, dietro e in alto
+      const ax = -r * 0.52, ay = -r * 0.18, aw = r * 0.80;
+      this._macchia(ctx, ax, ay + r * 0.06, aw * 1.16, aw * 0.92, P.buio, 0.95);
+      this._macchia(ctx, ax, ay, aw * 1.02, aw * 0.78, P.chit, 0.95);
+      this._macchia(ctx, ax - aw * 0.24, ay - aw * 0.24, aw * 0.52, aw * 0.34, P.chiaro, 0.38);
+      this._macchia(ctx, ax - aw * 0.30, ay - aw * 0.34, aw * 0.26, aw * 0.14, P.orlo, 0.22);
+      // il segno sull'addome: due gocce affusolate, non un faro
+      this._macchia(ctx, ax + aw * 0.24, ay - aw * 0.10, aw * 0.20, aw * 0.11, P.segno, 0.60, -0.5);
+      this._macchia(ctx, ax + aw * 0.24, ay + aw * 0.12, aw * 0.20, aw * 0.11, P.segno, 0.60, 0.5);
+      this._macchia(ctx, ax + aw * 0.02, ay + aw * 0.02, aw * 0.16, aw * 0.24, P.segno, 0.35);
+      for (let i = 0; i < 16; i++) {   // peluria sul bordo
+        const a = (i / 16) * Math.PI * 2 + e;
+        this._macchia(ctx, ax + Math.cos(a) * aw * 0.94, ay + Math.sin(a) * aw * 0.68, aw * 0.075, aw * 0.045, P.pelo, 0.55, a);
+      }
+      this._macchia(ctx, -r * 0.05, r * 0.02, r * 0.16, r * 0.13, P.buio, 0.9);   // peduncolo
+      // CEFALOTORACE: piu' piccolo, davanti e piu' basso
+      const cx = r * 0.48, cy = r * 0.12, cw = r * 0.48;
+      this._macchia(ctx, cx, cy + r * 0.03, cw * 1.16, cw * 0.84, P.buio, 0.95);
+      this._macchia(ctx, cx, cy, cw * 1.00, cw * 0.68, P.chit, 0.95);
+      this._macchia(ctx, cx - cw * 0.14, cy - cw * 0.24, cw * 0.56, cw * 0.30, P.chiaro, 0.40);
+      // OTTO OCCHI: due grandi davanti e sei piccoli sopra
+      const oc = (ox, oy, s2) => {
+        this._macchia(ctx, cx + ox, cy + oy, cw * 0.24 * s2, cw * 0.20 * s2, P.alone, 0.13 + sw * 0.14);
+        this._macchia(ctx, cx + ox, cy + oy, cw * 0.105 * s2, cw * 0.090 * s2, P.occhio, 0.95);
+        this._macchia(ctx, cx + ox, cy + oy, cw * 0.048 * s2, cw * 0.040 * s2, '#fff4ee', 1);
+      };
+      oc(cw * 0.50, -cw * 0.04, 1.20); oc(cw * 0.46, cw * 0.26, 1.00);
+      oc(cw * 0.16, -cw * 0.32, 0.60); oc(cw * 0.48, -cw * 0.34, 0.56);
+      oc(cw * 0.70, -cw * 0.16, 0.50); oc(cw * 0.72, cw * 0.10, 0.48);
+      oc(cw * 0.18, cw * 0.30, 0.52); oc(cw * 0.74, -cw * 0.02, 0.40);
+      // CHELICERI: due zanne che si aprono quando morde
+      for (const k of [-1, 1]) {
+        const apre = 0.22 + sw * 0.40;
+        for (let i = 1; i <= 6; i++) {
+          const p = i / 6, a = 0.55 + k * apre;
+          const x = cx + cw * 0.66 + Math.cos(a) * cw * 0.62 * p;
+          const y = cy + cw * 0.36 + Math.sin(a) * cw * 0.62 * p + k * cw * 0.16;
+          const w = cw * 0.14 * (1 - p * 0.76);
+          this._macchia(ctx, x, y, w, w, i > 4 ? P.orlo : P.chit, 0.92);
+        }
+      }
+      for (let i = 3; i >= 0; i--) { zampa(i, 1, true); zampa(i, -1, true); }     // le zampe di qua
+      ctx.restore();
     },
     _beholderPuppet(ctx, m, r, def, atk, moving, dir) {
       const t = this.time;

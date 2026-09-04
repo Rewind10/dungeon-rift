@@ -774,6 +774,16 @@ git tag vX.Y.Z
   chi e' a meta' di un'azione (`rolling`/`winding`/`lunge`) e chi vede il giocatore (`vedeIl`, come
   `perceive` ma senza toccare la memoria). L'anti-stallo di `Room` salta chi sta aspettando il turno: non
   e' bloccato. Spento anche il recupero di distanza (`cu`, fino a 2,1x oltre 340 px).
+- **v1.81 — `weaver` (i tre Ragni delle Volte).** Non insegue: orbita a `def.strafeDist` come lo `strafer`,
+  ma invece di sparare chiama `ctx.ragnatela(p.x, p.y, def.telaR, def.telaDur, def.eye, m.eid)` ogni
+  `def.telaCd` secondi, se vede il bersaglio entro `def.telaRange`. La tela e' un'entita' a se in
+  `Room.ragnatele` (non una `zone`: le zone fanno danno e scadono col botto, la tela rallenta e basta):
+  `Room.updateRagnatele` rinnova `p.buffs.ragnatela` a chi ci sta sopra, `effSpeed` applica
+  `C.RAGNATELA_MULT`, e chi e' in scatto (`p.buffs.dash`) e' esente. Tetto `C.RAGNATELE_MAX`, azzerate in
+  `newMap`. Sotto `def.atkRange` il ragno morde (`melee`). Fuori vista ricade su `caccia(0.78)`.
+- **v1.81 — `esplode` (Larva Fetida).** Non e' un'IA: e' un campo della def letto da `Room.killMonster`, che
+  alla morte spinge una `zone` con `t = def.esplode.ritardo` (3 s), raggio `.r` e danno `dmg * .mul`. Il
+  telegrafo e il conto alla rovescia sono quelli delle zone di sempre — nessun codice nuovo lato client.
 - **Brute FOV-slam:** in vista+gittata avvia `m.winding` (wind-up) ed **emette `slam_wind` (con eid)** per l'anim;
   al `windT ≥ winding*0.62` applica `areaDamage(slamRadius, dmg, colore, slamKnock)` ed **emette `slam`** (FX).
   Def: `sightRange 400, memory 4, slamWind 0.72, slamKnock 4.2, slamRadius 104, atkRange 70`.

@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
+  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], tele: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -92,6 +92,8 @@
         R.burst(ev.x, ev.y, '#ffcf5a', 28, 300, 0.5); R.burst(ev.x, ev.y + 6, '#7a5a3a', 20, 160, 0.65);
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
+      // v1.81 — il ragno tesse: un anello che si apre e qualche filo che schizza
+      case 'tela': R.ring(ev.x, ev.y, ev.c || '#cfe0ea', 3, ev.r, 0.45); R.burst(ev.x, ev.y, '#e6f1f8', 10, 90, 0.5); break;
       // v1.81 — LA LARVA SCOPPIA: il corpo si apre in uno sbuffo di spore, poi la zona telegrafata (che
       // arriva con lo stesso evento zone_tell di tutti) fa il conto alla rovescia sul pavimento.
       case 'larva_pop': R.burst(ev.x, ev.y, ev.c || '#e8ff6a', 18, 150, 0.55); R.ring(ev.x, ev.y, ev.c || '#e8ff6a', 5, 26, 0.3); break;
@@ -206,7 +208,7 @@
     const bm = {}; for (const b of prev.bul) bm[b.e] = b;
     w.bul = next.bul.map(nb => { const pb = bm[nb.e]; const o = Object.assign({}, nb); if (pb) { o.vx = (nb.x - pb.x) * C.SNAPSHOT_RATE; o.vy = (nb.y - pb.y) * C.SNAPSHOT_RATE; o.x = lerp(pb.x, nb.x, a); o.y = lerp(pb.y, nb.y, a); } return o; });
     w.orbs = next.orbs; w.met = next.met; w.crates = next.crates || []; w.wdrops = next.wdrops || [];
-    w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || [];
+    w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || []; w.tele = next.tele || [];
     // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
     // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
     w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;

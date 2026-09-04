@@ -3,7 +3,7 @@
 > Scheda di riferimento rapido di **tutti** i nemici del gioco. Per la **tecnica** di realizzazione (raster puppet,
 > sprite sheet, slicing, animazioni) vedi `ENEMIES.md`. Per la cronologia versioni vedi `CHANGELOG.md`.
 
-**Versione:** `1.81.0` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
+**Versione:** `1.81.1` · **Render:** due metodi convivono — **RASTER PUPPET** (illustrazione ritagliata in pezzi,
 animata via rig) per Zombie, Negromante, Melma e Beholder; **SPRITE SHEET** frame-by-frame per il Troll (dalla 1.47).
 
 > ⚠️ **Gli id nel codice non corrispondono ai nomi.** `skeleton` = Zombie Putrido · `cave_brute` = Troll delle
@@ -44,9 +44,11 @@ per i nemici d'ondata).
 | 6 | 💀 Sfera d'Ossa | 9 |
 | 7 | 🔵 Fuoco Fatuo | 8 |
 | 8 | 👁️ Occhio Viola *(max 8 vivi)* | 9 |
-| 9 | 🐛 **Larva Fetida** | 11 |
+| 8 | 🕷️ **Vedova delle Volte** *(max 6)* | 10 |
+| 9 | 🐛 **Larva Fetida** | 12 |
+| 10 | 🕷️ **Ragno della Cripta** *(max 5)* | 8 |
 | 10 | 👁️ Occhio di Carne *(max 6)* | 7 |
-| 11 | 👻 **Spettro** | 8 |
+| 11 | 🕷️ **Tessitrice Verde** *(max 4)* | 6 |
 | 12 | 👁️ Occhio Spettrale *(max 5)* | 5 |
 
 > 🗓️ **Aggiornata in v1.81.** Il **Troll delle Caverne** e' uscito dal pool nella v1.79.2 (la def resta in
@@ -209,8 +211,10 @@ L'unico nemico contro cui mettersi al riparo non serve a niente.
 | 👁️ Beholder | `occhio` | 3 | 130 | 92 | 22 | 16 | 340 | gazer | debuffer | 10+ (max 8) |
 | 🦇 Nugolo di Pipistrelli | `bat_swarm` | 1 | 76 | 175 | 24 | 6 | 30 | flock | sciame volante | 6+ |
 | 🔵 Fuoco Fatuo | `wisp` | 2 | 68 | 74 | 15 | 9 | 96 | drifter | inseguitore / attraversa muri | 8+ |
-| 🐛 Larva Fetida | `larva` | 2 | 66 | 104 | 17 | 9 | 36 | swarm | scoppia alla morte (104 px, 0,75 s, x2,4) | 9+ |
-| 👻 Spettro | `spettro` | 2 | 132 | 138 | 19 | 15 | 46 | wraith | si sfasa alle tue spalle | 11+ |
+| 🐛 Larva Fetida | `larva` | 2 | 66 | 104 | 17 | 9 | 36 | swarm | scoppia alla morte (104 px, 3 s, x2,4) | 9+ |
+| 🕷️ Vedova delle Volte | `ragno` | 2 | 88 | 116 | 21 | 12 | 52 | weaver | tesse tele che rallentano | 8+ (max 6) |
+| 🕷️ Ragno della Cripta | `ragno_cripta` | 3 | 148 | 112 | 23 | 17 | 56 | weaver | tele piu' larghe | 10+ (max 5) |
+| 🕷️ Tessitrice Verde | `ragno_veleno` | 3 | 196 | 120 | 24 | 21 | 58 | weaver | tele larghe e frequenti | 11+ (max 4) |
 | 🟢 Melma Minore *(divisione)* | `slime_mini` | 0 | 34 | 66 | 13 | 7 | 110 | blob | evocato | — |
 | 🟢 Zombie Minore | `zombie_mini` | 0 | 26 | 120 | 12 | 8 | 34 | swarm | evocato | — |
 

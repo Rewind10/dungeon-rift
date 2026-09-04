@@ -72,7 +72,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
@@ -88,6 +88,8 @@ class Room {
   newMap(seed, level, market) {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
+    // v1.81 — zone e ragnatele sono POSTI sulla mappa vecchia: sulla nuova non vogliono dire niente.
+    this.zones.length = 0; this.ragnatele.length = 0;
     // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
     // collisione torna a costare esattamente quanto prima: un solo confronto con null.
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
@@ -344,6 +346,14 @@ class Room {
       emit(ev) { self.events.push(ev); },
       GAZE_TICK: C.GAZE_TICK,
       gaze(m, p, kind) { self.gazePlayer(p, kind); },
+      // v1.81 — RAGNATELA: una macchia di pavimento che rallenta. Non fa danno e non scade col colpo:
+      // scade col tempo. Il tetto serve perche' tre ragni con la tela ogni 4 secondi, in un'ondata da
+      // due minuti, coprirebbero mezza stanza — e allora non sarebbe piu' una scelta, sarebbe una tassa.
+      ragnatela(x, y, r, dur, col, src) {
+        if (self.ragnatele.length >= (C.RAGNATELE_MAX || 14)) self.ragnatele.shift();
+        self.ragnatele.push({ eid: src || 0, x, y, r, t: dur, max: dur, col: col || '#cfe0ea' });
+        self.events.push({ t: 'tela', x, y, r, c: col || '#cfe0ea' });
+      },
       // v1.79.2 — IL BEHOLDER ADESSO ATTACCA. Prima applicava solo debuff: potevi restargli davanti tutto
       // il giorno e non ti succedeva niente. Il raggio fa danno a ogni tick finche' ti tiene nel cono, e
       // sotto la distanza di morso smette di guardarti e ti azzanna.
@@ -667,7 +677,7 @@ class Room {
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
   effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
-  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
   effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
@@ -1510,7 +1520,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -1893,6 +1903,22 @@ class Room {
       if (o.turret) { o.fireCd -= dt; let tgt = null, bd = o.range * o.range; for (const m of this.monsters) { if (m.dead) continue; const d2 = MU.dist2(o.x, o.y, m.x, m.y); if (d2 < bd && this.losClear(o.x, o.y, m.x, m.y)) { bd = d2; tgt = m; } } if (tgt) { o.aim = Math.atan2(tgt.y - o.y, tgt.x - o.x); if (o.fireCd <= 0) { o.fireCd = 0.3; const sp = 820; this.bullets.push({ eid: NEXT++, hostile: false, owner: o.owner, x: o.x, y: o.y, vx: Math.cos(o.aim) * sp, vy: Math.sin(o.aim) * sp, r: 5, dmg: o.dmg, color: '#9fe0ff', life: o.range / sp, pierce: 0, knock: 40 }); this.events.push({ t: 'turret_fire', x: o.x, y: o.y, a: o.aim }); } } continue; }
       if (o.rift) { for (const m of this.monsters) { const d = MU.dist(o.x, o.y, m.x, m.y); if (d < o.r && !m.boss) { const n = MU.norm(o.x - m.x, o.y - m.y); this.moveCircle(m, n.x * 120 * dt, n.y * 120 * dt); m.tickR = (m.tickR || 0) + dt; if (m.tickR > 0.25) { m.tickR = 0; this.damageMonster(m, o.dmg * 0.25, o.x, o.y, 0, this.players.get(o.owner)); } } } } } if (this.orbs.some(o => o.dead)) this.orbs = this.orbs.filter(o => !o.dead); }
   updateMeteors(dt) { for (const mt of this.meteors) { mt.t -= dt; if (mt.t <= 0 && !mt.done) { mt.done = true; this.events.push({ t: 'explosion', x: mt.x, y: mt.y, r: mt.r }); for (const p of this.alivePlayers) if (MU.dist(mt.x, mt.y, p.x, p.y) <= mt.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, mt.dmg, mt.x, mt.y, 2); } } this.meteors = this.meteors.filter(m => !m.done); }
+  // v1.81 — chi sta DENTRO una tela e' rallentato. Il buff si rinnova a ogni tick finche' ci sei sopra e
+  // si spegne da solo poco dopo che ne sei uscito (RAGNATELA_CODA): cosi' non serve rilevare l'uscita, e
+  // una tela resta un POSTO — non una maledizione che ti porti dietro per la stanza.
+  updateRagnatele(dt) {
+    if (!this.ragnatele.length) return;
+    for (const w of this.ragnatele) w.t -= dt;
+    if (this.ragnatele.some(w => w.t <= 0)) this.ragnatele = this.ragnatele.filter(w => w.t > 0);
+    for (const p of this.alivePlayers) {
+      if (p.buffs.dash > 0) continue;                       // lo scatto strappa la tela: e' l'uscita
+      for (const w of this.ragnatele) {
+        if (MU.dist(w.x, w.y, p.x, p.y) > w.r + p.radius * 0.5) continue;
+        p.buffs.ragnatela = Math.max(p.buffs.ragnatela || 0, C.RAGNATELA_CODA || 0.25);
+        break;
+      }
+    }
+  }
   updateZones(dt) { for (const z of this.zones) { if (z.done) continue; z.t -= dt; if (z.t <= 0) { z.done = true; this.events.push({ t: 'zone_hit', x: z.x, y: z.y, r: z.r, c: z.col }); for (const p of this.alivePlayers) if (MU.dist(z.x, z.y, p.x, p.y) <= z.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, z.dmg, z.x, z.y, 2.4); } } if (this.zones.some(z => z.done)) this.zones = this.zones.filter(z => !z.done); }
 
   // v1.68 — SNAPSHOT MAGRO. I mostri erano il 90% del traffico (120 byte l'uno, 20 volte al secondo), ma
@@ -1969,12 +1995,13 @@ class Room {
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });
     const zones = []; for (const z of this.zones) zones.push({ x: Math.round(z.x), y: Math.round(z.y), r: z.r, p: +(1 - z.t / z.max).toFixed(2), c: z.col });
+    const tele = []; for (const w of this.ragnatele) tele.push({ x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2), c: w.col });
     const crates = []; for (const c of this.crates) crates.push({ e: c.eid, x: Math.round(c.x), y: Math.round(c.y) });
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, tele, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

@@ -2,7 +2,7 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
-### [1.81.0] — 2026-09-04 · "La rampa non si ferma piu' alla settima"
+### [1.81.1] — 2026-09-04 · "La rampa non si ferma piu' alla settima"
 
 #### 📉 Il problema, misurato
 Il gioco smetteva di presentare cose all'**ondata 7**. Dopo arrivavano solo i tre Beholder (9, 12, 15): le
@@ -13,21 +13,25 @@ crescere (il livello 15 arriva verso la sedicesima). L'Occhio Spettrale, il nemi
 bestiario, compariva alla 15 e aveva **quattro ondate di vita** prima del drago.
 
 #### 🪜 La rampa, anticipata
-Adesso **ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era**:
+**Alla dodicesima ondata il bestiario e' tutto in campo** — prima ci arrivava alla quindicesima, e da li'
+in poi non succedeva piu' niente. Ogni ondata dalla 1 alla 12 aggiunge almeno un archetipo che prima non
+c'era; dall'ottava in poi qualcuna ne aggiunge due, perche' i tre Ragni si intrecciano ai tre Beholder.
 
 | Ondata | Entra | | Ondata | Entra |
 |---:|---|---|---:|---|
 | 1 | Zombie Putrido | | 7 | Fuoco Fatuo |
-| 2 | Melma Corrosiva | | **8** | **Occhio Viola** *(era la 9)* |
+| 2 | Melma Corrosiva | | **8** | **🆕 Vedova delle Volte** + **Occhio Viola** *(era la 9)* |
 | 3 | Negromante | | **9** | **🆕 Larva Fetida** |
-| 4 | Fungo Sporifero | | **10** | **Occhio di Carne** *(era la 12)* |
-| 5 | Nugolo di Pipistrelli | | **11** | **🆕 Spettro** |
+| 4 | Fungo Sporifero | | **10** | **🆕 Ragno della Cripta** + **Occhio di Carne** *(era la 12)* |
+| 5 | Nugolo di Pipistrelli | | **11** | **🆕 Tessitrice Verde** |
 | 6 | Sfera d'Ossa | | **12** | **Occhio Spettrale** *(era la 15)* |
+
+Il bestiario passa da 10 archetipi a **14**.
 
 #### 🐛 Larva Fetida *(ondata 9)*
 Ti corre addosso come uno zombi e da sola fa poco male. Il punto e' la sua morte: quando cade **si gonfia e
 scoppia**. Non subito — lascia a terra il cerchio telegrafato che usano gia' il Negromante e il Fungo, e
-detona **dopo 0,75 s** su un raggio di **104 px** per **2,4 volte il suo danno**. Insegna una cosa sola e la
+detona **dopo 3 s** su un raggio di **104 px** per **2,4 volte il suo danno**. Insegna una cosa sola e la
 insegna bene: *non stare incollato al nemico che stai finendo.* Chi arretra di un passo non prende niente, e
 le zone fanno male ai giocatori e non ai mostri, quindi niente reazioni a catena.
 
@@ -35,23 +39,44 @@ Disegnata a codice come i Beholder e la caverna: sei segmenti di macchie morbide
 fra un segmento e l'altro, sei uncini che spingono quando striscia, mandibole, e il **nucleo che pulsa sotto
 la pelle tesa** — l'unico avviso che quando cade lascera' un buco nel pavimento. Nessun asset nuovo.
 
-#### 👻 Spettro *(ondata 11)*
-C'era nella **v1.32**, e' uscito nella **v1.37** quando il bestiario fu ridotto a un archetipo solo. Il suo
-disegno (`_spettroF`) e la sua IA (`wraith`) non erano mai stati buttati: **torna quello**. Avanza rapido in
-mischia e ogni tanto **si sfasa e riemerge alle tue spalle**, attraverso la roccia. Toglie la sicurezza
-della distanza.
+#### 🕷️ I tre Ragni delle Volte *(ondate 8, 10, 11)*
+Non ti vengono addosso: tengono la media distanza orbitando, e ogni pochi secondi **tessono una ragnatela
+sul punto dove sei**. La tela **non fa un solo punto di danno**: ti **rallenta del 42%** finche' ci stai
+sopra. E' l'unico nemico del bestiario che ti toglie la **mobilita'** invece di aggiungere danno — se lo
+ignori ti chiude lo spazio, e poi ti raggiunge tutto il resto dell'ondata. Da vicino **mordono**, se no
+sarebbe bastato stargli addosso per annullarli.
 
-**Lo sfasamento e' stato reso leggibile**, perche' com'era sarebbe stato esattamente il difetto tolto nella
-v1.76.1: spariva e ricompariva **nello stesso fotogramma**, e nessuno dei tre eventi (`blink_out`,
-`blink_in`) era gestito dal client — un teletrasporto muto. Adesso ci sono tre momenti distinti: **si
-annuncia** (0,38 s piantato, anello che si stringe addosso a lui, evento `blink_wind`), **sparisce** (anello
-+ sbuffo), **riappare** (anello + sbuffo + scossone) e resta stordito 0,30 s prima di colpire. Lo vedi
-partire e sai dove guardare.
+| | Ondata | PV | Tela | Durata | Ogni |
+|---|---:|---:|---:|---:|---:|
+| 🕷️ **Vedova delle Volte** | 8 | 88 | 92 px | 5,0 s | 5,5 s |
+| 🕷️ **Ragno della Cripta** | 10 | 148 | 104 px | 6,0 s | 5,0 s |
+| 🕷️ **Tessitrice Verde** | 11 | 196 | 112 px | 6,5 s | 4,4 s |
+
+Stessa famiglia, stesso comportamento (`weaver`), **un disegno solo e tre palette** — la struttura che ha
+funzionato coi Beholder. Dipinti a codice come la caverna: otto zampe che si piegano sopra il corpo e
+ricadono a terra (disegnate in due passate, quelle di la' dietro il corpo e quelle di qua davanti, se no
+diventa una macchia con dei bastoncini incollati sopra), addome ovale con la peluria sul bordo, e il
+grappolo di **otto occhi** sul cefalotorace.
+
+Tre dettagli che contano: lo **scatto strappa la tela** (chi scatta non e' rallentato: e' l'uscita), il
+rallentamento **si spegne da solo poco dopo che ne sei uscito** — la tela e' un posto, non una maledizione
+che ti porti dietro — e c'e' un **tetto di 14 tele in campo**, perche' tre ragni per due minuti d'ondata
+coprirebbero mezza stanza, e allora non sarebbe piu' una scelta ma una tassa. Le tele spariscono anche col
+cambio mappa: erano un posto sulla mappa vecchia.
+
+#### 👻 Lo Spettro non torna
+Era rientrato in lavorazione (c'era dalla v1.32, uscito nella v1.37) riusando il disegno vettoriale di
+allora. Bocciato: accanto ai Beholder e alla caverna dipinti non stava in piedi, e rifarlo da zero non
+valeva il prezzo di un archetipo che ne duplicava un altro. Restano nel file la sua IA `wraith` e lo
+sfasamento reso leggibile (annuncio, sparizione, rientro: tre momenti distinti invece di un teletrasporto
+muto), se un domani servisse.
 
 #### 🧪 Test
-**1293 passati, 0 falliti.** La rampa e' verificata ondata per ondata: dalla 1 alla 12 il pool deve avere
-esattamente tanti archetipi quante sono le ondate — se un domani se ne aggiunge uno lasciando un buco, il
-test lo dice.
+**1327 passati, 0 falliti.** La rampa e' verificata ondata per ondata: dalla 1 alla 7 il pool deve avere
+esattamente tanti archetipi quante sono le ondate, dalla 8 alla 12 deve **crescere sempre**, e alla
+dodicesima deve essere completo (14). Se un domani se ne aggiunge uno lasciando un buco, o se ne arriva
+uno tardi, il test lo dice. Verificati anche la tela (rallenta, non fa danno, si spegne quando esci, ha un
+tetto, sparisce col cambio mappa) e i tre secondi della Larva.
 
 ### [1.80.1] — 2026-09-04 · "I nemici ti cercano"
 

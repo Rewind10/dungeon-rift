@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.81.0`
+**Versione attuale:** `1.81.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -136,25 +136,35 @@ piu' dal pool, e nessuna ondata resta senza novita':
 | 5 | Nugolo di Pipistrelli | serpeggia: guida il tiro |
 | 6 | Sfera d'Ossa | carica dritta: togliti di lato |
 | 7 | Fuoco Fatuo | attraversa i muri: il riparo non basta |
-| **8** | **Occhio Viola** *(era 9)* | il raggio consuma vita: esci dal cono |
+| **8** | **Vedova delle Volte** *(nuova)* + **Occhio Viola** *(era 9)* | **la tela ti toglie le gambe** · il raggio consuma vita |
 | **9** | **Larva Fetida** *(nuova)* | **non stare incollato a chi stai finendo** |
-| **10** | **Occhio di Carne** *(era 12)* | lo stesso, ma piu' duro e piu' vicino |
-| **11** | **Spettro** *(nuovo)* | **si sfasa alle tue spalle: la distanza non salva** |
+| **10** | **Ragno della Cripta** *(nuovo)* + **Occhio di Carne** *(era 12)* | tele piu' larghe · lo stesso occhio, piu' duro |
+| **11** | **Tessitrice Verde** *(nuova)* | la tela piu' larga e piu' frequente |
 | **12** | **Occhio Spettrale** *(era 15)* | raggio lungo, e passa nella roccia |
 
-Prima della v1.81 la rampa si fermava alla settima: le ondate 8, 10, 11, 13, 14 e tutte dalla 16 alla 19
-non portavano niente, e all'ondata 19 la composizione del pool era identica a quella della 15.
+**Alla dodicesima il bestiario e' tutto in campo** — 14 archetipi. Prima della v1.81 la rampa si fermava
+alla settima: le ondate 8, 10, 11, 13, 14 e tutte dalla 16 alla 19 non portavano niente, e all'ondata 19 la
+composizione del pool era identica a quella della 15.
+
+### 🕷️ I tre Ragni delle Volte
+Non inseguono: orbitano a media distanza e **tessono una ragnatela sul punto dove sei**. La tela non fa un
+solo punto di danno — ti **rallenta del 42%** finche' ci stai sopra.
+
+| | Ondata | PV | Tela | Durata | Ogni |
+|---|---:|---:|---:|---:|---:|
+| Vedova delle Volte | 8 | 88 | 92 px | 5,0 s | 5,5 s |
+| Ragno della Cripta | 10 | 148 | 104 px | 6,0 s | 5,0 s |
+| Tessitrice Verde | 11 | 196 | 112 px | 6,5 s | 4,4 s |
+
+Da vicino **mordono**: se no bastava stargli addosso per annullarli. Lo **scatto strappa la tela** (chi
+scatta non e' rallentato), il rallentamento **si spegne poco dopo che ne sei uscito** — la tela e' un
+posto, non una maledizione — e c'e' un **tetto di 14 tele** in campo perche' tre ragni per due minuti
+d'ondata coprirebbero mezza stanza. Le tele spariscono col cambio mappa.
 
 ### 🐛 Larva Fetida
 Corre addosso come uno zombi e da sola fa poco male: il punto e' la sua morte. Quando cade lascia a terra
-il cerchio telegrafato delle zone, che detona dopo **0,75 s** su **104 px** per **2,4x il suo danno**. Chi
+il cerchio telegrafato delle zone, che detona dopo **3 s** su **104 px** per **2,4x il suo danno**. Chi
 arretra di un passo non prende niente. Le zone fanno male ai giocatori e non ai mostri: niente catene.
-
-### 👻 Spettro
-Torna dalla v1.32 (era uscito nella v1.37). Rapido in mischia, ogni **4,6 s** circa si sfasa e riemerge
-**alle tue spalle** attraverso la roccia. Lo sfasamento ha tre momenti visibili — si annuncia (0,38 s
-fermo, anello che si stringe), sparisce, riappare — e dopo il rientro resta stordito 0,30 s prima di
-colpire: non e' un teletrasporto, e' un'abilita' che vedi partire.
 
 ---
 

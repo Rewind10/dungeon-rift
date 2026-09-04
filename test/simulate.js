@@ -463,10 +463,8 @@ function testV113() {
 function testV139() {
   console.log('\n[TEST 18] Novita v1.39 — Negromante PUPPET (sfere debilitanti nel campo visivo + evoca zombi minori) & migliorie');
   const Mon = require('../shared/monsters.js');
-  // roster PUPPET: zombie + negromante (entrambi puppet). v1.81 — lo Spettro e' TORNATO (era uscito
-  // nella v1.37 col taglio del bestiario a un archetipo solo): il disegno _spettroF e l IA wraith non
-  // erano mai stati buttati, e adesso rientra in pool all ondata 11.
-  assert(!!Mon.MONSTERS.spettro && Mon.MONSTERS.spettro.ai === 'wraith', 'lo Spettro e tornato nel bestiario');
+  // roster PUPPET: zombie + negromante (entrambi puppet); lo Spettro vettoriale resta fuori.
+  assert(!Mon.MONSTERS.spettro, 'nemico vettoriale ancora rimosso: spettro');
   assert(Mon.ORDER[0] === 'skeleton' && Mon.ORDER.includes('darkmage'), 'ORDER parte dallo sciame base e contiene il Negromante');
   const z = Mon.MONSTERS.skeleton, dm = Mon.MONSTERS.darkmage, mn = Mon.MONSTERS.zombie_mini;
   assert(z && z.puppet && z.shape === 'ghoul', 'Zombie Putrido = puppet ghoul');
@@ -683,8 +681,13 @@ function testV150() {
   assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 5');
   assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 7');
   assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'Beholder introdotto all ondata 8 (v1.81: era la 9)');
-  // v1.81 — la rampa non salta nessuna ondata da 1 a 12: un archetipo nuovo per ogni ondata.
-  for (let w = 1; w <= 12; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
+  // v1.81 — LA RAMPA NON HA BUCHI e non arriva tardi: ogni ondata dalla 1 alla 12 aggiunge almeno un
+  // archetipo che prima non c'era, e alla 12 il bestiario e' tutto in campo. Dalla 8 in poi qualche
+  // ondata ne aggiunge due (i tre Ragni si intrecciano ai tre Beholder), quindi non si conta piu' "un
+  // tipo per ondata": si conta che il pool CRESCA sempre, e che si chiuda entro la dodicesima.
+  for (let w = 1; w <= 7; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
+  for (let w = 8; w <= 12; w++) assert(at(w).length > at(w - 1).length, 'ondata ' + w + ': porta qualcosa che prima non c era');
+  assert(at(12).length === 14 && at(13).length === 14, 'alla dodicesima il bestiario e tutto in campo (14 archetipi) e li resta');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -3202,6 +3205,14 @@ function testBeholder179() {
   assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'il Viola entra alla 8');
   assert(!at(9).includes('occhio_carne') && at(10).includes('occhio_carne'), 'quello di Carne alla 10');
   assert(!at(11).includes('occhio_spettro') && at(12).includes('occhio_spettro'), 'lo Spettrale alla 12');
+  // i tre Ragni, intrecciati ai Beholder
+  assert(!at(7).includes('ragno') && at(8).includes('ragno'), 'la Vedova delle Volte entra alla 8');
+  assert(!at(9).includes('ragno_cripta') && at(10).includes('ragno_cripta'), 'il Ragno della Cripta alla 10');
+  assert(!at(10).includes('ragno_veleno') && at(11).includes('ragno_veleno'), 'la Tessitrice Verde alla 11');
+  const R1 = Mon.MONSTERS.ragno, R2 = Mon.MONSTERS.ragno_cripta, R3 = Mon.MONSTERS.ragno_veleno;
+  assert(R1.ai === 'weaver' && R2.ai === 'weaver' && R3.ai === 'weaver', 'i tre Ragni hanno lo stesso comportamento');
+  assert(R1.hp < R2.hp && R2.hp < R3.hp, 'e crescono di pericolo (' + R1.hp + ' < ' + R2.hp + ' < ' + R3.hp + ')');
+  assert(R1.pal !== R2.pal && R2.pal !== R3.pal, 'tre palette diverse');
   // --- 3) IL RAGGIO FA MALE ---
   const room = new Room('beh179'); const p = room.addPlayer('b', { send() {} }, 'B', 'guerriero'); room.startGame();
   room.phase = C.PHASE_COMBAT; room.monsters.length = 0;
@@ -3346,6 +3357,93 @@ function testV180() {
   ok('la caccia verificata: arrivano a scaglioni, li vedi arrivare, e non ti seppelliscono');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 57 — v1.81: la Larva scoppia, i Ragni tessono
+// ============================================================================
+function testV181() {
+  console.log('\n[TEST 57] v1.81 — la Larva scoppia, i tre Ragni tessono');
+  const dt = 1 / C.TICK_RATE;
+  const Mon = require('../shared/monsters.js');
+
+  // --- 1) LA LARVA: quando muore lascia una zona, e la zona detona DOPO, non subito ---
+  const r1 = new Room('v181a'); const p = r1.addPlayer('a', { send() {} }, 'A', 'guerriero'); r1.startGame();
+  r1.phase = C.PHASE_COMBAT; r1.monsters.length = 0; r1.pending = 0; r1.waveList = []; r1.zones.length = 0;
+  const sp1 = losSpot(r1, p, 200);
+  const lv = r1.spawnMonster('larva', sp1.x, sp1.y, { scaling: Waves.scaling(9, 1) }); lv.awake = true;
+  const rit = Mon.MONSTERS.larva.esplode.ritardo;
+  assert(rit === 3, 'la Larva scoppia dopo 3 secondi (' + rit + ')');
+  r1.killMonster(lv, p);
+  const z = r1.zones.find(x => Math.abs(x.x - sp1.x) < 1 && Math.abs(x.y - sp1.y) < 1);
+  assert(!!z, 'alla morte lascia a terra la zona telegrafata');
+  assert(Math.abs(z.max - rit) < 1e-9, 'con il conto alla rovescia di ' + rit + ' s');
+  assert(z.r === Mon.MONSTERS.larva.esplode.r, 'e il raggio dichiarato (' + z.r + ' px)');
+  // chi resta dentro la prende, chi esce no
+  const q1 = new Room('v181b'); const g1 = q1.addPlayer('b', { send() {} }, 'B', 'guerriero'); q1.startGame();
+  q1.phase = C.PHASE_COMBAT; q1.monsters.length = 0; q1.pending = 0; q1.waveList = []; q1.zones.length = 0;
+  const lv2 = q1.spawnMonster('larva', g1.x + 40, g1.y, { scaling: Waves.scaling(9, 1) }); lv2.awake = true;
+  q1.killMonster(lv2, g1);
+  g1.hp = q1.effMaxHp(g1); const hp0 = g1.hp;
+  for (let i = 0; i < C.TICK_RATE * 4; i++) { q1.setInput('b', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); q1.update(dt); }
+  assert(g1.hp < hp0, 'restare sull esplosione costa vita (' + (hp0 - g1.hp) + ' danni)');
+
+  // --- 2) I TRE RAGNI: stessa famiglia, tre pericoli ---
+  for (const id of ['ragno', 'ragno_cripta', 'ragno_veleno']) {
+    const d = Mon.MONSTERS[id];
+    assert(!!d && d.ai === 'weaver', id + ': esiste e tesse');
+    assert(d.ragno && d.pal, id + ': dipinto a codice, con la sua palette');
+    assert(d.telaR > 0 && d.telaDur > 0 && d.telaCd > 0, id + ': ha la tela');
+    assert(Mon.ORDER.includes(id), id + ': e nel bestiario');
+  }
+
+  // --- 3) LA TELA RALLENTA, e non fa danno ---
+  const r3 = new Room('v181c'); const p3 = r3.addPlayer('c', { send() {} }, 'C', 'ladro'); r3.startGame();
+  r3.phase = C.PHASE_COMBAT; r3.monsters.length = 0; r3.pending = 0; r3.waveList = []; r3.ragnatele.length = 0;
+  const sp3 = losSpot(r3, p3, 240);
+  const rg = r3.spawnMonster('ragno', sp3.x, sp3.y, { scaling: Waves.scaling(8, 1) }); rg.awake = true; rg.telaT = 0;
+  p3.hp = r3.effMaxHp(p3); const hp3 = p3.hp;
+  let tessuto = false;
+  for (let i = 0; i < C.TICK_RATE * 6 && !tessuto; i++) {
+    p3.hp = r3.effMaxHp(p3);
+    r3.setInput('c', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+    r3.update(dt);
+    if (r3.ragnatele.length) tessuto = true;
+  }
+  assert(tessuto, 'il ragno tesse una tela dove sei');
+  const tela = r3.ragnatele[0];
+  p3.buffs.ragnatela = 0;                     // il ragno ha gia' tessuto sotto ai piedi: si azzera per misurare
+  const vPiena = r3.effSpeed(p3);
+  p3.x = tela.x; p3.y = tela.y; p3.buffs.dash = 0;
+  r3.updateRagnatele(dt);
+  const vLenta = r3.effSpeed(p3);
+  assert(vLenta < vPiena * 0.75, 'dentro la tela vai piu' + String.fromCharCode(39) + ' piano (' + vLenta.toFixed(0) + ' contro ' + vPiena.toFixed(0) + ')');
+  // e non fa danno: il colpo del ragno e il morso, non il pavimento
+  const hpTela = p3.hp;
+  for (let i = 0; i < C.TICK_RATE; i++) { p3.x = tela.x; p3.y = tela.y; r3.updateRagnatele(dt); }
+  assert(p3.hp === hpTela, 'e la tela non fa un solo punto di danno');
+  // uscendo, il rallentamento si spegne da solo
+  p3.x = tela.x + 900; p3.y = tela.y + 900;
+  for (let i = 0; i < C.TICK_RATE; i++) { r3.updateRagnatele(dt); p3.buffs.ragnatela = Math.max(0, (p3.buffs.ragnatela || 0) - dt); }
+  assert(!(p3.buffs.ragnatela > 0), 'uscito dalla tela torni veloce: non te la porti dietro');
+  // la tela scade da sola
+  const quante = r3.ragnatele.length;
+  for (let i = 0; i < C.TICK_RATE * 10; i++) r3.updateRagnatele(dt);
+  assert(r3.ragnatele.length < quante || r3.ragnatele.every(w => w.t > 0), 'le tele scadono col tempo');
+  // tetto: non si copre la stanza
+  r3.ragnatele.length = 0;
+  const ctx3 = r3.makeCtx();
+  for (let i = 0; i < 40; i++) ctx3.ragnatela(100 + i, 100, 90, 6, '#fff', 1);
+  assert(r3.ragnatele.length <= (C.RAGNATELE_MAX || 14), 'c e un tetto alle tele in campo (' + r3.ragnatele.length + ')');
+
+  // --- 4) le tele spariscono col cambio mappa: sono un posto, non un oggetto ---
+  const r4 = new Room('v181d'); r4.addPlayer('d', { send() {} }, 'D', 'mago'); r4.startGame();
+  r4.makeCtx().ragnatela(300, 300, 90, 6, '#fff', 1);
+  assert(r4.ragnatele.length === 1, 'tela messa');
+  r4.newMap(12345, 3);
+  assert(r4.ragnatele.length === 0, 'e sparita con la mappa vecchia');
+
+  ok('Larva e Ragni verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -233,6 +233,30 @@
         }
       } else { m.gazeActive = 0; }
     },
+    // v1.81 — TESSITRICE (i tre Ragni delle Volte). Non ti insegue: tiene la media distanza orbitando,
+    // e ogni telaCd secondi TESSE una ragnatela sul punto dove sei. La tela non fa danno: rallenta. Il
+    // ragno non vince col colpo, vince col pavimento — se lo ignori ti chiude lo spazio e poi ti raggiunge
+    // chiunque altro. Da vicino morde, se no bastava stargli addosso per annullarlo.
+    weaver(m, ctx) {
+      const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 560);
+      if (!sees) { if (!investigate(m, ctx)) caccia(m, ctx, 0.78); return; }
+      const id = m.def.strafeDist || 240;
+      const toP = MU.norm(p.x - m.x, p.y - m.y);
+      let rad = 0; if (d < id - 40) rad = -1; else if (d > id + 40) rad = 1;
+      if (m.orbit === undefined) m.orbit = Math.random() < 0.5 ? 1 : -1;
+      const tg = { x: -toP.y * m.orbit, y: toP.x * m.orbit };
+      const n = MU.norm(toP.x * rad + tg.x, toP.y * rad + tg.y);
+      m.mx = n.x * m.speed * 0.92; m.my = n.y * m.speed * 0.92;
+      m.facing = Math.atan2(toP.y, toP.x);
+      // MORSO: sotto la distanza ravvicinata smette di tessere e azzanna
+      melee(m, ctx, p, 1, 1.1);
+      // TELA: sul punto dove sei, non dove sarai — cosi' e' evitabile muovendosi
+      m.telaT = (m.telaT != null ? m.telaT : MU.rand(1.0, 2.4)) - ctx.dt;
+      if (m.telaT <= 0 && d <= (m.def.telaRange || 340) && ctx.losClear(m.x, m.y, p.x, p.y)) {
+        m.telaT = m.def.telaCd || 5;
+        if (ctx.ragnatela) ctx.ragnatela(p.x, p.y, m.def.telaR || 100, m.def.telaDur || 5.5, m.def.eye, m.eid);
+      }
+    },
     // v1.58 — SENTINELLA (Fungo Sporifero): non si muove MAI. Nessun ciclo di camminata da animare, e in
     // cambio nega il terreno: se ti vede, semina zone di spore dove sei. Punisce chi resta fermo.
     sentry(m, ctx) {

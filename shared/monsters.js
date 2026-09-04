@@ -62,12 +62,15 @@
     // e' la sua morte. Quando cade si gonfia e SCOPPIA — non subito, dopo tre quarti di secondo, e sul
     // pavimento resta il cerchio che vedi accendersi. Insegna una cosa sola e la insegna bene: non stare
     // incollato al nemico che stai finendo. Chi arretra di un passo non prende niente.
-    larva: { id: 'larva', name: 'Larva Fetida', tier: 2, hp: 66, speed: 104, radius: 17, dmg: 9, atkRange: 36, atkCd: 1.2, ai: 'swarm', atk: 'melee', xp: 14, weight: 0, color: '#46561a', color2: '#1b2408', eye: '#e8ff6a', shape: 'larva', larva: true, sightRange: 560, memory: 3, esplode: { r: 104, mul: 2.4, ritardo: 0.75 }, eliteHp: 1.5 },
-    // v1.81 — SPETTRO: c'era nella v1.32, e' uscito nella v1.37 quando il bestiario fu ridotto a un
-    // archetipo solo. Il disegno non e' mai stato buttato (_spettroF) e nemmeno la sua IA (wraith):
-    // torna quello, con lo SFASAMENTO reso leggibile. Avanza rapido in mischia e ogni tanto si sfasa e
-    // riemerge ALLE TUE SPALLE attraverso la roccia. Toglie la sicurezza della distanza.
-    spettro: { id: 'spettro', name: 'Spettro', tier: 2, hp: 132, speed: 138, radius: 19, dmg: 15, atkRange: 46, atkCd: 0.95, ai: 'wraith', atk: 'melee', xp: 26, weight: 0, color: '#5b6fa8', color2: '#141a2c', eye: '#9fe8ff', shape: 'spettro', front: true, aura: 1.8, sightRange: 640, memory: 4.5, blinkCd: 4.6, blinkWind: 0.38, eliteHp: 1.6 },
+    larva: { id: 'larva', name: 'Larva Fetida', tier: 2, hp: 66, speed: 104, radius: 17, dmg: 9, atkRange: 36, atkCd: 1.2, ai: 'swarm', atk: 'melee', xp: 14, weight: 0, color: '#46561a', color2: '#1b2408', eye: '#e8ff6a', shape: 'larva', larva: true, sightRange: 560, memory: 3, esplode: { r: 104, mul: 2.4, ritardo: 3 }, eliteHp: 1.5 },
+    // v1.81 — I TRE RAGNI DELLE VOLTE. Stessa famiglia, stesso comportamento (weaver), tre taglie e tre
+    // palette: e' la struttura che ha funzionato coi Beholder — un disegno solo, tre creature. Non ti
+    // vengono addosso: tengono la media distanza e TESSONO. La ragnatela non fa danno, ti RALLENTA — e'
+    // l'unico nemico del bestiario che ti toglie la mobilita' invece di aggiungere danno. Da vicino
+    // mordono, se no basterebbe stargli addosso per annullarli.
+    ragno:         { id: 'ragno',         name: 'Vedova delle Volte', tier: 2, hp: 88,  speed: 116, radius: 21, dmg: 12, atkRange: 52, atkCd: 1.15, ai: 'weaver', atk: 'melee', xp: 18, weight: 0, color: '#1e1a24', color2: '#08070c', eye: '#ff3b52', shape: 'ragno', ragno: true, pal: 'vedova', sightRange: 560, memory: 3.5, strafeDist: 230, telaCd: 5.5, telaR: 92,  telaDur: 5.0, telaRange: 330, eliteHp: 1.5, maxAlive: 6 },
+    ragno_cripta:  { id: 'ragno_cripta',  name: 'Ragno della Cripta', tier: 3, hp: 148, speed: 112, radius: 23, dmg: 17, atkRange: 56, atkCd: 1.05, ai: 'weaver', atk: 'melee', xp: 27, weight: 0, color: '#261c12', color2: '#0b0906', eye: '#ffc247', shape: 'ragno', ragno: true, pal: 'cripta', sightRange: 600, memory: 4.0, strafeDist: 250, telaCd: 5.0, telaR: 104, telaDur: 6.0, telaRange: 360, eliteHp: 1.6, maxAlive: 5 },
+    ragno_veleno:  { id: 'ragno_veleno',  name: 'Tessitrice Verde',   tier: 3, hp: 196, speed: 120, radius: 24, dmg: 21, atkRange: 58, atkCd: 1.0,  ai: 'weaver', atk: 'melee', xp: 38, weight: 0, color: '#152a1c', color2: '#070f0a', eye: '#c8ff5a', shape: 'ragno', ragno: true, pal: 'veleno', sightRange: 640, memory: 4.5, strafeDist: 260, telaCd: 4.4, telaR: 112, telaDur: 6.5, telaRange: 390, eliteHp: 1.7, maxAlive: 4 },
     wisp: { id: 'wisp', name: 'Fuoco Fatuo', tier: 2, hp: 68, speed: 74, radius: 15, dmg: 9, atkRange: 96, atkCd: 0.9, ai: 'drifter', atk: 'melee', xp: 15, weight: 0, color: '#123a3a', color2: '#06181a', eye: '#7dffea', shape: 'wisp', wisp: true, puppet: true, aura: 2.6, phasing: true, leech: 0.9, bobAmp: 6, eliteHp: 1.7 },
     // v1.30 — Mimic MANTENUTO solo come CASSA: non entra nel pool delle ondate (weight 0),
     // compare esclusivamente dalle casse-mima e dalla modalità TESORO. Sprite top-down a forziere.
@@ -82,6 +85,6 @@
   // ondata. La sua definizione resta qui sopra — con lo sprite-sheet, lo slam ad area e la sua IA — perche'
   // toglierla butterebbe via del lavoro che potrebbe tornare utile, ma non e' piu' raggiungibile: non e' in
   // ORDER e non e' nel pool delle ondate.
-  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'spore_fungus', 'bone_roller', 'wisp', 'larva', 'spettro', 'occhio', 'occhio_carne', 'occhio_spettro'];
+  const ORDER = ['skeleton', 'slime', 'slime_mini', 'bat_swarm', 'darkmage', 'spore_fungus', 'bone_roller', 'wisp', 'larva', 'ragno', 'ragno_cripta', 'ragno_veleno', 'occhio', 'occhio_carne', 'occhio_spettro'];
   return { MONSTERS, BOSSES, ORDER };
 });

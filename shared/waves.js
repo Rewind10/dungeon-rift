@@ -52,10 +52,12 @@
     // ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era, e i Beholder si
     // fanno avanti: il Viola alla 8, quello di Carne alla 10, lo Spettrale alla 12 — cosi' il piu'
     // lavorato dei tre non compare a cinque ondate dalla fine.
-    if (w >= 8) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi  (era 9)
-    if (w >= 9) add('larva', 11);           // Larva Fetida — scoppia quando la uccidi              (nuovo)
+    if (w >= 8) add('ragno', 10);           // Vedova delle Volte — tesse tele che rallentano       (nuovo)
+    if (w >= 8) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi   (era 9)
+    if (w >= 9) add('larva', 12);           // Larva Fetida — scoppia quando la uccidi              (nuovo)
+    if (w >= 10) add('ragno_cripta', 8);    // Ragno della Cripta — la seconda tessitrice          (nuovo)
     if (w >= 10) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino          (era 12)
-    if (w >= 11) add('spettro', 8);         // Spettro — si sfasa e riemerge alle tue spalle        (nuovo)
+    if (w >= 11) add('ragno_veleno', 6);    // Tessitrice Verde — la terza, tele piu' larghe       (nuovo)
     if (w >= 12) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo (era 15)
     return p;
   }
