@@ -2,6 +2,38 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.82.1] — 2026-09-05 · "Il giocatore si e' ritrovato addosso i colori del mercenario"
+
+#### 🐛 Il difetto
+Con un mercenario **della stessa classe** in campo, il personaggio del giocatore cambiava colore: si
+ritrovava addosso la tinta del compagno (abilita' e classe restavano quelle giuste — cambiava solo cio'
+che si vedeva). Segnalato subito dopo la 1.82.0: *"avevo l'estetica di un ladro, ho assoldato un altro
+ladro e sono diventato un guerriero con le abilita' di un ladro"*.
+
+#### 🔍 La causa
+Non era il mercenario: era la **cache dei gradienti**, ferma dal 2024 e cieca alla palette. La chiave era
+
+```
+'h_torso|lad|' + raggio        →  due ladri dello stesso raggio = STESSO gradiente
+```
+
+cioe' i colori di chi veniva disegnato per primo. Il torso e' la superficie piu' grande del personaggio
+visto dall'alto, quindi il travaso si vedeva tutto. Finche' esisteva un solo personaggio per classe il
+difetto non poteva manifestarsi — **le tinte dei mercenari sono la prima cosa che ha messo due esemplari
+della stessa classe sullo schermo insieme**, e il bug e' saltato fuori al primo tentativo.
+
+Il mago era gia' mezzo salvo per caso (la sua chiave conteneva `body`); guerriero e ladro no.
+
+#### 🔧 La correzione
+La **firma della palette** entra nella chiave (`_palKey`, una funzione pura): tinte diverse, gradienti
+diversi. Chi non ha tinta produce firma vuota e continua a condividere il gradiente di sempre, quindi non
+si paga niente per una funzione che non si usa. Verificato nel browser: con giocatore e mercenario
+entrambi ladri, in cache ci sono adesso **due** voci `h_torso|lad|…` invece di una.
+
+Il test lo blinda dove costa meno — su `_palKey`, che e' pura e non ha bisogno di un canvas: le quattro
+tinte di ogni classe devono dare quattro firme diverse, nessuna delle quali uguale alla firma di "nessuna
+tinta", e la chiave completa di giocatore e mercenario della stessa classe non deve mai coincidere.
+
 ### [1.82.0] — 2026-09-05 · "La compagnia di ventura"
 
 #### 🗡️ I mercenari

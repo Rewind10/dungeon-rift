@@ -364,6 +364,30 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   HUD.hideBandit();
   ok(panel.classList.contains('hidden'), 'e si chiude quando ti allontani');
 
+  // --- v1.82 FIX: due personaggi della STESSA classe con tinte diverse non si spartiscono i colori ---
+  // La cache dei gradienti era chiusa su 'h_torso|lad|<raggio>': il secondo ladro disegnato riusava il
+  // gradiente del primo, cioe' i suoi colori. Con i mercenari il giocatore si e' ritrovato addosso la
+  // tinta del compagno. La chiave adesso porta la firma della palette.
+  {
+    const M = require('../shared/mercenari.js');
+    const RR = window.Renderer;
+    const pk = (p) => RR._palKey(p);
+    ok(pk(null) === '', 'chi non ha tinta ha firma vuota: continua a condividere il gradiente di sempre');
+    const tinte = M.TINTE.ladro.map(pk);
+    ok(new Set(tinte).size === tinte.length, 'le quattro tinte del ladro hanno quattro firme diverse');
+    ok(tinte.every(x => x !== ''), 'e nessuna e vuota: non si confondono con chi non ha tinta');
+    for (const cl of ['guerriero', 'mago', 'ladro']) {
+      const f = M.TINTE[cl].map(pk);
+      ok(new Set(f).size === f.length, cl + ': tinte tutte distinguibili');
+      ok(!f.includes(''), cl + ': nessuna tinta produce la chiave di "nessuna tinta"');
+    }
+    // la chiave completa, quella che finisce davvero nella cache
+    const chiave = (cl, r, p) => 'h_torso|' + cl + '|' + r + '|' + pk(p);
+    ok(chiave('lad', 16, null) !== chiave('lad', 16, M.TINTE.ladro[0]), 'giocatore e mercenario della stessa classe: due chiavi diverse');
+    ok(chiave('lad', 16, M.TINTE.ladro[0]) !== chiave('lad', 16, M.TINTE.ladro[1]), 'due mercenari di tinta diversa: due chiavi diverse');
+    ok(chiave('lad', 16, null) === chiave('lad', 16, null), 'e senza tinta la chiave resta stabile');
+  }
+
   // --- il Fabbro deve dire cosa e gia tuo ---
   const card = HUD._gearCard({ id: 'gue_spadone', name: 'Spadone', desc: 'x', color: '#e0a52c', rank: 2, cost: 230,
     rarity: 'uncommon', owned: 0, have: 1 }, 0, () => {});

@@ -1985,9 +1985,24 @@
     // v1.67 — `eq` porta l'equipaggiamento visibile (`wp` arma, `sh` scudo). Si disegna cio' che cambia
     // la SAGOMA — scudo a torre, arco lungo, orbe della bacchetta — perche' e' l'unica differenza che si
     // legge dall'alto a questa scala; il resto (armature, vesti, calzature) si legge nelle statistiche.
+    // La firma di una palette: entra nelle chiavi della cache dei gradienti. Chiavi diverse per tinte
+    // diverse, chiave vuota per chi non ha tinta — cosi' i personaggi senza palette continuano a
+    // condividere il gradiente di sempre e non si paga niente per una funzione che non si usa.
+    _palKey(pal) {
+      if (!pal) return '';
+      let k = '';
+      for (const c of ['cloth', 'clothDk', 'body', 'bodyDk', 'steelDk', 'skin', 'wood', 'accent', 'pelo', 'orlo']) if (pal[c]) k += pal[c];
+      return k;
+    },
     _hero(ctx, id, r, t, dashing, atk, eq) {
       const a = Math.max(0, Math.min(1, atk || 0));
       eq = eq || {};
+      // v1.82 FIX — LA CACHE DEI GRADIENTI ERA CIECA ALLA PALETTE. Le chiavi erano 'h_torso|lad|<raggio>':
+      // due ladri con lo stesso raggio si spartivano lo STESSO gradiente, cioe' i colori di chi veniva
+      // disegnato per primo. Finche' le tinte non esistevano non si vedeva; con i mercenari il giocatore
+      // si e' ritrovato addosso i colori del compagno. La firma della palette entra nella chiave, e ogni
+      // combinazione ha il suo gradiente. (Il mago era gia' a posto per meta': la chiave conteneva body.)
+      eq._pk = this._palKey(eq.pal);
       // v1.69 — il rango V si vede addosso: e' l'unico che cambia una scelta, quindi e' l'unico che
       // merita di essere riconoscibile a colpo d'occhio anche dai compagni.
       if (eq.sp) this._specSotto(ctx, r, t, eq.sp);
@@ -2058,7 +2073,7 @@
       const DK = '#0a0c12', body = _P.body || '#16181f', bodyDk = _P.bodyDk || '#05060a', accent = _P.accent || '#00f0c8', skin = _P.skin || '#d8d2c8';
       const sway = Math.sin(t * 5) * 0.12, sw2 = Math.sin(t * 5 + 0.8) * 0.10;
       ctx.lineJoin = 'round';
-      const mg = this._grad('h_mag|' + r + '|' + (_P.body || ''), () => { const q = ctx.createLinearGradient(-r * 1.6, -r * 0.6, r * 0.4, r * 0.6); q.addColorStop(0, _P.body || '#20252f'); q.addColorStop(0.55, _P.bodyDk || '#161a22'); q.addColorStop(1, '#0d1016'); return q; });
+      const mg = this._grad('h_mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 1.6, -r * 0.6, r * 0.4, r * 0.6); q.addColorStop(0, _P.body || '#20252f'); q.addColorStop(0.55, _P.bodyDk || '#161a22'); q.addColorStop(1, '#0d1016'); return q; });
       ctx.fillStyle = mg; ctx.strokeStyle = DK; ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(r * 0.30, -r * 0.34);
@@ -2081,7 +2096,7 @@
       ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 0.7, -r * 0.14); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, r * 0.45); ctx.lineTo(r * 0.7, r * 0.14); ctx.stroke();
       ctx.lineCap = 'butt'; ctx.lineWidth = 2; ctx.strokeStyle = DK;
-      const gr = this._grad('h_torso|mag|' + r + '|' + (_P.body || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, bodyDk); q.addColorStop(1, body); return q; });
+      const gr = this._grad('h_torso|mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, bodyDk); q.addColorStop(1, body); return q; });
       ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
       ctx.fillStyle = accent; ctx.globalAlpha = 0.75; ctx.fillRect(-r * 0.5, -r * 0.06, r * 0.9, r * 0.12); ctx.globalAlpha = 1;
       ctx.fillStyle = '#0a0b10'; ctx.strokeStyle = accent; ctx.lineWidth = 2;
@@ -2124,7 +2139,7 @@
       };
       armPlate(-r * 0.45, -r * 0.30, r * 0.62); armPlate(r * 0.45, r * 0.16, r * 0.70);
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
-      const gr = this._grad('h_torso|gue|' + r, () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
+      const gr = this._grad('h_torso|gue|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
       ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
       const pg = this._grad('h_plate|' + r, () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, '#3a424e'); q.addColorStop(0.5, '#7f8895'); q.addColorStop(1, '#c2c9d4'); return q; });
       ctx.fillStyle = pg; this._rr(ctx, -r * 0.36, -r * 0.34, r * 0.74, r * 0.68, r * 0.26); ctx.fill(); ctx.stroke();
@@ -2191,7 +2206,7 @@
       ctx.beginPath(); ctx.moveTo(0, r * 0.42); ctx.lineTo(r * (0.30 - draw * 0.34), -r * (0.12 + draw * 0.30)); ctx.stroke();
       }
       ctx.lineCap = 'butt'; ctx.lineWidth = 2; ctx.strokeStyle = DK;
-      const gr = this._grad('h_torso|lad|' + r, () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
+      const gr = this._grad('h_torso|lad|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
       ctx.fillStyle = gr; this._rr(ctx, -r * 0.60, -r * 0.50, r * 1.05, r * 1.0, r * 0.38); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#5a3d1e'; ctx.lineWidth = r * 0.20; ctx.beginPath(); ctx.moveTo(-r * 0.45, r * 0.42); ctx.lineTo(r * 0.30, -r * 0.42); ctx.stroke();
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
