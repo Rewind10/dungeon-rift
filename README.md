@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.84.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.85.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -19,10 +19,30 @@ Test: `npm test`
 | Spara | Click sinistro / Spazio |
 | **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
 | **Pozioni della cintura** | 1 / 2 / 3 — il tipo di ogni slot lo scegli dall'Erborista |
-| ~~Abilità 1 / 2~~ | *slot ai livelli 6 e 12, visibili col lucchetto: non ancora implementate (v1.79)* |
+| **Abilità attive** | **Q** (si sblocca al livello 6) e **E** (livello 12) — quattro per classe, se ne sceglie una per slot |
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.85 (le abilità attive)
+Gli slot **Q** ed **E** erano disegnati col lucchetto dal v1.79 e vuoti dal v1.66. Adesso hanno dentro
+**dodici abilità**, quattro per classe: se ne sceglie **una al livello 6** e **una al livello 12**, e la
+scelta vale per tutta la partita.
+
+| Classe | Slot **Q** — livello 6, ricarica 30s | Slot **E** — livello 12, ricarica 45s |
+|---|---|---|
+| 🛡️ **Guerriero** | ⚡ **Carica** — scatto corazzato di 300px che sfonda: doppio fendente, spinta e **stordimento**, e sei immune mentre corri<br>📣 **Grido di Guerra** — i nemici intorno puntano **te** per 3s, e tu e i compagni nel raggio subite **−25% danni** per 4s (**i boss non danno retta**) | 🌀 **Turbine** — tre giri a 360° in 1,2s, ognuno al 70% del fendente<br>✨ **Giuramento** — per 5s tu e i compagni entro 220px siete **immuni al primo colpo** |
+| 🔮 **Mago** | 🔥 **Muro di Fuoco** — barriera di fiamme lunga 220px per 5s: brucia chi la attraversa<br>🫧 **Scudo di Mana** — assorbe danni per 6s, poi **esplode** respingendo e rallentando | ☄️ **Meteora** — tre impatti telegrafati sul punto mirato<br>⛓️ **Catena Nera** — fulmine che rimbalza fra **otto** nemici, a danno calante |
+| 🏹 **Ladro** | 🌫️ **Velo d'Ombra** — nube di 150px per 5s: dentro sei **invisibile**, e il primo colpo dall'ombra e' critico<br>🪤 **Tagliola** — trappola armata 25s: il primo che entra resta **bloccato 2,5s** (fino a tre in campo) | 🎯 **Marchio** — il bersaglio prende **+50% danni da chiunque** per 8s; se muore marchiato, meta' ricarica torna<br>🏹 **Salva** — quindici frecce in due secondi, perforanti |
+
+- **Ricariche lunghe apposta**: 30s per lo slot Q, 45s per lo slot E. Non sono una seconda arma, sono il
+  momento in cui l'ondata gira. Misurato coi bot: il danno al secondo cambia di poco (+14% il guerriero,
+  ±2% mago e ladro) — quello che cambia è *cosa puoi fare*, non quanto picchi.
+- **Le passive scendono da quattro a due** (livelli **3** e **9**) e salgono di scaglione: rara e divina.
+  Le quattro scelte della run restano quattro, ma due sono attive.
+- **La specializzazione del 15 non regala più un'abilità** (erano promesse dal v1.69 e mai scritte): adesso
+  quelle sei *sono* le attive del livello 12, e la specializzazione **le potenzia del 30%**.
+- **Il mercenario non ha abilità** e **il Grido di Guerra non attira i boss**.
 
 ## 🆕 Novita v1.84.1 (la chiave si cerca, e le casse pagano)
 - **🗝️ La chiave non si vede da lontano**: compare solo quando ci sei quasi sopra (~118 px, sfumando). La
@@ -116,7 +136,7 @@ Test: `npm test`
 - **🧭 Menu di fine ondata a quattro sezioni** — Riepilogo · Personaggio (con l'inventario) · Abilita' ·
   Vai al villaggio — e sotto, da solo, il pulsante della mappa successiva. Dal villaggio si torna al menu.
 - **🔮 La Cartomante e' chiusa**: la struttura resta nel villaggio, la funzione verra' ridisegnata.
-- **🔒 Slot delle abilita' attive** ai livelli 6 e 12: si vedono, spenti col lucchetto.
+- **🔒 Slot delle abilita' attive** ai livelli 6 e 12: si vedono, spenti col lucchetto. *(Accesi in v1.85.)*
 
 ## 🆕 Novita v1.78 (l'ondata finisce quando lo decidi tu)
 - **✔ Pulsante EXIT sulla mappa ripulita**: ucciso l'ultimo nemico non si esce di scatto. Compare la

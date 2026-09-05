@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
+  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -101,6 +101,22 @@
         R.floater(ev.x, ev.y - 40, '+' + ev.monete + ' \uD83E\uDE99', '#ffcf4a', true); R.addShake(4); break;
       // v1.83 — colpo parato con lo scudo: l'arco si accende dalla parte in cui guardi
       case 'para': R.para(ev.x, ev.y, ev.a, (window.GAME.Constants.SCUDO_CONO || 1.22)); break;
+      // ===== v1.85 — le abilita' attive =====
+      case 'abil': { const AB = (window.GAME.Abilities || {}).BY_ID || {}; const a = AB[ev.k] || {};
+        A.ability && A.ability(ev.k); R.ring(ev.x, ev.y, ev.c || a.color || '#ffd27a', 8, 70, 0.35);
+        if (ev.who === Net.id) R.floater(ev.x, ev.y - 34, (a.icon || '⚡') + ' ' + (a.name || ''), ev.c || '#ffd27a', true); break; }
+      case 'abil_presa': HUD.killfeed('⚡ <b style="color:' + (ev.c || '#ffd27a') + '">' + ev.icon + ' ' + ev.name + '</b> — tasto <b>' + ev.tasto + '</b>, ricarica ' + ev.cd + 's'); break;
+      case 'sfonda': R.hitAttack(ev.e, 0.3); R.burst(ev.x, ev.y, '#ffd9a0', 10, 190, 0.35); R.floater(ev.x, ev.y - 16, 'stordito', '#ffd27a'); break;
+      case 'grido': A.ability && A.ability('grido'); R.grido(ev.x, ev.y, ev.r); R.addShake(4);
+        if (ev.who === Net.id && ev.n) R.floater(ev.x, ev.y - 46, ev.n + ' addosso a te', '#ffb45a', true); break;
+      case 'giuramento': R.ring(ev.x, ev.y, '#ffe9a8', 10, ev.r, 0.6); R.burst(ev.x, ev.y, '#ffe9a8', 26, 210, 0.7); break;
+      case 'giur_para': R.para(ev.x, ev.y, 0, 3.14); R.ring(ev.x, ev.y, '#ffe9a8', 4, 40, 0.35); R.floater(ev.x, ev.y - 20, '✨ giuramento', '#ffe9a8'); break;
+      case 'scudo_hit': R.ring(ev.x, ev.y, '#7dffea', 4, 34, 0.25); break;
+      case 'scudo_rotto': A.explosion && A.explosion(); R.ring(ev.x, ev.y, '#7dffea', 8, ev.r, 0.45); R.burst(ev.x, ev.y, '#bffff4', 26, 260, 0.6); R.addShake(4); break;
+      case 'meteora_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, '#ff7a3b', 5, ev.r + 20, 0.5); break;
+      case 'tagliola': A.hitMonster && A.hitMonster(); R.ring(ev.x, ev.y, '#cfd8dc', 3, 40, 0.35); R.burst(ev.x, ev.y, '#e8eef2', 12, 130, 0.4); R.floater(ev.x, ev.y - 16, 'bloccato', '#cfd8dc'); break;
+      case 'marchio': R.ring(ev.x, ev.y, '#ff5a7a', 6, 46, 0.4); R.floater(ev.x, ev.y - 24, '🎯', '#ff5a7a', true); break;
+      case 'marchio_ok': if (ev.who === Net.id) R.floater(ev.x, ev.y - 26, 'marchio · mezza ricarica', '#ff5a7a'); break;
       // v1.81 — il ragno tesse: un anello che si apre e qualche filo che schizza
       case 'tela': R.ring(ev.x, ev.y, ev.c || '#cfe0ea', 3, ev.r, 0.45); R.burst(ev.x, ev.y, '#e6f1f8', 10, 90, 0.5); break;
       // v1.81 — LA LARVA SCOPPIA: il corpo si apre in uno sbuffo di spore, poi la zona telegrafata (che

@@ -36,7 +36,7 @@
 | 9 | **Punti statistica**: costi abbassati. Con l'intero bilancio si puo' **cappare una sola statistica** e portarne **una seconda al massimo a 6**. |
 | 10 | **Cartomante chiusa**: la struttura resta nel villaggio, la funzione e' disattivata (verra' ridisegnata). Con lei sparisce il tetto delle 5 carte accese. |
 | 11 | Ritirate tre carte: **Avidita', Fortuna Sfacciata, Fame Vorace** (bonus XP, inutili col tetto). |
-| 12 | Le **due abilita' attive** per classe (livelli 6 e 12) restano **progettate ma non implementate**: gli slot Q/E si vedono, spenti, col lucchetto. |
+| 12 | ~~Le **due abilita' attive** per classe (livelli 6 e 12) restano progettate ma non implementate.~~ → **fatte in v1.85**: quattro per classe, due per slot, ricariche 30s e 45s. Le passive scendono a due (livelli 3 e 9). |
 | 13 | Il **menu di fine ondata** viene rifatto: schermata di riepilogo con barra di sezioni (§10). |
 
 ---
@@ -283,8 +283,8 @@ E' il prezzo giusto.
 
 ## 10. Livello 15 — la specializzazione
 
-Due per classe, **passive**. Le abilita' attive che le accompagnavano restano scritte ma **non
-implementate** (§11).
+Due per classe, **passive**. Le abilita' attive che le accompagnavano sono diventate, in **v1.85**, le
+attive del **livello 12** — e la specializzazione, al posto di regalarne una, **le potenzia del 30%** (§11).
 
 | Classe | | |
 |---|---|---|
@@ -296,7 +296,12 @@ E' l'ultimo punto in cui due run della stessa classe possono divergere: per ques
 
 ---
 
-## 11. Le due abilita' attive — progettate, non implementate
+## 11. Le due abilita' attive — ~~progettate, non implementate~~ FATTE IN v1.85
+
+> ⚠️ **Questa sezione e' storica.** Le abilita' attive esistono dalla **v1.85** e non sono quelle previste
+> qui sotto: sono **quattro per classe** (due per slot, si sceglie una al livello 6 e una al 12), le sei
+> gia' promesse sono diventate le opzioni del **livello 12**, e le ricariche sono **30s** e **45s**.
+> L'elenco vero sta in CARATTERISTICHE.md, sezione *LE ABILITA' ATTIVE*.
 
 Gli slot sono **livello 6** e **livello 12**. Nella barra in basso restano **disegnati e spenti, col
 lucchetto**: si deve vedere che arriveranno. Le sei gia' progettate restano assegnate agli slot in attesa

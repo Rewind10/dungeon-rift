@@ -16,7 +16,7 @@
 > **REALIZZATO nella v1.69, RIVISTO nella v1.70.** Quattro cose sono cambiate dopo la prova sul campo,
 > e il documento le riporta: **niente piu' tetto ai livelli**, **esperienza da piu' fonti**, **carte di
 > rango rimosse** (le sostituiranno le abilita' di classe) e **annuncio del LEVEL UP in partita**.
-> Restano da fare le abilita' attive delle specializzazioni. Descrive per intero come cresce il personaggio: la scala dei
+> ~~Restano da fare le abilita' attive delle specializzazioni.~~ **Fatte in v1.85**, ma agli slot Q/E dei livelli 6 e 12: vedi CARATTERISTICHE.md. Descrive per intero come cresce il personaggio: la scala dei
 > livelli, i cinque ranghi di ogni classe, il costo in punti delle statistiche e tutte le carte di rango.
 > Lo sviluppo di nuove versioni resta fermo finche' questo impianto non e' approvato.
 >

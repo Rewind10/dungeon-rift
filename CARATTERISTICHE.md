@@ -1,32 +1,64 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.84.1`
+**Versione attuale:** `1.85.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
-> ⚠️ **Manopole spente al momento** — quello che il documento descrive ma che nel gioco oggi **non c'e'**:
-> la **Faglia ai margini** (`EDGE_MARGIN: 0`, vedi la sezione *LA FAGLIA E' SPENTA*) e le **abilita' attive**
-> delle sei specializzazioni (dichiarate dal v1.69, per ora esistono solo le passive).
+> ⚠️ **Manopola spenta al momento** — quello che il documento descrive ma che nel gioco oggi **non c'e'**:
+> la **Faglia ai margini** (`EDGE_MARGIN: 0`, vedi la sezione *LA FAGLIA E' SPENTA*).
+>
+> *(Le **abilita' attive**, spente dal v1.66 e promesse dal v1.69, sono state accese in **v1.85**: quattro
+> per classe, agli slot Q ed E.)*
 
 ---
 
 ## 🎚️ COME CRESCE IL PERSONAGGIO *(rifatto in v1.79)*
 
-### Il tetto e le quattro scelte
+### Il tetto e le quattro scelte *(rifatte in v1.85)*
 - **Livello massimo: 15.** Oltre non si sale; l'esperienza raccolta dopo non serve piu' a niente.
-- **Quattro abilita' passive in tutta la partita**, una per **scaglione**, ai livelli **3, 6, 9 e 12**.
-- Ogni scaglione mostra **quattro abilita': due della tua classe e due neutre**. Se ne sceglie **una**.
+- **Quattro scelte in tutta la partita**, e sono di due tipi: **due passive** (livelli **3** e **9**) e
+  **due abilita' attive** (livelli **6** e **12**, tasti **Q** ed **E**).
+- Una passiva mostra **quattro carte**: due della tua classe e due neutre. Un'abilita' attiva ne mostra
+  **due**, entrambe della tua classe. In tutti e due i casi se ne sceglie **una**, e vale per la run.
 - Le abilita' di classe le vede **solo** quella classe: un mago non sa nemmeno che esistono quelle del
   guerriero. E' voluto — e' la rigiocabilita' a cambiare personaggio.
-- **Niente impilamento**: ogni abilita' si prende una volta sola, e vale circa il doppio di prima.
-- Al **livello 15** si sceglie la **specializzazione** fra due, ed e' passiva.
+- **Niente impilamento**: ogni passiva si prende una volta sola.
+- Al **livello 15** si sceglie la **specializzazione** fra due: e' passiva, e **alza del 30% la potenza
+  delle abilita' attive** che hai scelto.
 
-| Scaglione | Livello | Cosa deve fare |
+| Livello | Cosa arriva | Cosa deve fare |
 |---|---|---|
-| Non comune | 3 | Da' forma al colpo base. Piccola, ma si sente subito. |
-| Raro | 6 | Aggiunge una **regola** a come combatti, non solo una percentuale. |
-| Epico | 9 | Definisce la build, e puo' avere un prezzo o una condizione. |
-| Divino | 12 | **Riscrive una regola** del gioco, e punta verso la specializzazione. |
+| 3 | Passiva **rara** | Aggiunge una **regola** a come combatti, non solo una percentuale. |
+| 6 | **Abilita' attiva — tasto Q** | Un gesto nuovo, con 30s di ricarica: cambia cosa puoi fare, non quanto fai. |
+| 9 | Passiva **divina** | **Riscrive una regola** del gioco. |
+| 12 | **Abilita' attiva — tasto E** | Il momento in cui l'ondata gira. Ricarica 45s. |
+
+> *Fino alla 1.84 le passive erano quattro (3/6/9/12) e le attive non esistevano. Dalla 1.85 il 6 e il 12
+> sono le attive; perche' il personaggio non ne uscisse piu' povero, le due passive rimaste sono salite di
+> scaglione — rara al posto di non comune, divina al posto di epica.*
+
+---
+
+## ⚡ LE ABILITA' ATTIVE *(v1.85)*
+
+Quattro per classe, due per slot. Si usano con **Q** ed **E** e la ricarica e' lunga apposta: non sono una
+seconda arma, sono il momento in cui l'ondata cambia. Nessuna risorsa nuova da guardare — solo il tempo.
+
+| Classe | Slot **Q** — livello 6, ricarica 30s | Slot **E** — livello 12, ricarica 45s |
+|---|---|---|
+| 🛡️ **Guerriero** | ⚡ **Carica** — scatto corazzato di 300px che sfonda: doppio fendente, spinta e **stordimento**, e sei immune mentre corri<br>📣 **Grido di Guerra** — i nemici intorno puntano **te** per 3s, e tu e i compagni nel raggio subite **−25% danni** per 4s (**i boss non danno retta**) | 🌀 **Turbine** — tre giri a 360° in 1,2s, ognuno al 70% del fendente<br>✨ **Giuramento** — per 5s tu e i compagni entro 220px siete **immuni al primo colpo** |
+| 🔮 **Mago** | 🔥 **Muro di Fuoco** — barriera di fiamme lunga 220px per 5s: brucia chi la attraversa<br>🫧 **Scudo di Mana** — assorbe danni per 6s, poi **esplode** respingendo e rallentando | ☄️ **Meteora** — tre impatti telegrafati sul punto mirato<br>⛓️ **Catena Nera** — fulmine che rimbalza fra **otto** nemici, a danno calante |
+| 🏹 **Ladro** | 🌫️ **Velo d'Ombra** — nube di 150px per 5s: dentro sei **invisibile**, e il primo colpo dall'ombra e' critico<br>🪤 **Tagliola** — trappola armata 25s: il primo che entra resta **bloccato 2,5s** (fino a tre in campo) | 🎯 **Marchio** — il bersaglio prende **+50% danni da chiunque** per 8s; se muore marchiato, meta' ricarica torna<br>🏹 **Salva** — quindici frecce in due secondi, perforanti |
+
+**Le regole comuni:** il danno delle abilita' e' una **quota del colpo base**, quindi non invecchia con le
+ondate; la **Destrezza** accorcia la ricarica (`cdrMult`) e la **specializzazione** ne alza la potenza del
+**30%**; un'abilita' che non trova bersaglio (il Marchio) **non parte e non spende la ricarica**. Il
+**mercenario non ha abilita'**: come per l'XP, le monete e la chiave dei prigionieri, non e' un giocatore
+per le regole.
+
+**Cosa lasciano sul campo:** il muro di fuoco, le tagliole e la nube d'ombra sono **oggetti veri** nel
+mondo, mandati nello snapshot e disegnati come tali — non effetti sopra lo schermo. Il marchio si vede
+sopra la testa del nemico **da tutta la squadra**.
 
 ### La curva dell'esperienza *(ritarata in v1.79.1)*
 Cumulata al livello 15: **9.470**. La taratura viene dall'esperienza che i mostri di un'ondata mettono

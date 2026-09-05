@@ -13,8 +13,43 @@
     // che sono le due cose da sapere per scegliere la classe adesso.
     showHeroDetail(id) { const h = HERO[id]; const SCH = { melee: ['💪', 'Forza', 'semicerchio in mischia'], magic: ['🔮', 'Intelligenza', 'proiettili magici'], ranged: ['🏹', 'Destrezza', 'tiro a distanza'] }[h.weapon.school] || ['⚔️', '—', '']; $('heroDetail').innerHTML = `<h3 style="color:${h.accent}">${h.name} — <span style="color:#c9d2e6;font-weight:600">${h.title}</span></h3><div class="ab"><span class="k">SX</span><b>${h.weapon.name}</b> — ${SCH[2]}, ${h.weapon.dmg} danni, ${h.weapon.fireRate}/s</div><div class="ab"><span class="k">${SCH[0]}</span><b>${SCH[1]}</b> — alza danno e cadenza di quest'arma</div><div class="ab"><span class="k">🖱▸</span><b>Scatto</b> — tasto destro: attraversa i nemici.</div><div class="ab pas">🛡️ ${h.passives.map(p => '<b>' + p.name + '</b>').join(' · ')}</div><div class="sw"><span class="s">▲ ${h.strengths}</span><br><span class="w">▼ ${h.weakness}</span></div>`; },
     // v1.66 — niente piu' slot Q/E: la barra tiene solo cio' che il giocatore puo' davvero premere.
-    buildAbilityBar(id) { const h = HERO[id]; const bar = $('abilityBar'); bar.innerHTML = ''; const wi = { melee: '🗡️', magic: '🔮', ranged: '🏹' }[h.weapon.school] || '🔫'; [{ k: 'DX', ic: '💨', t: 'Scatto' }, { k: 'SX', ic: wi, t: h.weapon.name }].forEach((s, i) => { const el = document.createElement('div'); el.className = 'ab-slot'; el.id = 'ab' + i; el.title = s.t || ''; el.innerHTML = `<span class="key">${s.k}</span><span class="ic">${s.ic}</span><span class="lbl">${s.t || ''}</span><div class="cd hidden"></div>`; bar.appendChild(el); }); },
-    updateAbilities(me) { if (!me) return; const set = (i, cd) => { const el = $('ab' + i); if (!el) return; const c = el.querySelector('.cd'); if (cd > 0.1) { c.classList.remove('hidden'); c.textContent = cd.toFixed(1); el.classList.remove('ready'); } else { c.classList.add('hidden'); el.classList.add('ready'); } }; set(0, me.cd || 0); const f = $('ab1'); if (f) f.classList.add('ready'); },
+    // v1.85 — quattro slot: scatto, arma, e le due ABILITA' ATTIVE. Q ed E nascono col LUCCHETTO e
+    // dicono a che livello si aprono — un riquadro vuoto si legge come un guasto, uno chiuso come una meta.
+    buildAbilityBar(id) {
+      const h = HERO[id]; const bar = $('abilityBar'); bar.innerHTML = '';
+      const wi = { melee: '🗡️', magic: '🔮', ranged: '🏹' }[h.weapon.school] || '🔫';
+      const slots = [{ k: 'DX', ic: '💨', t: 'Scatto' }, { k: 'SX', ic: wi, t: h.weapon.name },
+        { k: 'Q', ic: '🔒', t: 'Livello 6', lock: 1 }, { k: 'E', ic: '🔒', t: 'Livello 12', lock: 1 }];
+      slots.forEach((s, i) => {
+        const el = document.createElement('div'); el.className = 'ab-slot' + (s.lock ? ' locked' : ''); el.id = 'ab' + i; el.title = s.t || '';
+        el.innerHTML = '<span class="key">' + s.k + '</span><span class="ic">' + s.ic + '</span><span class="lbl">' + (s.t || '') + '</span><div class="cd hidden"></div>';
+        bar.appendChild(el);
+      });
+      this._abSlot = { q: null, e: null };
+    },
+    updateAbilities(me) {
+      if (!me) return;
+      const set = (i, cd, pronta) => { const el = $('ab' + i); if (!el) return; const c = el.querySelector('.cd');
+        if (cd > 0.1) { c.classList.remove('hidden'); c.textContent = cd < 10 ? cd.toFixed(1) : String(Math.ceil(cd)); el.classList.remove('ready'); }
+        else { c.classList.add('hidden'); if (pronta !== false) el.classList.add('ready'); } };
+      set(0, me.cd || 0);
+      const f = $('ab1'); if (f) f.classList.add('ready');
+      // l'abilita' arriva a partita in corso: il riquadro si riempie quando succede, non prima
+      this._abSlot = this._abSlot || { q: null, e: null };
+      const AB = (window.GAME && window.GAME.Abilities) ? window.GAME.Abilities.BY_ID : {};
+      const riempi = (i, id, tasto) => {
+        const el = $('ab' + i); if (!el) return;
+        const a = id ? AB[id] : null;
+        if (!a) return;
+        el.classList.remove('locked'); el.title = a.name + ' — ' + a.desc;
+        el.querySelector('.ic').textContent = a.icon;
+        el.querySelector('.lbl').textContent = a.name;
+        el.style.borderColor = a.color;
+      };
+      if (me.aq && this._abSlot.q !== me.aq) { this._abSlot.q = me.aq; riempi(2, me.aq, 'Q'); }
+      if (me.ae && this._abSlot.e !== me.ae) { this._abSlot.e = me.ae; riempi(3, me.ae, 'E'); }
+      set(2, me.cq || 0, !!me.aq); set(3, me.ce || 0, !!me.ae);
+    },
     // v1.62 — didascalia con il nome della zona (theme.name). Persistente: non e' un annuncio, e' il
     // posto in cui ti trovi. Cambia solo quando arriva una mappa nuova.
     zoneName(th) { const e = $('zoneName'); if (!e) return; if (!th || !th.name) { e.classList.add('hidden'); return; } e.textContent = th.name; e.style.color = th.accent || '#8be9ff'; e.classList.remove('hidden'); },
@@ -258,8 +293,11 @@
       if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
         $('boonSection').classList.remove('hidden');
         const rar = RAR[this._boons.tier] || {};
-        if (bt) bt.textContent = '🎴 SCEGLI UN\'ABILITÀ';
-        if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 4) + '</b> — '
+        if (bt) bt.textContent = this._boons.abil ? ('⚡ ABILITÀ ATTIVA — TASTO ' + (this._boons.tasto || 'Q')) : '🎴 SCEGLI UN\'ABILITÀ';
+        if (bs && this._boons.abil) bs.innerHTML = 'Si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
+          + ((this._boons.boons[0] && this._boons.boons[0].cd) || 30) + 's</b> · livello <b>' + (this._boons.liv || 6) + '</b>'
+          + ' <span style="opacity:.75">— la scelta vale per tutta la partita</span>';
+        else if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 2) + '</b> — '
           + '<b style="color:' + (this._boons.tierColor || '#fff') + '">' + (this._boons.tierName || '') + '</b>'
           + ' · livello <b>' + (this._boons.liv || 1) + '</b>'
           + (this._boons.resta > 1 ? ' <span style="opacity:.75">(ne restano ' + this._boons.resta + ')</span>' : '');
@@ -278,37 +316,52 @@
         if (bs) bs.innerHTML = this._boons.cap
           ? 'Sei al <b>livello ' + (this._boons.max || 15) + '</b>, il massimo: la crescita finisce qui.'
           : (this._boons.prossimo
-            ? 'Le abilità si scelgono ai livelli <b>3, 6, 9 e 12</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
+            ? 'Passive ai livelli <b>3</b> e <b>9</b>, abilità attive al <b>6</b> e al <b>12</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
               + (this._boons.manca ? ', fra <b>' + this._boons.manca + ' XP</b>' : '') + '.'
-            : 'Le abilità si scelgono ai livelli <b>3, 6, 9 e 12</b>.');
+            : 'Passive ai livelli <b>3</b> e <b>9</b>, abilità attive al <b>6</b> e al <b>12</b>.');
       } else { $('boonSection').classList.add('hidden'); }
       this._renderElencoAbilita();
     },
     // L'elenco per scaglione: quattro righe fisse, cosi' si vede a colpo d'occhio cosa manca ancora.
+    // v1.85 — QUATTRO RIGHE, non piu' quattro passive: due passive (3 e 9) e due abilita' attive (6 e 12),
+    // in ordine di livello. E' l'unico posto in cui si vede la run intera in una schermata: cosa hai preso,
+    // cosa hai saltato e cosa manca ancora.
     _renderElencoAbilita() {
       const cont = $('abilElenco'); if (!cont) return;
-      const SC = [
-        { lvl: 3, tier: 'uncommon' }, { lvl: 6, tier: 'rare' },
-        { lvl: 9, tier: 'epic' }, { lvl: 12, tier: 'divine' },
-      ];
+      const SC = [{ lvl: 3, tier: 'rare' }, { lvl: 6, slot: 'q', tasto: 'Q' },
+        { lvl: 9, tier: 'divine' }, { lvl: 12, slot: 'e', tasto: 'E' }];
       const prese = (this._active || []).filter(b => !b.syn);
       const liv = this._stats ? (this._stats.level || 1) : 1;
       const inArrivo = this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked ? this._boons.tier : null;
+      const inArrivoSlot = this._boons && this._boons.abil && !this._boons.picked ? this._boons.slot : null;
+      const AB = (window.GAME && window.GAME.Abilities) ? window.GAME.Abilities.BY_ID : {};
       let html = '';
       for (const sc of SC) {
-        const r = RAR[sc.tier] || {};
-        const mia = prese.find(b => b.rarity === sc.tier);
-        const corpo = mia
-          ? `<div class="card"><span class="ic">${mia.icon}</span><span><span class="nm">${esc(mia.name)}</span><div class="ds">${mia.desc || ''}</div></span></div>`
-          : (inArrivo === sc.tier ? '<span class="attesa">▲ da scegliere adesso</span>'
-            : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
-        html += `<div class="ab-sc"><span class="lv" style="color:${r.color || '#8d97ab'}">Liv. ${sc.lvl}<br>${r.name || ''}</span>${corpo}</div>`;
+        let etichetta, colore, corpo;
+        if (sc.slot) {
+          const id = (this._abSlot || {})[sc.slot];
+          const a = id ? AB[id] : null;
+          etichetta = 'attiva ' + sc.tasto; colore = a ? a.color : '#8d97ab';
+          corpo = a
+            ? '<div class="card"><span class="ic">' + a.icon + '</span><span><span class="nm">' + esc(a.name) + '</span><div class="ds">' + esc(a.breve || '') + ' · ricarica ' + a.cd + 's</div></span></div>'
+            : (inArrivoSlot === sc.slot ? '<span class="attesa">▲ da scegliere adesso</span>'
+              : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
+        } else {
+          const r = RAR[sc.tier] || {};
+          const mia = prese.find(b => b.rarity === sc.tier);
+          etichetta = r.name || ''; colore = r.color || '#8d97ab';
+          corpo = mia
+            ? '<div class="card"><span class="ic">' + mia.icon + '</span><span><span class="nm">' + esc(mia.name) + '</span><div class="ds">' + (mia.desc || '') + '</div></span></div>'
+            : (inArrivo === sc.tier ? '<span class="attesa">▲ da scegliere adesso</span>'
+              : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
+        }
+        html += '<div class="ab-sc"><span class="lv" style="color:' + colore + '">Liv. ' + sc.lvl + '<br>' + etichetta + '</span>' + corpo + '</div>';
       }
       cont.innerHTML = html;
       const syn = (this._active || []).filter(b => b.syn);
       let sbox = $('abilSyn');
       if (!sbox && syn.length) { sbox = document.createElement('div'); sbox.id = 'abilSyn'; cont.parentNode.appendChild(sbox); }
-      if (sbox) sbox.innerHTML = syn.map(x => `<span class="syn">${x.icon} <b>${esc(x.name)}</b> — ${x.desc || ''}</span>`).join('');
+      if (sbox) sbox.innerHTML = syn.map(x => '<span class="syn">' + x.icon + ' <b>' + esc(x.name) + '</b> — ' + (x.desc || '') + '</span>').join('');
     },
     // ---- SEZIONE PERSONAGGIO: punti, statistiche, inventario ----
     _renderPersonaggio() {

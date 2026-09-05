@@ -7,6 +7,7 @@ const Heroes = require('../shared/heroes.js');
 const MapGen = require('../shared/mapgen.js');
 const Loot = require('../shared/loot.js');
 const Waves = require('../shared/waves.js');
+const Ab = require('../shared/abilities.js');
 const Pot = require('../shared/potions.js');
 const Bnt = require('../shared/bounties.js');
 const Gear = require('../shared/gear.js');
@@ -1805,11 +1806,14 @@ function testV169() {
   const prTop = Lv.progress(Lv.xpForLevel(15) + 5000);
   assert(prTop.cap === true && prTop.frac === 1 && prTop.need === 0, 'al tetto la barra e piena e non si divide per zero');
 
-  // --- 2) GLI SCAGLIONI: quattro, ai livelli 3, 6, 9 e 12 ---
-  assert(Lv.SCAGLIONI.length === 4, 'gli scaglioni sono quattro');
-  assert(Lv.SCAGLIONI.map(x => x.lvl).join(',') === '3,6,9,12', 'cadono ai livelli 3, 6, 9 e 12');
-  assert(Lv.SCAGLIONI.map(x => x.tier).join(',') === 'uncommon,rare,epic,divine', 'e in ordine: non comune, raro, epico, divino');
-  assert(Lv.tierForLevel(9) === 'epic' && !Lv.tierForLevel(10) && !Lv.tierForLevel(15), 'solo quei quattro livelli danno una scelta');
+  // --- 2) GLI SCAGLIONI: v1.85 sono DUE (3 e 9), perche' il 6 e il 12 sono le ABILITA' ATTIVE ---
+  assert(Lv.SCAGLIONI.length === 2, 'le passive si scelgono due volte');
+  assert(Lv.SCAGLIONI.map(x => x.lvl).join(',') === '3,9', 'ai livelli 3 e 9');
+  assert(Lv.SCAGLIONI.map(x => x.tier).join(',') === 'rare,divine', 'e valgono di piu di prima: rara e divina');
+  assert(Lv.tierForLevel(9) === 'divine' && !Lv.tierForLevel(6) && !Lv.tierForLevel(12) && !Lv.tierForLevel(15), 'solo quei due livelli danno una passiva');
+  assert(Lv.slotPerLivello(6) === 'q' && Lv.slotPerLivello(12) === 'e' && !Lv.slotPerLivello(9), 'al 6 si apre lo slot Q, al 12 lo slot E');
+  assert(Lv.prossimaScelta(1) === 3 && Lv.prossimaScelta(3) === 6 && Lv.prossimaScelta(9) === 12 && Lv.prossimaScelta(12) === 0,
+    'le quattro scelte della run si alternano: 3, 6, 9, 12');
 
   // --- 3) I RANGHI: 3/6/9/12/15, con la specializzazione in fondo ---
   assert(Lv.RANK_LEVELS.join(',') === '1,3,6,9,12,15', 'le fasce sono 1, 3, 6, 9, 12 e 15');
@@ -1836,7 +1840,8 @@ function testV169() {
   room.addXp(p, 99999);
   assert(p.level === 15, 'con esperienza a volonta si arriva al 15 (' + p.level + ')');
   assert(p.points === 18, 'e in mano ci sono 18 punti (' + p.points + ')');
-  assert((p.scaglioniDovuti || []).join(',') === 'uncommon,rare,epic,divine', 'con le quattro scelte in coda');
+  assert((p.scaglioniDovuti || []).join(',') === 'rare,divine', 'con le due passive in coda');
+  assert((p.abilDovute || []).join(',') === 'q,e', 'e i due slot delle abilita attive');
   assert(p.specOffer && p.specOffer.length === 2, 'e il bivio della specializzazione aperto');
   const xp0 = p.xpPool; room.addXp(p, 5000);
   assert(p.xpPool === xp0, 'oltre il tetto l esperienza non si accumula nemmeno');
@@ -2801,16 +2806,19 @@ function testV178() {
   r6.phase = C.PHASE_COMBAT;
   r6.addXp(y, Lv2.xpForLevel(7));
   assert(y.level >= 7, 'con l esperienza di sette livelli si arriva almeno al 7 (' + y.level + ')');
-  assert((y.scaglioniDovuti || []).join(',') === 'uncommon,rare', 'e si devono i primi due scaglioni');
+  assert((y.scaglioniDovuti || []).join(',') === 'rare', 'e si deve la passiva del 3');
+  assert((y.abilDovute || []).join(',') === 'q', 'e lo slot Q, che si apre al 6');
   r6.monsters.length = 0; r6.pending = 0; r6._checkWaveClear(); r6.exitWave('a');
-  const dovuti = (y.scaglioniDovuti || []).length;
+  const dovuti = (y.scaglioniDovuti || []).length + (y.abilDovute || []).length;
   let scelte = 0;
   while (y.boonOffer && y.boonOffer.length && scelte < 12) {
-    assert(y.boonOffer.length === 4, 'ogni scaglione mostra quattro abilita');
+    // v1.85 — una passiva mostra quattro carte, uno slot di abilita' ne mostra DUE
+    const abil = !!Ab.BY_ID[y.boonOffer[0]];
+    assert(y.boonOffer.length === (abil ? 2 : 4), abil ? 'lo slot mostra le due abilita della classe' : 'ogni scaglione mostra quattro abilita');
     r6.pickBoon('a', y.boonOffer[0]); scelte++;
   }
   assert(scelte === dovuti, 'il pannello si riapre finche gli scaglioni dovuti non sono finiti (' + scelte + '/' + dovuti + ')');
-  assert((y.scaglioniDovuti || []).length === 0, 'poi la coda e vuota');
+  assert((y.scaglioniDovuti || []).length === 0 && (y.abilDovute || []).length === 0, 'poi la coda e vuota');
   // le abilita' scelte sono di quelle che il MAGO puo' vedere: mai di un'altra classe
   for (const id in y.boonsOwned) {
     const b = Loot.BOON_BY_ID[id];
@@ -2927,17 +2935,19 @@ function testV179() {
   r1.addXp(p, Lv.xpForLevel(3) - 1);
   assert(p.level === 2 && (p.scaglioniDovuti || []).length === 0, 'al livello 2 non si sceglie niente');
   r1.addXp(p, 5);
-  assert(p.level === 3 && p.scaglioniDovuti.join(',') === 'uncommon', 'al 3 arriva il primo scaglione');
+  assert(p.level === 3 && p.scaglioniDovuti.join(',') === 'rare', 'al 3 arriva la prima passiva');
   r1.addXp(p, Lv.xpForLevel(5) - p.xpPool);
   assert(p.level === 5 && p.scaglioniDovuti.length === 1, 'al 4 e al 5 non arriva niente di nuovo');
   r1.addXp(p, Lv.xpForLevel(12) - p.xpPool);
-  assert(p.scaglioniDovuti.join(',') === 'uncommon,rare,epic,divine', 'e al 12 la coda ha tutti e quattro');
+  assert(p.scaglioniDovuti.join(',') === 'rare,divine', 'e al 12 la coda ha le due passive');
+  assert(p.abilDovute.join(',') === 'q,e', 'e i due slot delle attive');
   r1.phase = C.PHASE_SHOP;
   let n = 0;
-  while (p.scaglioniDovuti.length && n < 10) { r1.offerBoon(p); r1.pickBoon('a', p.boonOffer[0]); n++; }
-  assert(n === 4, 'si scelgono esattamente quattro abilita in una run (' + n + ')');
+  while ((p.scaglioniDovuti.length || p.abilDovute.length) && n < 10) { r1.offerBoon(p); r1.pickBoon('a', p.boonOffer[0]); n++; }
+  assert(n === 4, 'si scelgono esattamente quattro volte in una run: due passive e due attive (' + n + ')');
   const prese = Object.keys(p.boonsOwned).map(id => Loot.BOON_BY_ID[id]);
-  assert(new Set(prese.map(b => b.rarity)).size === 4, 'una per scaglione, mai due dello stesso');
+  assert(new Set(prese.map(b => b.rarity)).size === 2, 'una passiva per scaglione, mai due dello stesso');
+  assert(!!p.abil.q && !!p.abil.e, 'e i due slot sono pieni');
   assert(prese.every(b => b.hero === 'guerriero' || b.hero === '*'), 'e mai una di un altra classe');
 
   // --- 4) IL TETTO: al 15 si sceglie la specializzazione, e l esperienza smette di contare ---
@@ -3954,6 +3964,133 @@ function testV184() {
   ok('prigionieri, faglia e forzieri verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV185() {
+  console.log('\n[TEST 61] v1.85 — le abilita attive (slot Q al 6, slot E al 12)');
+  const dt = 1 / C.TICK_RATE;
+  const conn = { send() {} };
+  const Lv2 = require('../shared/levels.js');
+
+  // --- 1) la tabella: quattro per classe, due per slot, ricariche 30 e 45 ---
+  {
+    for (const h of Heroes.ORDER) {
+      const tutte = Ab.ABIL[h];
+      assert(tutte && tutte.length === 4, 'il ' + h + ' ha quattro abilita');
+      assert(Ab.perSlot(h, 'q').length === 2 && Ab.perSlot(h, 'e').length === 2, 'due per slot');
+      for (const a of Ab.perSlot(h, 'q')) assert(a.cd === 30, a.name + ' si ricarica in 30s (' + a.cd + ')');
+      for (const a of Ab.perSlot(h, 'e')) assert(a.cd === 45, a.name + ' si ricarica in 45s (' + a.cd + ')');
+      for (const a of tutte) assert(!!a.name && !!a.icon && !!a.desc, a.id + ' ha nome, icona e descrizione');
+    }
+    assert(Object.keys(Ab.BY_ID).length === 12, 'dodici abilita in tutto');
+  }
+
+  // --- 2) lo slot si apre al livello giusto, e si sceglie fra DUE ---
+  {
+    const r = new Room('v185a'); const p = r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
+    r.addXp(p, Lv2.xpForLevel(6));
+    assert(p.level >= 6 && (p.abilDovute || []).join(',') === 'q', 'al 6 si deve lo slot Q');
+    r.phase = C.PHASE_SHOP; r.offerBoon(p);
+    assert(p.boonOffer.length === 2, 'e il pannello offre due abilita');
+    assert(p.boonOffer.every(id => Ab.BY_ID[id] && Ab.BY_ID[id].hero === 'mago' && Ab.BY_ID[id].slot === 'q'), 'sono le due del mago per lo slot Q');
+    r.pickBoon('a', p.boonOffer[1]);
+    assert(!!p.abil.q && !p.abil.e, 'presa quella scelta, e solo quella');
+    assert((p.abilDovute || []).length === 0, 'e lo slot esce dalla coda');
+    r.addXp(p, Lv2.xpForLevel(12) - p.xpPool);
+    assert((p.abilDovute || []).join(',') === 'e', 'al 12 si deve lo slot E');
+  }
+
+  // --- 3) IL MERCENARIO NON HA ABILITA' ---
+  {
+    const r = new Room('v185b'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    p.level = 4; r.enterMarket(); p.x = r.bandit.x; p.y = r.bandit.y; p.coins = 1000; r.assumiMercenario('a');
+    r.nextWave(); r.phase = C.PHASE_COMBAT;
+    const mc = r.mercenario; assert(!!mc, 'mercenario in campo');
+    mc.abil = { q: 'ab_carica', e: null };            // anche mettendogliela in mano
+    assert(r._usaAbilita(mc, 'q') === false, 'il mercenario non usa le abilita nemmeno se ce l ha');
+    assert(mc.cdQ === 0, 'e non consuma niente');
+  }
+
+  // --- 4) IL GRIDO NON ATTIRA I BOSS ---
+  {
+    const r = new Room('v185c'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    p.abil.q = 'ab_grido'; p.cdQMax = 30;
+    const sp1 = losSpot(r, p, 120), sp2 = losSpot(r, p, 150);
+    const normale = r.spawnMonster('skeleton', sp1.x, sp1.y, { scaling: Waves.scaling(3, 1) });
+    const boss = r.spawnMonster('skeleton', sp2.x, sp2.y, { scaling: Waves.scaling(3, 1) });
+    if (boss) boss.boss = true;
+    assert(!!normale && !!boss && boss.boss, 'in campo un nemico normale e un boss');
+    r._usaAbilita(p, 'q');
+    assert(normale.taunt > 0 && normale.tauntBy === 'a', 'il nemico normale viene attirato');
+    assert(!(boss.taunt > 0), 'IL BOSS NO: ha il suo bersaglio e non lo cambia perche hai urlato');
+    assert(p.buffs.grido > 0, 'e chi urla si protegge');
+    const nudo = new Room('v185c2'); const q = nudo.addPlayer('b', conn, 'B', 'guerriero'); nudo.startGame();
+    q.buffs = {}; q.hp = 500; const h0 = q.hp; nudo.damagePlayer(q, 100, q.x + 50, q.y, 0);
+    const senza = h0 - q.hp;
+    q.hp = 500; q.buffs.grido = 4; q.gridoDR = 0.25; nudo.damagePlayer(q, 100, q.x + 50, q.y, 0);
+    assert((500 - q.hp) < senza, 'col Grido addosso si incassa meno (' + (500 - q.hp) + ' contro ' + senza + ')');
+  }
+
+  // --- 5) la ricarica: una volta sola, poi si aspetta ---
+  {
+    const r = new Room('v185d'); const p = r.addPlayer('a', conn, 'A', 'ladro'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    p.abil.q = 'ab_velo';
+    assert(r._usaAbilita(p, 'q') === true, 'la prima volta parte');
+    assert(Math.abs(p.cdQ - 30) < 1.5, 'e mette 30s di ricarica (' + p.cdQ.toFixed(1) + ')');
+    assert(r._usaAbilita(p, 'q') === false, 'la seconda no, e in ricarica');
+    p.cdQ = 0;
+    assert(r._usaAbilita(p, 'q') === true, 'finita la ricarica si rifa');
+  }
+
+  // --- 6) il MARCHIO: piu danni DA CHIUNQUE, e senza bersaglio non spreca la ricarica ---
+  {
+    const r = new Room('v185e'); const p = r.addPlayer('a', conn, 'A', 'ladro'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    p.abil.e = 'ab_marchio'; p.cdEMax = 45;
+    assert(r._usaAbilita(p, 'e') === false, 'senza bersaglio non parte');
+    assert(p.cdE === 0, 'e non costa la ricarica: mirare male non si punisce per 45 secondi');
+    const sp = losSpot(r, p, 200);
+    const m = r.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(3, 1) });
+    p.aim = Math.atan2(m.y - p.y, m.x - p.x);
+    assert(r._usaAbilita(p, 'e') === true, 'col bersaglio in mira parte');
+    assert(m.marchio > 0, 'e il nemico resta marchiato');
+    // stesso colpo, con e senza marchio
+    const m2 = r.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(3, 1) });
+    const a0 = m.hp, b0 = m2.hp;
+    r.damageMonster(m, 100, p.x, p.y, 0, null); r.damageMonster(m2, 100, p.x, p.y, 0, null);
+    assert((a0 - m.hp) > (b0 - m2.hp), 'il marchiato incassa di piu (' + (a0 - m.hp) + ' contro ' + (b0 - m2.hp) + '), e da chiunque');
+  }
+
+  // --- 7) tutte e dodici partono davvero, e nessuna rompe il ciclo ---
+  {
+    for (const hero of Heroes.ORDER) for (const a of Ab.ABIL[hero]) {
+      const r = new Room('v185f' + a.id); const p = r.addPlayer('a', conn, 'A', hero); r.startGame();
+      r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+      p.abil[a.slot] = a.id; p.cdQMax = 30; p.cdEMax = 45;
+      const sp = losSpot(r, p, 130);
+      const m = r.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(5, 1) });
+      p.aim = Math.atan2(m.y - p.y, m.x - p.x);
+      assert(r._usaAbilita(p, a.slot) === true, a.name + ' parte');
+      for (let i = 0; i < C.TICK_RATE * 3; i++) r.update(dt);
+      assert(!hasNaN(r), a.name + ' non sporca lo stato');
+      assert(isFinite(p.x) && isFinite(p.y) && p.hp > 0, 'e chi la usa e ancora al suo posto');
+    }
+  }
+
+  // --- 8) il GIURAMENTO annulla UN colpo, non tutti ---
+  {
+    const r = new Room('v185g'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    p.abil.e = 'ab_giuramento'; p.buffs = {}; p.hp = 400;
+    r._usaAbilita(p, 'e');
+    const h0 = p.hp; r.damagePlayer(p, 60, p.x + 40, p.y, 0);
+    assert(p.hp === h0, 'il primo colpo non arriva');
+    r.damagePlayer(p, 60, p.x + 40, p.y, 0);
+    assert(p.hp < h0, 'il secondo si');
+  }
+  ok('abilita attive verificate');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

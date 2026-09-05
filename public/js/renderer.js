@@ -1166,6 +1166,7 @@
       for (const z of (world.zones || [])) { const cc = z.c || '#ff3b3b'; const gr = ctx.createRadialGradient(z.x, z.y, 2, z.x, z.y, z.r); gr.addColorStop(0, 'rgba(255,60,60,' + (0.10 + z.p * 0.28) + ')'); gr.addColorStop(0.75, 'rgba(255,60,60,' + (0.06 + z.p * 0.18) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.fill(); ctx.strokeStyle = cc; ctx.globalAlpha = 0.4 + z.p * 0.55; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(z.x, z.y, z.r * z.p, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
       for (const mt of world.met) { ctx.strokeStyle = 'rgba(255,120,40,' + (0.4 + mt.p * 0.5) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r, 0, 7); ctx.stroke(); ctx.fillStyle = 'rgba(255,80,20,' + (mt.p * 0.35) + ')'; ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r * mt.p, 0, 7); ctx.fill(); }
       for (const o of world.orbs) this._drawOrb(ctx, o);
+      this._drawMuri(ctx, world, dt); this._drawTrappole(ctx, world);   // v1.85 — muri di fuoco e tagliole
       this._drawCritters(ctx, camX, camY, dt); // v1.22 — animaletti
       this._drawParticles(ctx, false);
       // v1.64 — SCARTO FUORI INQUADRATURA. Finora mostri e proiettili venivano disegnati TUTTI, anche quelli
@@ -1184,6 +1185,7 @@
         if (dch < 118) this._drawChiave(ctx, world.chv, Math.max(0, Math.min(1, (118 - dch) / 46)));
       }
       if (world.fg) this._drawFaglia(ctx, world.fg);
+      this._drawNebbie(ctx, world);                                     // v1.85 — il velo copre anche chi ci sta dentro
       for (const p of world.players) this._drawPlayer(ctx, p, me && p.i === me.i);
       this._drawChains(ctx);
       this._drawParticles(ctx, true); this._drawSwings(ctx); this._drawFlashes(ctx); this._drawPare(ctx); this._drawFloaters(ctx); this._drawLevelUps(ctx, world);
@@ -1332,6 +1334,59 @@
     // irregolari e due corrent i— e' basso, non blocca il passaggio, ma si legge subito come "qui non si
     // entra". Dentro ci sta della gente, disegnata con la stessa figura dei mercanti del villaggio
     // (_hero civile) e una palette per ciascuno, cosi' non sono cinque copie.
+    // ===== v1.85 — quello che le abilita' lasciano sul campo ==================================
+    // Tre oggetti, tre linguaggi diversi: il muro BRUCIA (caldo, mobile, luminoso), la tagliola e'
+    // METALLO (freddo, immobile, piccolo), la nube e' ASSENZA (scura, morbida, senza contorno).
+    _drawMuri(ctx, world, dt) {
+      for (const w of (world.muri || [])) {
+        const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = Math.hypot(dx, dy) || 1;
+        const n = Math.max(4, Math.round(L / 34));
+        const vita = Math.max(0, Math.min(1, w.p));
+        ctx.save();
+        // la striscia rovente a terra: si spegne col tempo, cosi' si vede che sta per finire
+        const gr = ctx.createLinearGradient(w.x1, w.y1, w.x2, w.y2);
+        gr.addColorStop(0, 'rgba(255,120,30,0)'); gr.addColorStop(0.5, 'rgba(255,140,40,' + (0.16 + vita * 0.2) + ')'); gr.addColorStop(1, 'rgba(255,120,30,0)');
+        ctx.strokeStyle = gr; ctx.lineWidth = 26; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+        ctx.restore();
+        for (let i = 0; i <= n; i++) {
+          const t = i / n, x = w.x1 + dx * t, y = w.y1 + dy * t;
+          this._flame(ctx, x, y, 0.62 + Math.sin(this.time * 6 + i) * 0.08 + vita * 0.25);
+        }
+      }
+    },
+    _drawTrappole(ctx, world) {
+      for (const tr of (world.trap || [])) {
+        ctx.save(); ctx.translate(tr.x, tr.y);
+        // due ganasce aperte: mezzelune contrapposte, metallo freddo su un piatto scuro
+        ctx.fillStyle = 'rgba(8,10,16,.55)'; ctx.beginPath(); ctx.ellipse(0, 3, tr.r * 0.62, tr.r * 0.4, 0, 0, 7); ctx.fill();
+        for (const s of [-1, 1]) {
+          ctx.strokeStyle = '#b9c4cc'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.arc(0, 0, tr.r * 0.5, s > 0 ? -0.9 : Math.PI - 0.9, s > 0 ? 0.9 : Math.PI + 0.9); ctx.stroke();
+          ctx.strokeStyle = '#78848d'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.arc(0, 0, tr.r * 0.5, s > 0 ? -0.9 : Math.PI - 0.9, s > 0 ? 0.9 : Math.PI + 0.9); ctx.stroke();
+        }
+        ctx.fillStyle = '#5d666d'; ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, 7); ctx.fill();
+        ctx.restore();
+      }
+    },
+    _drawNebbie(ctx, world) {
+      for (const nb of (world.nebb || [])) {
+        const vita = Math.max(0, Math.min(1, nb.p));
+        ctx.save(); ctx.globalAlpha = 0.30 + vita * 0.42;
+        for (let k = 0; k < 5; k++) {
+          const an = this.time * 0.25 + k * 1.3;
+          const ox = Math.cos(an) * nb.r * 0.22, oy = Math.sin(an * 1.2) * nb.r * 0.16;
+          const rr = nb.r * (0.52 + 0.13 * k) * (0.7 + vita * 0.3);
+          const g = ctx.createRadialGradient(nb.x + ox, nb.y + oy, 0, nb.x + ox, nb.y + oy, rr);
+          g.addColorStop(0, 'rgba(18,26,22,.55)'); g.addColorStop(0.6, 'rgba(24,34,28,.32)'); g.addColorStop(1, 'rgba(20,28,24,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(nb.x + ox, nb.y + oy, rr, 0, 7); ctx.fill();
+        }
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
+    },
+    // L'onda del Grido: tre anelli sfasati, non uno. Uno solo si legge come un'esplosione; tre come una VOCE.
+    grido(x, y, r) { for (let k = 0; k < 3; k++) setTimeout(() => this.ring(x, y, '#ffb45a', 10 + k * 14, r, 0.5), k * 90); },
     _drawRecinto(ctx, rec, chiaveInTasca) {
       const t = this.time, R2 = rec.r;
       ctx.save(); ctx.translate(rec.x, rec.y);
@@ -2086,6 +2141,21 @@
       ctx.save(); ctx.translate(x, y);
       if (p.iv) { ctx.strokeStyle = 'rgba(255,235,120,' + (0.5 + 0.4 * Math.sin(this.time * 10)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 9, 0, 7); ctx.stroke(); }
       if (p.bar) { ctx.save(); ctx.rotate(p.a); ctx.strokeStyle = 'rgba(120,200,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r + 12, -0.9, 0.9); ctx.stroke(); ctx.restore(); }
+      // v1.85 — SCUDO DI MANA: una bolla che si increspa. GIURAMENTO: una lastra dorata bassa, a terra,
+      // che sta addosso a tutti quelli protetti — anche ai compagni, che e' cio' che lo rende un giuramento.
+      if (p.sc) {
+        const rr = r + 13 + Math.sin(this.time * 7) * 1.6;
+        const g = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, rr);
+        g.addColorStop(0, 'rgba(125,255,234,0)'); g.addColorStop(0.75, 'rgba(125,255,234,.10)'); g.addColorStop(1, 'rgba(125,255,234,.34)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rr, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(160,255,240,.75)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, rr, 0, 7); ctx.stroke();
+      }
+      if (p.gi) {
+        ctx.save(); ctx.strokeStyle = 'rgba(255,233,168,' + (0.55 + 0.3 * Math.sin(this.time * 4)) + ')'; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.ellipse(0, 6, r + 15, (r + 15) * 0.55, 0, 0, 7); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,220,130,.10)'; ctx.beginPath(); ctx.ellipse(0, 6, r + 15, (r + 15) * 0.55, 0, 0, 7); ctx.fill();
+        ctx.restore();
+      }
       if (p.tb && p.tb.length) { ctx.strokeStyle = 'rgba(255,210,90,' + (0.4 + 0.3 * Math.sin(this.time * 8)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 7, 0, 7); ctx.stroke(); }
       if (p.cu) { // v1.28 — aura viola di maledizione + volute
         ctx.strokeStyle = 'rgba(156,107,255,' + (0.45 + 0.35 * Math.sin(this.time * 6)) + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, r + 6, 0, 7); ctx.stroke();
@@ -2430,6 +2500,17 @@
       else if (m.b) { ctx.strokeStyle = 'rgba(255,60,60,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8 + Math.sin(this.time * 4) * 2, 0, 7); ctx.stroke(); }
       else if (m.el) { ctx.strokeStyle = 'rgba(255,180,40,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, rr + 5, 0, 7); ctx.stroke(); }
       if (m.sh) { ctx.strokeStyle = 'rgba(120,255,234,.8)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, rr + 6, 0, 7); ctx.stroke(); }
+      // v1.85 — MARCHIO: un sigillo che gira sopra la testa. Lo vede tutta la squadra, ed e' il punto:
+      // e' il ladro che dice dove picchiare. Il cuneo ambra invece dice che quello sta inseguendo TE.
+      if (m.mk) {
+        ctx.save(); ctx.translate(0, -rr - 16); ctx.rotate(this.time * 2.2);
+        ctx.strokeStyle = 'rgba(255,90,122,.95)'; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.stroke();
+        for (let k = 0; k < 4; k++) { const an = k * Math.PI / 2; ctx.beginPath(); ctx.moveTo(Math.cos(an) * 9, Math.sin(an) * 9); ctx.lineTo(Math.cos(an) * 13, Math.sin(an) * 13); ctx.stroke(); }
+        ctx.restore();
+      }
+      if (m.tn) { ctx.fillStyle = 'rgba(255,180,90,.9)'; ctx.beginPath(); ctx.moveTo(0, -rr - 9); ctx.lineTo(-5, -rr - 17); ctx.lineTo(5, -rr - 17); ctx.closePath(); ctx.fill(); }
       if (m.ps) { /* v1.38 — rimosso il disco verde attorno al nemico: il veleno si vede solo dalle particelle che salgono */ if (Math.random() < 0.3) this.particles.push({ x: x + MU.rand(-rr, rr), y: y - rr, vx: 0, vy: -20, life: 0.5, t: 0.5, color: '#7ee07e', r: 2, over: true }); }
       const bodyc = m.fl ? '#ffffff' : def.color; const dk = m.fl ? '#ffd0d0' : def.color2; const aa = this.mAtk[m.e]; const atk = aa ? Math.max(0, Math.min(1, aa.t / aa.dur)) : 0;
       // v1.46 — rilevamento movimento con ISTERESI + smoothing forte (per non tremolare, tipico dei mostri LENTI

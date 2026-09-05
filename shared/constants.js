@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.84.1',
+    VERSION: '1.85.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -137,6 +137,9 @@
       { id: 'silver', v: 5, color: '#cbd5e6', r: 5 },
       { id: 'gold', v: 20, color: '#ffcf4a', r: 6 },
     ],
+    // v1.85 — la specializzazione del livello 15 non regala piu' un'abilita' (adesso si scelgono al 6
+    // e al 12): alza la POTENZA di quelle che hai. Vale su danno, assorbimento e cura delle abilita'.
+    SPEC_ABIL_MULT: 1.30,
     RARITY: {
       common: { name: 'Comune', color: '#b8c0cc', weight: 60, mult: 1.00 },
       uncommon: { name: 'Non comune', color: '#4bd66b', weight: 26, mult: 1.18 },

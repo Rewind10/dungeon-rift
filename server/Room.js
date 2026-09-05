@@ -8,6 +8,7 @@ const Loot = require('../shared/loot.js');
 const Gear = require('../shared/gear.js');
 const Merc = require('../shared/mercenari.js');
 const Lv = require('../shared/levels.js');
+const Ab = require('../shared/abilities.js');   // v1.85 — le dodici abilita' attive
 const Pot = require('../shared/potions.js');
 const Bnt = require('../shared/bounties.js');
 const MapGen = require('../shared/mapgen.js');
@@ -73,7 +74,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
@@ -98,7 +99,7 @@ class Room {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
     // v1.81 — zone e ragnatele sono POSTI sulla mappa vecchia: sulla nuova non vogliono dire niente.
-    this.zones.length = 0; this.ragnatele.length = 0; this.recinto = null; this.chiave = null; this.faglia = null;
+    this.zones.length = 0; this.ragnatele.length = 0; this.muri.length = 0; this.trappole.length = 0; this.nebbie.length = 0; this.recinto = null; this.chiave = null; this.faglia = null;
     // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
     // collisione torna a costare esattamente quanto prima: un solo confronto con null.
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
@@ -131,7 +132,7 @@ class Room {
       id: pid, conn, connected: true, name: (name || 'Eroe').slice(0, 16), heroId: hero.id, hero,
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
       hp: hero.hp, maxHp: hero.hp, dead: false, down: false, downT: 0, fireCd: 0, facing: 0,
-      input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false, pot: 0 }, cdQ: 0, cdE: 0, cdDash: 0, buffs: {},
+      input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false, pot: 0 }, cdQ: 0, cdE: 0, cdQMax: 0, cdEMax: 0, cdDash: 0, abil: { q: null, e: null }, abilDovute: [], carica: null, turbine: null, salva: null, scudoAb: null, veloCrit: 0, buffs: {},
       // v1.71 — LA CINTURA: tre slot, ognuno null oppure { id, n }. Il cooldown e' UNO SOLO per tutti e
       // tre (potCd), altrimenti basterebbe alternare gli slot per bere tre volte di fila.
       belt: Pot.newBelt(), potCd: 0, potCdMax: Pot.COOLDOWN,
@@ -177,7 +178,7 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = { q: null, e: null }; p.abilDovute = []; p.cdQ = 0; p.cdE = 0; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
   }
   nextWave() {
@@ -341,7 +342,9 @@ class Room {
     const self = this;
     return {
       dt: this.dt, now: this.time,
-      nearest(m) { return self._nearestPlayer(m.x, m.y); },
+      // v1.85 — GRIDO DI GUERRA: finche' dura il taunt il bersaglio non si sceglie, e' gia' scelto.
+      // Passa da qui perche' TUTTE le IA chiedono il bersaglio a `ctx.nearest`: un solo punto, nessun ramo sparso.
+      nearest(m) { if (m.taunt > 0 && m.tauntBy) { const t = self.players.get(m.tauntBy); if (t && !t.dead && !t.down) return t; } return self._nearestPlayer(m.x, m.y); },
       ANELLO: C.ANELLO_ATTESA,
       flowStep(m) { if (!self.flow) return { x: 0, y: 0, d: -1 }; const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0; return PF.stepDir(self.flow, self.map.grid, self.map.w, self.map.h, gx, gy); },
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
@@ -605,6 +608,9 @@ class Room {
       this.events.push({ t: 'aegis', x: p.x, y: p.y, who: p.id });
       return;
     }
+    // v1.85 — GIURAMENTO: il primo colpo che arriva, a te o a un compagno nell'aura, non arriva.
+    // Uno per lancio a testa: e' una finestra, non un'immunita'.
+    if (p.buffs.giuramento > 0 && p.giurScudo) { p.giurScudo = 0; this.events.push({ t: 'giur_para', x: p.x, y: p.y, who: p.id }); return; }
     let d = dmg;
     if (p.heroId === 'guerriero') d *= 0.88;  // v1.66 — passiva Piastra: -12% danni subiti
     // v1.83 — LO SCUDO PARA DAVANTI. Il guerriero incassava quattro volte i danni degli altri due (5,6/s
@@ -632,6 +638,7 @@ class Room {
     let auraDR = p.perk.auraDR || 0;
     for (const q of this.alivePlayers) if (q !== p && q.perk.aura > 0 && MU.dist(q.x, q.y, p.x, p.y) <= q.perk.aura) auraDR = Math.max(auraDR, q.perk.auraDR);
     if (auraDR > 0) d *= (1 - auraDR);
+    if (p.buffs.grido > 0) d *= (1 - (p.gridoDR || 0.25));   // v1.85 — Grido di Guerra: vale a chi urla e a chi era nel raggio
     if (p.buffs.phase) d *= 0.7;
     if (p.buffs.b_shield) d *= 0.5;
     if (p.buffs.i_armor) d *= 0.45;
@@ -646,6 +653,13 @@ class Room {
     if (p.manaShield > 0) {
       const ass = Math.min(p.manaShield, d); p.manaShield -= ass; d -= ass;
       this.events.push({ t: 'manahit', x: p.x, y: p.y, left: Math.round(p.manaShield) });
+      if (d <= 0) return;
+    }
+    // v1.85 — SCUDO DI MANA (abilita' del mago): assorbe finche' regge, poi esplode.
+    if (p.scudoAb && p.scudoAb.hp > 0) {
+      const ass = Math.min(p.scudoAb.hp, d); p.scudoAb.hp -= ass; d -= ass;
+      this.events.push({ t: 'scudo_hit', x: p.x, y: p.y, who: p.id, left: Math.round(p.scudoAb.hp) });
+      if (p.scudoAb.hp <= 0) this._rompiScudo(p);
       if (d <= 0) return;
     }
     p.hp -= d; const n = MU.norm(p.x - sx, p.y - sy); p.vx += n.x * 40 * kn; p.vy += n.y * 40 * kn; p.hitFlash = 0.15;
@@ -715,7 +729,7 @@ class Room {
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
   effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
-  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.merc && p._torna) s *= (C.MERC_RIENTRO_MULT || 1.28); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.merc && p._torna) s *= (C.MERC_RIENTRO_MULT || 1.28); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.turbine) s *= (p.turbine.lento || 0.7); if (p.buffs.carica > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
   effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
@@ -756,6 +770,9 @@ class Room {
     if (p.perk.pioggia > 0 && p.shotSeq % p.perk.pioggia === 0) pc = Math.max(pc, 5);
     let dmg = this.effDamage(p); let crit = MU.chance(p.stats.critChance);
     if (crit) dmg *= p.stats.critMult; dmg = Math.round(dmg);
+    // v1.85 — VELO D'OMBRA: il primo colpo dopo essere sparito e' critico. Va qui e non piu' in basso
+    // perche' il danno del critico si calcola in questa riga: piu' avanti si cambierebbe solo il colore.
+    if (p.veloCrit) { p.veloCrit = 0; if (!crit) { crit = true; dmg = Math.round(dmg * p.stats.critMult); } }
     // v1.66 — il GUERRIERO non spara: descrive un semicerchio davanti a se'. Raggio e apertura vengono
     // dall'arma (arcRadius/arcHalf), non dall'eroe, perche' spada corta, spada lunga e alabarda dovranno
     // dare tre archi diversi allo stesso personaggio.
@@ -863,9 +880,6 @@ class Room {
     this.events.push({ t: 'ability', k: 'dash', x: p.x, y: p.y });
   }
 
-  // v1.66 — le abilita' Q/E sono SOSPESE: erano cucite sui tre eroi rimossi (enforcer/recon/glitch) e vanno
-  // ripensate sulle nuove classi, dove i poteri arriveranno dall'evoluzione dopo il boss e non da uno slot
-  // fisso. Le funzioni restano come stub perche' input, rete e HUD non abbiano bisogno di rami condizionali.
   // ===== v1.71 — LA CINTURA =====
   // Bere e' istantaneo: nessuna finestra, nessuna animazione bloccante, il personaggio continua a muoversi
   // e sparare. Cio' che regola l'abuso e' il COOLDOWN CONDIVISO fra i tre slot, ridotto dalla Destrezza.
@@ -1182,8 +1196,247 @@ class Room {
     this.offerSeer(p, 1); this.sendBoons(p);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'card_toggle', x: p.x, y: p.y, id: cardId, name: b ? b.name : cardId, icon: b ? b.icon : '', on: era ? 0 : 1 } });
   }
-  useQ(p) { /* nessuna abilita' in v1.66 */ }
-  useE(p) { /* nessuna abilita' in v1.66 */ }
+  // ===== v1.85 — LE ABILITA' ATTIVE ============================================================
+  // Lo slot Q si sblocca al livello 6, lo slot E al 12. I NUMERI non stanno qui: stanno tutti in
+  // shared/abilities.js, e questo blocco si limita a farli succedere. Aggiungere un'abilita' nuova
+  // vuol dire una riga di tabella li' e un ramo dello switch qui — non toccare nient'altro.
+  abilitaDi(p, slot) { const id = p.abil ? p.abil[slot] : null; return id ? Ab.BY_ID[id] : null; }
+  useQ(p) { this._usaAbilita(p, 'q'); }
+  useE(p) { this._usaAbilita(p, 'e'); }
+  _usaAbilita(p, slot) {
+    // IL MERCENARIO NON HA ABILITA'. Come per l'esperienza, le monete e la chiave dei prigionieri: non
+    // e' un giocatore per le regole del gioco, e' un compagno d'arme che mena.
+    if (!p || p.dead || p.down || p.merc) return false;
+    const a = this.abilitaDi(p, slot); if (!a) return false;
+    if ((slot === 'q' ? p.cdQ : p.cdE) > 0) return false;
+    // Un'abilita' puo' RIFIUTARSI di partire (il Marchio senza bersaglio): in quel caso non consuma
+    // la ricarica. Trenta secondi buttati per una mira sbagliata sarebbero una punizione, non una regola.
+    if (this._eseguiAbilita(p, a) === false) return false;
+    const t = Math.max(1, a.cd * (p.stats.cdrMult || 1));
+    if (slot === 'q') { p.cdQ = t; p.cdQMax = t; } else { p.cdE = t; p.cdEMax = t; }
+    this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
+    return true;
+  }
+  // Il danno delle abilita' e' una QUOTA DEL COLPO BASE, non un numero fisso: cosi' un'abilita' presa al
+  // livello 6 vale ancora qualcosa all'ondata 18, senza una seconda tabella di scala da tenere allineata.
+  _abilDmg(p, mult) { return Math.max(1, Math.round(this.effDamage(p) * mult * this.abilPow(p))); }
+  // Il mostro piu' vicino alla LINEA DI MIRA (non il piu' vicino e basta): serve al Marchio e alla Meteora.
+  _bersaglioMirato(p, gittata) {
+    let best = null, bs = Infinity;
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      const d = MU.dist(p.x, p.y, m.x, m.y); if (d > gittata) continue;
+      const ang = Math.atan2(m.y - p.y, m.x - p.x);
+      const diff = Math.abs(((ang - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI);
+      if (diff > 0.55) continue;
+      const score = diff * 260 + d;                    // conta prima la mira, poi la distanza
+      if (score < bs) { bs = score; best = m; }
+    }
+    return best;
+  }
+  _eseguiAbilita(p, a) {
+    switch (a.id) {
+      // ---------- GUERRIERO ----------
+      case 'ab_carica': {
+        p.dashDir = { x: Math.cos(p.aim), y: Math.sin(p.aim) };
+        p.buffs.dash = a.durata; p.buffs.carica = a.durata; p.buffs.iframe = a.durata + 0.08;
+        p.carica = { t: a.durata, dmg: this._abilDmg(p, a.dmgMult), raggio: a.raggio, stun: a.stun, knock: a.knock, hit: {} };
+        return true;
+      }
+      case 'ab_grido': {
+        let attirati = 0;
+        for (const m of this.monsters) {
+          // I BOSS NON DANNO RETTA A NESSUNO: hanno gia' il loro bersaglio, e un boss che si gira
+          // perche' hai urlato smetterebbe di essere un boss.
+          if (m.dead || m.boss) continue;
+          if (MU.dist(p.x, p.y, m.x, m.y) > a.raggio) continue;
+          m.taunt = a.taunt; m.tauntBy = p.id; attirati++;
+        }
+        for (const q of this.alivePlayers) {
+          if (MU.dist(p.x, p.y, q.x, q.y) > a.raggio) continue;
+          q.buffs.grido = a.dur; q.gridoDR = a.dr;
+        }
+        this.events.push({ t: 'grido', x: p.x, y: p.y, r: a.raggio, n: attirati, who: p.id });
+        return true;
+      }
+      case 'ab_turbine': {
+        p.turbine = { t: a.dur, giri: a.giri, fatti: 0, ogni: a.dur / a.giri, next: 0, raggio: a.raggio, quota: a.quota, lento: a.lento };
+        return true;
+      }
+      case 'ab_giuramento': {
+        let n = 0;
+        for (const q of this.alivePlayers) {
+          if (MU.dist(p.x, p.y, q.x, q.y) > a.raggio) continue;
+          q.buffs.giuramento = a.dur; q.giurScudo = 1; n++;
+        }
+        this.events.push({ t: 'giuramento', x: p.x, y: p.y, r: a.raggio, n, who: p.id });
+        return true;
+      }
+      // ---------- MAGO ----------
+      case 'ab_muro': {
+        // Il muro nasce DAVANTI a te e per traverso: e' una barriera, non un raggio.
+        const ang = p.aim + Math.PI / 2, h = a.len / 2;
+        const cx = p.x + Math.cos(p.aim) * 70, cy = p.y + Math.sin(p.aim) * 70;
+        this.muri.push({ eid: NEXT++, owner: p.id,
+          x1: cx - Math.cos(ang) * h, y1: cy - Math.sin(ang) * h,
+          x2: cx + Math.cos(ang) * h, y2: cy + Math.sin(ang) * h,
+          t: a.dur, max: a.dur, sp: a.spessore, dps: this._abilDmg(p, a.dmgMult), tick: a.tick, acc: 0, col: a.color });
+        return true;
+      }
+      case 'ab_scudo': {
+        const hp = Math.max(1, Math.round(this.effMaxHp(p) * a.quota * this.abilPow(p)));
+        p.scudoAb = { hp, max: hp, t: a.dur, r: a.ondaR, knock: a.ondaKnock };
+        return true;
+      }
+      case 'ab_meteora': {
+        // Si mira dove SARANNO: il bersaglio e' il punto, non il mostro. Se ne stai mirando uno si cade
+        // addosso a lui, se no alla distanza di mira.
+        const tg = this._bersaglioMirato(p, a.gittata);
+        const bx = tg ? tg.x : p.x + Math.cos(p.aim) * Math.min(a.gittata, 320);
+        const by = tg ? tg.y : p.y + Math.sin(p.aim) * Math.min(a.gittata, 320);
+        const dmg = this._abilDmg(p, a.dmgMult);
+        for (let k = 0; k < a.colpi; k++) {
+          const ang = Math.random() * Math.PI * 2, ray = k === 0 ? 0 : MU.rand(a.sparg * 0.4, a.sparg);
+          this.meteors.push({ eid: NEXT++, mio: 1, owner: p.id, x: bx + Math.cos(ang) * ray, y: by + Math.sin(ang) * ray,
+            r: a.r, dmg, t: a.ritardo + k * a.passo, max: a.ritardo + k * a.passo });
+        }
+        this.events.push({ t: 'meteora_tell', x: bx, y: by, r: a.r, n: a.colpi });
+        return true;
+      }
+      case 'ab_catena': {
+        let cur = this._bersaglioMirato(p, a.gittata);
+        if (!cur) { let bd = a.gittata; for (const m of this.monsters) { if (m.dead) continue; const d = MU.dist(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; cur = m; } } }
+        if (!cur) return false;                       // niente da colpire: la ricarica non si spende
+        let dmg = this._abilDmg(p, a.dmgMult);
+        const visti = {}; let px = p.x, py = p.y;
+        for (let k = 0; k < a.salti && cur; k++) {
+          visti[cur.eid] = 1;
+          this.events.push({ t: 'chain', x1: px, y1: py, x2: cur.x, y2: cur.y });
+          px = cur.x; py = cur.y;
+          this.damageMonster(cur, dmg, px, py, 0, p, { slow: true });
+          dmg = Math.max(1, Math.round(dmg * a.calo));
+          let nx = null, bd = a.salto;
+          for (const m of this.monsters) { if (m.dead || visti[m.eid]) continue; const d = MU.dist(px, py, m.x, m.y); if (d < bd) { bd = d; nx = m; } }
+          cur = nx;
+        }
+        return true;
+      }
+      // ---------- LADRO ----------
+      case 'ab_velo': {
+        this.nebbie.push({ eid: NEXT++, owner: p.id, x: p.x, y: p.y, r: a.r, t: a.dur, max: a.dur });
+        p.buffs.hidden = Math.max(p.buffs.hidden || 0, 0.4);
+        p.veloCrit = 1;                               // il primo colpo che esce dall'ombra e' critico
+        return true;
+      }
+      case 'ab_tagliola': {
+        const mie = this.trappole.filter(t => t.owner === p.id && !t.done);
+        while (mie.length >= a.max) { const v = mie.shift(); v.done = true; }   // la piu' vecchia si smonta
+        this.trappole.push({ eid: NEXT++, owner: p.id, x: p.x, y: p.y, r: a.r, t: a.arma, max: a.arma,
+          blocco: a.blocco, dmg: this._abilDmg(p, a.dmgMult), done: false });
+        return true;
+      }
+      case 'ab_marchio': {
+        const m = this._bersaglioMirato(p, a.gittata);
+        if (!m) return false;                         // senza bersaglio non parte, e non costa niente
+        m.marchio = a.dur; m.marchioBy = p.id; m.marchioMult = a.mult; m.marchioRim = a.rimborso;
+        this.events.push({ t: 'marchio', x: m.x, y: m.y, e: m.eid, who: p.id });
+        return true;
+      }
+      case 'ab_salva': {
+        p.salva = { n: a.colpi, ogni: a.dur / a.colpi, next: 0, mult: a.dmgMult, sparg: a.sparg, pierce: a.pierce };
+        return true;
+      }
+    }
+    return false;
+  }
+  // Un giro completo del Turbine. Riusa l'evento `swing` con apertura piena: il client sa gia' disegnarlo
+  // (il campo `giro` c'era dal v1.69 e non lo usava nessuno).
+  _turbineColpo(p, tb) {
+    const dmg = Math.max(1, Math.round(this.effDamage(p) * tb.quota * this.abilPow(p)));
+    let n = 0;
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      if (MU.dist(p.x, p.y, m.x, m.y) > tb.raggio + m.radius) continue;
+      this.damageMonster(m, dmg, p.x, p.y, 90 * p.stats.knockMult, p); n++;
+    }
+    this.events.push({ t: 'swing', x: p.x, y: p.y, a: p.aim, rad: tb.raggio, half: Math.PI, crit: false, hits: n, who: p.id, giro: 1 });
+  }
+  _frecciaSalva(p, sv) {
+    const w = this.effWeapon(p);
+    const ang = p.aim + MU.rand(-sv.sparg, sv.sparg);
+    const sp = w.bulletSpeed || 820;
+    const dmg = Math.max(1, Math.round(this.effDamage(p) * sv.mult * this.abilPow(p)));
+    this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: w.r || C.BULLET_RADIUS, dmg,
+      color: w.projColor, life: (w.range || 700) / sp, crit: false,
+      pierce: sv.pierce + p.stats.pierce, hitSet: new Set(), knock: (w.knockback || 25) * p.stats.knockMult,
+      bounce: 0, bleed: 0, arrow: true });
+    this.events.push({ t: 'shot', x: p.x, y: p.y, a: ang, who: p.id, hero: p.heroId, wt: null });
+  }
+  // Lo Scudo di Mana finisce sempre allo stesso modo: con un'onda. Che si sia rotto o che sia scaduto,
+  // quello che il giocatore vede e' lo stesso gesto — e cosi' non c'e' un modo "sbagliato" di usarlo.
+  _rompiScudo(p) {
+    const s = p.scudoAb; if (!s) return; p.scudoAb = null;
+    for (const m of this.monsters) {
+      if (m.dead || m.boss) continue;
+      const d = MU.dist(p.x, p.y, m.x, m.y); if (d > s.r + m.radius) continue;
+      const n = MU.norm(m.x - p.x, m.y - p.y);
+      this.moveCircle(m, n.x * s.knock * 0.35, n.y * s.knock * 0.35);
+      if (this.isWallAt(m.x, m.y)) this._unstuck(m);
+      m.slowT = Math.max(m.slowT || 0, 1.5);
+    }
+    this.events.push({ t: 'scudo_rotto', x: p.x, y: p.y, r: s.r, who: p.id });
+  }
+  // ===== i tre oggetti che le abilita' lasciano sul campo =====
+  _distSeg(x, y, w) {
+    const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = dx * dx + dy * dy || 1;
+    let t = ((x - w.x1) * dx + (y - w.y1) * dy) / L; t = Math.max(0, Math.min(1, t));
+    return MU.dist(x, y, w.x1 + dx * t, w.y1 + dy * t);
+  }
+  updateMuri(dt) {
+    if (!this.muri.length) return;
+    for (const w of this.muri) {
+      w.t -= dt; w.acc += dt;
+      if (w.acc < w.tick) continue;
+      const q = w.acc; w.acc = 0;
+      const src = this.players.get(w.owner);
+      for (const m of this.monsters) {
+        if (m.dead) continue;
+        if (this._distSeg(m.x, m.y, w) > w.sp + m.radius) continue;
+        this.damageMonster(m, Math.max(1, Math.round(w.dps * q)), m.x, m.y, 0, src);
+      }
+    }
+    if (this.muri.some(w => w.t <= 0)) this.muri = this.muri.filter(w => w.t > 0);
+  }
+  updateTrappole(dt) {
+    if (!this.trappole.length) return;
+    for (const tr of this.trappole) {
+      if (tr.done) continue;
+      tr.t -= dt; if (tr.t <= 0) { tr.done = true; continue; }
+      for (const m of this.monsters) {
+        if (m.dead || m.boss) continue;                 // un boss non lo blocca una tagliola
+        if (MU.dist(tr.x, tr.y, m.x, m.y) > tr.r + m.radius) continue;
+        tr.done = true;
+        m.stun = Math.max(m.stun || 0, tr.blocco);
+        this.damageMonster(m, tr.dmg, tr.x, tr.y, 0, this.players.get(tr.owner));
+        this.events.push({ t: 'tagliola', x: tr.x, y: tr.y, e: m.eid });
+        break;
+      }
+    }
+    if (this.trappole.some(t => t.done)) this.trappole = this.trappole.filter(t => !t.done);
+  }
+  updateNebbie(dt) {
+    if (!this.nebbie.length) return;
+    for (const n of this.nebbie) n.t -= dt;
+    for (const n of this.nebbie) {
+      if (n.t <= 0) continue;
+      const p = this.players.get(n.owner);
+      if (!p || p.dead || p.down) continue;
+      // Nasconde CHI L'HA MESSA: e' il velo del ladro, non un fumogeno per la squadra.
+      if (MU.dist(n.x, n.y, p.x, p.y) <= n.r) p.buffs.hidden = Math.max(p.buffs.hidden || 0, 0.35);
+    }
+    if (this.nebbie.some(n => n.t <= 0)) this.nebbie = this.nebbie.filter(n => n.t > 0);
+  }
 
   damageMonster(m, dmg, sx, sy, kn, src, opts = {}) {
     if (m.dead) return; if (m.shielded > 0) { this.events.push({ t: 'block', x: m.x, y: m.y }); return; }
@@ -1202,6 +1455,9 @@ class Room {
       // v1.51 — TIRO LUNGO: premia il combattimento a distanza (fino a +22% per carica a piena gittata).
       if (src.boon.longshot > 0) d *= 1 + Math.min(1, MU.dist(src.x, src.y, m.x, m.y) / 700) * 0.22 * src.boon.longshot;
     }
+    // v1.85 — MARCHIO: il segnato prende di piu' DA CHIUNQUE, non solo da chi l'ha segnato. E' li'
+    // che sta il senso in cooperativa: e' il ladro che dice alla squadra dove picchiare.
+    if (m.marchio > 0) d *= (m.marchioMult || 1.5);
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
     // v1.51 — COLPO DI GRAZIA: esecuzione sotto soglia. Mai sui boss, altrimenti banalizza le ondate 5/10/15/20.
     if (m.hp > 0 && !m.boss && src && src.boon && src.boon.execute > 0) {
@@ -1247,6 +1503,15 @@ class Room {
   }
   killMonster(m, src) {
     m.dead = true;
+    // v1.85 — se cade MARCHIATO, meta' della ricarica torna indietro: il Marchio premia chi lo
+    // mette su un bersaglio che sta per morire davvero, non su quello piu' comodo.
+    if (m.marchio > 0 && m.marchioBy) {
+      const mk = this.players.get(m.marchioBy);
+      if (mk && mk.abil && mk.abil.e === 'ab_marchio' && mk.cdE > 0) {
+        mk.cdE = Math.max(0, mk.cdE - (mk.cdEMax || 45) * (m.marchioRim || 0.5));
+        this.events.push({ t: 'marchio_ok', x: m.x, y: m.y, who: mk.id });
+      }
+    }
     // v1.58 — DIVISIONE: la Melma alla morte lascia due melme minori (che non si dividono a loro volta).
     // v1.64 — anche la divisione rispetta il tetto: e' l'unico modo perche' "mai piu' di N in campo" sia
     // una promessa vera e non un auspicio. Il mostro che si divide libera comunque il proprio posto.
@@ -1366,6 +1631,11 @@ class Room {
       // in pausa il mondo per uno solo. Resta in coda e si paga nel menu di fine ondata.
       const tier = Lv.tierForLevel(p.level);
       if (tier) { p.scaglioniDovuti = p.scaglioniDovuti || []; p.scaglioniDovuti.push(tier); }
+      // v1.85 — ai livelli 6 e 12 non arriva una passiva ma uno SLOT: si sceglie fra le due abilita'
+      // attive di quello slot. Sta nella stessa coda differita, per la stessa ragione: in mezzo
+      // all'ondata nessuno legge due carte, e in cooperativa non si mette in pausa il mondo per uno.
+      const slot = Lv.slotPerLivello(p.level);
+      if (slot && !p.abil[slot]) { p.abilDovute = p.abilDovute || []; p.abilDovute.push(slot); }
       const r = Lv.rankForLevel(p.level);
       if (r > Lv.rankForLevel(p.level - 1)) this._rankUp(p, r);
       // l'evento parte SEMPRE, anche in mezzo alla battaglia: il "LEVEL UP" sopra la testa e il suo
@@ -1505,8 +1775,7 @@ class Room {
   nienteCarta(p) {
     p.boonOffer = null; p.boonPicked = true;
     const pr = Lv.progress(p.xpPool);
-    let prossimo = 0;
-    for (const sc of Lv.SCAGLIONI) if (sc.lvl > p.level) { prossimo = sc.lvl; break; }
+    const prossimo = Lv.prossimaScelta(p.level);   // v1.85 — passive a 3 e 9, abilita' attive a 6 e 12
     this.sendTo(p.id, {
       t: C.MSG.OFFER_BOON, boons: [], resta: 0, liv: p.level,
       manca: pr.cap ? 0 : Math.max(0, Math.round(pr.need - pr.cur)),
@@ -1517,6 +1786,10 @@ class Room {
   // Non si sorteggia niente — con una sola scelta per scaglione, nascondere un'opzione non aggiungerebbe
   // varieta' ma solo frustrazione.
   offerBoon(p) {
+    // v1.85 — lo SLOT DI UN'ABILITA' ATTIVA ha la precedenza sulla passiva: e' la scelta piu' grossa
+    // delle due, e mostrarla per seconda la farebbe sembrare un contentino.
+    const slot = (p.abilDovute && p.abilDovute[0]) || null;
+    if (slot) return this.offerAbilita(p, slot);
     const coda = p.scaglioniDovuti || [];
     const tier = coda[0];
     if (!tier) return this.nienteCarta(p);
@@ -1528,6 +1801,31 @@ class Room {
       resta: coda.length, liv: p.level, scaglione: Lv.SCAGLIONI.findIndex(x => x.tier === tier) + 1, tot: Lv.SCAGLIONI.length,
       boons: choices.map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, desc: b.desc.replace('{v}', b.v ? b.v(p) : ''), owned: p.boonsOwned[b.id] || 0, max: b.max })),
     });
+  }
+  // v1.85 — le DUE abilita' di uno slot. Non si sorteggia niente, come per le passive: con una sola
+  // scelta per slot, nascondere un'opzione non aggiungerebbe varieta' ma solo rimpianto.
+  offerAbilita(p, slot) {
+    const due = Ab.perSlot(p.heroId, slot);
+    p.boonOffer = due.map(a => a.id); p.boonPicked = due.length === 0;
+    const rar = slot === 'q' ? 'rare' : 'divine';
+    this.sendTo(p.id, {
+      t: C.MSG.OFFER_BOON, abil: 1, slot, tasto: slot.toUpperCase(), tier: rar,
+      tierName: (C.RARITY[rar] || {}).name || rar, tierColor: (C.RARITY[rar] || {}).color || '#fff',
+      resta: (p.abilDovute || []).length + (p.scaglioniDovuti || []).length, liv: p.level,
+      boons: due.map(a => ({ id: a.id, name: a.name, icon: a.icon, rarity: rar, hero: p.heroId,
+        desc: a.desc, breve: a.breve, cd: a.cd, owned: 0, max: 1 })),
+    });
+  }
+  // Prendere un'abilita' non passa da _recomputeBoons: non e' un potenziamento, e' cio' che il tasto fa.
+  _prendiAbilita(p, id) {
+    const a = Ab.BY_ID[id]; if (!a || a.hero !== p.heroId) return;
+    if (!p.abilDovute || p.abilDovute[0] !== a.slot) return;
+    p.abilDovute.shift();
+    p.abil[a.slot] = id;
+    if (a.slot === 'q') { p.cdQ = 0; p.cdQMax = a.cd; } else { p.cdE = 0; p.cdEMax = a.cd; }
+    p.boonOffer = null; p.boonPicked = true;
+    this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: a.slot.toUpperCase(), cd: a.cd } });
+    if (this.phase === C.PHASE_SHOP) this.offerBoon(p);   // se resta altro in coda si presenta subito
   }
   buyStat(pid, statId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;
@@ -1567,7 +1865,7 @@ class Room {
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
     for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }
     for (const sy of Loot.detectSynergies(accese, {})) { sy.apply(p); p.synActive[sy.id] = 1; }
-    if (p.spec) { const sp = Lv.SPEC_BY_ID[p.spec]; if (sp && sp.apply) sp.apply(p); }
+    if (p.spec) { const sp = Lv.SPEC_BY_ID[p.spec]; if (sp && sp.apply) sp.apply(p); p.stats.abilityMult *= C.SPEC_ABIL_MULT || 1.30; }   // v1.85 — il rango V non regala piu' un'abilita': rende piu' forti quelle che hai
     p.defianceLeft = Math.max(0, p.defianceLeft - (p.defianceUsed || 0));
     // v1.74 — ALZARE IL MASSIMO NON CURA MAI. Ne' comprare Costituzione, ne' prendere Colosso o Scudo
     // Vitale: rimettere in piedi il personaggio e' il mestiere dell'OSTESSA, e se lo facesse anche il
@@ -1593,6 +1891,7 @@ class Room {
   pickBoon(pid, boonId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP || !p.boonOffer) return;
     if (!p.boonOffer.includes(boonId)) return;
+    if (Ab.BY_ID[boonId]) return this._prendiAbilita(p, boonId);   // v1.85 — la carta e' un'abilita' attiva
     const b = Loot.BOON_BY_ID[boonId]; if (!b) return;
     if ((p.boonsOwned[boonId] || 0) >= b.max) return;
     p.boonsOwned[boonId] = (p.boonsOwned[boonId] || 0) + 1; p.boonOffer = null; p.boonPicked = true;
@@ -1687,7 +1986,7 @@ class Room {
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
       { const mc = this.mercenario; if (mc) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); } }
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -1937,6 +2236,32 @@ class Room {
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
       for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; if (k === 'killStep') p.killStepStacks = 0; } }
       if (p.aegisT > 0) p.aegisT -= dt;  // v1.51 — ricarica dell'Egida Ostinata
+      // v1.85 — LE ABILITA' CHE DURANO. La Carica ferisce COL MOVIMENTO (non c'e' un colpo da
+      // sparare: c'e' un corpo che passa), il Turbine e la Salva scandiscono i propri colpi, e lo
+      // Scudo di Mana esplode anche quando scade e non solo quando lo rompono.
+      if (p.carica) {
+        p.carica.t -= dt;
+        for (const m of this.monsters) {
+          if (m.dead || p.carica.hit[m.eid]) continue;
+          if (MU.dist(p.x, p.y, m.x, m.y) > p.carica.raggio + m.radius) continue;
+          p.carica.hit[m.eid] = 1;
+          this.damageMonster(m, p.carica.dmg, p.x, p.y, p.carica.knock * p.stats.knockMult, p, { stun: p.carica.stun });
+          this.events.push({ t: 'sfonda', x: m.x, y: m.y, e: m.eid });
+        }
+        if (p.carica.t <= 0) p.carica = null;
+      }
+      if (p.turbine) {
+        p.turbine.t -= dt; p.turbine.next -= dt;
+        if (p.turbine.next <= 0 && p.turbine.fatti < p.turbine.giri) { p.turbine.next = p.turbine.ogni; p.turbine.fatti++; this._turbineColpo(p, p.turbine); }
+        if (p.turbine.t <= 0) p.turbine = null;
+      }
+      if (p.salva) {
+        p.salva.next -= dt;
+        let giri = 0;
+        while (p.salva.n > 0 && p.salva.next <= 0 && giri++ < 8) { p.salva.next += p.salva.ogni; p.salva.n--; this._frecciaSalva(p, p.salva); }
+        if (p.salva.n <= 0) p.salva = null;
+      }
+      if (p.scudoAb) { p.scudoAb.t -= dt; if (p.scudoAb.t <= 0) this._rompiScudo(p); }
       if (p.stats.regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + p.stats.regen * dt);
       // v1.69 — AURA DEL PALADINO: cura i COMPAGNI dentro il cerchio (la riduzione danni la applica
       // damagePlayer). Cura anche chi la porta, ma meta': in solitaria non deve essere il ramo migliore.
@@ -2035,6 +2360,8 @@ class Room {
   updateMonsters(dt) {
     const ctx = this.makeCtx(); const tf = this.bulletTime ? this.bulletTime.factor : 1;
     for (const m of this.monsters) { if (m.dead) continue; if (m.hitFlash) m.hitFlash = Math.max(0, m.hitFlash - dt);
+      if (m.taunt > 0) m.taunt -= dt;                 // v1.85 — Grido di Guerra
+      if (m.marchio > 0) m.marchio -= dt;             // v1.85 — Marchio
       // veleno (boon)
       // v1.79.2 — il veleno fa una QUOTA DEL COLPO che l'ha applicato (5% al secondo), non un numero
       // fisso: cosi' non diventa irrilevante all'ondata 15 ne' sproporzionato alla prima.
@@ -2113,7 +2440,23 @@ class Room {
   updateOrbs(dt) { for (const o of this.orbs) { if (o.dead) continue; o.t -= dt; if (o.t <= 0) { o.dead = true; continue; }
       if (o.turret) { o.fireCd -= dt; let tgt = null, bd = o.range * o.range; for (const m of this.monsters) { if (m.dead) continue; const d2 = MU.dist2(o.x, o.y, m.x, m.y); if (d2 < bd && this.losClear(o.x, o.y, m.x, m.y)) { bd = d2; tgt = m; } } if (tgt) { o.aim = Math.atan2(tgt.y - o.y, tgt.x - o.x); if (o.fireCd <= 0) { o.fireCd = 0.3; const sp = 820; this.bullets.push({ eid: NEXT++, hostile: false, owner: o.owner, x: o.x, y: o.y, vx: Math.cos(o.aim) * sp, vy: Math.sin(o.aim) * sp, r: 5, dmg: o.dmg, color: '#9fe0ff', life: o.range / sp, pierce: 0, knock: 40 }); this.events.push({ t: 'turret_fire', x: o.x, y: o.y, a: o.aim }); } } continue; }
       if (o.rift) { for (const m of this.monsters) { const d = MU.dist(o.x, o.y, m.x, m.y); if (d < o.r && !m.boss) { const n = MU.norm(o.x - m.x, o.y - m.y); this.moveCircle(m, n.x * 120 * dt, n.y * 120 * dt); m.tickR = (m.tickR || 0) + dt; if (m.tickR > 0.25) { m.tickR = 0; this.damageMonster(m, o.dmg * 0.25, o.x, o.y, 0, this.players.get(o.owner)); } } } } } if (this.orbs.some(o => o.dead)) this.orbs = this.orbs.filter(o => !o.dead); }
-  updateMeteors(dt) { for (const mt of this.meteors) { mt.t -= dt; if (mt.t <= 0 && !mt.done) { mt.done = true; this.events.push({ t: 'explosion', x: mt.x, y: mt.y, r: mt.r }); for (const p of this.alivePlayers) if (MU.dist(mt.x, mt.y, p.x, p.y) <= mt.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, mt.dmg, mt.x, mt.y, 2); } } this.meteors = this.meteors.filter(m => !m.done); }
+  // v1.85 — la stessa meteora, due padroni: quella del boss cade sui giocatori, quella del mago (mio)
+  // sui mostri. Il telegrafo, l'ombra a terra e l'esplosione sono gli stessi: chi la subisce la legge
+  // allo stesso modo, ed e' giusto cosi'.
+  updateMeteors(dt) {
+    for (const mt of this.meteors) {
+      mt.t -= dt; if (mt.t > 0 || mt.done) continue;
+      mt.done = true;
+      this.events.push({ t: 'explosion', x: mt.x, y: mt.y, r: mt.r });
+      if (mt.mio) {
+        const src = this.players.get(mt.owner);
+        for (const m of this.monsters) if (!m.dead && MU.dist(mt.x, mt.y, m.x, m.y) <= mt.r + m.radius) this.damageMonster(m, mt.dmg, mt.x, mt.y, 40, src);
+      } else {
+        for (const p of this.alivePlayers) if (MU.dist(mt.x, mt.y, p.x, p.y) <= mt.r + p.radius && !p.buffs.iframe && !p.buffs.i_invuln) this.damagePlayer(p, mt.dmg, mt.x, mt.y, 2);
+      }
+    }
+    this.meteors = this.meteors.filter(m => !m.done);
+  }
   // v1.81 — chi sta DENTRO una tela e' rallentato. Il buff si rinnova a ogni tick finche' ci sei sopra e
   // si spegne da solo poco dopo che ne sei uscito (RAGNATELA_CODA): cosi' non serve rilevare l'uscita, e
   // una tela resta un POSTO — non una maledizione che ti porti dietro per la stanza.
@@ -2184,6 +2527,15 @@ class Room {
       if (p.potCd > 0) o.pcd = +(p.potCd / (p.potCdMax || Pot.COOLDOWN)).toFixed(2);
       const gz = p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0;
       if (gz) o.gz = gz;
+      // v1.85 — l'ID dell'abilita' viaggia quando CAMBIA (due volte per partita), la ricarica finche' scorre.
+      if (p.abil) {
+        if (p.abil.q && (nuovo || p._aq !== p.abil.q)) { o.aq = p.abil.q; p._aq = p.abil.q; }
+        if (p.abil.e && (nuovo || p._ae !== p.abil.e)) { o.ae = p.abil.e; p._ae = p.abil.e; }
+        if (p.cdQ > 0) o.cq = +p.cdQ.toFixed(1);
+        if (p.cdE > 0) o.ce = +p.cdE.toFixed(1);
+      }
+      if (p.scudoAb && p.scudoAb.hp > 0) o.sc = 1;      // la bolla dello Scudo di Mana
+      if (p.buffs.giuramento > 0 && p.giurScudo) o.gi = 1;
       players.push(o);
     }
     // v1.59 — per il Beholder si manda anche gt: quanto manca al cambio di sguardo (0 = sta per cambiare).
@@ -2199,6 +2551,8 @@ class Room {
       if (m.hitFlash > 0) o.fl = 1;
       if (m.shielded > 0) o.sh = 1;
       if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
+      if (m.marchio > 0) o.mk = 1;                       // v1.85 — Marchio del ladro
+      if (m.taunt > 0) o.tn = 1;                         // v1.85 — attirato dal Grido
       if (m.type === 'occhio') {
         o.gk = m.gazeKind; o.gt = +Math.max(0, Math.min(1, (m.gazeCycleT || 0) / (m.def.gazeCycle || 4))).toFixed(2);
         if (m.gazeActive) { o.gz = 1; o.gtx = Math.round(m.gazeTx); o.gty = Math.round(m.gazeTy); }
@@ -2210,6 +2564,10 @@ class Room {
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });
     const zones = []; for (const z of this.zones) zones.push({ x: Math.round(z.x), y: Math.round(z.y), r: z.r, p: +(1 - z.t / z.max).toFixed(2), c: z.col });
+    // v1.85 — muri di fuoco, tagliole e nubi d'ombra: pochi oggetti, viaggiano interi.
+    const muri = []; for (const w of this.muri) muri.push({ e: w.eid, x1: Math.round(w.x1), y1: Math.round(w.y1), x2: Math.round(w.x2), y2: Math.round(w.y2), p: +(w.t / w.max).toFixed(2), c: w.col });
+    const trap = []; for (const w of this.trappole) trap.push({ e: w.eid, x: Math.round(w.x), y: Math.round(w.y), r: w.r });
+    const nebb = []; for (const w of this.nebbie) nebb.push({ e: w.eid, x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2) });
     // v1.84 — recinto, chiave e faglia. Sono tre oggetti soli e cambiano di rado: viaggiano interi.
     const rec = this.recinto ? { x: this.recinto.x, y: this.recinto.y, r: this.recinto.r,
       lib: this.recinto.liberato ? 1 : 0, pr: this.recinto.prigionieri } : null;
@@ -2222,7 +2580,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

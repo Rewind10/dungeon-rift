@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new'), querySelector: () => mkEl('q') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'abilities', 'mapgen']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -575,12 +575,25 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(document.getElementById('nextWaveBtn').disabled === false, 'scelta l abilita, il pulsante si accende');
   ok(document.getElementById('tabBadge').classList.contains('hidden'), 'e il richiamo sparisce');
 
-  // l'elenco per scaglione: quattro righe, sempre
-  HUD.setActiveBoons([{ id: 'crit', icon: '🎯', name: 'Occhio di Falco', rarity: 'uncommon', n: 1, desc: 'critico', on: 1 }]);
+  // v1.85 — l'elenco ha sempre QUATTRO righe, ma adesso sono due passive (3 e 9) e due attive (6 e 12)
+  HUD.setActiveBoons([{ id: 'crit', icon: '🎯', name: 'Occhio di Falco', rarity: 'rare', n: 1, desc: 'critico', on: 1 }]);
   const righe = document.getElementById('abilElenco').innerHTML;
-  ok((righe.match(/ab-sc/g) || []).length === 4, 'l elenco ha una riga per scaglione');
-  ok(righe.indexOf('Occhio di Falco') > 0, 'con dentro l abilita gia presa');
+  ok((righe.match(/ab-sc/g) || []).length === 4, 'l elenco ha una riga per ogni scelta della run');
+  ok(righe.indexOf('Occhio di Falco') > 0, 'con dentro la passiva gia presa');
   ok(righe.indexOf('si sblocca al livello 12') > 0, 'e dice quando arrivano quelle che mancano');
+  ok(righe.indexOf('attiva Q') > 0 && righe.indexOf('attiva E') > 0, 'e i due slot delle abilita attive sono in elenco');
+
+  // v1.85 — LA BARRA DELLE ABILITA': quattro slot, e i due delle attive nascono col lucchetto
+  HUD.buildAbilityBar('ladro');
+  const barra = document.getElementById('abilityBar');
+  ok(barra.children.length === 4, 'la barra ha quattro slot: scatto, arma, Q ed E');
+  ok(String(barra.children[2].className).indexOf('locked') >= 0 && String(barra.children[3].className).indexOf('locked') >= 0,
+    'Q ed E nascono chiusi');
+  ok(String(barra.children[0].className).indexOf('locked') < 0, 'lo scatto no, quello c e da subito');
+  ok(String(barra.children[2].innerHTML).indexOf('Livello 6') > 0 && String(barra.children[3].innerHTML).indexOf('Livello 12') > 0,
+    'e dicono a che livello si aprono');
+  HUD.updateAbilities({ cd: 0, aq: 'ab_velo', cq: 12.4, ae: null, ce: 0 });
+  ok(true, 'la barra si aggiorna con l abilita presa senza rompersi');
 
   // l'inventario
   HUD.setStats({ points: 3, level: 9, rankName: 'Campione', wave: 9, stats: [], inv: {

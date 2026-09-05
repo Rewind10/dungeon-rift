@@ -27,14 +27,29 @@
   const POINTS_PER_LEVEL = 1, POINTS_PER_RANK = 1;
   const MAX_LEVEL = 15;
 
-  // I LIVELLI DOVE SI SCEGLIE UN'ABILITA' PASSIVA, uno per scaglione. Il 15 non e' qui: quello e' la
-  // specializzazione, che e' un'altra cosa.
+  // I LIVELLI DOVE SI SCEGLIE UN'ABILITA' PASSIVA. Il 15 non e' qui: quello e' la specializzazione,
+  // che e' un'altra cosa.
+  //
+  // v1.85 — DA QUATTRO A DUE. I livelli 6 e 12 sono diventati le due ABILITA' ATTIVE (slot Q ed E,
+  // vedi abilities.js): a quei livelli si sceglie un'attiva, non una passiva. Perche' le due passive
+  // rimaste non lascino il personaggio piu' povero, salgono di scaglione — la prima e' RARA invece che
+  // non comune, la seconda DIVINA invece che epica. Meno scelte, ognuna piu' pesante: e' la stessa
+  // regola che regge tutto il resto della progressione.
   const SCAGLIONI = [
-    { lvl: 3,  tier: 'uncommon' },
-    { lvl: 6,  tier: 'rare' },
-    { lvl: 9,  tier: 'epic' },
-    { lvl: 12, tier: 'divine' },
+    { lvl: 3, tier: 'rare' },
+    { lvl: 9, tier: 'divine' },
   ];
+  // I due livelli delle ABILITA' ATTIVE. Stanno qui e non in abilities.js perche' e' la progressione a
+  // decidere QUANDO si sblocca uno slot; abilities.js decide COSA c'e' dentro.
+  const ABIL_SLOT = [{ lvl: 6, slot: 'q' }, { lvl: 12, slot: 'e' }];
+  function slotPerLivello(L) { for (const a of ABIL_SLOT) if (a.lvl === L) return a.slot; return null; }
+  // Il prossimo livello in cui si sceglie QUALCOSA (passiva o attiva), dopo il livello L.
+  function prossimaScelta(L) {
+    let best = 0;
+    for (const s of SCAGLIONI) if (s.lvl > L && (!best || s.lvl < best)) best = s.lvl;
+    for (const a of ABIL_SLOT) if (a.lvl > L && (!best || a.lvl < best)) best = a.lvl;
+    return best;
+  }
   const SCAGLIONE_BY_LVL = {}; for (const s of SCAGLIONI) SCAGLIONE_BY_LVL[s.lvl] = s.tier;
   function tierForLevel(L) { return SCAGLIONE_BY_LVL[L] || null; }
 
@@ -120,8 +135,10 @@
   // Non sono lo stesso personaggio piu' forte: in ogni coppia uno rende SUBITO e uno rende DI PIU'
   // ma chiede qualcosa (una squadra, un bersaglio grosso, il posizionamento). Se dalle misure uscisse
   // che un ramo e' semplicemente migliore, va corretto quello — non il suo gemello.
-  // v1.69 — di ogni specializzazione e' implementato il PASSIVO. Le abilita' attive (Giuramento,
-  // Turbine, Meteora, Catena Nera, Marchio, Salva) arrivano con la barra delle abilita'.
+  // v1.85 — LE SEI ABILITA' PROMESSE QUI SONO DIVENTATE LE ATTIVE DEL LIVELLO 12 (abilities.js), e non
+  // si prendono piu' con la specializzazione: si scelgono a meta' partita e si giocano per mezza run.
+  // La specializzazione tiene il suo passivo e in cambio ALZA LA POTENZA DELLE ABILITA' (abilityMult):
+  // il campo `abilita` qui sotto resta come descrizione di cosa il ramo sa fare meglio.
   const SPECS = {
     guerriero: [
       { id: 'paladino', name: 'Paladino', icon: '✨', color: '#ffe9a8', hero: 'guerriero',
@@ -162,7 +179,7 @@
 
   return {
     POINTS_PER_LEVEL, POINTS_PER_RANK, XP_STEP, XP_CUM, MAX_LEVEL, alTetto,
-    SCAGLIONI, tierForLevel,
+    SCAGLIONI, tierForLevel, ABIL_SLOT, slotPerLivello, prossimaScelta,
     levelForXp, xpForLevel, xpStep, progress,
     RANK_LEVELS, RANK_NAMES, RANK_SPEC, rankForLevel, levelForRank, rankName, puntiPerRango,
     statPointCost, statPointsTo, pointsForLevel,

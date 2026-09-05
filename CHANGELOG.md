@@ -2,6 +2,67 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.85.0] — 2026-09-05 · "Q ed E"
+
+#### ⚡ Dodici abilita' attive, quattro per classe
+Gli slot **Q** ed **E** erano un contenitore vuoto dal v1.66: i tasti li leggeva `input.js`, il server
+aveva `useQ`/`useE` come stub, i cooldown `cdQ`/`cdE` scendevano a vuoto e la barra dell'HUD teneva il
+posto col lucchetto. Mancava cosa metterci.
+
+| Classe | Slot **Q** — livello 6, ricarica 30s | Slot **E** — livello 12, ricarica 45s |
+|---|---|---|
+| 🛡️ **Guerriero** | ⚡ **Carica** — scatto corazzato di 300px che sfonda: doppio fendente, spinta e **stordimento**, e sei immune mentre corri<br>📣 **Grido di Guerra** — i nemici intorno puntano **te** per 3s, e tu e i compagni nel raggio subite **−25% danni** per 4s (**i boss non danno retta**) | 🌀 **Turbine** — tre giri a 360° in 1,2s, ognuno al 70% del fendente<br>✨ **Giuramento** — per 5s tu e i compagni entro 220px siete **immuni al primo colpo** |
+| 🔮 **Mago** | 🔥 **Muro di Fuoco** — barriera di fiamme lunga 220px per 5s: brucia chi la attraversa<br>🫧 **Scudo di Mana** — assorbe danni per 6s, poi **esplode** respingendo e rallentando | ☄️ **Meteora** — tre impatti telegrafati sul punto mirato<br>⛓️ **Catena Nera** — fulmine che rimbalza fra **otto** nemici, a danno calante |
+| 🏹 **Ladro** | 🌫️ **Velo d'Ombra** — nube di 150px per 5s: dentro sei **invisibile**, e il primo colpo dall'ombra e' critico<br>🪤 **Tagliola** — trappola armata 25s: il primo che entra resta **bloccato 2,5s** (fino a tre in campo) | 🎯 **Marchio** — il bersaglio prende **+50% danni da chiunque** per 8s; se muore marchiato, meta' ricarica torna<br>🏹 **Salva** — quindici frecce in due secondi, perforanti |
+
+Si sceglie **una abilita' al livello 6** (slot Q) e **una al livello 12** (slot E), fra le due di quello
+slot. La scelta e' **definitiva**, come le passive: le due che non prendi sono il motivo per rigiocare la
+classe.
+
+#### ⏱️ Ricariche lunghe, e nessuna risorsa nuova
+**30 secondi** lo slot Q, **45** lo slot E. Una ricarica corta le trasformerebbe in una seconda arma, e a
+quel punto il gioco lo giocherebbero loro. Niente mana e niente vigore: sarebbe stata un'altra barra da
+guardare mentre schivi. Restano le due manopole che c'erano gia' e non facevano niente — `cdrMult` (la
+Destrezza accorcia la ricarica) e `abilityMult` (la potenza).
+
+Misurato coi bot, dodici run per classe a livello 12, con e senza abilita': **+14%** di danno al secondo
+per il guerriero, **±2%** per mago e ladro. Il bot le usa a caso, quindi il numero vero in mano a una
+persona e' piu' alto — ma dice quello che serviva sapere: **con queste ricariche non sbilanciano niente**.
+
+#### 🎴 Le passive scendono da quattro a due (e salgono di scaglione)
+I livelli 6 e 12 erano gia' occupati dalle passive. Le scelte della run restano **quattro** — 3, 6, 9, 12 —
+ma adesso sono **due passive** (3 e 9) e **due attive** (6 e 12). Perche' il personaggio non ne uscisse
+piu' povero, le due passive rimaste **salgono di scaglione**: **rara** al posto di non comune, **divina**
+al posto di epica. Meno scelte, ognuna piu' pesante: la stessa regola che regge tutto il resto.
+
+#### ★ E la specializzazione del 15 smette di promettere
+Dal v1.69 ogni specializzazione dichiarava un'abilita' attiva — Giuramento, Turbine, Meteora, Catena Nera,
+Marchio, Salva — che non e' mai stata scritta: sei promesse in un file di dati e nel documento delle
+caratteristiche, sotto *manopole spente*. Adesso **quelle sei sono le attive del livello 12**, e la
+specializzazione fa un'altra cosa: **+30% di potenza** a quelle che hai (`SPEC_ABIL_MULT`). Tiene il suo
+passivo, e non promette piu' niente.
+
+#### 🎨 Cosa si vede
+Il muro di fuoco, le tagliole e la nube d'ombra sono **oggetti veri sul campo** — viaggiano nello snapshot
+e si disegnano nel mondo, non sopra lo schermo. Tre linguaggi diversi apposta: il muro **brucia** (caldo,
+mobile, illumina), la tagliola e' **metallo** (freddo, immobile, piccolo), la nube e' **assenza** (scura,
+morbida, senza contorno). Il Turbine riusa l'arco del fendente a giro pieno — il campo `giro` c'era dal
+v1.69 e non lo disegnava nessuno. Il **marchio** gira sopra la testa del nemico e **lo vede tutta la
+squadra**: e' li' che sta il senso in cooperativa.
+
+#### Le due regole che ha chiesto Paolo
+- **Il mercenario non ha abilita'.** Come per l'XP, le monete e la chiave dei prigionieri: non e' un
+  giocatore per le regole. C'e' un test anche per questo.
+- **Il Grido di Guerra non attira i boss.** Un boss che si gira perche' hai urlato smetterebbe di essere
+  un boss.
+
+#### 🧪 Test
+**1557 passati in 6,5s** — TEST 61 nuovo (la tabella, lo sblocco ai livelli giusti, le ricariche, il
+mercenario, i boss, il Marchio, tutte e dodici che partono senza sporcare lo stato) e i test 39, 51 e 52
+riallineati ai due scaglioni. Il suo peso resta quello della 1.84.1: la suite non e' tornata a crescere.
+
+---
+
 ### [1.84.1] — 2026-09-05 · "Cercala"
 
 #### 🗝️ La chiave si cerca
