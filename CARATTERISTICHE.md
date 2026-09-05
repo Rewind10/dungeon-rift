@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.82.4`
+**Versione attuale:** `1.83.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1180,7 +1180,17 @@ d'assalto e un hacker.
 |---|---|---|---:|---:|---:|
 | 🛡️ **Guerriero** | Spada | **semicerchio** davanti a se, 100px / 109° | 99 sul piu' vicino | 200 | 194 |
 | 🔮 **Mago** | Bolla di Energia | proiettile lento (430 px/s) e grosso | 96 | 100 | 200 |
-| 🏹 **Ladro** | Arco | freccia veloce (900 px/s), perfora 1 | 93 | 112 | 218 |
+| 🏹 **Ladro** | Arco | freccia veloce (900 px/s), perfora 1 | 87 *(v1.83)* | 112 | 218 |
+
+> 🛡️ **Lo scudo para davanti** *(v1.83)*. Oltre allo sconto piatto, gli scudi del guerriero tagliano i
+> colpi che arrivano nel cono frontale — **70° per lato**: −45% lo Scudo, −60% lo Scudo a Torre. Di fianco
+> e alle spalle non c'e' niente, e i colpi senza sorgente (le esplosioni) non si parano. Misurato coi bot:
+> i danni subiti dal guerriero passano da 4,3 a 2,9 al secondo e il tempo di sopravvivenza da 80 a 119 s.
+> E' l'unica classe che non puo' tenere le distanze: adesso ha una risposta, ed e' una risposta che si
+> gioca — girarsi verso chi colpisce.
+>
+> 🏹 **L'arco** *(v1.83)*: cadenza da 3,0 a **2,3** al secondo, freccia da 31 a **38** danni. Cinque frecce
+> al secondo (Destrezza al massimo) erano un rubinetto, non un arco.
 
 Il **fendente** del guerriero non e' un proiettile: colpisce chi sta nel settore davanti al personaggio.
 **Raggio e apertura vengono dall'arma** — la spada corta fara' 74px/131°, l'alabarda 144px/71°: *piu' lunga =

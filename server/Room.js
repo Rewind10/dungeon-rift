@@ -605,6 +605,19 @@ class Room {
     }
     let d = dmg;
     if (p.heroId === 'guerriero') d *= 0.88;  // v1.66 — passiva Piastra: -12% danni subiti
+    // v1.83 — LO SCUDO PARA DAVANTI. Il guerriero incassava quattro volte i danni degli altri due (5,6/s
+    // contro 1,3-1,4/s misurati coi bot): e' l'unico che non puo' tenere le distanze, quindi l'unico che
+    // non ha una risposta. Adesso ce l'ha, ed e' una risposta che si GIOCA: girarsi verso chi colpisce.
+    // Vale solo per i colpi con un'origine (i colpi ad area senza sorgente non si parano) e solo nel cono
+    // dello scudo: alle spalle non c'e' niente, e restare circondati continua a costare caro.
+    const fr = p.gearBonus ? (p.gearBonus.frontale || 0) : 0;
+    if (fr > 0 && sx !== undefined && sx !== null) {
+      const a = Math.atan2(sy - p.y, sx - p.x);
+      if (Math.abs(((a - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI) < (C.SCUDO_CONO || 1.22)) {
+        d *= (1 - fr);
+        if (!p._paraT || this.time - p._paraT > 0.25) { p._paraT = this.time; this.events.push({ t: 'para', x: p.x, y: p.y, a: p.aim, who: p.id }); }
+      }
+    }
     // v1.69 — PARATA: vale solo sui colpi che arrivano da DAVANTI, cioe' da dove stai guardando.
     if (p.perk.parata && p.buffs.parry > 0 && sx !== undefined) {
       const ang = Math.atan2(sy - p.y, sx - p.x);

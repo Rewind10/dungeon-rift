@@ -51,8 +51,12 @@
       id: 'ladro', name: 'LADRO', title: 'Ombra della Faglia',
       color: '#3c5140', color2: '#1d2a22', accent: '#9ef0b0', hp: 112, speed: 218, radius: 16,
       // DISTANZA: frecce veloci e sottili che perforano un nemico. La Destrezza alza danno, cadenza e passo.
+      // v1.83 — LA CADENZA SCENDE da 3,0 a 2,3 al secondo e il danno per freccia sale da 31 a 38. Tre
+      // frecce al secondo di partenza (che con la Destrezza al massimo diventavano CINQUE) facevano un
+      // arco automatico: il gesto spariva e restava il rubinetto. Il danno al secondo scende poco
+      // (93 → 87, meno 6%), il ritmo cambia molto — ed e' il ritmo il problema.
       weapon: {
-        name: 'Arco', school: 'ranged', dmg: 31, fireRate: 3.0, spread: 0.04,
+        name: 'Arco', school: 'ranged', dmg: 38, fireRate: 2.3, spread: 0.04,
         bulletSpeed: 900, range: 700, pierce: 1, projColor: '#9ef0b0', knockback: 25, arrow: true,
       },
       passives: [{ id: 'nimble', name: 'Passo Lieve', desc: 'Destrezza alza danno, cadenza e velocita.' }],

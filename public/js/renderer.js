@@ -255,7 +255,7 @@
   };
   const R = {
     canvas: null, ctx: null, w: 0, h: 0, dpr: 1, cam: { x: 0, y: 0 }, shake: 0,
-    particles: [], floaters: [], flashes: [], chains: [], swings: [], atk: {}, levelUps: [], map: null, mapCanvas: null, minimapCanvas: null, mm: null, torches: [], campfires: [], theme: null, time: 0,
+    particles: [], floaters: [], flashes: [], chains: [], swings: [], pare: [], atk: {}, levelUps: [], map: null, mapCanvas: null, minimapCanvas: null, mm: null, torches: [], campfires: [], theme: null, time: 0,
     torch: true, darkCv: null, darkCtx: null, darkScale: 0.5, darkness: 0.86, haloR: 260, dust: [], fog: [], critters: [],  // v1.17/1.23 — torcia + nebbia + animaletti (rune rimosse)
     mAtk: {}, deaths: [],  // v1.26 — animazioni di attacco (per eid) e di morte (sprite effimeri)
     init(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); for (const k in PUPPETS) PUPPETS[k].load(); for (const k in SHEETS) SHEETS[k].load(); this.resize(); window.addEventListener('resize', () => this.resize()); try { this.torch = localStorage.getItem('dr_torch') !== '0'; } catch (_) {} window.addEventListener('keydown', (e) => { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.code === 'KeyL') { this.torch = !this.torch; try { localStorage.setItem('dr_torch', this.torch ? '1' : '0'); } catch (_) {} } }); },
@@ -1036,6 +1036,22 @@
       this.ring(fx, fy, col, 3, 22, 0.3);
     },
     ring(x, y, c, r0, r1, life) { this.flashes.push({ x, y, color: c, r0, r1, life, t: life }); },
+    // v1.83 — LA PARATA. Non un anello (l'anello e' tondo, e direbbe "da ogni parte"): un ARCO, largo
+    // quanto il cono dello scudo e messo dove stai guardando. Serve a far vedere la regola mentre
+    // succede — hai incassato meno perche' eri girato di la'.
+    para(x, y, a, semi) { this.pare.push({ x, y, a, semi: semi || 1.22, life: 0.3, t: 0.3 }); },
+    _drawPare(ctx) {
+      for (const p of this.pare) {
+        const k = p.t / p.life;
+        ctx.save(); ctx.globalAlpha = 0.25 + k * 0.6; ctx.strokeStyle = '#dbe6f2'; ctx.lineCap = 'round';
+        ctx.lineWidth = 3 + (1 - k) * 3;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 24 + (1 - k) * 8, p.a - p.semi, p.a + p.semi); ctx.stroke();
+        ctx.globalAlpha = (0.18 + k * 0.35); ctx.strokeStyle = '#8fb6d8'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 30 + (1 - k) * 10, p.a - p.semi * 0.8, p.a + p.semi * 0.8); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    },
     // v1.66 — FENDENTE del guerriero. Il server manda raggio e apertura REALI dell'area che ferisce: il
     // disegno usa quelli e non un'approssimazione, cosi' il giocatore impara la portata guardando, non
     // provando. Dura poco (0.22s) perche' deve leggersi come un colpo, non come una zona.
@@ -1156,7 +1172,7 @@
       this._drawDeaths(ctx); // v1.26 — sprite di morte (crollo/dissolvenza)
       for (const p of world.players) this._drawPlayer(ctx, p, me && p.i === me.i);
       this._drawChains(ctx);
-      this._drawParticles(ctx, true); this._drawSwings(ctx); this._drawFlashes(ctx); this._drawFloaters(ctx); this._drawLevelUps(ctx, world);
+      this._drawParticles(ctx, true); this._drawSwings(ctx); this._drawFlashes(ctx); this._drawPare(ctx); this._drawFloaters(ctx); this._drawLevelUps(ctx, world);
       this._drawDust(ctx, camX, camY, dt); // v1.16 — pulviscolo ambientale (world-space)
       this._drawFog(ctx, camX, camY, dt); // v1.21 — nebbia volumetrica a strati
       ctx.restore(); this._drawLighting(ctx, world, camX, camY);
@@ -1892,7 +1908,7 @@
     },
     _drawFlashes(ctx) { for (const f of this.flashes) { const a = f.t / f.life; ctx.globalAlpha = a; ctx.strokeStyle = f.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, MU.lerp(f.r0, f.r1, 1 - a), 0, 7); ctx.stroke(); } ctx.globalAlpha = 1; },
     _drawFloaters(ctx) { ctx.textAlign = 'center'; for (const f of this.floaters) { const a = Math.min(1, f.t / f.life * 1.5); ctx.globalAlpha = a; ctx.fillStyle = f.color; ctx.font = (f.big ? 'bold 22px ' : 'bold 15px ') + 'Segoe UI, sans-serif'; ctx.fillText(f.text, f.x, f.y); } ctx.globalAlpha = 1; ctx.textAlign = 'left'; },
-    updateFx(dt) { for (const p of this.particles) { p.t += (p.fire ? dt : 0); if (!p.fire) p.t -= dt * 2; p.x += p.vx * dt; p.y += p.vy * dt; if (p.fire) { p.vy += 8 * dt; p.vx *= 0.96; } else { p.vx *= 0.92; p.vy *= 0.92; } } this.particles = this.particles.filter(p => p.fire ? p.t < p.life : p.t > 0); for (const f of this.flashes) f.t -= dt; this.flashes = this.flashes.filter(f => f.t > 0); for (const f of this.floaters) { f.t -= dt; f.y -= 26 * dt; } this.floaters = this.floaters.filter(f => f.t > 0); for (const c of this.chains) c.t -= dt; this.chains = this.chains.filter(c => c.t > 0); for (const sw of this.swings) sw.t += dt; this.swings = this.swings.filter(sw => sw.t < sw.dur); for (const L of this.levelUps) L.t += dt; this.levelUps = this.levelUps.filter(L => L.t < L.dur); for (const k in this.atk) { this.atk[k] -= dt; if (this.atk[k] <= 0) delete this.atk[k]; } for (const k in this.mAtk) { const a = this.mAtk[k]; a.t += dt; if (a.t >= a.dur) delete this.mAtk[k]; } for (const d of this.deaths) d.t += dt; this.deaths = this.deaths.filter(d => d.t < d.dur); },
+    updateFx(dt) { for (const p of this.particles) { p.t += (p.fire ? dt : 0); if (!p.fire) p.t -= dt * 2; p.x += p.vx * dt; p.y += p.vy * dt; if (p.fire) { p.vy += 8 * dt; p.vx *= 0.96; } else { p.vx *= 0.92; p.vy *= 0.92; } } this.particles = this.particles.filter(p => p.fire ? p.t < p.life : p.t > 0); for (const f of this.flashes) f.t -= dt; this.flashes = this.flashes.filter(f => f.t > 0); for (const f of this.floaters) { f.t -= dt; f.y -= 26 * dt; } this.floaters = this.floaters.filter(f => f.t > 0); for (const c of this.chains) c.t -= dt; this.chains = this.chains.filter(c => c.t > 0); for (const pp of this.pare) pp.t -= dt; this.pare = this.pare.filter(pp => pp.t > 0); for (const sw of this.swings) sw.t += dt; this.swings = this.swings.filter(sw => sw.t < sw.dur); for (const L of this.levelUps) L.t += dt; this.levelUps = this.levelUps.filter(L => L.t < L.dur); for (const k in this.atk) { this.atk[k] -= dt; if (this.atk[k] <= 0) delete this.atk[k]; } for (const k in this.mAtk) { const a = this.mAtk[k]; a.t += dt; if (a.t >= a.dur) delete this.mAtk[k]; } for (const d of this.deaths) d.t += dt; this.deaths = this.deaths.filter(d => d.t < d.dur); },
     _drawOrb(ctx, o) {
       if (o.k === 'turret') { const x = o.x, y = o.y; ctx.save(); ctx.translate(x, y); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0, 8, 13, 5, 0, 0, 7); ctx.fill();
         ctx.fillStyle = '#2a3550'; ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; this._rr(ctx, -10, -2, 20, 12, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#3a4a6a'; this._rr(ctx, -7, -5, 14, 6, 2); ctx.fill(); ctx.stroke();

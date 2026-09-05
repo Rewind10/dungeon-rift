@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.82.4',
+    VERSION: '1.83.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -22,6 +22,9 @@
     CURSE_TIME: 4.5, CURSE_DMG_MULT: 0.6, CURSE_SPEED_MULT: 0.8, // v1.28 — maledizione del Negromante (indebolimento)
     // v1.34 — Sguardo dell'Occhio Vagante: debuff applicato quando il giocatore è nel campo visivo (cono) del bulbo.
     GAZE_TIME: 2.6, GAZE_TICK: 0.4, GAZE_FOV: 0.6, GAZE_RANGE: 340,
+    // v1.83 — quanto e' largo il cono coperto dallo scudo, in radianti a mezzo (1,22 = 70 gradi per lato).
+    // Largo abbastanza da poterci contare girandosi, stretto abbastanza che essere circondati faccia male.
+    SCUDO_CONO: 1.22,
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

@@ -63,10 +63,14 @@
       desc: '+10 PV massimi · −3% danni subiti', bonus: { maxHpFlat: 10, dmgReduce: 0.03 } },
     { id: 'gue_piastre', hero: 'guerriero', slot: 'armor', rank: 2, cost: 250, name: 'Armatura a Piastre', color: '#e2e7ee',
       desc: '+45 PV massimi · −10% danni subiti', bonus: { maxHpFlat: 45, dmgReduce: 0.10 } },
+    // v1.83 — LO SCUDO STA DAVANTI, e adesso conta. Oltre allo sconto che vale da ogni parte, para i
+    // colpi che arrivano dal cono frontale (`frontale`): il guerriero e' l'unico che non puo' tenere le
+    // distanze, e quindi l'unico che puo' fare qualcosa di meglio che incassare — girarsi verso chi
+    // colpisce. Alle spalle lo scudo non c'e', e si sente.
     { id: 'gue_scudo', hero: 'guerriero', slot: 'shield', rank: 1, cost: 0, name: 'Scudo', color: '#8d97a5',
-      desc: '−5% danni subiti', bonus: { dmgReduce: 0.05 } },
+      desc: '−5% danni subiti · −45% dai colpi FRONTALI', bonus: { dmgReduce: 0.05, frontale: 0.45 } },
     { id: 'gue_torre', hero: 'guerriero', slot: 'shield', rank: 2, cost: 290, name: 'Scudo a Torre', color: '#c8a23a',
-      desc: '−13% danni subiti · +20 PV massimi', bonus: { dmgReduce: 0.13, maxHpFlat: 20 } },
+      desc: '−13% danni subiti · −60% dai colpi FRONTALI · +20 PV massimi', bonus: { dmgReduce: 0.13, maxHpFlat: 20, frontale: 0.60 } },
 
     // ===================== MAGO =====================
     // La CADENZA delle bacchette resta 1,5/s su tutte e tre: e' la firma della classe, ed e' l'Intelligenza
@@ -124,7 +128,7 @@
   // Somma dei bonus degli oggetti indossati. Si RICALCOLA sempre da zero: col cambio libero non si puo'
   // sommare il delta, o il bonus dell'oggetto sostituito resterebbe attaccato al personaggio per sempre.
   function bonusOf(gear) {
-    const b = { maxHpFlat: 0, dmgReduce: 0, speedMult: 0 };
+    const b = { maxHpFlat: 0, dmgReduce: 0, speedMult: 0, frontale: 0 };
     for (const k in (gear || {})) {
       const it = BY_ID[gear[k]]; if (!it || !it.bonus) continue;
       for (const s in it.bonus) b[s] = (b[s] || 0) + it.bonus[s];

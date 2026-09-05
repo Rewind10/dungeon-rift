@@ -2,6 +2,64 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.83.0] — 2026-09-05 · "Lo scudo sta davanti"
+
+Ribilanciamento delle tre classi giocabili, partendo da una misura invece che da una sensazione: dodici
+partite simulate per classe, coi bot, contando i danni **subiti** al secondo.
+
+#### 📉 Il problema, in numeri
+| | ondata raggiunta | vissuto | danni subiti | uccisi/s |
+|---|---:|---:|---:|---:|
+| 🛡️ Guerriero | **2,1** | **80 s** | **4,3/s** | 0,31 |
+| 🔮 Mago | 3,0 | 163 s | 1,0/s | 0,35 |
+| 🏹 Ladro | 3,2 | 172 s | 1,1/s | 0,31 |
+
+Il guerriero incassava **quattro volte** gli altri due e moriva a meta' strada. Non per mancanza di danno
+(uccide come gli altri): per il tempo che passa a contatto. E' l'unico che non puo' tenere le distanze,
+quindi era l'unico **senza una risposta**.
+
+#### 🛡️ Lo scudo para davanti, e adesso conta
+Il guerriero uno scudo ce l'ha, ed e' disegnato **davanti a lui** — ma faceva solo uno sconto piatto del
+5%, uguale da ogni lato. Adesso para il cono frontale:
+
+| | sconto piatto | colpi frontali |
+|---|---:|---:|
+| Scudo | −5% | **−45%** |
+| Scudo a Torre | −13% | **−60%** |
+
+Il cono e' di **70° per lato** (`C.SCUDO_CONO`): largo abbastanza da poterci contare girandosi, stretto
+abbastanza che essere circondati continui a far male. Alle spalle e di fianco lo scudo non c'e', e si
+sente. I colpi **senza sorgente** (le esplosioni ad area) non si parano: non c'e' una direzione da cui
+pararli. Quando scatta, a schermo si accende un **arco** dalla parte in cui guardi — non un anello, che
+direbbe "da ogni parte": la regola si vede mentre succede.
+
+E' una risposta che si **gioca**: girarsi verso chi colpisce. Il guerriero non diventa piu' duro, diventa
+piu' bravo se lo giochi bene.
+
+#### 🏹 L'arco: meno frecce, piu' peso
+Tre frecce al secondo di partenza — che con la Destrezza al massimo diventavano **cinque** — non erano un
+arco, erano un rubinetto: il gesto spariva. Cadenza **3,0 → 2,3**, danno per freccia **31 → 38**. Il danno
+al secondo scende del 6% (93 → 87), il **ritmo** cambia molto: ed era il ritmo il problema.
+
+Il mago non e' stato toccato: era gia' quello in equilibrio, e i numeri lo confermavano.
+
+#### 📈 Il risultato, stesse dodici partite per classe
+| | ondata | vissuto | danni subiti | uccisi/s |
+|---|---:|---:|---:|---:|
+| 🛡️ Guerriero | 2,1 → **2,7** | 80 → **119 s** | 4,3 → **2,9/s** | 0,31 |
+| 🔮 Mago | 3,0 → 2,7 | 163 → 135 s | 1,0 → 1,2/s | 0,33 |
+| 🏹 Ladro | 3,2 → 3,1 | 172 → 154 s | 1,1 → 1,2/s | 0,32 |
+
+Il guerriero incassa **un terzo in meno** e vive **la meta' in piu'**; le altre due classi si muovono
+dentro il rumore. Resta quello che prende piu' colpi — e' un corpo a corpo, deve essere cosi' — ma con il
+doppio dei PV adesso la resistenza effettiva e' allineata.
+
+**1428 test passati, 0 falliti** su cinque esecuzioni. Le prove: un colpo in faccia fa meno male di uno
+alle spalle, e la differenza e' **esattamente** lo sconto dello scudo; di fianco (oltre i 70°) non c'e'
+sconto; il cono ha un bordo netto; i colpi senza sorgente non si parano; **togliendo lo scudo** la parata
+sparisce (e' l'oggetto a parare, non la classe); la Torre para piu' del piccolo; e le tre classi restano
+entro il 15% di danno al secondo l'una dall'altra.
+
 ### [1.82.4] — 2026-09-05 · "Quando c'e' da menare, si mena"
 
 Rifinitura della 1.82.3. Le distanze erano giuste ma avevano la precedenza sbagliata: *"se ci sono nemici

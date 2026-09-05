@@ -3743,6 +3743,80 @@ function testV182() {
   ok('mercenari verificati: aiutano, e non contano come giocatori');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 59 — v1.83: il ribilanciamento delle tre classi
+// ============================================================================
+function testV183() {
+  console.log('\n[TEST 59] v1.83 — scudo frontale del guerriero, cadenza dell arco');
+  const dt = 1 / C.TICK_RATE;
+  const conn = { send() {} };
+
+  // --- 1) L ARCO: meno frecce, piu' peso per freccia ---
+  const arco = Heroes.HEROES.ladro.weapon;
+  assert(arco.fireRate === 2.3, 'la cadenza dell arco scende a 2,3 al secondo (era 3,0)');
+  assert(arco.dmg === 38, 'e ogni freccia pesa 38 (era 31)');
+  const dpsOra = arco.dmg * arco.fireRate;
+  assert(dpsOra > 31 * 3.0 * 0.90 && dpsOra < 31 * 3.0, 'il danno al secondo cala di poco (' + dpsOra.toFixed(0) + ' contro 93): cambia il ritmo, non la potenza');
+  // le tre classi restano allineate sul danno al secondo di partenza
+  const dpsG = Heroes.HEROES.guerriero.weapon.dmg * Heroes.HEROES.guerriero.weapon.fireRate;
+  const dpsM = Heroes.HEROES.mago.weapon.dmg * Heroes.HEROES.mago.weapon.fireRate;
+  const M = Math.max(dpsG, dpsM, dpsOra), m2 = Math.min(dpsG, dpsM, dpsOra);
+  assert((M - m2) / M < 0.15, 'e le tre classi restano entro il 15% di danno al secondo (' + [dpsG, dpsM, dpsOra].map(x => x.toFixed(0)).join(' / ') + ')');
+
+  // --- 2) LO SCUDO PARA DAVANTI ---
+  const sc = Gear.BY_ID.gue_scudo, to = Gear.BY_ID.gue_torre;
+  assert(sc.bonus.frontale > 0 && to.bonus.frontale > sc.bonus.frontale, 'i due scudi parano di fronte, la torre piu del piccolo');
+  assert(Gear.bonusOf({ shield: 'gue_scudo' }).frontale === sc.bonus.frontale, 'il bonus frontale arriva nel calcolo dell equipaggiamento');
+  assert(!Gear.bonusOf({ shield: 'lad_mantello' }).frontale, 'e non lo hanno gli altri: e' + String.fromCharCode(39) + ' lo scudo, non la classe');
+
+  const prova = (angoloAttacco) => {
+    const r = new Room('v183' + angoloAttacco.toFixed(2)); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    p.aim = 0; p.hp = r.effMaxHp(p); p.buffs = {};
+    const sx = p.x + Math.cos(angoloAttacco) * 60, sy = p.y + Math.sin(angoloAttacco) * 60;
+    const prima = p.hp; r.damagePlayer(p, 100, sx, sy, 0);
+    return prima - p.hp;
+  };
+  const davanti = prova(0);            // dritto in faccia
+  const dietro = prova(Math.PI);       // alle spalle
+  const lato = prova(Math.PI / 2);     // di fianco: fuori dal cono (70 gradi per lato)
+  assert(davanti < dietro, 'un colpo in faccia fa meno male di uno alle spalle (' + davanti.toFixed(0) + ' contro ' + dietro.toFixed(0) + ')');
+  assert(Math.abs(davanti - dietro * (1 - sc.bonus.frontale)) < 1.5, 'e la differenza e' + String.fromCharCode(39) + ' esattamente lo sconto dello scudo');
+  assert(Math.abs(lato - dietro) < 1.5, 'di fianco lo scudo non c e: nessuno sconto (' + lato.toFixed(0) + ')');
+  // il bordo del cono
+  const dentro = prova(C.SCUDO_CONO * 0.9), fuori = prova(C.SCUDO_CONO * 1.1);
+  assert(dentro < fuori, 'il cono ha un bordo netto: dentro para (' + dentro.toFixed(0) + '), fuori no (' + fuori.toFixed(0) + ')');
+
+  // --- 3) i colpi SENZA ORIGINE non si parano: non c e una direzione da cui pararli ---
+  {
+    const r = new Room('v183z'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; p.aim = 0; p.hp = r.effMaxHp(p); p.buffs = {};
+    const prima = p.hp; r.damagePlayer(p, 100);
+    assert(Math.abs((prima - p.hp) - dietro) < 1.5, 'un colpo senza sorgente non si para');
+  }
+
+  // --- 4) e' lo SCUDO a parare, non il guerriero: senza scudo niente parata ---
+  {
+    const r = new Room('v183y'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; p.aim = 0; p.buffs = {};
+    p.gear.shield = null; r._recomputeGear(p); p.hp = r.effMaxHp(p);
+    const prima = p.hp; r.damagePlayer(p, 100, p.x + 60, p.y, 0);
+    const senza = prima - p.hp;
+    assert(senza > davanti, 'togli lo scudo e i colpi frontali tornano a farti male (' + senza.toFixed(0) + ' contro ' + davanti.toFixed(0) + ')');
+  }
+
+  // --- 5) la torre para piu' dello scudo piccolo ---
+  {
+    const r = new Room('v183x'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; p.aim = 0; p.buffs = {};
+    p.gear.shield = 'gue_torre'; r._recomputeGear(p); p.hp = r.effMaxHp(p);
+    const prima = p.hp; r.damagePlayer(p, 100, p.x + 60, p.y, 0);
+    assert(prima - p.hp < davanti, 'lo Scudo a Torre para piu del piccolo (' + (prima - p.hp).toFixed(0) + ' contro ' + davanti.toFixed(0) + ')');
+  }
+
+  ok('ribilanciamento verificato');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

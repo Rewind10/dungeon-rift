@@ -92,6 +92,8 @@
         R.burst(ev.x, ev.y, '#ffcf5a', 28, 300, 0.5); R.burst(ev.x, ev.y + 6, '#7a5a3a', 20, 160, 0.65);
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
+      // v1.83 — colpo parato con lo scudo: l'arco si accende dalla parte in cui guardi
+      case 'para': R.para(ev.x, ev.y, ev.a, (window.GAME.Constants.SCUDO_CONO || 1.22)); break;
       // v1.81 — il ragno tesse: un anello che si apre e qualche filo che schizza
       case 'tela': R.ring(ev.x, ev.y, ev.c || '#cfe0ea', 3, ev.r, 0.45); R.burst(ev.x, ev.y, '#e6f1f8', 10, 90, 0.5); break;
       // v1.81 — LA LARVA SCOPPIA: il corpo si apre in uno sbuffo di spore, poi la zona telegrafata (che

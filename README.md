@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.82.4 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.83.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,15 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.83 (ribilanciamento delle classi)
+- **🛡️ Lo scudo del guerriero para davvero, e solo davanti**: −45% dai colpi che arrivano nel cono
+  frontale (−60% con lo Scudo a Torre), 70° per lato. Alle spalle non c'e' niente. Misurato: incassa un
+  terzo in meno e vive la meta' in piu', ma solo se ti giri verso chi colpisce.
+- **🏹 L'arco rallenta**: da 3,0 a 2,3 frecce al secondo, con la freccia che passa da 31 a 38 danni. Il
+  danno al secondo cala del 6%, il ritmo cambia del tutto — cinque frecce al secondo col massimo di
+  Destrezza non erano un arco, erano un rubinetto.
+- **🔮 Il mago non e' stato toccato**: era gia' quello in equilibrio, e le misure lo confermano.
 
 ## 🆕 Novita v1.82 (i mercenari)
 - **🗡️ Assoldi un compagno al Banditore**, fra un'ondata e l'altra: classe a caso, **il tuo stesso
