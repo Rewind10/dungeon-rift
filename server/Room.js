@@ -2507,7 +2507,10 @@ class Room {
       // eroi) e non lo usava nessuno: adesso lo usa lui. Stessa sagoma, stesso vestito, tono diverso —
       // non un clone del tuo personaggio, ma nemmeno un'altra cosa.
       if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; }
+      // v1.88 — TUTTO l'equipaggiamento viaggia, non solo arma e scudo: adesso ogni pezzo cambia
+      // qualcosa nel disegno del personaggio, quindi il client deve sapere cosa hai addosso.
       o.wp = p.gear ? p.gear.weapon : null; o.sh = p.gear ? p.gear.shield : null;
+      o.arm = (p.gear && p.gear.armor) || null; o.stv = (p.gear && p.gear.boots) || null;   // null esplicito: lo slot che la classe non ha
       if (p.dead) o.d = 1;
       if (p.down) { o.dn = 1; o.dt = +Math.max(0, p.downT).toFixed(1); }
       if (p.hitFlash > 0) o.bf = 1;

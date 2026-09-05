@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.87.0`
+**Versione attuale:** `1.88.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1218,12 +1218,19 @@ L'ondata non perde nessuno: i nemici in eccesso restano in coda ed entrano appen
 Il fabbro del **Mercato** (ogni 3 ondate) vende un **catalogo di oggetti per classe**, pagato in **monete**.
 Ogni classe ha **i suoi slot** e vede **solo la propria roba**: il filtro sta sul server.
 
-| | 🛡️ Guerriero | 🔮 Mago | 🏹 Ladro |
-|---|---|---|---|
-| **Arma** | Spada · Spadone 🪙230 · Alabarda 🪙470 | Bacchetta di Frassino · Scettro Runico 🪙240 · Bastone del Vuoto 🪙500 | Arco Corto · Arco Lungo 🪙300 |
-| **Armatura** | Maglia di Ferro · Armatura a Piastre 🪙250 | Veste da Apprendista · Manto dell'Arcanista 🪙270 | Giaco di Pelle · Corazza di Cuoio 🪙240 |
-| **Scudo** | Scudo · Scudo a Torre 🪙290 | — | — |
-| **Calzature** | — | — | Scarpe di Corda · Stivali del Passo Lieve 🪙260 |
+**Quattro ranghi per ogni slot** *(v1.88)*, uno per rarita': ⚪ **comune** (di partenza, gratis) · 🔵 **raro**
+· 🟠 **leggendario** · ✨ **divino**. Otto slot fra le tre classi, **32 oggetti**.
+
+| Slot | ⚪ comune | 🔵 raro | 🟠 leggendario | ✨ divino |
+|---|---|---|---|---|
+| 🛡️ **Arma** | Spada | Spadone 🪙230 | Alabarda 🪙520 | Falce della Faglia 🪙1000 |
+| 🛡️ **Armatura** | Maglia di Ferro | Armatura a Piastre 🪙250 | Corazza del Baluardo 🪙560 | Egida di Ossidiana 🪙1050 |
+| 🛡️ **Scudo** | Scudo | Scudo a Torre 🪙290 | Muro d'Acciaio 🪙620 | Aegis della Faglia 🪙1100 |
+| 🔮 **Arma** | Bacchetta di Frassino | Scettro Runico 🪙240 | Bastone del Vuoto 🪙500 | Scettro delle Stelle Morte 🪙1050 |
+| 🔮 **Armatura** | Veste da Apprendista | Manto dell'Arcanista 🪙270 | Toga del Conclave 🪙580 | Manto delle Ere 🪙1020 |
+| 🏹 **Arma** | Arco Corto | Arco Lungo 🪙300 | Arco Composito 🪙560 | Arco delle Ombre 🪙1020 |
+| 🏹 **Armatura** | Giaco di Pelle | Corazza di Cuoio 🪙240 | Giustacuore Ombroso 🪙540 | Pelle del Vuoto 🪙990 |
+| 🏹 **Calzature** | Scarpe di Corda | Stivali del Passo Lieve 🪙260 | Stivali del Vento 🪙520 | Passi della Faglia 🪙950 |
 
 **Il rango 1 costa 0 ed e' cio' che hai addosso alla partenza**: nel pannello e' marcato *DI BASE*. Un rango
 piu' alto costa di piu' e vale di piu', sempre — niente scambi alla pari e niente svantaggi nascosti.
@@ -1236,9 +1243,20 @@ l'arco del fendente e' **stretto** (alabarda 152px/71°, spada 100px/109°): si 
 coprire i fianchi. Per il mago la **cadenza resta la stessa** su tutte le bacchette — quella la alza
 l'Intelligenza — e cambiano danno, velocita' e grandezza della bolla, cioe' quante ne vanno a segno.
 
-**Si vede cio' che si compra**: scudo a torre piu' grande e spesso, arco lungo che sporge davanti e dietro,
-orbe della bacchetta che cresce e cambia colore, e l'arco del fendente che segue l'arma. Armature, vesti e
-calzature restano invisibili: da sopra, a questa scala, non si leggerebbero.
+**SI VEDE COSA HAI ADDOSSO** *(rifatto in v1.88)*. Ogni oggetto porta una `tinta` e un rango, e il renderer
+li traduce in colori e forme:
+
+| | Cosa cambia a schermo |
+|---|---|
+| **Armatura** | ridipinge i pezzi grossi: il **metallo** di elmo, piastra e spalline del guerriero, la **veste** del mago, **mantellina e cappuccio** del ladro |
+| **Scudo** | **arco piu' ampio e lastra piu' spessa** a ogni rango, un rivetto in piu', bordo del colore dell'oggetto. E' l'unico pezzo che cambia la sagoma vista dall'alto — e nel gioco e' quello che para davvero, quindi la forma dice quanto copre senza scrivere un numero. L'Aegis ha una **runa accesa** lungo il bordo |
+| **Arco** | quattro **lunghezze**, quattro legni; dal leggendario in su il dorso e' acceso del colore dell'arma |
+| **Bacchetta** | l'**orbe** cambia colore e grandezza |
+| **Rango divino** | un **alone che respira** del colore del pezzo. Uno solo anche con tre pezzi divini: tre aloni sovrapposti sarebbero una lampadina |
+
+Tecnicamente lo snapshot porta adesso **tutti e quattro** gli slot (prima solo arma e scudo), e la chiave
+della cache dei gradienti include la tinta dello scudo — la stessa attenzione che era servita per il bug dei
+mercenari nella 1.82.1.
 
 **Prezzi** tarati sull'economia misurata (~65-70 monete a ondata): al primo mercato ci si permette un rango 2,
 al secondo un rango 3 oppure due rango 2.

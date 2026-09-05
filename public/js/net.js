@@ -56,6 +56,7 @@
           if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; p.aq = st.aq || null; p.ae = st.ae || null; }   // v1.82 — anche mercenario e tinta
           p.d = p.d || 0; p.dn = p.dn || 0; p.dt = p.dt || 0; p.bf = p.bf || 0; p.bar = p.bar || 0;
           p.dash = p.dash || 0; p.ph = p.ph || 0; p.iv = p.iv || 0; p.cu = p.cu || 0;
+          p.arm = p.arm || null; p.stv = p.stv || null;   // v1.88 — armatura e calzature
           p.tb = p.tb || []; p.w2 = p.w2 || null; p.w2l = p.w2l || 0; p.evo = p.evo || 0;
           p.cmb = p.cmb || 0; p.cmt = p.cmt || 0; p.eg = p.eg || 0;
           p.nm = p.nm || 0; p.nmd = p.nmd || 0; p.ng = p.ng || 0; p.gz = p.gz || 0;

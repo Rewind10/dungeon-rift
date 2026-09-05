@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.87.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.88.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.88 (l'equipaggiamento si vede addosso)
+- **⚔️ Quattro ranghi per ogni slot** invece di due o tre: **comune** (quello di partenza, gratis),
+  **raro**, **leggendario**, **divino**. Otto slot fra le tre classi, **32 oggetti** in tutto — 15 nuovi.
+- **🎨 Ogni pezzo cambia il personaggio a schermo.** L'armatura ridipinge metallo, veste e mantellina;
+  lo **scudo** cresce di arco e spessore rango dopo rango (ed e' l'unico pezzo che cambia la sagoma vista
+  dall'alto); l'**arco** del ladro si allunga e cambia legno; l'**orbe** del mago cambia colore e grandezza.
+  Il rango **divino** aggiunge un alone che respira, del colore del pezzo.
+- **🏹 Fix**: l'Arco Corto aveva ancora i numeri di prima della 1.83 (31 danni, 3,0/s). L'arma vera arriva
+  **sempre** dall'oggetto equipaggiato, quindi il ribilanciamento del ladro non era mai entrato in partita.
 
 ## 🆕 Novita v1.87 (due rimedi)
 - **🔒 I prigionieri si trovano di nuovo.** Con la 1.84.1 avevo tolto il segnalino dalla minimappa (giusto)

@@ -60,7 +60,7 @@ const gw = document.getElementById('gearNpcCards');
 ok(gw.children.length === 3, 'il guerriero vede tre slot (arma, armatura, scudo)');
 const righe = gw.children.map(b => b.children.filter(c => c.className === 'gslot-row')[0]).filter(Boolean);
 ok(righe.length === 3, 'ogni slot ha la sua riga di oggetti');
-ok(righe[0].children.length === 3, 'lo slot arma mostra le tre armi del guerriero');
+ok(righe[0].children.length === 4, 'lo slot arma mostra le quattro armi del guerriero');   // v1.88
 const carte = righe[0].children;
 ok(carte[0].className.includes('maxed') && carte[0].innerHTML.includes('IN USO'), 'l oggetto indosso e marcato IN USO');
 ok(carte[1].innerHTML.includes('Spadone') && carte[1].innerHTML.includes('230'), 'lo spadone mostra nome e prezzo');

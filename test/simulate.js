@@ -4094,6 +4094,55 @@ function testV185() {
   ok('abilita attive verificate');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV188() {
+  console.log('\n[TEST 62] v1.88 — quattro ranghi di equipaggiamento per ogni slot');
+  const conn = { send() {} };
+  const NOMI = ['common', 'rare', 'legendary', 'divine'];
+  assert(Gear.RANK_RARITY.join(',') === NOMI.join(','), 'le rarita sono comune, raro, leggendario, divino');
+
+  for (const h of Heroes.ORDER) {
+    for (const slot of Gear.slotsFor(h)) {
+      const l = Gear.itemsFor(h, slot);
+      assert(l.length === 4, h + '/' + slot + ': quattro oggetti (' + l.length + ')');
+      assert(l.map(i => i.rank).join(',') === '1,2,3,4', h + '/' + slot + ': i ranghi vanno da 1 a 4');
+      assert(l.map(i => Gear.rarityOf(i)).join(',') === NOMI.join(','), h + '/' + slot + ': una rarita per rango');
+      assert(l[0].cost === 0, h + '/' + slot + ': il rango 1 e quello di partenza e costa 0');
+      for (let k = 1; k < 4; k++) assert(l[k].cost > l[k - 1].cost, h + '/' + slot + ': ' + l[k].name + ' costa piu del precedente');
+      // niente scambi alla pari: salendo di rango non si perde mai niente
+      for (let k = 1; k < 4; k++) {
+        const a = l[k - 1], b = l[k];
+        if (a.bonus && b.bonus) for (const s of Object.keys(a.bonus)) assert((b.bonus[s] || 0) >= a.bonus[s], l[k].name + ': ' + s + ' non peggiora');
+        if (a.weapon && b.weapon) {
+          const dps = (w) => w.dmg * w.fireRate;
+          assert(dps(b.weapon) > dps(a.weapon), l[k].name + ': fa piu danni al secondo di ' + a.name);
+        }
+      }
+      // v1.88 — SI DEVE VEDERE: ogni pezzo che veste il personaggio porta la sua tinta.
+      if (slot !== 'weapon') for (const it of l) assert(!!it.tinta && Object.keys(it.tinta).length > 0, it.name + ' ha una tinta da mostrare addosso');
+    }
+  }
+
+  // il rango piu' alto arriva davvero addosso al personaggio
+  {
+    const r = new Room('v188a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    const hp0 = r.effMaxHp(p);
+    p.coins = 99999; r.enterMarket(); p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; r.updateGearMerchant();
+    for (const slot of Gear.slotsFor('guerriero')) { const l = Gear.itemsFor('guerriero', slot); r.buyGear('a', l[3].id); }
+    assert(p.gear.weapon === 'gue_falce' && p.gear.armor === 'gue_ossidiana' && p.gear.shield === 'gue_aegis', 'comprati i tre pezzi divini');
+    assert(r.effMaxHp(p) > hp0 + 100, 'i PV massimi salgono col set divino (' + hp0 + ' -> ' + r.effMaxHp(p) + ')');
+    assert(r.effWeapon(p).arcRadius > 160, 'e la portata del fendente e quella della Falce');
+    const snap = r.snapshot(); const me = snap.players[0];
+    assert(me.arm === 'gue_ossidiana' && me.stv === undefined || me.arm === 'gue_ossidiana', 'lo snapshot porta l armatura, che il client disegna');
+    assert(me.sh === 'gue_aegis' && me.wp === 'gue_falce', 'e lo scudo e l arma');
+  }
+  // e il ladro riceve la taratura della 1.83, che era rimasta solo in heroes.js
+  {
+    const w = Gear.BY_ID['lad_arcocorto'].weapon;
+    assert(w.dmg === 38 && w.fireRate === 2.3, 'l Arco Corto ha i numeri della 1.83 (38 danni, 2,3/s)');
+  }
+  ok('quattro ranghi per slot verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

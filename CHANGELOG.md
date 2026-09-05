@@ -2,6 +2,49 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.88.0] — 2026-09-05 · "Si vede cosa hai addosso"
+
+#### ⚔️ Quattro ranghi per ogni slot
+Il catalogo aveva due o tre oggetti per slot e una scala di rarita' ereditata dai boon (comune, non comune,
+raro, epico, leggendario) che non ci finiva dentro. Adesso ogni slot ha **quattro oggetti**, uno per rarita':
+
+**comune** (quello che hai addosso alla partenza, gratis) · **raro** · **leggendario** · **divino**
+
+Otto slot fra le tre classi, **32 oggetti**, quindici dei quali nuovi: la Falce della Faglia e l'Egida di
+Ossidiana del guerriero, l'Aegis della Faglia, lo Scettro delle Stelle Morte e il Manto delle Ere del mago,
+l'Arco delle Ombre e la Pelle del Vuoto del ladro, e cosi' via. Le regole di prima restano tutte: rango 1
+gratis, prezzi crescenti, **nessuno scambio alla pari** (salendo non si perde mai niente) e il cambio libero
+col ricalcolo da zero dei bonus.
+
+#### 🎨 E si VEDE, che e' il punto
+Comprare un pezzo e vedere cambiare solo un numero nel pannello e' un acquisto; vederlo addosso e' un
+personaggio. Ogni oggetto porta una `tinta` e un rango, e il renderer li usa:
+
+- **L'armatura ridipinge i pezzi grossi**: il metallo di elmo, piastra e spalline del guerriero, la veste
+  del mago, mantellina e cappuccio del ladro. Cambiare corazza cambia il colore del personaggio.
+- **Lo scudo cresce**: arco piu' ampio e lastra piu' spessa a ogni rango, con un rivetto in piu' e il bordo
+  del colore dell'oggetto. E' l'unico pezzo che cambia la **sagoma** vista dall'alto — e nel gioco e' anche
+  quello che para davvero, quindi la forma dice quanto copre senza scrivere un numero. L'Aegis (divino) ha
+  una runa accesa lungo il bordo.
+- **L'arco del ladro** si allunga di rango in rango (quattro lunghezze) e cambia legno; dal leggendario in
+  su il dorso e' acceso del colore dell'arma.
+- **L'orbe del mago** cambia colore e grandezza con la bacchetta.
+- **Il rango divino** aggiunge un **alone che respira** del colore del pezzo. Uno solo, anche se hai tre
+  pezzi divini: tre aloni sovrapposti sarebbero una lampadina.
+
+Tecnicamente: lo snapshot porta adesso **tutti e quattro** gli slot (prima solo arma e scudo), il renderer
+ha `_palGear()` e `_gearRanks()` che traducono l'equipaggiamento in colori e forme, e la chiave della cache
+dei gradienti include la nuova tinta dello scudo — la stessa attenzione che era servita per il bug dei
+mercenari nella 1.82.1.
+
+#### 🏹 E un difetto vecchio di cinque versioni
+L'**Arco Corto** aveva ancora `dmg 31, fireRate 3.0`: i numeri di **prima** della 1.83. Il ribilanciamento
+del ladro (38 danni, 2,3 tiri al secondo) era stato scritto in `heroes.js`, ma `effWeapon()` legge **sempre**
+dall'oggetto equipaggiato e ignora l'arma della classe quando c'e' un oggetto — e alla partenza c'e' sempre.
+Quindi per cinque versioni il ladro ha giocato con l'arco vecchio. Allineato.
+
+---
+
 ### [1.87.1] — 2026-09-05 · "Un portale, non una crepa"
 
 La faglia d'uscita era uno **squarcio**: un'ellisse verticale di macchie morbide, alta e stretta, come una

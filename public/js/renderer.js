@@ -2304,12 +2304,33 @@
     _palKey(pal) {
       if (!pal) return '';
       let k = '';
-      for (const c of ['cloth', 'clothDk', 'body', 'bodyDk', 'steelDk', 'skin', 'wood', 'accent', 'pelo', 'orlo', 'mant', 'capp', 'metallo']) if (pal[c]) k += pal[c];
+      for (const c of ['cloth', 'clothDk', 'body', 'bodyDk', 'steelDk', 'skin', 'wood', 'accent', 'pelo', 'orlo', 'mant', 'capp', 'metallo', 'scudo']) if (pal[c]) k += pal[c];
       return k;
+    },
+    // v1.88 — L'EQUIPAGGIAMENTO SI VEDE ADDOSSO. Ogni oggetto porta una `tinta` (gear.js) e un rango:
+    // la tinta ridipinge i pezzi grossi del personaggio (metallo, veste, mantellina), il rango cambia
+    // le FORME — quanto e' largo lo scudo, quanto e' lungo l'arco, che orbe ha il bastone. Cosi' due
+    // maghi con equipaggiamento diverso si distinguono da lontano, senza leggere niente.
+    _palGear(eq) {
+      const G = window.GAME && window.GAME.Gear; if (!G) return eq.pal || null;
+      const out = {};
+      for (const gid of [eq.arm, eq.stv, eq.sh]) { const it = gid && G.BY_ID[gid]; if (it && it.tinta) Object.assign(out, it.tinta); }
+      if (eq.pal) Object.assign(out, eq.pal);   // la tinta del mercenario resta sopra: e' la sua identita'
+      return Object.keys(out).length ? out : (eq.pal || null);
+    },
+    _gearRanks(eq) {
+      const G = window.GAME && window.GAME.Gear;
+      const rk = (gid) => { const it = G && gid && G.BY_ID[gid]; return it ? (it.rank || 1) : 1; };
+      return { w: rk(eq.wp), a: rk(eq.arm), s: rk(eq.sh), b: rk(eq.stv) };
+    },
+    _gearCol(gid, fallback) {
+      const G = window.GAME && window.GAME.Gear; const it = G && gid && G.BY_ID[gid];
+      return (it && it.color) || fallback;
     },
     _hero(ctx, id, r, t, dashing, atk, eq) {
       const a = Math.max(0, Math.min(1, atk || 0));
       eq = eq || {};
+      if (!eq.civile) { eq.pal = this._palGear(eq); eq._rk = this._gearRanks(eq); }
       // v1.82 FIX — LA CACHE DEI GRADIENTI ERA CIECA ALLA PALETTE. Le chiavi erano 'h_torso|lad|<raggio>':
       // due ladri con lo stesso raggio si spartivano lo STESSO gradiente, cioe' i colori di chi veniva
       // disegnato per primo. Finche' le tinte non esistevano non si vedeva; con i mercenari il giocatore
@@ -2323,6 +2344,18 @@
       else if (id === 'ladro') this._heroLadro(ctx, r, t, a, eq);
       else this._heroGuerriero(ctx, r, t, a, eq);
       if (eq.sp) this._specSopra(ctx, r, t, eq.sp);
+      // v1.88 — IL RANGO DIVINO SI VEDE ANCHE AL BUIO: un alone che respira, del colore del pezzo.
+      // Solo il rango 4, e solo un pezzo (il piu' alto che hai): tre aloni sovrapposti sarebbero una lampadina.
+      const rk = eq._rk;
+      if (rk && Math.max(rk.w, rk.a, rk.s, rk.b) >= 4) {
+        const src = rk.a >= 4 ? eq.arm : rk.w >= 4 ? eq.wp : rk.s >= 4 ? eq.sh : eq.stv;
+        const col = this._gearCol(src, '#ffe9a8');
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.16 + 0.07 * Math.sin(t * 2.4);
+        const g = this._grad('gear_div|' + col + '|' + r, () => { const q = ctx.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.7); q.addColorStop(0, this._rgba(col, 0.55)); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; });
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r * 1.7, 0, 7); ctx.fill();
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
       if (dashing) { const h = HERO[id] || HERO.guerriero; ctx.strokeStyle = h.accent || '#9fe0ff'; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     },
     // v1.69 — i due strati della specializzazione: cio' che sta SOTTO il personaggio (aure, mantelli
@@ -2419,7 +2452,8 @@
       ctx.fillStyle = '#2a1d10'; ctx.strokeStyle = DK; ctx.lineWidth = 1.5;   // bastone
       this._rr(ctx, r * 0.45, -r * 0.06, r * 1.05, r * 0.12, 2); ctx.fill(); ctx.stroke();
       ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // orbe: divampa quando lancia
-      const orb = { mag_scettro: ['163,140,255', 0.62], mag_bastone: ['127,251,228', 0.76] }[eq && eq.wp] || ['0,240,200', 0.50];
+      // v1.88 — un orbe per bacchetta: colore e grandezza dicono che arma hai in mano.
+      const orb = { mag_scettro: ['163,140,255', 0.62], mag_bastone: ['127,251,228', 0.76], mag_stelle: ['255,217,255', 0.92] }[eq && eq.wp] || ['0,240,200', 0.50];
       const og = this._grad('h_orb|' + r + '|' + orb[0], () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * orb[1]); q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.28, 'rgba(' + orb[0] + ',.85)'); q.addColorStop(1, 'rgba(' + orb[0] + ',0)'); return q; });
       ctx.globalAlpha = 0.75 + 0.25 * atk; ctx.fillStyle = og; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * (orb[1] + 0.34 * atk), 0, 7); ctx.fill(); ctx.restore();
       }
@@ -2475,17 +2509,30 @@
       ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
       // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
       // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
-      const torre = eq && eq.sh === 'gue_torre';
-      const RS = r * (torre ? 0.94 : 0.86), TH = r * (torre ? 0.38 : 0.26), A0 = torre ? -1.45 : -1.15, A1 = -A0;
-      const sgd = this._grad('h_scudo|' + r + '|' + (torre ? 't' : 'n'), () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, '#3f4650'); q.addColorStop(0.55, '#8d97a5'); q.addColorStop(1, '#c9d1dc'); return q; });
+      // v1.88 — QUATTRO SCUDI, non piu' due. Piu' alto e' il rango, piu' l'arco e' AMPIO e la lastra
+      // spessa: e' l'unico pezzo d'armatura che cambia la sagoma vista dall'alto, ed e' anche il pezzo
+      // che nel gioco para davvero — la forma dice quanto copre, e la dice senza numeri.
+      const srk = (eq._rk && eq._rk.s) || 1;
+      const scCol = _P.scudo || '#8d97a5', orlo = _P.orlo || '#c8a23a';
+      const RS = r * (0.86 + 0.052 * (srk - 1)), TH = r * (0.26 + 0.052 * (srk - 1));
+      const A0 = -(1.15 + 0.145 * (srk - 1)), A1 = -A0;
+      const sgd = this._grad('h_scudo|' + r + '|' + srk + '|' + scCol, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, this._shade(scCol, -78)); q.addColorStop(0.55, scCol); q.addColorStop(1, this._shade(scCol, 60)); return q; });
       ctx.fillStyle = sgd; ctx.strokeStyle = DK; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2, A0, A1); ctx.arc(0, 0, RS - TH / 2, A1, A0, true); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = '#c8a23a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
-      ctx.fillStyle = '#c8a23a'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * 0.11, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = orlo; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
+      ctx.fillStyle = orlo; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * (0.11 + 0.012 * (srk - 1)), 0, 7); ctx.fill(); ctx.stroke();
+      // i rivetti: uno in piu' per rango, distribuiti sull'arco. Contarli non serve — si legge la densita'.
       ctx.fillStyle = '#e6ecf4';
-      const riv = torre ? 1.05 : 0.72;
-      ctx.beginPath(); ctx.arc(Math.cos(-riv) * RS, Math.sin(-riv) * RS, r * 0.05, 0, 7); ctx.arc(Math.cos(riv) * RS, Math.sin(riv) * RS, r * 0.05, 0, 7); ctx.fill();
-      if (torre) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
+      ctx.beginPath();
+      for (let k = 0; k < srk + 1; k++) { const u = (k + 1) / (srk + 2), an = A0 + (A1 - A0) * u; ctx.arc(Math.cos(an) * RS, Math.sin(an) * RS, r * 0.05, 0, 7); }
+      ctx.fill();
+      if (srk >= 2) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
+      if (srk >= 4) {   // l'Aegis: una runa accesa lungo il bordo
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = this._rgba(orlo, 0.55 + 0.3 * Math.sin(t * 3)); ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(0, 0, RS - TH * 0.15, A0 + 0.2, A1 - 0.2); ctx.stroke();
+        ctx.restore();
+      }
       ctx.restore();
       }
       if (_civ) {   // testa scoperta: capelli e la fetta di viso davanti, al posto dell'elmo
@@ -2540,15 +2587,21 @@
       ctx.restore(); ctx.strokeStyle = DK; ctx.lineWidth = 2;
       // l'arco lungo esce oltre la sagoma davanti e dietro, e la curva e' piu' profonda: da sopra e' la
       // sola cosa che distingue i due archi, e si vede subito.
-      const lungo = eq && eq.wp === 'lad_arcolungo', BL = lungo ? 1.34 : 1, BC = lungo ? 0.62 : 0.46;
+      // v1.88 — l'arco cresce con il rango: quattro lunghezze e quattro legni. Il rango 1 e' quello di
+      // partenza e resta il metro; dal terzo il legno si scurisce e il colore lo da' l'oggetto.
+      const wrk = (eq._rk && eq._rk.w) || 1;
+      const BL = [1, 1.34, 1.48, 1.60][wrk - 1], BC = [0.46, 0.62, 0.70, 0.76][wrk - 1];
+      const lungo = wrk >= 2;
+      const arcoCol = wrk >= 2 ? this._gearCol(eq.wp, _P.wood || '#8a6534') : (_P.wood || '#8a6534');
       const bx0 = -r * 0.56 * BL, bx1 = r * 0.80 * BL, by = -r * 1.00;         // ARCO ")" di lato
-      ctx.strokeStyle = lungo ? '#a67c3d' : wood; ctx.lineCap = 'round'; ctx.lineWidth = r * (lungo ? 0.15 : 0.13);
+      ctx.strokeStyle = arcoCol; ctx.lineCap = 'round'; ctx.lineWidth = r * (0.13 + 0.012 * (wrk - 1));
       ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * BC, bx1, by + r * 0.10); ctx.stroke();
       ctx.strokeStyle = '#5a4326'; ctx.lineWidth = r * 0.05;
       ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * BC, bx1, by + r * 0.10); ctx.stroke();
       ctx.strokeStyle = 'rgba(240,240,230,.9)'; ctx.lineWidth = 1.6; ctx.lineCap = 'butt';
       const pull = by + r * (0.10 + 0.60 * draw);                              // corda tirata mentre incocca
       ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.lineTo(r * 0.12, pull); ctx.lineTo(bx1, by + r * 0.10); ctx.stroke();
+      if (wrk >= 3) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = this._rgba(arcoCol, 0.5); ctx.lineWidth = r * 0.09; ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * BC, bx1, by + r * 0.10); ctx.stroke(); ctx.restore(); }
       if (lungo) { ctx.strokeStyle = 'rgba(230,220,190,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx0, by + r * 0.10); ctx.quadraticCurveTo(r * 0.12, by - r * (BC - 0.10), bx1, by + r * 0.10); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,230,.9)'; ctx.lineWidth = 1.6; }
       if (draw > 0.05) {
         ctx.strokeStyle = '#efe7cf'; ctx.lineWidth = 2.2;
