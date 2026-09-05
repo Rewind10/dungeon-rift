@@ -5,7 +5,7 @@ da dare al generatore di immagini. Il codice che le usa e' gia' scritto: basta m
 
 | Illustrazione | File | Formato | Stato |
 |---|---|---|---|
-| Sfondo del menu iniziale | `public/assets/art/menu_key_art.jpg` | 1672×941 (16:9) | **fatta** (v1.86) — originale in `menu_key_art.png` |
+| Sfondo del menu iniziale | `public/assets/art/menu_key_art.jpg` | **1920×1080** (16:9) | **rifatta** (v1.89.2) — la prima versione resta in `menu_key_art_v1.png` |
 | Scheda del bestiario | `public/assets/art/roster_overview.png` | 1024×1536 | fatta |
 | Concept del Troll | `public/assets/art/cave_brute_concept.png` | — | fatto |
 
@@ -17,11 +17,22 @@ da dare al generatore di immagini. Il codice che le usa e' gia' scritto: basta m
 `public/assets/art/menu_key_art.jpg` — **esattamente questo nome**. Il CSS lo carica da solo; se il file non
 c'e' resta il gradiente scuro di prima e non si rompe niente.
 
-> ✅ **Fatto in v1.86.** L'originale di Paolo e' `menu_key_art.png` (1672×941, 2,5 MB); il file che il gioco
-> carica e' la sua conversione JPEG qualita' 88 — **385 KB**, un settimo del peso, differenza invisibile a
-> schermo. Per rigenerarla dopo aver cambiato il PNG:
-> ```bash
-> convert public/assets/art/menu_key_art.png -strip -quality 88 public/assets/art/menu_key_art.jpg
+> ✅ **Rifatta in v1.89.2.** La seconda illustrazione arrivava a **1376×768**: portata a **1920×1080** e
+> salvata a qualita' 92 (**521 KB**). La prima versione resta in `menu_key_art_v1.png`.
+>
+> **Come si ingrandisce senza sporcare** (e' quello che ho usato): taglio esatto a 16:9, ingrandimento in
+> **due passaggi** — 2x Lanczos e poi giu' alla misura voluta, perche' un salto solo lascia i bordi molli —
+> e infine una **maschera di contrasto leggera** (raggio 1,4 · 58% · soglia 3): la soglia serve a non
+> alonare sui bordi netti, che in un'illustrazione dipinta sono dappertutto.
+>
+> ```python
+> from PIL import Image, ImageFilter
+> im = Image.open('sorgente.jpg').convert('RGB')
+> tw = int(round(im.height * 16 / 9))
+> if tw < im.width: x0 = (im.width - tw) // 2; im = im.crop((x0, 0, x0 + tw, im.height))
+> big = im.resize((im.width * 2, im.height * 2), Image.LANCZOS)
+> up = big.resize((1920, 1080), Image.LANCZOS).filter(ImageFilter.UnsharpMask(1.4, 58, 3))
+> up.save('public/assets/art/menu_key_art.jpg', quality=92, subsampling=0, optimize=True, progressive=True)
 > ```
 
 ### Requisiti tecnici

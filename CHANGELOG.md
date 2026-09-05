@@ -2,6 +2,22 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.89.2] — 2026-09-05 · "Il menu cambia quadro"
+
+Illustrazione nuova nel menu: i tre eroi in primo piano — guerriero e mago a sinistra, ladro a destra — con
+l'orda, il troll, il beholder e la faglia alle spalle. Arrivava a **1376×768**, portata a **1920×1080**.
+
+L'ingrandimento non e' un `resize` e basta: taglio esatto a 16:9 (la sorgente era 1,79, serve 1,78), poi
+**due passaggi** — 2x Lanczos e giu' alla misura voluta, perche' un salto solo lascia i bordi molli — e una
+**maschera di contrasto con soglia** (1,4 · 58% · 3), che affila senza alonare sui bordi netti, che in
+un'illustrazione dipinta sono dappertutto. JPEG qualita' 92, **521 KB**.
+
+La composizione va d'accordo con la velatura della 1.86: gli eroi stanno nelle due fasce laterali, che
+restano accese, e sotto al pannello finisce la faglia — la parte che si puo' coprire. La prima illustrazione
+resta nel repo come `menu_key_art_v1.png`.
+
+---
+
 ### [1.89.1] — 2026-09-05 · "Dipingerli, non disegnarli"
 
 La prima stesura dei due boss era fatta di **poligoni piatti col contorno nero**: esattamente il contrario di
