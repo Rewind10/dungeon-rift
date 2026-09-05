@@ -2,6 +2,60 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.82.0] — 2026-09-05 · "La compagnia di ventura"
+
+#### 🗡️ I mercenari
+Al **Banditore**, fra un'ondata e l'altra, c'e' un candidato al banco: nome, classe e **il tuo stesso
+livello**. Lo assoldi, e dalla mappa dopo combatte con te. Serve a una cosa sola — **aiutare chi non e'
+bravissimo** — e tutto il resto della funzione discende da li'.
+
+| | |
+|---|---|
+| Quanti | **uno solo per volta**, e solo in **partita singola** |
+| Quanto costa | **50 monete** a livello 1, **+40 per livello**: 610 al quindicesimo |
+| Che classe | a caso fra guerriero, mago e ladro |
+| Quanto e' forte | la **classe base al tuo livello**, coi punti statistica spesi come li spenderebbe uno che fa quel mestiere (al 15: uno cappato a 12 e sei sull'altro — la stessa forma della tua run). **Nessuna abilita', ne' passiva ne' attiva** |
+| Se muore | muore e basta: niente "a terra", niente rianimazione. Al banco se ne assolda un altro |
+| Fra un'ondata e l'altra | **sparisce**: non ti segue al villaggio. Lo ritrovi sulla mappa dopo, **curato del tutto** |
+| XP e monete | **restano tue**: non ne prende, e non ne raccoglie da terra |
+
+**Come pensa.** Segue il capo, ingaggia il nemico piu' vicino entro 620 px, tiene la distanza della **sua**
+arma (chi mena a 100 px non puo' tenersi a 160), si sgancia quando e' ridotto sotto il 40% e in mischia
+molla il contatto mentre l'arma ricarica invece di restare appoggiato al nemico. Non e' codice nuovo: e'
+la testa dei **bot che guidano le partite simulate dei test**, rifinita dalla v1.52 alla v1.66 e spostata
+in `shared/mercenari.js`. In piu' ha il **guinzaglio**: oltre 380 px dal capo molla tutto e torna, e non
+riprende finche' non e' rientrato a 150 — senza quell'isteresi oscillava sul bordo e sembrava rotto.
+
+**Come si vede.** Stessa sagoma, stesso vestito, **tono diverso**: quattro tinte per classe. Il renderer
+aveva gia' il gancio (`eq.pal` nei tre eroi) e non lo usava nessuno — adesso lo usa lui. Sopra la testa
+compaiono nome, livello e rango, come per i compagni in co-op. Quindici nomi per classe, corti.
+
+#### ⚖️ Le cinque cose che NON deve cambiare
+Il mercenario e' un **giocatore** per il motore — corpo, collisioni, bersaglio dei mostri, morte — e questo
+regala gratis tutto cio' che serve a esistere in campo. Ma non deve essere un giocatore per le **regole**,
+e sbagliare una di queste esclusioni non da' errore: cambia il bilanciamento in silenzio, com'e' successo
+con la curva dell'XP nella 1.79. Ognuna ha il suo controllo nei test:
+
+1. **L'ondata resta identica** — `buildWave` conta i giocatori veri: stessi nemici, stessa durezza.
+2. **L'XP resta tutto tuo** — niente divisione di gruppo, e lui non ne prende un punto.
+3. **La folla non raddoppia** — la quota della v1.80 (6 nemici addosso) si conta sui giocatori veri, se no
+   se ne facevano sotto dodici: un aiuto che raddoppia la pressione non e' un aiuto. I mostri che lo
+   **vedono** gli vanno addosso lo stesso, quindi fa comunque il suo mestiere di corpo che prende colpi.
+4. **Il gioco non lo aspetta** a fine ondata: l'uscita conta un solo giocatore.
+5. **La sua morte non chiude la run, la tua si'** — un mercenario vivo non tiene aperta la partita.
+
+E una sesta, trovata provando: **una run nuova parte senza compagnia**. `startGame()` rimette a uno il
+livello di tutti i giocatori in camera, e un mercenario sopravvissuto si sarebbe ritrovato di livello 1 col
+nome di un veterano.
+
+#### 🪧 Il Banditore cambia mestiere a meta' banco
+La **rivendita delle armi e' stata tolta** (`sellGear` e il magazzino non ci sono piu'): quello spazio
+adesso e' il reclutamento. Un banco che fa due mestieri diversi non e' un banco, e' un menu. Cio' che
+possiedi resta tuo e lo **rimetti addosso gratis dal Fabbro**, esattamente come prima — che e' il
+comportamento che conta, ed e' quello verificato dai test.
+
+**1395 test passati, 0 falliti** (server) + client verde.
+
 ### [1.81.1] — 2026-09-04 · "La rampa non si ferma piu' alla settima"
 
 #### 📉 Il problema, misurato

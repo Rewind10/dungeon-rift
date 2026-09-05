@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.81.1`
+**Versione attuale:** `1.82.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -121,6 +121,35 @@ Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Es
 **Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace *(bonus XP, inutili col tetto)*, e in
 v1.79.2 🌵 Aura di Spine, ⛏️ Piede di Porco, 🔱 Sdoppiamento, 🎯 Mira Guidata, 😈 Furia Cieca, 🧿 Egida
 Ostinata, 🚩 Doppia Bolla, 🔊 Eco Arcana, 🌌 Implosione.
+
+## 🗡️ I MERCENARI *(v1.82)*
+
+Al **Banditore**, nel villaggio, c'e' un candidato al banco. Lo assoldi e dalla mappa dopo combatte con te.
+
+| | |
+|---|---|
+| Quanti | uno solo per volta, solo in **partita singola** |
+| Costo | **50 monete** a livello 1, **+40 per livello** (610 al quindicesimo) |
+| Classe | a caso fra guerriero, mago e ladro |
+| Forza | la classe base **al tuo livello**, coi punti statistica spesi due sulla statistica di classe e uno sulla Costituzione. **Nessuna abilita'** |
+| Morte | muore e basta: niente "a terra", niente rianimazione. Poi se ne assolda un altro |
+| Fine ondata | **sparisce** (non ti segue al villaggio) e torna sulla mappa dopo **curato del tutto** |
+| XP e monete | restano **tue**: non ne prende e non ne raccoglie |
+
+**Cosa NON cambia perche' hai un mercenario.** L'ondata ha gli stessi nemici e la stessa durezza; l'XP non
+si divide; la quota di nemici che si fanno sotto (v1.80) resta sei e non dodici; a fine ondata il gioco non
+lo aspetta; e la sua morte non chiude la partita, mentre la tua si'. Serve ad **aiutare chi non e'
+bravissimo**, non ad alzare l'asticella — ogni riga di questo paragrafo ha il suo controllo nei test.
+
+**Come combatte.** Segue il capo, ingaggia il nemico piu' vicino entro 620 px, tiene la distanza della
+**sua** arma, si sgancia sotto il 40% di vita e in mischia molla il contatto mentre l'arma ricarica. Oltre
+380 px dal capo molla tutto e torna indietro. E' la stessa testa dei bot che guidano le partite simulate
+dei test, spostata in `shared/mercenari.js`.
+
+**Come si vede.** Stessa sagoma e stesso vestito della sua classe, **tono diverso** (quattro tinte per
+classe), col nome, il livello e il rango sopra la testa. Quindici nomi per classe.
+
+---
 
 ## 🪜 LA RAMPA DEGLI ARCHETIPI *(rifatta in v1.81)*
 

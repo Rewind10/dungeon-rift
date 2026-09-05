@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.81.1',
+    VERSION: '1.82.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -26,6 +26,11 @@
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).
     RAGNATELA_MULT: 0.58, RAGNATELA_CODA: 0.25, RAGNATELE_MAX: 14,
+    // v1.82 — MERCENARI. Uno solo per volta, solo in singolo. Serve ad aiutare chi non e' bravissimo:
+    // per questo NON conta come giocatore in niente che regoli la difficolta' — l'ondata resta identica,
+    // l'XP resta tutto tuo, e la sua morte non chiude la partita. Fra un'ondata e l'altra sparisce (non
+    // ti segue al villaggio) e torna in campo curato del tutto.
+    MERC_MAX: 1, MERC_SOLO_SINGOLO: true, MERC_CURA_FINE_ONDATA: true,
     DASH_CD: 3.2, DASH_TIME: 0.20, DASH_IFRAME: 0.28, DASH_SPEED: 3.0,
     BULLET_RADIUS: 5, XP_MAGNET: 120, FINAL_WAVE: 20,
     // v1.63 — LA FAGLIA AI MARGINI. Restare attaccati al bordo esterno riduceva l'arco da difendere da
@@ -135,6 +140,7 @@
       PICK_RANK: 'pick_rank', OFFER_RANK: 'offer_rank',   // v1.69 — carte di rango e bivio finale
       PICK_POTION: 'pick_potion', BUY_POTION: 'buy_potion', OFFER_POTION: 'offer_potion',  // v1.71 — cintura
       TAKE_BOUNTY: 'take_bounty', SELL_GEAR: 'sell_gear', OFFER_BANDIT: 'offer_bandit',      // v1.72 — Banditore
+      HIRE_MERC: 'hire_merc',                                                                  // v1.82 — reclutamento
       TOGGLE_CARD: 'toggle_card', OFFER_SEER: 'offer_seer',                                  // v1.73 — Cartomante
       REST: 'rest', OFFER_INN: 'offer_inn',                                                    // v1.74 — Ostessa
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',

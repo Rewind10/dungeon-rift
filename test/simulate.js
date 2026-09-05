@@ -2046,23 +2046,11 @@ function testV172() {
   assert(p.coins === c1, 'rimettersi addosso un oggetto posseduto non costa nulla');
   assert(p.gear.weapon === 'gue_spadone', 'ed e davvero tornato addosso');
 
-  // --- 2) la ricompra ---
-  p.x = r.bandit.x; p.y = r.bandit.y;
-  const c2 = p.coins;
-  r.sellGear('a', 'gue_alabarda');
-  assert(p.coins - c2 === Math.floor(Gear.BY_ID.gue_alabarda.cost * C.SELL_BACK), 'venduta a meta prezzo esatto');
-  assert(!p.owned.gue_alabarda, 'e non e piu nel magazzino');
-  r.sellGear('a', 'gue_spadone');
-  assert(!!p.owned.gue_spadone, 'quello che hai ADDOSSO non si vende');
-  r.sellGear('a', 'gue_spada');
-  assert(!!p.owned.gue_spada, "e nemmeno quello di partenza: vale zero e lascerebbe lo slot senza fondo");
-  const lontano = c2; p.x = r.bandit.x + 900;
-  const c3 = p.coins; r.sellGear('a', 'gue_alabarda');
-  assert(p.coins === c3, 'da lontano il banco non risponde');
-  p.x = r.bandit.x;
-  // riaverla dopo averla venduta costa di nuovo intero
-  const c4 = p.coins; p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; r.buyGear('a', 'gue_alabarda');
-  assert(c4 - p.coins === Gear.BY_ID.gue_alabarda.cost, 'ricomprare cio che hai venduto costa di nuovo intero');
+  // --- 2) v1.82: LA RICOMPRA NON C'E' PIU'. Il Banditore non ricompra le armi: quel posto al banco
+  // adesso e' il reclutamento dei mercenari. Cio' che possiedi resta tuo e si rimette addosso gratis dal
+  // Fabbro, che e' il comportamento che conta ed e' verificato qui sopra.
+  assert(typeof r.sellGear !== 'function', 'la rivendita delle armi al Banditore e stata tolta');
+  assert(!!p.owned.gue_alabarda && !!p.owned.gue_spadone, 'e cio che hai comprato resta comunque tuo');
 
   // --- 3) le tre offerte ---
   p.x = r.bandit.x; p.y = r.bandit.y;
@@ -3130,6 +3118,9 @@ function testV1792() {
     r.phase = C.PHASE_COMBAT; p.input.mx = 0; p.input.my = 0;
     for (let i = 0; i < C.TICK_RATE; i++) r.update(1 / C.TICK_RATE);
     assert(p.fermoT >= 0.5, 'stando fermo la concentrazione si carica (' + p.fermoT.toFixed(2) + 's)');
+    // il critico va SPENTO per questa misura: due colpi confrontati fra loro, uno dei due che fa critico
+    // e il test diventa un lancio di dadi (e' successo: 70 contro 128, con la Concentrazione funzionante).
+    p.stats.critChance = 0;
     r.bullets.length = 0; p.fireCd = 0; r.firePlayerWeapon(p);
     const carico = r.bullets.find(x => !x.hostile);
     assert(p.fermoT === 0, 'e il colpo la consuma');
@@ -3444,6 +3435,198 @@ function testV181() {
   ok('Larva e Ragni verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 58 — v1.82: i mercenari
+// La parte difficile non e' il mercenario: e' che il motore lo tratta come un GIOCATORE (corpo,
+// bersaglio, morte) mentre le REGOLE non devono trattarlo cosi'. Ogni esclusione ha qui il suo
+// controllo, perche' sbagliarne una non da' errore: cambia il bilanciamento in silenzio.
+// ============================================================================
+function testV182() {
+  console.log('\n[TEST 58] v1.82 — mercenari: aiutano, e non contano come giocatori');
+  const dt = 1 / C.TICK_RATE;
+  const Mrc = require('../shared/mercenari.js');
+  const conn = { send() {} };
+
+  // --- 1) il listino e la scheda ---
+  assert(Mrc.costo(1) === 50, 'un livello 1 costa 50 monete');
+  assert(Mrc.costo(15) === 50 + 14 * 40, 'un livello 15 costa ' + Mrc.costo(15));
+  for (let l = 2; l <= 15; l++) assert(Mrc.costo(l) > Mrc.costo(l - 1), 'il prezzo sale sempre col livello');
+  assert(Mrc.punti(15) === 18, 'a livello 15 ha i 18 punti che avresti tu');
+  const b15 = Mrc.distribuisci('guerriero', 15, Loot.STAT_MAX_LEVEL);
+  assert(b15.st_for === 12 && b15.st_cos === 6, 'e li spende come la tua run: uno cappato (12) e sei sull altro');
+  for (const cl of ['guerriero', 'mago', 'ladro']) {
+    assert(Mrc.NOMI[cl].length === 15, cl + ': quindici nomi');
+    assert(Mrc.NOMI[cl].every(n => n.length <= 8), cl + ': nomi corti, ci stanno sopra la testa');
+    assert(new Set(Mrc.NOMI[cl]).size === 15, cl + ': tutti diversi');
+    assert(Mrc.TINTE[cl].length >= 3, cl + ': almeno tre tinte');
+  }
+
+  // --- 2) si assolda al Banditore, in singolo, uno solo ---
+  const r = new Room('v182a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+  p.level = 5; r.enterMarket();
+  p.x = r.bandit.x; p.y = r.bandit.y; p.coins = 1000;
+  const off = r._offertaMerc(p);
+  assert(!!off && off.lvl === 5, 'il candidato al banco ha il TUO livello');
+  assert(off.costo === Mrc.costo(5), 'e il prezzo del listino (' + off.costo + ')');
+  const prima = p.coins;
+  r.assumiMercenario('a');
+  assert(prima - p.coins === off.costo, 'assoldarlo costa esattamente quel prezzo');
+  assert(!!r.mercData && r.mercData.nome === off.nome, 'e la scheda resta in camera');
+  const secondo = r._offertaMerc(p);
+  assert(!secondo, 'con uno al soldo il banco non ne offre un altro');
+  // e non si paga due volte
+  const c2 = p.coins; r.assumiMercenario('a');
+  assert(p.coins === c2, 'e riprovare non toglie monete');
+  // senza monete non si assolda
+  const r0 = new Room('v182z'); const p0 = r0.addPlayer('a', conn, 'A', 'mago'); r0.startGame();
+  p0.level = 8; r0.enterMarket(); p0.x = r0.bandit.x; p0.y = r0.bandit.y; p0.coins = 10;
+  r0.assumiMercenario('a');
+  assert(!r0.mercData, 'con dieci monete non si assolda nessuno');
+
+  // --- 3) scende in campo con l ondata, non prima ---
+  assert(!r.mercenario, 'al villaggio il mercenario non esiste: non ti segue');
+  r.nextWave();
+  const m = r.mercenario;
+  assert(!!m, 'alla mappa dopo e in campo');
+  assert(m.merc === true && m.mercOwner === 'a', 'ed e marcato come mercenario, col suo capo');
+  assert(m.level === 5 && m.buys.st_cos >= 0, 'del livello giusto e coi punti spesi');
+  assert(Math.abs(m.hp - r.effMaxHp(m)) < 1, 'e arriva curato del tutto');
+  assert(!!m.pal, 'con la sua tinta');
+  assert(Object.keys(m.boons || {}).length === 0 || !m.boonList || m.boonList.length === 0, 'nessuna abilita: ne passiva ne attiva');
+
+  // --- 4) L ONDATA NON CRESCE. E' il punto di tutta la funzione: aiutare, non alzare l asticella. ---
+  const senza = new Room('v182b'); const ps = senza.addPlayer('a', conn, 'A', 'guerriero'); senza.startGame();
+  ps.level = 5;
+  const con = new Room('v182b'); const pc = con.addPlayer('a', conn, 'A', 'guerriero'); con.startGame();
+  pc.level = 5; con.enterMarket(); pc.x = con.bandit.x; pc.y = con.bandit.y; pc.coins = 1000; con.assumiMercenario('a');
+  for (let w = 0; w < 4; w++) { senza.nextWave(); con.nextWave(); }
+  assert(!!con.mercenario, 'nella stanza col mercenario c e il mercenario');
+  assert(con.veri.length === 1, 'ma i giocatori VERI restano uno');
+  assert(con.pending + con.waveList.length === senza.pending + senza.waveList.length,
+    'e l ondata ha esattamente gli stessi nemici (' + (con.pending + con.waveList.length) + ' contro ' + (senza.pending + senza.waveList.length) + ')');
+  assert(JSON.stringify(con.waveScaling) === JSON.stringify(senza.waveScaling), 'e la stessa durezza, voce per voce');
+
+  // --- 5) L XP RESTA TUTTO TUO ---
+  const xp0 = pc.xpPool, xpm = con.mercenario.xpPool;
+  con.xpCondivisa(100, 'prova');
+  assert(pc.xpPool - xp0 === 100, 'con un mercenario in campo prendi il 100% dell XP (' + (pc.xpPool - xp0) + ')');
+  assert(con.mercenario.xpPool === xpm, 'e lui non ne prende un punto');
+
+  // --- 6) non raccoglie niente da terra ---
+  const mm = con.mercenario;
+  con.groundXp.length = 0; con.groundCoins.length = 0;
+  con.groundXp.push({ eid: 1, x: mm.x, y: mm.y, v: 50, t: 30, dead: false });
+  con.groundCoins.push({ eid: 2, x: mm.x, y: mm.y, cid: 'c', t: 30, dead: false, v: 10 });
+  pc.x = mm.x + 4000; pc.y = mm.y + 4000;
+  const xpA = pc.xpPool, coA = pc.coins;
+  for (let i = 0; i < C.TICK_RATE * 2; i++) con.updatePickups(dt);
+  assert(con.groundXp.length === 1 && con.groundCoins.length === 1, 'sfere e monete sotto i piedi del mercenario restano li');
+  assert(pc.xpPool === xpA && pc.coins === coA, 'e non arrivano nemmeno a te per magia');
+
+  // --- 7) la quota della folla non raddoppia ---
+  const rf = new Room('v182c'); const pf = rf.addPlayer('a', conn, 'A', 'guerriero'); rf.startGame();
+  pf.level = 5; rf.enterMarket(); pf.x = rf.bandit.x; pf.y = rf.bandit.y; pf.coins = 1000; rf.assumiMercenario('a');
+  rf.nextWave(); rf.phase = C.PHASE_COMBAT; rf.monsters.length = 0; rf.pending = 0; rf.waveList = [];
+  for (let k = 0; k < 20; k++) {
+    const a = (k / 20) * Math.PI * 2, x = pf.x + Math.cos(a) * 500, y = pf.y + Math.sin(a) * 500;
+    if (rf.isWallAt(x, y)) continue;
+    const mo = rf.spawnMonster('skeleton', x, y, { scaling: Waves.scaling(5, 1) }); if (mo) mo.awake = true;
+  }
+  rf._assegnaFolla();
+  const impegnati = rf.monsters.filter(x => !x.dead && x.impegnato === 1).length;
+  assert(impegnati <= C.FOLLA_MAX, 'col mercenario in campo si fanno sotto sempre e solo ' + C.FOLLA_MAX + ' nemici (' + impegnati + ')');
+
+  // --- 8) il gioco non lo aspetta a fine ondata ---
+  rf.monsters.length = 0; rf.pending = 0; rf.waveList = [];
+  const c = rf._contaUscita();
+  assert(c.tot === 1, 'a fine ondata si aspetta un solo giocatore, non due (' + c.tot + ')');
+
+  // --- 9) LA SUA MORTE NON CHIUDE LA RUN, LA TUA SI ---
+  const rd = new Room('v182d'); const pd = rd.addPlayer('a', conn, 'A', 'guerriero'); rd.startGame();
+  pd.level = 6; rd.enterMarket(); pd.x = rd.bandit.x; pd.y = rd.bandit.y; pd.coins = 1000; rd.assumiMercenario('a');
+  rd.nextWave();
+  const md = rd.mercenario; assert(!!md, 'mercenario in campo');
+  rd.downPlayer(md);
+  assert(md.dead && !md.down, 'il mercenario muore e basta: niente "a terra", niente rianimazione');
+  assert(rd.phase !== C.PHASE_GAMEOVER, 'e la partita continua');
+  assert(!rd.mercenario, 'e non e piu in campo');
+  // ...e adesso al banco se ne puo assoldare un altro
+  rd._waveDone();
+  assert(!rd.mercData, 'caduto lui, la scheda si libera: al banco se ne assolda un altro');
+  // il contrario: il giocatore cade con un mercenario vivo
+  const rg = new Room('v182e'); const pg = rg.addPlayer('a', conn, 'A', 'guerriero'); rg.startGame();
+  pg.level = 6; rg.enterMarket(); pg.x = rg.bandit.x; pg.y = rg.bandit.y; pg.coins = 1000; rg.assumiMercenario('a');
+  rg.nextWave();
+  assert(!!rg.mercenario, 'mercenario vivo');
+  pg.dead = true; pg.down = false;
+  assert(rg.anyRevivable === false, 'se sei fuori TU non c e piu nessuno da rialzare: il mercenario vivo non tiene aperta la partita');
+
+  // --- 10) fra un ondata e l altra sparisce, e torna curato ---
+  const rw = new Room('v182f'); const pw = rw.addPlayer('a', conn, 'A', 'ladro'); rw.startGame();
+  pw.level = 9; rw.enterMarket(); pw.x = rw.bandit.x; pw.y = rw.bandit.y; pw.coins = 1000; rw.assumiMercenario('a');
+  rw.nextWave();
+  const m1 = rw.mercenario; m1.hp = 3;
+  rw._waveDone();
+  assert(!rw.mercenario, 'a fine ondata non ti segue al villaggio');
+  assert(!!rw.mercData, 'ma resta al tuo soldo');
+  rw.nextWave();
+  const m2 = rw.mercenario;
+  assert(!!m2, 'e lo ritrovi sulla mappa dopo');
+  assert(Math.abs(m2.hp - rw.effMaxHp(m2)) < 1, 'curato del tutto (' + Math.round(m2.hp) + '/' + Math.round(rw.effMaxHp(m2)) + ')');
+  assert(m2.name === m1.name, 'ed e lo stesso: stesso nome');
+
+  // --- 11) solo in singolo, e uno solo ---
+  const r2 = new Room('v182g'); const q1 = r2.addPlayer('a', conn, 'A', 'guerriero'); r2.addPlayer('b', conn, 'B', 'mago'); r2.startGame();
+  r2.enterMarket(); q1.x = r2.bandit.x; q1.y = r2.bandit.y; q1.coins = 1000;
+  r2.assumiMercenario('a');
+  assert(!r2.mercData, 'in due non si assoldano mercenari');
+
+  // --- 12) la testa: segue il capo e attacca ---
+  const ra = new Room('v182h'); const pa = ra.addPlayer('a', conn, 'A', 'guerriero'); ra.startGame();
+  pa.level = 6; ra.enterMarket(); pa.x = ra.bandit.x; pa.y = ra.bandit.y; pa.coins = 1000; ra.assumiMercenario('a');
+  // ATTENZIONE: l ondata va tenuta APERTA. Svuotando il campo, update() la chiude al primo tick e ritira
+  // il mercenario — che e' esattamente cio' che deve fare, ma qui si misura altro. Con `pending` a 5 e la
+  // lista vuota non entra nessuno e l ondata non finisce mai: campo pulito e cronometro fermo.
+  ra.nextWave(); ra.phase = C.PHASE_COMBAT; ra.monsters.length = 0; ra.pending = 5; ra.waveList = [];
+  const ma = ra.mercenario;
+  assert(!!ma, 'mercenario in campo per la prova');
+  // Il punto dove metterlo serve LIBERO PER UN CORPO, non solo non-muro: losSpot guarda un punto, ma un
+  // giocatore ha un raggio. Al primo tentativo finiva incastrato nella roccia e il test misurava
+  // l anti-incastro invece dell IA — restava fermo a 592 px e sembrava che il guinzaglio non funzionasse.
+  const largo = (dist) => {
+    for (let k = 0; k < 96; k++) {
+      const a = (k / 96) * Math.PI * 2, x = pa.x + Math.cos(a) * dist, y = pa.y + Math.sin(a) * dist;
+      if (ra.isWallAt(x, y) || !ra.losClear(pa.x, pa.y, x, y)) continue;
+      let ok2 = true;
+      for (const [dx, dy] of [[30, 0], [-30, 0], [0, 30], [0, -30], [22, 22], [-22, -22]]) if (ra.isWallAt(x + dx, y + dy)) { ok2 = false; break; }
+      if (ok2) return { x, y };
+    }
+    return null;
+  };
+  const via = largo(560);
+  assert(!!via, 'trovato un punto libero a 560 px dal capo');
+  ma.x = via.x; ma.y = via.y;
+  const d0 = MU.dist(ma.x, ma.y, pa.x, pa.y);
+  const fermo = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false };
+  for (let i = 0; i < C.TICK_RATE * 5; i++) { pa.hp = ra.effMaxHp(pa); ra.setInput('a', fermo); ra.update(dt); }
+  const d1 = MU.dist(ma.x, ma.y, pa.x, pa.y);
+  assert(d1 < d0 * 0.5, 'se resta indietro torna dal capo (da ' + d0.toFixed(0) + ' a ' + d1.toFixed(0) + ' px)');
+
+  // un mostro accanto al capo: se lo prende lui
+  const sp = largo(170) || losSpot(ra, pa, 170);
+  const bersaglio = ra.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(2, 1) });
+  assert(!!bersaglio, 'bersaglio piazzato');
+  bersaglio.awake = true;
+  const hp0 = bersaglio.hp;
+  for (let i = 0; i < C.TICK_RATE * 8 && !bersaglio.dead; i++) {
+    pa.hp = ra.effMaxHp(pa); bersaglio.x = sp.x; bersaglio.y = sp.y;   // tenuto fermo: si misura il mercenario
+    ra.setInput('a', fermo); ra.update(dt);
+  }
+  assert(bersaglio.dead || bersaglio.hp < hp0, 'e i nemici vicini se li prende lui (' + Math.round(hp0 - bersaglio.hp) + ' danni)');
+
+  ok('mercenari verificati: aiutano, e non contano come giocatori');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

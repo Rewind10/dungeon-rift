@@ -6,6 +6,7 @@ const Heroes = require('../shared/heroes.js');
 const Mon = require('../shared/monsters.js');
 const Loot = require('../shared/loot.js');
 const Gear = require('../shared/gear.js');
+const Merc = require('../shared/mercenari.js');
 const Lv = require('../shared/levels.js');
 const Pot = require('../shared/potions.js');
 const Bnt = require('../shared/bounties.js');
@@ -72,7 +73,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.mercData = null; this.mercCount = 0; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
@@ -80,8 +81,16 @@ class Room {
     this.newMap(1234 + (id.charCodeAt ? id.charCodeAt(0) : 0), 1);
   }
   get alivePlayers() { const a = []; for (const p of this.players.values()) if (p.connected && !p.dead) a.push(p); return a; }
+  // v1.82 — IL MERCENARIO E' UN GIOCATORE PER IL MOTORE (corpo, collisioni, bersaglio dei mostri, morte)
+  // ma NON e' un giocatore per le regole. Queste due liste sono la linea di confine, e tutto cio' che
+  // decide difficolta', ricompense o fine partita deve passare da `veri`, mai da `alivePlayers`:
+  //   ondata piu' numerosa · XP diviso · quota della folla · uscita dall'ondata · game over.
+  // Sbagliare lista qui non da' errore: cambia il bilanciamento in silenzio. E' successo con la curva
+  // dell'XP nella 1.79, e non deve succedere di nuovo — i test lo verificano uno per uno.
+  get veri() { const a = []; for (const p of this.players.values()) if (p.connected && !p.dead && !p.merc) a.push(p); return a; }
+  get mercenario() { for (const p of this.players.values()) if (p.merc && !p.dead) return p; return null; }
   get anyConnected() { for (const p of this.players.values()) if (p.connected) return true; return false; }
-  get anyRevivable() { for (const p of this.players.values()) if (p.connected && (!p.dead || (p.down && p.lives > 1))) return true; return false; }
+  get anyRevivable() { for (const p of this.players.values()) if (p.connected && !p.merc && (!p.dead || (p.down && p.lives > 1))) return true; return false; }
   broadcast(o) { const s = JSON.stringify(o); for (const p of this.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} }
   sendTo(pid, o) { const p = this.players.get(pid); if (p && p.conn) try { p.conn.send(JSON.stringify(o)); } catch (_) {} }
 
@@ -163,6 +172,10 @@ class Room {
 
   startGame() {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
+    // v1.82 — una run nuova parte SENZA compagnia: il mercenario e' un ingaggio di questa partita, e
+//     startGame() rimette a uno il livello di tutti i giocatori in camera — mercenario compreso, che si
+//     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
+    this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
     for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
@@ -174,7 +187,8 @@ class Room {
     if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }  // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella stanza del mercante
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
-    else { const w = Waves.buildWave(this.wave, this.alivePlayers.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    this._schieraMercenario();                                    // v1.82 — il mercenario torna in campo, curato
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
     // v1.77.2 — ATTENZIONE AL RIPIEGO. Qui c'era scritto `this.time - (this.waveT0 || this.time)`:
     // alla PRIMA ondata waveT0 vale esattamente 0, che in JavaScript e' falso, quindi scattava il
@@ -650,6 +664,15 @@ class Room {
     if (was <= 0.1) this.events.push({ t: 'gazed', who: p.id, x: p.x, y: p.y, kind, dur: Math.round(dur) });
   }
   downPlayer(p) {
+    // v1.82 — IL MERCENARIO NON VA "A TERRA": muore. Non ha vite, non si rianima, non tiene aperta la
+    // partita e non la chiude. Chi lo assume compra un aiuto per questa mappa, non un secondo eroe.
+    if (p.merc) {
+      p.hp = 0; p.dead = true; p.down = false;
+      this.events.push({ t: 'merc_down', x: p.x, y: p.y, name: p.name, hero: p.heroId });
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'merc_down', x: p.x, y: p.y, name: p.name, hero: p.heroId } });
+      if (this.mercData) this.mercData.caduto = true;
+      return;
+    }
     // v1.51 — ULTIMA OCCASIONE: consuma una carica e rimette in piedi invece di far cadere.
     if ((p.defianceLeft || 0) > 0) {
       p.defianceLeft--; p.defianceUsed = (p.defianceUsed || 0) + 1; p.hp = Math.round(this.effMaxHp(p) * 0.5); p.buffs.iframe = 2;
@@ -899,23 +922,73 @@ class Room {
     return p.bountyOffer;
   }
   // Il magazzino: tutto cio' che possiedi della TUA classe, con dentro cosa hai addosso e quanto rende.
-  _magazzino(p) {
-    const out = [];
-    for (const id of Object.keys(p.owned)) {
-      const it = Gear.BY_ID[id]; if (!it || it.hero !== p.heroId) continue;
-      out.push({ id: it.id, name: it.name, color: it.color, slot: it.slot, slotName: Gear.SLOT_NAME[it.slot] || it.slot,
-        icon: Gear.SLOT_ICON[it.slot] || '⚔️', rank: it.rank, cost: it.cost,
-        pay: Math.floor(it.cost * C.SELL_BACK), worn: p.gear[it.slot] === it.id ? 1 : 0 });
-    }
-    out.sort((a, b) => a.slot === b.slot ? a.rank - b.rank : (a.slot < b.slot ? -1 : 1));
-    return out;
-  }
+
   offerBandit(p, near) {
     const b = p.bounty;
     this.sendTo(p.id, { t: C.MSG.OFFER_BANDIT, coins: p.coins, near: near ? 1 : 0,
       bounty: b ? { k: b.k, n: b.n, have: b.have, pay: b.pay, nome: b.nome, icon: b.icon, color: b.color, testo: b.testo } : null,
       offers: b ? [] : this._offerteTaglie(p).map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })),
-      stock: this._magazzino(p) });
+      // v1.82 — al posto del magazzino (la rivendita delle armi e' stata tolta) c'e' il banco dei
+      // mercenari: un candidato per volta, del tuo stesso livello, prendere o lasciare.
+      merc: this._bancoMerc(p) });
+  }
+  // ===== v1.82 — LA COMPAGNIA DI VENTURA ==========================================================
+  // Il mercenario vive in due posti: `this.mercData` (la scheda: chi e', di che livello, come ha speso i
+  // punti — sopravvive alle ondate) e `this.players` (il corpo in campo, che esiste SOLO durante il
+  // combattimento). Fra un'ondata e l'altra il corpo non c'e': non ti segue al villaggio, non compare nel
+  // menu, non va contato da nessuna parte — e cosi' non serve ricordarsi di escluderlo in venti posti,
+  // perche' semplicemente non esiste. Torna alla mappa dopo, curato del tutto.
+  _puoAssumere(p) {
+    if (!p || p.merc) return false;
+    if (this.veri.length > 1 && C.MERC_SOLO_SINGOLO) return false;   // solo in singolo
+    return !this.mercData;
+  }
+  _offertaMerc(p) {
+    if (!this._puoAssumere(p)) return null;
+    if (!p._mercOff || p._mercOff.lvl !== p.level) p._mercOff = Merc.genera(p.level || 1);
+    return p._mercOff;
+  }
+  assumiMercenario(pid) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanditore(p)) return;
+    const off = this._offertaMerc(p); if (!off) return;
+    if ((p.coins || 0) < off.costo) return;
+    p.coins -= off.costo;
+    this.mercData = { owner: pid, heroId: off.heroId, nome: off.nome, tinta: off.tinta, lvl: off.lvl,
+      buys: Merc.distribuisci(off.heroId, off.lvl, Loot.STAT_MAX_LEVEL), caduto: false };
+    p._mercOff = null;
+    this.offerBandit(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'merc_hired', x: p.x, y: p.y, nome: off.nome, hero: off.heroId, lvl: off.lvl, costo: off.costo } });
+  }
+  _schieraMercenario() {
+    if (!this.mercData || this.mercenario) return;
+    const capo = this.players.get(this.mercData.owner);
+    if (!capo || capo.dead) return;
+    const d = this.mercData;
+    const id = 'merc_' + this.mercCount++;
+    const p = this.addPlayer(id, { send() {} }, d.nome, d.heroId);
+    if (!p) return;
+    p.merc = true; p.mercOwner = d.owner; p.lives = 1; p.pal = Merc.palette(d.heroId, d.tinta);
+    p.level = d.lvl; p.points = 0; p.buys = Object.assign({}, d.buys); p.xpPool = 0;
+    this._recomputeBoons(p);
+    p.hp = this.effMaxHp(p);                      // v1.82 — torna in campo curato del tutto, a ogni ondata
+    p.x = capo.x + MU.rand(-46, 46); p.y = capo.y + MU.rand(-46, 46);
+    if (this.isWallAt(p.x, p.y)) { p.x = capo.x; p.y = capo.y; }
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'merc_in', x: p.x, y: p.y, name: p.name, hero: p.heroId, lvl: p.level } });
+    return p;
+  }
+  _ritiraMercenario() {
+    for (const [k, p] of this.players) if (p.merc) this.players.delete(k);
+    if (this.mercData && this.mercData.caduto) this.mercData = null;   // caduto: al banco se ne assume un altro
+  }
+  _bancoMerc(p) {
+    if (this.mercData) {
+      const d = this.mercData;
+      return { assunto: { nome: d.nome, hero: d.heroId, lvl: d.lvl }, off: null, motivo: null };
+    }
+    if (this.veri.length > 1 && C.MERC_SOLO_SINGOLO) return { assunto: null, off: null, motivo: 'solo' };
+    const o = this._offertaMerc(p);
+    return { assunto: null, off: o ? { nome: o.nome, hero: o.heroId, lvl: o.lvl, costo: o.costo } : null, motivo: null };
   }
   _alBanditore(p) {
     return this.phase === C.PHASE_MARKET && !!this.bandit &&
@@ -929,19 +1002,10 @@ class Room {
     this.offerBandit(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bounty_take', x: p.x, y: p.y, nome: scelta.nome, testo: scelta.testo, color: scelta.color, icon: scelta.icon } });
   }
-  // Vendere: solo cio' che NON hai addosso e che e' costato qualcosa. L'oggetto di partenza vale zero e
-  // toglierlo dal magazzino lascerebbe uno slot senza fondo a cui tornare.
-  sellGear(pid, itemId) {
-    const p = this.players.get(pid); if (!p || p.dead) return;
-    if (!this._alBanditore(p)) return;
-    const it = Gear.BY_ID[itemId]; if (!it || !p.owned[itemId]) return;
-    if (it.hero !== p.heroId || !it.cost) return;
-    if (p.gear[it.slot] === itemId) return;                 // quello che hai addosso non si vende
-    const pay = Math.floor(it.cost * C.SELL_BACK);
-    delete p.owned[itemId]; p.coins += pay;
-    this.offerBandit(p, 1);
-    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'gear_sold', x: p.x, y: p.y, id: itemId, name: it.name, color: it.color, pay } });
-  }
+  // v1.82 — LA RIVENDITA DELLE ARMI E' STATA TOLTA (c'era `sellGear` + `_magazzino`). Al banco del
+  // Banditore quello spazio adesso e' il reclutamento: un banco che fa due mestieri diversi non e' un
+  // banco, e' un menu. Cio' che possiedi resta tuo e lo rimetti addosso gratis dal Fabbro, come prima.
+
   // Il contatore. Un tipo che nessuno incrementa resta a zero per sempre: ogni tipo di bounties.js ha una
   // chiamata a questo metodo da qualche parte, e il test lo verifica.
   bountyTick(p, kind, quanti, extra) {
@@ -1181,8 +1245,7 @@ class Room {
   // gruppo arriverebbe al tetto con ondate d'anticipo, e la curva sarebbe giusta per una taglia sola.
   xpCondivisa(v, fonte) {
     if (v <= 0) return;
-    const vivi = [];
-    for (const p of this.players.values()) if (p.connected && !p.dead) vivi.push(p);
+    const vivi = this.veri;                 // v1.82 — il mercenario non prende XP e non fa scendere la quota
     if (!vivi.length) return;
     const k = C.XP_GRUPPO[Math.min(C.XP_GRUPPO.length - 1, vivi.length)] || 1;
     const q = Math.max(1, Math.round(v * k));
@@ -1479,7 +1542,11 @@ class Room {
   // piu' vicino fra quelli in attesa prende il suo posto e si avvia. Quando ne restano pochi sono
   // tutti dentro il tetto, e allora ti cercano tutti: la coda di fine ondata non esiste piu'.
   _assegnaFolla() {
-    const ap = this.alivePlayers;
+    // v1.82 — la quota si conta sui giocatori VERI: se contasse anche il mercenario si farebbero sotto
+    // dodici nemici invece di sei, e un aiuto che raddoppia la pressione non e' un aiuto. I mostri che
+    // VEDONO il mercenario gli vanno addosso lo stesso (l'eccezione della vista in AI.update), quindi
+    // fa il suo mestiere di corpo che prende colpi senza aumentare l'ondata.
+    const ap = this.veri;
     if (!ap.length) { for (const m of this.monsters) m.impegnato = 1; return; }
     const code = new Map();
     for (const m of this.monsters) {
@@ -1520,6 +1587,7 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
+      { const mc = this.mercenario; if (mc) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); } }
       this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
@@ -1608,7 +1676,7 @@ class Room {
   }
   // Quanti giocatori devono premere EXIT perche' si esca, e quanti l'hanno gia' fatto.
   // Chi e' caduto non puo' premere niente: non lo si aspetta, o si resterebbe fermi fino al timeout.
-  _contaUscita() { let n = 0, tot = 0; for (const p of this.players.values()) { if (!p.connected || p.dead) continue; tot++; if (p.exitOk) n++; } return { n, tot }; }
+  _contaUscita() { let n = 0, tot = 0; for (const p of this.players.values()) { if (!p.connected || p.dead || p.merc) continue; tot++; if (p.exitOk) n++; } return { n, tot }; }
   exitWave(pid) {
     if (this.phase !== C.PHASE_CLEARED) return;
     const p = this.players.get(pid); if (!p) return;
@@ -1618,6 +1686,7 @@ class Room {
     if (c.n >= c.tot || c.tot === 0) this._waveDone();
   }
   _waveDone() {
+    this._ritiraMercenario();                                     // v1.82 — non ti segue al villaggio
     // v1.72 — l'ondata e' finita: chi non ha perso vite chiude la taglia "Nessun caduto".
     for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
     // v1.77 — IL PREMIO DI VELOCITA'. Le ondate a sopravvivenza sono escluse per costruzione: durano
@@ -1691,24 +1760,27 @@ class Room {
     for (const p of this.players.values()) { if (!p.connected) continue; p.ready = false; this._inviaPannello(p); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'shop', next: this.wave + 1, dalVillaggio: 1 } });
   }
+  // v1.82 — CHI RACCOGLIE. Il mercenario cammina sopra sfere e monete senza prenderle: sono tue, e un
+  // aiutante che ti mangia la progressione sarebbe un aiuto che costa due volte.
+  get raccoglitori() { return this.veri; }
   updatePickups(dt) {
     // ATTENZIONE: si ferma solo la SCADENZA, non il resto. Azzerare dt qui spegnerebbe anche la calamita
     // che tira le sfere verso il giocatore, cioe proprio il gesto che questa regola vuole permettere.
     const scade = this.phase === C.PHASE_CLEARED ? 0 : dt;
-    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.alivePlayers) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.xpCondivisa(o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
+    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.raccoglitori) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.xpCondivisa(o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
     if (this.groundXp.some(o => o.dead)) this.groundXp = this.groundXp.filter(o => !o.dead);
     // Raccolta MONETE (calamita come l'XP)
-    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.alivePlayers) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; if (target.ondata) target.ondata.monete += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
+    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.raccoglitori) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; if (target.ondata) target.ondata.monete += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
-    for (const it of this.items) { if (it.dead) continue; it.t -= scade; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.alivePlayers) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
+    for (const it of this.items) { if (it.dead) continue; it.t -= scade; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.raccoglitori) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
-    for (const c of this.crates) { if (c.opened) continue; for (const p of this.alivePlayers) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.alivePlayers.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
+    for (const c of this.crates) { if (c.opened) continue; for (const p of this.raccoglitori) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.raccoglitori.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
         // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
         this.xpCondivisa(C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa');
         this.bountyTick(p, 'casse', 1);
         break; } } }
     if (this.crates.some(c => c.opened)) this.crates = this.crates.filter(c => !c.opened);
-    for (const d of this.weaponDrops) { if (d.taken) continue; for (const p of this.alivePlayers) { if (MU.dist(d.x, d.y, p.x, p.y) < p.radius + d.r + 6) { d.taken = true; this._giveWeapon(p, d.wt); if (d.level >= 2 && p.weapon2 && p.weapon2.type === d.wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, Math.max(p.weapon2.level, d.level)); const w = Loot.WEAPONS[d.wt]; this.events.push({ t: 'weapon_pickup', x: d.x, y: d.y, wt: d.wt, name: w.name, icon: w.icon, color: w.color, level: p.weapon2.level, name2: p.name }); this._checkEvo(p); break; } } }
+    for (const d of this.weaponDrops) { if (d.taken) continue; for (const p of this.raccoglitori) { if (MU.dist(d.x, d.y, p.x, p.y) < p.radius + d.r + 6) { d.taken = true; this._giveWeapon(p, d.wt); if (d.level >= 2 && p.weapon2 && p.weapon2.type === d.wt && !p.weapon2.evolved) p.weapon2.level = Math.min(3, Math.max(p.weapon2.level, d.level)); const w = Loot.WEAPONS[d.wt]; this.events.push({ t: 'weapon_pickup', x: d.x, y: d.y, wt: d.wt, name: w.name, icon: w.icon, color: w.color, level: p.weapon2.level, name2: p.name }); this._checkEvo(p); break; } } }
     if (this.weaponDrops.some(d => d.taken)) this.weaponDrops = this.weaponDrops.filter(d => !d.taken);
   }
 
@@ -1941,6 +2013,10 @@ class Room {
       const o = { i: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), lv: p.lives, cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, co: p.coins || 0, cmx: +this.comboMult(p).toFixed(2), lvl: p.level, prg: +pr.frac.toFixed(2), pt: p.points };
       if (p.spec) o.sp = p.spec;
       if (nuovo) { o.n = p.name; o.h = p.heroId; }                       // nome ed eroe: immutabili in partita
+      // v1.82 — il mercenario viaggia con la sua TINTA. Il renderer aveva gia' il gancio (`eq.pal` nei tre
+      // eroi) e non lo usava nessuno: adesso lo usa lui. Stessa sagoma, stesso vestito, tono diverso —
+      // non un clone del tuo personaggio, ma nemmeno un'altra cosa.
+      if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; }
       o.wp = p.gear ? p.gear.weapon : null; o.sh = p.gear ? p.gear.shield : null;
       if (p.dead) o.d = 1;
       if (p.down) { o.dn = 1; o.dt = +Math.max(0, p.downT).toFixed(1); }

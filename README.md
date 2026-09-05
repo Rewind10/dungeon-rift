@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.81.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.82.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.82 (i mercenari)
+- **🗡️ Assoldi un compagno al Banditore**, fra un'ondata e l'altra: classe a caso, **il tuo stesso
+  livello**, **50 monete a livello 1** e +40 per livello. Uno per volta, solo in **partita singola**.
+- **Combatte da solo**: ti segue, ingaggia chi ti sta vicino, tiene la distanza della sua arma e si
+  sgancia quando e' ridotto male. Non ha abilita', ne' passive ne' attive.
+- **Non conta come giocatore**: l'ondata resta identica, l'**XP resta tutto tuo**, non raccoglie niente da
+  terra e la sua morte non chiude la partita. Serve ad aiutare, non ad alzare l'asticella.
+- **Fra un'ondata e l'altra sparisce** (non ti segue al villaggio) e lo ritrovi dopo **curato del tutto**.
+  Se cade, al banco se ne assolda un altro.
+- **🪧 Il Banditore non ricompra piu' le armi**: quel posto al banco adesso e' il reclutamento. Cio' che
+  possiedi resta tuo e lo rimetti addosso gratis dal Fabbro, come prima.
 
 ## 🆕 Novita v1.81 (quattro nemici nuovi, e la rampa non si ferma piu' alla settima)
 - **🪜 Alla dodicesima ondata il bestiario e' tutto in campo** (prima ci arrivava alla quindicesima, e da

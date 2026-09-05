@@ -1950,7 +1950,7 @@
         const gc = p.gz === 'slow' ? '#5ad0ff' : p.gz === 'sunder' ? '#c48cff' : '#ff7a5a';
         ctx.strokeStyle = this._rgba(gc, 0.4 + 0.35 * Math.sin(this.time * 7)); ctx.lineWidth = 2.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 7); ctx.stroke(); ctx.setLineDash([]);
       }
-      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a); this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
+      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a); this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }

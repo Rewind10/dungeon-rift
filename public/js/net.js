@@ -18,7 +18,7 @@
     pickPotion(slot, id) { this.send({ t: C.MSG.PICK_POTION, slot, id }); },
     buyPotion(slot) { this.send({ t: C.MSG.BUY_POTION, slot }); },
     takeBounty(i) { this.send({ t: C.MSG.TAKE_BOUNTY, i }); },
-    sellGear(id) { this.send({ t: C.MSG.SELL_GEAR, id }); },
+    hireMerc() { this.send({ t: C.MSG.HIRE_MERC }); },
     toggleCard(id) { this.send({ t: C.MSG.TOGGLE_CARD, id }); },
     rest() { this.send({ t: C.MSG.REST }); },
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
@@ -49,9 +49,9 @@
         const vivi = new Set();
         for (const p of s.players) {
           vivi.add(p.i);
-          if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h });
+          if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h, mc: p.mc || 0, pal: p.pal || null });
           const st = P.get(p.i);
-          if (st) { p.n = st.n; p.h = st.h; }
+          if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; }   // v1.82 — anche mercenario e tinta
           p.d = p.d || 0; p.dn = p.dn || 0; p.dt = p.dt || 0; p.bf = p.bf || 0; p.bar = p.bar || 0;
           p.dash = p.dash || 0; p.ph = p.ph || 0; p.iv = p.iv || 0; p.cu = p.cu || 0;
           p.tb = p.tb || []; p.w2 = p.w2 || null; p.w2l = p.w2l || 0; p.evo = p.evo || 0;

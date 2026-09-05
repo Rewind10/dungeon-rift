@@ -305,15 +305,11 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
 
   // --- il banco, senza taglia accettata ---
   const tre = [B.istanza('specie', 6, 'slime', 'Melma Corrosiva'), B.istanza('elite', 6), B.istanza('casse', 6)];
-  const owned = ['gue_spada', 'gue_spadone', 'gue_alabarda'];
-  const worn = { weapon: 'gue_alabarda' };
-  const stock = owned.map(id => { const it = G.BY_ID[id]; return { id: it.id, name: it.name, color: it.color, slot: it.slot,
-    slotName: G.SLOT_NAME[it.slot], icon: G.SLOT_ICON[it.slot], rank: it.rank, cost: it.cost,
-    pay: Math.floor(it.cost * 0.5), worn: worn[it.slot] === id ? 1 : 0 }; });
-  let presa = null, venduto = null;
-  HUD.showBandit({ coins: 180, near: 1, bounty: null, stock,
-    offers: tre.map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })) },
-    { take: (i) => { presa = i; }, sell: (id) => { venduto = id; } });
+  let presa = null, assoldato = 0;
+  const cbB = { take: (i) => { presa = i; }, hire: () => { assoldato++; } };
+  HUD.showBandit({ coins: 180, near: 1, bounty: null,
+    merc: { assunto: null, off: { nome: 'Ghisla', hero: 'guerriero', lvl: 4, costo: 170 }, motivo: null },
+    offers: tre.map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })) }, cbB);
   const panel = document.getElementById('banditPanel');
   ok(!panel.classList.contains('hidden'), 'il banco si apre');
   ok(String(document.getElementById('banditHead').innerHTML).indexOf('180') > 0, 'e dice quante monete hai');
@@ -323,21 +319,45 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(String(tg.children[0].innerHTML).indexOf('alla consegna') > 0, 'e ognuna dice quanto paga');
   tg.children[2].onclick();
   ok(presa === 2, 'cliccarne una la accetta, per indice');
-  // magazzino
-  const mag = document.getElementById('banditStock');
-  ok(mag.children.length === 3, 'il magazzino elenca cio che possiedi');
-  ok(String(mag.children[2].className).indexOf('on') >= 0, 'quello addosso e marcato');
-  ok(String(mag.children[2].innerHTML).indexOf('addosso') > 0, 'e lo dice a parole');
-  ok(String(mag.children[0].innerHTML).indexOf('di partenza') > 0, "quello di partenza non ha il bottone: vale zero");
-  ok(String(mag.children[1].innerHTML).indexOf('vendi') > 0, 'quello posseduto e non addosso si vende');
-  ok(String(mag.children[1].innerHTML).indexOf('115') > 0, 'a meta prezzo');
+
+  // --- v1.82: il banco dei mercenari ---
+  const bm = document.getElementById('banditMerc');
+  ok(bm.children.length === 1, 'al banco c e un candidato per volta');
+  const riga0 = bm.children[0].innerHTML;
+  ok(String(riga0).indexOf('Ghisla') > 0, 'con il suo nome');
+  ok(String(riga0).indexOf('livello 4') > 0, 'e il suo livello');
+  ok(String(riga0).indexOf('170') > 0, 'e quanto vuole');
+  ok(String(riga0).indexOf('abilit') > 0, 'e dice che non ha abilita');
+  ok(String(riga0).indexOf('disabled') < 0, 'con 180 monete il bottone e attivo');
+  ok(typeof bm.children[0].onclick === 'function', 'e la riga si puo cliccare');
+  bm.children[0].onclick();
+  ok(assoldato === 1, 'cliccare assolda');
+  // senza monete il bottone e spento
+  HUD._bndSig = null;
+  HUD.showBandit({ coins: 30, near: 1, bounty: null, offers: [],
+    merc: { assunto: null, off: { nome: 'Ghisla', hero: 'guerriero', lvl: 4, costo: 170 }, motivo: null } }, cbB);
+  const bmPoco = document.getElementById('banditMerc');
+  ok(String(bmPoco.children[0].innerHTML).indexOf('disabled') > 0, 'con 30 monete il bottone e spento');
+  ok(typeof bmPoco.children[0].onclick !== 'function', 'e la riga non fa niente');
+  // gia assunto: il banco lo ricorda e non ne offre un altro
+  HUD._bndSig = null;
+  HUD.showBandit({ coins: 900, near: 1, bounty: null, offers: [],
+    merc: { assunto: { nome: 'Vesper', hero: 'mago', lvl: 7 }, off: null, motivo: null } }, cbB);
+  const bm2 = document.getElementById('banditMerc');
+  ok(String(bm2.children[0].innerHTML).indexOf('Vesper') > 0, 'con uno gia al soldo il banco mostra lui');
+  ok(String(bm2.children[0].innerHTML).indexOf('assolda') < 0, 'e non se ne puo assoldare un secondo');
+  // in multiplayer il banco lo dice e basta
+  HUD._bndSig = null;
+  HUD.showBandit({ coins: 900, near: 1, bounty: null, offers: [], merc: { assunto: null, off: null, motivo: 'solo' } }, cbB);
+  ok(document.getElementById('banditMerc').children.length === 0, 'in multiplayer non si assolda nessuno');
+  ok(String(document.getElementById('mercSub').textContent).indexOf('singola') > 0, 'e il banco spiega perche');
 
   // --- il banco, con la taglia gia accettata ---
   const att = B.istanza('caccia', 6); att.have = 12;
   HUD._bndSig = null;
-  HUD.showBandit({ coins: 400, near: 1, offers: [], stock,
+  HUD.showBandit({ coins: 400, near: 1, offers: [], merc: { assunto: null, off: null, motivo: null },
     bounty: { k: att.k, n: att.n, have: att.have, pay: att.pay, nome: att.nome, icon: att.icon, color: att.color, testo: att.testo } },
-    { take: () => {}, sell: () => {} });
+    { take: () => {}, hire: () => {} });
   const riga = document.getElementById('banditBounty').children[0];
   ok(String(riga.className).indexOf('att') >= 0, 'con una taglia aperta il banco mostra quella, non le offerte');
   ok(String(riga.innerHTML).indexOf('12 / ') > 0, 'con il conteggio');

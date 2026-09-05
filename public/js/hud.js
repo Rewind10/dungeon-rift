@@ -595,7 +595,7 @@
       const d = this._bnd; if (!d) return;
       const hd = $('banditHead');
       if (hd) hd.innerHTML = '\uD83E\uDEA7 <b>Banditore</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
-      const sig = JSON.stringify([d.coins, d.bounty, d.offers, d.stock]);
+      const sig = JSON.stringify([d.coins, d.bounty, d.offers, d.merc]);
       if (sig === this._bndSig) return; this._bndSig = sig;
       const cb = this._bndCb || {};
       // --- taglie ---
@@ -621,19 +621,33 @@
         });
         tg.appendChild(row);
       }
-      // --- magazzino ---
-      const mag = $('banditStock'); mag.innerHTML = '';
-      (d.stock || []).forEach(it => {
-        const el = document.createElement('div'); el.className = 'mi' + (it.worn ? ' on' : '');
-        el.innerHTML = '<div class="sl">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
-          '<div class="ds">' + esc(it.slotName) + ' \u00b7 rango ' + it.rank + '</div></div>' +
-          (it.worn ? '<span class="add">addosso</span>'
-                   : (it.cost ? '<button data-sell="' + it.id + '">vendi <b>\uD83E\uDE99' + it.pay + '</b></button>'
-                              : '<span class="add" style="color:#6f7890">di partenza</span>'));
-        const b = el.querySelector('button');
-        if (b) el.onclick = (e) => { const t = e.target.closest('button'); if (t && cb.sell) cb.sell(t.dataset.sell); };
-        mag.appendChild(el);
-      });
+      // --- v1.82: la compagnia di ventura ---
+      // Un candidato per volta, del tuo stesso livello, prendere o lasciare. Se ne hai gia' uno il banco
+      // te lo ricorda e non ne offre un altro: uno solo per volta, e finche' e' vivo e' quello.
+      const box = $('banditMerc'), msub = $('mercSub'); box.innerHTML = '';
+      const M = d.merc || {};
+      const ICO = { guerriero: '\u2694\uFE0F', mago: '\uD83D\uDD2E', ladro: '\uD83C\uDFF9' };
+      const CLA = { guerriero: 'Guerriero', mago: 'Mago', ladro: 'Ladro' };
+      if (M.assunto) {
+        if (msub) msub.textContent = 'Ne hai gia\u2019 uno al soldo. Lo ritrovi sulla mappa, curato.';
+        const el = document.createElement('div'); el.className = 'mi on';
+        el.innerHTML = '<div class="sl">' + (ICO[M.assunto.hero] || '\u2694\uFE0F') + '</div><div><div class="nm">' + esc(M.assunto.nome) + '</div>' +
+          '<div class="ds">' + (CLA[M.assunto.hero] || '') + ' \u00b7 livello ' + M.assunto.lvl + '</div></div><span class="add">al tuo soldo</span>';
+        box.appendChild(el);
+      } else if (M.motivo === 'solo') {
+        if (msub) msub.textContent = 'I mercenari si assoldano solo in partita singola.';
+      } else if (M.off) {
+        if (msub) msub.textContent = 'Uno solo per volta. Ti segue nella mappa, non al villaggio, e se cade se ne assume un altro.';
+        const o = M.off, puo = (d.coins || 0) >= o.costo;
+        const el = document.createElement('div'); el.className = 'mi';
+        el.innerHTML = '<div class="sl">' + (ICO[o.hero] || '\u2694\uFE0F') + '</div><div><div class="nm">' + esc(o.nome) + '</div>' +
+          '<div class="ds">' + (CLA[o.hero] || '') + ' \u00b7 livello ' + o.lvl + ' \u00b7 nessuna abilit\u00e0</div></div>' +
+          '<button data-hire="1"' + (puo ? '' : ' disabled') + '>assolda <b>\uD83E\uDE99' + o.costo + '</b></button>';
+        if (puo) el.onclick = () => { if (cb.hire) cb.hire(); };   // tutta la riga e' il gesto: il bottone e' solo il prezzo
+        box.appendChild(el);
+      } else {
+        if (msub) msub.textContent = 'Nessuno al banco in questo momento.';
+      }
     },
 
     // ===== v1.71 — IL BANCO DELL'ERBORISTA =====
