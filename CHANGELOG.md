@@ -2,6 +2,38 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.86.0] — 2026-09-05 · "La prima cosa che vedi"
+
+#### 🖼️ Il menu ha un'illustrazione
+Il menu iniziale era un gradiente scuro con una card sopra: onesto, muto. Adesso ha l'**artwork** —
+i tre eroi di fronte, l'orda e la faglia alle spalle — a tutto schermo, in `assets/art/menu_key_art.jpg`.
+Il brief completo e il prompt con cui e' stata generata stanno in **ARTWORK.md**, cosi' la prossima si fa
+senza ripartire da zero.
+
+Il file originale (PNG, 2,5 MB) resta nel repo; quello che il gioco carica e' la conversione **JPEG q88 da
+385 KB**. E' la prima cosa che si scarica: un settimo del peso, differenza invisibile.
+
+#### 🪟 E il pannello diventa vetro
+Un'illustrazione dietro una lastra opaca e' un'illustrazione sprecata. Il pannello adesso e' **vetro
+sfocato** (`backdrop-filter`, sfondo al 70-86%), con un **filo d'oro** in cima che lo stacca dallo sfondo
+senza incorniciarlo, e un'entrata in dissolvenza di mezzo secondo. Campi e chip degli eroi sono diventati
+semitrasparenti per la stessa ragione.
+
+La velatura sopra l'artwork scurisce **la fascia centrale** — quella dietro al pannello — e lascia accese
+**le due fasce laterali**. La prima versione faceva l'opposto, una vignettatura radiale che apriva il centro
+e spegneva i bordi: solo guardando la schermata renderizzata si vede il problema — il centro e' coperto dal
+pannello, e quella velatura spegneva esattamente gli unici due pezzi di illustrazione che si vedono.
+
+Piccoli movimenti, niente di piu': l'immagine **deriva lentissima** (48s avanti e indietro, scala 1.055) e
+la parola **RIFT** pulsa d'oro ogni 3,6s. Un menu fermo sembra una schermata; uno che respira sembra un
+posto.
+
+#### 🧭 E la guida del menu tornava alla 1.84
+Diceva ancora *"le abilita' Q/E tornano con l'evoluzione delle classi"* e *"ai livelli 3, 6, 9 e 12 scegli
+1 abilita' su 4"*. Corretta: **Q ed E sono le attive** (livelli 6 e 12), le **passive sono al 3 e al 9**.
+
+---
+
 ### [1.85.0] — 2026-09-05 · "Q ed E"
 
 #### ⚡ Dodici abilita' attive, quattro per classe

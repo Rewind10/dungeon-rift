@@ -4,15 +4,44 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .hidden{display:none !important}
 canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#05060a;cursor:crosshair}
 #menu,#lobby,#endScreen,#upgradeScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:40;background:radial-gradient(1200px 800px at 50% -10%,#161a2e 0%,#080910 60%,#05060a 100%)}
-.menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,var(--panel),#10131f);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
-h1{font-size:44px;margin:0 0 2px;letter-spacing:3px;font-weight:800;background:linear-gradient(90deg,#7cc7ff,#00f0c8);-webkit-background-clip:text;background-clip:text;color:transparent}
-h1 span{color:var(--gold);-webkit-text-fill-color:var(--gold)}
+/* v1.86 — L'ARTWORK DEL MENU. L'immagine sta in /assets/art/menu_key_art.jpg (1920x1080). Se il file non
+   c'e', il gradiente della riga sopra resta visibile e il menu funziona identico: niente riquadro rotto.
+   Sopra l'illustrazione c'e' una VELATURA a due strati — una vignettatura radiale e una sfumatura
+   verticale — che serve a una cosa sola: tenere leggibile il pannello senza spegnere l'artwork. */
+#menu{overflow:hidden}
+/* L'artwork sta su un suo strato: cosi' puo' respirare (deriva lentissima, 48s) senza trascinarsi
+   dietro il pannello. Se il file manca resta il gradiente scuro e il menu funziona identico. */
+#menu::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
+  background:url('/assets/art/menu_key_art.jpg') center 44%/cover no-repeat;
+  animation:artDrift 48s ease-in-out infinite alternate}
+@keyframes artDrift{from{transform:scale(1.0) translate3d(0,0,0)}to{transform:scale(1.055) translate3d(-1.1%,-0.9%,0)}}
+/* La velatura scurisce LA FASCIA CENTRALE — quella dietro al pannello — e lascia accese le due fasce
+   laterali, che sono l'unica parte dell'illustrazione che si vede davvero. La prima versione faceva
+   l'opposto (vignettatura radiale: centro aperto, bordi spenti) e spegneva proprio gli eroi. */
+#menu::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:
+  linear-gradient(90deg,rgba(5,6,10,.10) 0%,rgba(5,6,10,.06) 16%,rgba(5,6,10,.42) 34%,rgba(5,6,10,.62) 50%,rgba(5,6,10,.42) 66%,rgba(5,6,10,.06) 84%,rgba(5,6,10,.10) 100%),
+  linear-gradient(180deg,rgba(5,6,10,.52) 0%,rgba(5,6,10,.04) 26%,rgba(5,6,10,.14) 58%,rgba(5,6,10,.82) 100%),
+  radial-gradient(1500px 950px at 50% 50%,rgba(5,6,10,0) 58%,rgba(5,6,10,.30) 84%,rgba(5,6,10,.60) 100%)}
+#menu>*{position:relative;z-index:2}
+.menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,rgba(17,21,36,.70),rgba(8,11,22,.86));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid rgba(146,164,214,.20);border-radius:var(--radius);padding:26px 28px;
+  box-shadow:0 40px 110px rgba(0,0,0,.78),0 0 60px rgba(0,240,200,.05),inset 0 1px 0 rgba(255,255,255,.07)}
+/* un filo d'oro in cima al pannello: e' quello che lo stacca dall'illustrazione senza incorniciarlo */
+.menu-card{position:relative}
+.menu-card::before{content:'';position:absolute;left:14%;right:14%;top:-1px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,176,32,.75),transparent)}
+#menu .menu-card{animation:cardIn .5s cubic-bezier(.16,.84,.44,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+h1{font-size:46px;margin:0 0 4px;letter-spacing:4px;font-weight:800;background:linear-gradient(90deg,#7cc7ff,#00f0c8);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 10px rgba(0,240,200,.28)) drop-shadow(0 6px 26px rgba(0,0,0,.9))}
+h1 span{color:var(--gold);-webkit-text-fill-color:var(--gold);animation:riftPulse 3.6s ease-in-out infinite}
+@keyframes riftPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(255,176,32,.35))}50%{filter:drop-shadow(0 0 18px rgba(255,176,32,.8))}}
 h2{font-size:19px;margin:18px 0 10px;letter-spacing:1px;color:#cfd7ea}
-.tag{color:var(--muted);margin:0 0 16px;font-size:15px}
+.tag{color:#a9b3c9;margin:0 0 16px;font-size:15px;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .field{margin:10px 0}
 .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase}
 .field small{text-transform:none;opacity:.7}
-input[type=text],input:not([type]){width:100%;padding:11px 13px;background:#0c0f1a;border:1px solid var(--line);color:var(--ink);border-radius:10px;font-size:16px;outline:none}
+input[type=text],input:not([type]){width:100%;padding:11px 13px;background:rgba(8,11,22,.72);border:1px solid rgba(146,164,214,.22);color:var(--ink);border-radius:10px;font-size:16px;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus{box-shadow:0 0 0 3px rgba(58,160,255,.18)}
 input:focus{border-color:var(--accent)}
 button{cursor:pointer;font-family:inherit;font-weight:700;border:none;border-radius:11px;padding:12px 18px;font-size:16px;letter-spacing:.5px;transition:transform .08s,filter .15s}
 button:active{transform:translateY(1px) scale(.99)}
@@ -20,9 +49,9 @@ button.primary{width:100%;margin-top:16px;color:#04121f;background:linear-gradie
 button.primary:hover{filter:brightness(1.08)}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);width:100%;margin-top:8px}
 #menuMsg{margin-top:10px;min-height:18px;font-size:14px;color:var(--gold);text-align:center}
-.credits{margin-top:16px;color:#5a6178;font-size:12px}
+.credits{margin-top:16px;color:#8d97ae;font-size:12px;text-shadow:0 1px 8px rgba(0,0,0,.95);letter-spacing:.3px}
 #heroSelect{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.hero-chip{background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative}
+.hero-chip{background:rgba(28,32,51,.66);border:2px solid rgba(146,164,214,.18);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative}
 .hero-chip:hover{transform:translateY(-2px)}
 .hero-chip.sel{border-color:var(--pick,var(--accent));box-shadow:0 0 0 1px var(--pick,var(--accent))}
 .hero-chip .avatar{width:56px;height:56px;margin:2px auto 8px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px}

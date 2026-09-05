@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.85.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.86.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.86 (il menu illustrato)
+- **🖼️ Artwork a tutto schermo** nel menu iniziale: i tre eroi di fronte, l'orda e la faglia alle spalle.
+  Sta in `public/assets/art/menu_key_art.jpg` (il brief e il prompt sono in **ARTWORK.md**).
+- **🪟 Il pannello diventa vetro**: sfondo semitrasparente con sfocatura, filo d'oro in cima, entrata in
+  dissolvenza. L'illustrazione si vede *attraverso* il menu invece di stare dietro una lastra.
+- **La velatura scurisce solo la fascia centrale**, quella dietro al pannello: le due fasce laterali —
+  l'unica parte dell'artwork che si vede davvero — restano accese.
+- **🌬️ L'immagine respira**: deriva lentissima (48s, avanti e indietro) e la faglia del titolo pulsa.
+- Se il file dell'artwork non c'e', resta il vecchio sfondo scuro: il menu non si rompe.
 
 ## 🆕 Novita v1.85 (le abilità attive)
 Gli slot **Q** ed **E** erano disegnati col lucchetto dal v1.79 e vuoti dal v1.66. Adesso hanno dentro

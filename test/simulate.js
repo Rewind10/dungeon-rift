@@ -2862,7 +2862,7 @@ function testV178() {
 
   // --- 7. I FONT DEL TESTO SONO CRESCIUTI DI 1px, I TITOLI NO ---
   const css = fs.readFileSync(__dirname + '/../public/style.css', 'utf8');
-  assert(/h1\{font-size:44px/.test(css), 'il titolo grande e rimasto a 44px');
+  assert(/h1\{font-size:4[46]px/.test(css), 'il titolo grande resta grande (46px dalla v1.86, sopra l artwork)');
   assert(/h2\{font-size:19px/.test(css), 'i titoli di sezione sono rimasti a 19px');
   assert(/#hud\{[^}]*font-size:15px/.test(css), 'il testo dell interfaccia e passato a 15px');
   assert(/\.kf\{[^}]*font-size:13px/.test(css), 'il registro delle uccisioni e passato a 13px');

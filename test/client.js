@@ -496,6 +496,14 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   // il DOM finto crea al volo qualunque id gli si chieda, quindi interrogarlo non prova niente: si
   // guarda la PAGINA VERA, che e' l unico posto dove il pulsante poteva restare per sbaglio.
   ok(fs.readFileSync(ROOT + 'public/index.html', 'utf8').indexOf('exitBtn') < 0, 'il pulsante EXIT e stato tolto dalla pagina');
+
+  // v1.86 — l'artwork del menu: il CSS lo carica, e il gradiente di prima resta come rete di sicurezza
+  {
+    const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+    ok(css.indexOf("url('/assets/art/menu_key_art.jpg')") > 0, 'il menu carica l artwork da assets/art/menu_key_art.jpg');
+    ok(css.indexOf('#menu::before') > 0, 'e ci mette sopra la velatura che tiene leggibile il pannello');
+    ok(css.indexOf('radial-gradient(1200px 800px at 50% -10%') > 0, 'il gradiente scuro resta: senza il file il menu non si rompe');
+  }
   // in combattimento non si vede niente
   HUD.updateTop(snap({}), null);
   ok(top.classList.contains('hidden'), 'in combattimento l avviso di fine ondata non c e');
