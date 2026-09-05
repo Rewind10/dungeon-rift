@@ -2,6 +2,19 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.86.1] — 2026-09-05 · "Meno da leggere"
+
+Via dal menu la **scheda della classe**: il riquadro fra i tre eroi e il pulsante che elencava arma, danni,
+cadenza, statistica, scatto, passiva, pregi e difetti. Erano sei righe di tabella davanti a un'illustrazione,
+e chiedevano di studiare prima di poter giocare. Restano i **tre riquadri** per scegliere l'eroe e
+**ENTRA IN PARTITA**; cosa sa fare una classe si scopre giocandola — e comunque e' tutto nel menu di pausa.
+
+Il pannello si accorcia di un terzo e l'artwork si vede sopra e sotto, che era il punto della 1.86.
+`showHeroDetail()` resta e non fa niente finche' il riquadro non c'e': se un giorno lo si rimette da
+un'altra parte, torna a riempirlo da solo.
+
+---
+
 ### [1.86.0] — 2026-09-05 · "La prima cosa che vedi"
 
 #### 🖼️ Il menu ha un'illustrazione
