@@ -11,29 +11,30 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
 /* v1.86.2 — il menu sta IN ALTO, non al centro: la card e' corta dalla 1.86.1 e centrata verticalmente
    lasciava una fascia vuota sotto. In alto, l'illustrazione respira sotto il pannello invece che
    attorno. */
-#menu{overflow:hidden;justify-content:flex-start;padding-top:4vh}
+#menu,#lobby{overflow:hidden}
+#menu{justify-content:flex-start;padding-top:4vh}
 #menu .menu-card{max-height:none}
 /* L'artwork sta su un suo strato: cosi' puo' respirare (deriva lentissima, 48s) senza trascinarsi
    dietro il pannello. Se il file manca resta il gradiente scuro e il menu funziona identico. */
-#menu::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
+#menu::after,#lobby::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
   background:url('/assets/art/menu_key_art.jpg') center 44%/cover no-repeat;
   animation:artDrift 48s ease-in-out infinite alternate}
 @keyframes artDrift{from{transform:scale(1.0) translate3d(0,0,0)}to{transform:scale(1.055) translate3d(-1.1%,-0.9%,0)}}
 /* La velatura scurisce LA FASCIA CENTRALE — quella dietro al pannello — e lascia accese le due fasce
    laterali, che sono l'unica parte dell'illustrazione che si vede davvero. La prima versione faceva
    l'opposto (vignettatura radiale: centro aperto, bordi spenti) e spegneva proprio gli eroi. */
-#menu::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:
+#menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:
   linear-gradient(90deg,rgba(5,6,10,.10) 0%,rgba(5,6,10,.06) 16%,rgba(5,6,10,.42) 34%,rgba(5,6,10,.62) 50%,rgba(5,6,10,.42) 66%,rgba(5,6,10,.06) 84%,rgba(5,6,10,.10) 100%),
   linear-gradient(180deg,rgba(5,6,10,.52) 0%,rgba(5,6,10,.04) 26%,rgba(5,6,10,.14) 58%,rgba(5,6,10,.82) 100%),
   radial-gradient(1500px 950px at 50% 50%,rgba(5,6,10,0) 58%,rgba(5,6,10,.30) 84%,rgba(5,6,10,.60) 100%)}
-#menu>*{position:relative;z-index:2}
+#menu>*,#lobby>*{position:relative;z-index:2}
 .menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,rgba(17,21,36,.70),rgba(8,11,22,.86));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid rgba(146,164,214,.20);border-radius:var(--radius);padding:26px 28px;
   box-shadow:0 40px 110px rgba(0,0,0,.78),0 0 60px rgba(0,240,200,.05),inset 0 1px 0 rgba(255,255,255,.07)}
 /* un filo d'oro in cima al pannello: e' quello che lo stacca dall'illustrazione senza incorniciarlo */
 .menu-card{position:relative}
 .menu-card::before{content:'';position:absolute;left:14%;right:14%;top:-1px;height:1px;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(255,176,32,.75),transparent)}
-#menu .menu-card{animation:cardIn .5s cubic-bezier(.16,.84,.44,1) both}
+#menu .menu-card,#lobby .menu-card{animation:cardIn .5s cubic-bezier(.16,.84,.44,1) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 h1{font-size:46px;margin:0 0 4px;letter-spacing:4px;font-weight:800;background:linear-gradient(90deg,#7cc7ff,#00f0c8);-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 2px 10px rgba(0,240,200,.28)) drop-shadow(0 6px 26px rgba(0,0,0,.9))}

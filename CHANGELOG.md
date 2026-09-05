@@ -2,6 +2,19 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.89.3] — 2026-09-05 · "Anche in sala d'attesa"
+
+Illustrazione nuova — la stessa scena, disegnata meglio: la faglia piu' alta e piu' viva, il troll e il
+beholder piu' definiti, i tre eroi con piu' contrasto. Arriva gia' a **1920×1080**, quindi va nel gioco
+**senza ricomprimerla**: ricomprimere un JPEG che e' gia' della misura giusta si porta via qualita' e non
+restituisce niente (520 KB, uguali).
+
+E l'artwork adesso c'e' anche nella **sala d'attesa**, quella con *AVVIA LA RUN*: `#menu` e `#lobby`
+condividono le stesse tre regole (lo strato dell'immagine, la velatura, il pannello di vetro), quindi le due
+schermate sono lo stesso posto invece che due fondali diversi — e non c'e' CSS duplicato da tenere allineato.
+
+---
+
 ### [1.89.2] — 2026-09-05 · "Il menu cambia quadro"
 
 Illustrazione nuova nel menu: i tre eroi in primo piano — guerriero e mago a sinistra, ladro a destra — con

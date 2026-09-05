@@ -5,7 +5,7 @@ da dare al generatore di immagini. Il codice che le usa e' gia' scritto: basta m
 
 | Illustrazione | File | Formato | Stato |
 |---|---|---|---|
-| Sfondo del menu iniziale | `public/assets/art/menu_key_art.jpg` | **1920×1080** (16:9) | **rifatta** (v1.89.2) — la prima versione resta in `menu_key_art_v1.png` |
+| Sfondo del menu iniziale **e della sala d'attesa** | `public/assets/art/menu_key_art.jpg` | **1920×1080** (16:9) | **rifatta** (v1.89.3) — nativa a 1920×1080, usata senza ricomprimere. La prima versione resta in `menu_key_art_v1.png` |
 | Scheda del bestiario | `public/assets/art/roster_overview.png` | 1024×1536 | fatta |
 | Concept del Troll | `public/assets/art/cave_brute_concept.png` | — | fatto |
 
@@ -14,8 +14,9 @@ da dare al generatore di immagini. Il codice che le usa e' gia' scritto: basta m
 ## 🖼️ Sfondo del menu iniziale *(v1.86)*
 
 ### Dove va
-`public/assets/art/menu_key_art.jpg` — **esattamente questo nome**. Il CSS lo carica da solo; se il file non
-c'e' resta il gradiente scuro di prima e non si rompe niente.
+`public/assets/art/menu_key_art.jpg` — **esattamente questo nome**. Il CSS lo carica da solo, **sia nel menu
+iniziale sia nella sala d'attesa** (`#menu` e `#lobby` condividono la stessa regola dalla v1.89.3); se il
+file non c'e' resta il gradiente scuro di prima e non si rompe niente.
 
 > ✅ **Rifatta in v1.89.2.** La seconda illustrazione arrivava a **1376×768**: portata a **1920×1080** e
 > salvata a qualita' 92 (**521 KB**). La prima versione resta in `menu_key_art_v1.png`.
