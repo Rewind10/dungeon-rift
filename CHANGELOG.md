@@ -2,6 +2,15 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.86.2] — 2026-09-05 · "In alto"
+
+Il pannello del menu e' **ancorato in alto** (4vh dal bordo) invece che centrato verticalmente. Da quando
+e' corto, centrarlo lasciava una fascia vuota sotto e schiacciava l'illustrazione in due mezzelune sopra e
+sotto; in alto l'artwork resta intero sotto al pannello. Tolto anche il `max-height:92vh` del menu: adesso
+non serve piu' a niente, la card sta comoda.
+
+---
+
 ### [1.86.1] — 2026-09-05 · "Meno da leggere"
 
 Via dal menu la **scheda della classe**: il riquadro fra i tre eroi e il pulsante che elencava arma, danni,

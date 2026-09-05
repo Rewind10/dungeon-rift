@@ -8,7 +8,11 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
    c'e', il gradiente della riga sopra resta visibile e il menu funziona identico: niente riquadro rotto.
    Sopra l'illustrazione c'e' una VELATURA a due strati — una vignettatura radiale e una sfumatura
    verticale — che serve a una cosa sola: tenere leggibile il pannello senza spegnere l'artwork. */
-#menu{overflow:hidden}
+/* v1.86.2 — il menu sta IN ALTO, non al centro: la card e' corta dalla 1.86.1 e centrata verticalmente
+   lasciava una fascia vuota sotto. In alto, l'illustrazione respira sotto il pannello invece che
+   attorno. */
+#menu{overflow:hidden;justify-content:flex-start;padding-top:4vh}
+#menu .menu-card{max-height:none}
 /* L'artwork sta su un suo strato: cosi' puo' respirare (deriva lentissima, 48s) senza trascinarsi
    dietro il pannello. Se il file manca resta il gradiente scuro e il menu funziona identico. */
 #menu::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
