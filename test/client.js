@@ -497,6 +497,18 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   // guarda la PAGINA VERA, che e' l unico posto dove il pulsante poteva restare per sbaglio.
   ok(fs.readFileSync(ROOT + 'public/index.html', 'utf8').indexOf('exitBtn') < 0, 'il pulsante EXIT e stato tolto dalla pagina');
 
+  // v1.90 — la musica: il brano c'e', ed e' UNA la funzione che decide dove suona
+  {
+    const au = fs.readFileSync(ROOT + 'public/js/audio.js', 'utf8');
+    ok(fs.existsSync(ROOT + 'public/assets/audio/theme_loop.ogg'), 'il brano e nel progetto (ogg)');
+    ok(fs.existsSync(ROOT + 'public/assets/audio/theme_loop.m4a'), 'con l m4a per Safari');
+    ok(au.indexOf('scene(kind)') > 0, 'e A.scene() e il punto unico che decide cosa si sente');
+    ok(/kind === 'menu' \|\| kind === 'lobby' \|\| kind === 'wave'/.test(au), 'brano in menu, sala d attesa e ondate');
+    ok(au.indexOf('this.startMusic(kind === \'boss\')') > 0, 'e sintetizzatore altrove (villaggio e riepilogo)');
+    const mn = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    ok(mn.indexOf("C.PHASE_MARKET ? 'village'") > 0, 'il mercato chiede la scena villaggio');
+  }
+
   // v1.86 — l'artwork del menu: il CSS lo carica, e il gradiente di prima resta come rete di sicurezza
   {
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');

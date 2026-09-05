@@ -3,6 +3,7 @@
   'use strict';
   const A = {
     ctx: null, master: null, musicGain: null, sfxGain: null, musicOn: true, sfxOn: true,
+    trackBuf: null, trackSrc: null, trackGain: null, scenaCorrente: null, TRACK_VOL: 0.85,   // v1.90 — il brano
     tempo: 74, step: 0, nextTime: 0, timer: null, bossMode: false,
     init() { if (this.ctx) return; const AC = window.AudioContext || window.webkitAudioContext; this.ctx = new AC(); this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.42; this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.6; this.musicGain.connect(this.master); this.sfxGain.connect(this.master); this.master.connect(this.ctx.destination); this.conv = this.ctx.createConvolver(); this.conv.buffer = this._imp(3.4, 3.0); this.reverbGain = this.ctx.createGain(); this.reverbGain.gain.value = 0.32; this.conv.connect(this.reverbGain); this.reverbGain.connect(this.master); this.musicLP = this.ctx.createBiquadFilter(); this.musicLP.type = 'lowpass'; this.musicLP.frequency.value = 2200; },
     resume() { this.init(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
@@ -82,7 +83,95 @@
     boss() { this._blip(60, 1.0, 'sawtooth', 0.42, 45); this._noise(1.2, 0.32, 380); },
     gameover() { [330, 262, 196].forEach((f, i) => setTimeout(() => this._blip(f, 0.5, 'triangle', 0.24), i * 300)); },
     victory() { [392, 523, 659, 784, 1046].forEach((f, i) => setTimeout(() => this._blip(f, 0.3, 'triangle', 0.24), i * 160)); },
-    toggleMusic() { this.musicOn = !this.musicOn; if (this.dGain) this.dGain.gain.setTargetAtTime(this.musicOn ? 0.16 : 0, this.ctx.currentTime, 0.3); return this.musicOn; },
+    // ===== v1.90 — LA TRACCIA =====================================================================
+    // Fino alla 1.89 la musica era TUTTA sintetizzata qui dentro (drone, pad, campane, battito).
+    // Adesso c'e' un brano vero — `assets/audio/theme_loop.ogg`, con l'm4a per Safari — che suona nel
+    // MENU, nella SALA D'ATTESA e durante le ONDATE. Nel villaggio e nel riepilogo di fine ondata NO:
+    // li' resta la musica procedurale, che e' l'unica cosa che quelle due schermate hanno di loro.
+    //
+    // Il brano si carica UNA volta e resta in memoria: 14 secondi decodificati sono ~2,5 MB, e il costo
+    // di rileggerlo a ogni cambio di schermata sarebbe uno stacco a ogni passaggio.
+    _trackURL(ext) { return '/assets/audio/theme_loop.' + ext; },
+    async _caricaTraccia() {
+      if (this.trackBuf || this._trackLoad) return this._trackLoad;
+      this.init();
+      this._trackLoad = (async () => {
+        for (const ext of ['ogg', 'm4a']) {          // ogg per Chrome/Firefox, m4a per Safari
+          try {
+            const r = await fetch(this._trackURL(ext));
+            if (!r.ok) continue;
+            const b = await r.arrayBuffer();
+            this.trackBuf = await this.ctx.decodeAudioData(b);
+            return this.trackBuf;
+          } catch (_) { /* si prova il formato dopo */ }
+        }
+        return null;                                  // niente file: resta la musica procedurale
+      })();
+      return this._trackLoad;
+    },
+    async playTrack(fade) {
+      this.resume();
+      if (this.trackSrc) return;                      // gia' in suono: non si riparte da capo
+      const buf = await this._caricaTraccia();
+      if (!buf) { this.startMusic(false); return; }   // ripiego: se il brano non c'e', suona il sintetizzatore
+      if (this.trackSrc) return;                      // due chiamate ravvicinate mentre caricava
+      const g = this.ctx.createGain();
+      g.gain.value = 0;
+      g.connect(this.musicGain);
+      const s = this.ctx.createBufferSource();
+      s.buffer = buf; s.loop = true;                  // il loop e' montato nel file: nessun buco alla giunzione
+      s.connect(g); s.start();
+      this.trackGain = g; this.trackSrc = s;
+      const t = this.ctx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(this.musicOn ? this.TRACK_VOL : 0, t + (fade == null ? 1.2 : fade));
+    },
+    stopTrack(fade) {
+      const s = this.trackSrc, g = this.trackGain;
+      if (!s || !g) return;
+      this.trackSrc = null; this.trackGain = null;
+      const t = this.ctx.currentTime, f = fade == null ? 0.8 : fade;
+      try {
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(g.gain.value, t);
+        g.gain.linearRampToValueAtTime(0, t + f);
+        s.stop(t + f + 0.05);
+      } catch (_) { try { s.stop(); } catch (__) {} }
+    },
+    // L'UNICO punto da cui si decide cosa si sente. Le schermate chiamano questo, non startMusic:
+    // cosi' la regola \"dove suona il brano\" sta scritta in un posto solo.
+    //   menu · lobby · wave  -> il brano
+    //   village · shop       -> la musica procedurale (drone e campane)
+    //   off                  -> silenzio (fine partita)
+    scene(kind) {
+      if (this.scenaCorrente === kind) return;
+      this.scenaCorrente = kind;
+      this._gestoArmato();                            // se il browser non ha ancora sbloccato l'audio, si riprova al primo click
+      if (kind === 'off') { this.stopTrack(0.6); this.stopMusic(); return; }
+      if (kind === 'menu' || kind === 'lobby' || kind === 'wave') { this.stopMusic(); this.playTrack(); return; }
+      this.stopTrack(0.7); this.startMusic(kind === 'boss');
+    },
+    // I browser non fanno partire l'audio prima di un gesto dell'utente: il menu e' la prima cosa che si
+    // vede, e li' un gesto non c'e' ancora stato. Ci si iscrive una volta sola e alla prima interazione
+    // si fa ripartire la scena corrente.
+    _gestoArmato() {
+      if (this._gesto) return;
+      this._gesto = 1;
+      const via = () => {
+        window.removeEventListener('pointerdown', via); window.removeEventListener('keydown', via);
+        this._gesto = 2; this.resume();
+        const k = this.scenaCorrente; this.scenaCorrente = null; if (k) this.scene(k);
+      };
+      window.addEventListener('pointerdown', via, { once: false });
+      window.addEventListener('keydown', via, { once: false });
+    },
+    toggleMusic() {
+      this.musicOn = !this.musicOn;
+      if (this.dGain) this.dGain.gain.setTargetAtTime(this.musicOn ? 0.16 : 0, this.ctx.currentTime, 0.3);
+      // v1.90 — il tasto M vale anche per il brano, se no ne spegneva solo meta'
+      if (this.trackGain) this.trackGain.gain.setTargetAtTime(this.musicOn ? this.TRACK_VOL : 0, this.ctx.currentTime, 0.25);
+      return this.musicOn;
+    },
   };
   window.GameAudio = A;
 })();

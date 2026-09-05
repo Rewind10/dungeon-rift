@@ -2,6 +2,47 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.90.0] — 2026-09-05 · "Una musica vera"
+
+Fino a qui la musica era **tutta sintetizzata** in `audio.js`: drone, pad, campane, battito. Adesso c'e' un
+**brano** — quello registrato da Paolo — nel **menu**, nella **sala d'attesa** e durante le **ondate**. Nel
+villaggio e nel riepilogo di fine ondata resta il sintetizzatore: e' l'unica cosa che quelle due schermate
+hanno di loro, e spegnerla per mettere ovunque lo stesso brano sarebbe stato un peggioramento.
+
+#### Cosa e' stato fatto al file, e perche'
+La registrazione arrivava a **16,1 s, −30,1 LUFS, picco −17,3 dBFS**: giusta come materiale, inutilizzabile
+come sottofondo — quattordici decibel sotto il livello di una musica da gioco, e con la coda in dissolvenza,
+cioe' in loop avrebbe fatto un buco a ogni giro.
+
+| | Prima | Dopo |
+|---|---|---|
+| Volume | −30,1 LUFS | **−18,0 LUFS** (guadagno statico di 12,8 dB) |
+| Durata | 16,1 s con la coda che sfuma | **14,235 s, loop chiuso** |
+| Sopra i 4 kHz | −12,6 dB relativi | −7,0 dB (campana alta +4 dB a 5,5 kHz) |
+| Formato | m4a 204 kbps | **ogg Vorbis 196 KB** + m4a per Safari |
+
+Tre cose meritano di essere scritte, perche' sono errori in cui si ricasca:
+
+1. **Il punto di giunzione si cerca, non si sceglie.** L'autocorrelazione dell'inviluppo dice che la frase
+   dura **4,35 s**; fra tutte le lunghezze fra 11,5 s e la fine si prende quella in cui il materiale che
+   precede il taglio somiglia di piu' all'inizio del brano. Poi la coda si **dissolve dentro** l'inizio con
+   curve di potenza costante (sin²/cos²), che non fanno il buco di volume a meta' dissolvenza.
+2. **Il master va fatto PRIMA di montare il loop.** Montandolo prima e filtrando dopo, i filtri partono con
+   la memoria vuota e i primi campioni escono diversi dal regime: alla giunzione si formava uno **scalino di
+   0,123** (un clic udibile a ogni giro). Invertito l'ordine: **0,013**, cioe' −38 dB sotto la musica.
+3. **Niente normalizzazione dinamica.** `loudnorm` cambia il guadagno nel tempo e quindi rompe il raccordo
+   che si e' appena costruito. Si misura il volume, si applica un **guadagno fisso** e si mette un limiter
+   a −1 dB dopo.
+
+#### Come e' agganciato al gioco
+Un punto solo decide cosa si sente — `A.scene('menu' | 'lobby' | 'wave' | 'village' | 'shop' | 'off')` — e
+le schermate dicono soltanto dove sono. Il brano si carica **una volta** e resta in memoria; il tasto **M**
+spegne anche lui (prima ne avrebbe spento solo meta'); i browser non fanno partire l'audio prima di un gesto
+dell'utente, e siccome il menu e' la prima cosa che si vede, `A.scene()` se ne accorge e **riprova da sola al
+primo click o al primo tasto**. Se il file non c'e', il gioco torna al sintetizzatore invece di restare muto.
+
+---
+
 ### [1.89.3] — 2026-09-05 · "Anche in sala d'attesa"
 
 Illustrazione nuova — la stessa scena, disegnata meglio: la faglia piu' alta e piu' viva, il troll e il

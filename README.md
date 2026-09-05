@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.89.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.90.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.90 (la musica)
+- **🎵 Un brano vero** al posto del solo sintetizzatore: `assets/audio/theme_loop.ogg` (+ `.m4a` per Safari),
+  **14,2 s in loop senza giunzione udibile**, ~200 KB.
+- **Suona dove serve**: menu, sala d'attesa e ondate. Nel **villaggio** e nel **riepilogo di fine ondata**
+  resta la musica **procedurale** — è l'unica cosa che quelle due schermate hanno di loro.
+- La regola sta in un punto solo (`A.scene()`), il tasto **M** spegne tutto e se il file manca il gioco
+  torna da solo al sintetizzatore.
 
 ## 🆕 Novita v1.89 (i boss)
 - **🗿 Boss solo al 10 e al 20.** Erano quattro, uno ogni cinque ondate: al quinto turno avevi visto tre

@@ -13,8 +13,8 @@
   Net.onFull = () => { $('menuMsg').textContent = 'Stanza piena, riprova.'; };
   Net.onClose = () => { $('menuMsg').textContent = 'Connessione persa.'; };
   let lobbyPlayers = [];
-  function showLobby(players) { lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
-  function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.startMusic(false); }
+  function showLobby(players) { A.scene('lobby'); lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
+  function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.scene('wave'); }
 
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
   // v1.79 — LA BARRA DEL MENU DI FINE ONDATA. Le tre sezioni si sfogliano senza mandare niente al
@@ -50,7 +50,10 @@
   const potCb = { pick: (slot, id) => Net.pickPotion(slot, id), buy: (slot) => Net.buyPotion(slot) };
   const bndCb = { take: (i) => Net.takeBounty(i), hire: () => Net.hireMerc() };
   Net.onChat = (m) => { const log = $('chatLog'); const el = document.createElement('div'); el.className = 'cm'; el.innerHTML = `<b>${esc(m.from)}:</b> ${esc(m.text)}`; log.appendChild(el); setTimeout(() => el.remove(), 8000); while (log.children.length > 6) log.removeChild(log.firstChild); };
-  Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev); };
+  Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS);
+    // v1.90 — la musica segue la SCHERMATA: il brano nelle ondate, il sintetizzatore al mercato e nel
+    // riepilogo di fine ondata. La regola sta in A.scene(), qui si dice solo dove siamo.
+    A.scene(snap.phase === C.PHASE_MARKET ? 'village' : snap.phase === C.PHASE_SHOP ? 'shop' : 'wave'); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev); };
   Net.onEvent = (ev) => onEv(ev);
 
   function onEv(ev) {
@@ -212,8 +215,8 @@
       case 'down': HUD.killfeed('⚠ <b>' + esc(ev.name || '') + '</b> è a terra! (' + ev.lives + ' ❤)'); R.addShake(6); break;
       case 'life_lost': A.lifeLost(); R.ring(ev.x, ev.y, '#ff5a7a', 8, 60, 0.6); R.addShake(8); HUD.killfeed('💔 <b>' + esc(ev.name || '') + '</b> perde una vita! (' + ev.lives + ' rimaste)'); break;
       case 'dead': HUD.killfeed('☠ <b>' + esc(ev.name || '') + '</b> è caduto'); break;
-      case 'gameover': A.gameover(); A.stopMusic(); showEnd(false, ev); break;
-      case 'victory': A.victory(); A.stopMusic(); showEnd(true, ev); break;
+      case 'gameover': A.gameover(); A.scene('off'); showEnd(false, ev); break;
+      case 'victory': A.victory(); A.scene('off'); showEnd(true, ev); break;
       case 'summon': R.ring(ev.x, ev.y, ev.c || '#7dffea', 6, 60, 0.4); break;
       case 'trap': R.burst(ev.x, ev.y, '#c8d0e0', 6, 100, 0.3); break;
       case 'reveal': R.ring(ev.x, ev.y, '#ff3b3b', 6, 50, 0.4); R.addShake(4); break;
@@ -286,5 +289,8 @@
     const v = (C && C.VERSION) ? C.VERSION : '';
     if (v) { document.title = 'DUNGEON RIFT v' + v + ' — Roguelike Co-op'; const vb = $('verBadge'); if (vb) vb.textContent = 'v' + v; }
     R.init($('game')); Input.init($('game')); initMenu(); requestAnimationFrame(loop);
+    // v1.90 — la musica del menu. Il browser non fa partire l'audio prima di un gesto dell'utente:
+    // A.scene() se ne accorge e riprova da solo al primo click o al primo tasto.
+    A.scene('menu');
   });
 })();
