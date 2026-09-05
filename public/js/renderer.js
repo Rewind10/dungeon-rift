@@ -3514,136 +3514,145 @@
           ctx.beginPath(); ctx.moveTo(r * 1.05, 0); ctx.quadraticCurveTo(r * .2, -r * .62, -r * .5, -r * .28); ctx.quadraticCurveTo(-r * .9, 0, -r * .5, r * .28); ctx.quadraticCurveTo(r * .2, r * .62, r * 1.05, 0); ctx.fill(); ctx.stroke();
           ctx.strokeStyle = '#e8e0cf'; ctx.lineWidth = r * .1; ctx.beginPath(); ctx.moveTo(r * .8, -r * .12); ctx.lineTo(r * 1.05, -r * .5); ctx.stroke();
           eyes(r * .7, r * .14, r * .1, eye); break; }
-        // v1.89 — IL COLOSSO DELLA FAGLIA. Non e' un omone: e' un ammasso di LASTRE tenute insieme dalla
-        // luce viola della faglia, e nelle fessure fra una lastra e l'altra si vede il vuoto acceso.
-        // Vista dall'alto e' tutta SPALLE — due lastroni che coprono quasi tutta la sagoma, la testa
-        // incassata in mezzo senza volto, e due braccia che arrivano davanti coi pugni squadrati.
-        // La forma CAMBIA con le fasi: a due terzi di vita perde il braccio sinistro, a un terzo il petto
-        // si apre sul nucleo. Non serve guardare la barra della vita: si vede a che punto e'.
+        // v1.89.1 — IL COLOSSO, DIPINTO. La prima stesura era fatta di poligoni piatti col contorno nero:
+        // esattamente il contrario di come sono fatte le creature che vengono bene in questo gioco. Qui la
+        // massa nasce da MACCHIE MORBIDE sovrapposte (scure sotto, chiare in alto a sinistra), le lastre
+        // sono poche e stanno SOPRA la massa, e le crepe si disegnano due volte — larghe e fioche per il
+        // bagliore, sottili e accese per il taglio. Le stesse regole del Beholder e dei ragni.
         case 'colosso': {
           const q = st.mhp ? Math.max(0, Math.min(1, (st.hp || 0) / st.mhp)) : 1;
           const fase = q <= 0.33 ? 3 : q <= 0.66 ? 2 : 1;
-          const puls = 0.55 + 0.45 * Math.sin(t * 2.1);
-          const crepa = this._rgba(eye, 0.40 + 0.45 * puls);
-          const passo = Math.sin(t * 2.4) * r * 0.05;             // dondolio pesante
-          // la PIETRA: macchie scure sparse (mai casuali a ogni frame — dipendono dalla posizione, se no
-          // formicolano) e un filo di luce sul bordo esposto. Senza queste due cose le lastre sono cartone.
-          const sasso = (cx, cy, w2, h2, seed) => {
-            ctx.save(); ctx.globalAlpha = 0.20;
-            for (let k = 0; k < 4; k++) {
-              const a = (seed * 2.399 + k * 1.77), rr3 = 0.30 + 0.42 * ((k * 3 + seed) % 3) / 3;
-              ctx.fillStyle = k % 2 ? '#000' : '#fff';
-              ctx.beginPath();
-              ctx.ellipse(cx + Math.cos(a) * w2 * rr3, cy + Math.sin(a) * h2 * rr3, w2 * 0.20, h2 * 0.16, a, 0, 7);
-              ctx.fill();
+          const puls = 0.5 + 0.5 * Math.sin(t * 2.0);
+          const passo = Math.sin(t * 2.3) * r * 0.045;
+          const L = (k) => this._shade(col, k);
+          // le crepe: sempre due passate, la larga fioca fa il bagliore e la sottile fa il taglio
+          // una crepa e' SOTTILE: il bagliore lo fa la passata larga e fioca sotto, non lo spessore del
+          // tratto. Con la linea grossa sembravano frecce dipinte sopra la roccia invece di fessure.
+          const crepe = (pts, w2, ram) => {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            const traccia = (pp) => { ctx.beginPath(); ctx.moveTo(pp[0][0], pp[0][1]); for (let k = 1; k < pp.length; k++) ctx.lineTo(pp[k][0], pp[k][1]); ctx.stroke(); };
+            ctx.strokeStyle = this._rgba(eye, 0.10 + 0.07 * puls); ctx.lineWidth = w2 * 5; traccia(pts);
+            ctx.strokeStyle = this._rgba(eye, 0.62 + 0.24 * puls); ctx.lineWidth = w2; traccia(pts);
+            if (ram) {   // una diramazione corta: e' l'irregolarita' a far leggere "spaccata", non la lunghezza
+              const i2 = Math.max(1, (pts.length / 2) | 0), a4 = pts[i2];
+              const b4 = [a4[0] + ram[0], a4[1] + ram[1]];
+              ctx.strokeStyle = this._rgba(eye, 0.45 + 0.2 * puls); ctx.lineWidth = w2 * 0.7; traccia([a4, b4]);
             }
-            ctx.restore(); ctx.globalAlpha = 1;
+            ctx.restore();
           };
-          const bordoLuce = (pts) => {   // il filo chiaro sullo spigolo rivolto alla luce (in alto a sinistra)
-            ctx.save(); ctx.strokeStyle = this._rgba(this._shade(col, 95), 0.5); ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+          // una LASTRA: poligono irregolare con il fianco scuro e il filo di luce sullo spigolo alto
+          const lastra = (pts, tono) => {
+            ctx.fillStyle = L(tono); ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
             for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
-            ctx.stroke(); ctx.restore();
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(6,8,14,.55)'; ctx.lineWidth = 1.6; ctx.stroke();
+            ctx.strokeStyle = this._rgba(L(tono + 85), 0.55); ctx.lineWidth = 1.8;
+            ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+            for (let k = 1; k < Math.min(3, pts.length); k++) ctx.lineTo(pts[k][0], pts[k][1]);
+            ctx.stroke();
           };
-          // massa a terra: un colosso di pietra deve pesare, e il peso si disegna con l'ombra
-          ctx.fillStyle = 'rgba(0,0,0,.30)';
-          ctx.beginPath(); ctx.ellipse(-r * 0.08, 0, r * 1.20, r * 1.02, 0, 0, 7); ctx.fill();
-          // i detriti in orbita: blocchi veri, non pulviscolo, tenuti su dalla stessa luce
-          ctx.save();
+
+          ctx.fillStyle = 'rgba(0,0,0,.34)';
+          ctx.beginPath(); ctx.ellipse(-r * 0.06, r * 0.06, r * 1.22, r * 1.04, 0, 0, 7); ctx.fill();
+
+          // ---- detriti in orbita: sassi veri, con la faccia illuminata e la crepa accesa ----
           for (let k = 0; k < 5; k++) {
-            const a = t * 0.45 + k * 1.257, rr2 = r * (1.42 + 0.10 * Math.sin(t * 0.8 + k));
-            const dx = Math.cos(a) * rr2, dy = Math.sin(a) * rr2 * 0.78, sz = r * (0.13 + 0.05 * ((k * 7) % 3));
-            ctx.fillStyle = dark; ctx.strokeStyle = D; ctx.lineWidth = 1.8;
-            ctx.beginPath(); ctx.moveTo(dx - sz, dy); ctx.lineTo(dx - sz * 0.2, dy - sz); ctx.lineTo(dx + sz, dy - sz * 0.1); ctx.lineTo(dx + sz * 0.2, dy + sz); ctx.closePath(); ctx.fill(); ctx.stroke();
-            ctx.strokeStyle = crepa; ctx.lineWidth = 1.4;
-            ctx.beginPath(); ctx.moveTo(dx - sz * 0.5, dy - sz * 0.2); ctx.lineTo(dx + sz * 0.4, dy + sz * 0.3); ctx.stroke();
+            const a2 = t * 0.42 + k * 1.257, rr2 = r * (1.44 + 0.10 * Math.sin(t * 0.8 + k));
+            const dx = Math.cos(a2) * rr2, dy = Math.sin(a2) * rr2 * 0.76, sz = r * (0.12 + 0.055 * (k % 3));
+            this._macchia(ctx, dx, dy, sz * 1.5, sz * 1.3, '#000', 0.28);
+            lastra([[dx - sz, dy - sz * 0.2], [dx - sz * 0.25, dy - sz], [dx + sz * 0.9, dy - sz * 0.15],
+                    [dx + sz * 0.35, dy + sz * 0.9], [dx - sz * 0.7, dy + sz * 0.55]], -18 + k * 12);
+            if (k % 2 === 0) crepe([[dx - sz * 0.5, dy - sz * 0.1], [dx + sz * 0.4, dy + sz * 0.35]], 0.9);
           }
-          ctx.restore();
-          // BRACCIA (disegnate per prime: stanno DIETRO alle spalle). Colonne di pietra col pugno squadrato.
+
+          // ---- BRACCIA: tre macchie a scalare + il pugno. Dietro alle spalle. ----
           const braccio = (sgn) => {
-            const sw = Math.sin(t * 2.2 + (sgn > 0 ? 0 : 1.7)) * r * 0.07;
-            const sx = -r * 0.10, sy = sgn * r * 0.86;
-            const gx = r * 0.52 + swing * r * 0.30, gy = sgn * r * (0.96) + sw;
-            const hx = r * (1.06) + swing * r * 0.62, hy = sgn * r * 0.80 + sw;
-            ctx.strokeStyle = dark; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.40;
-            ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(gx, gy); ctx.stroke();
-            ctx.strokeStyle = col; ctx.lineWidth = r * 0.32;
-            ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(hx, hy); ctx.stroke();
-            ctx.fillStyle = this._shade(col, 18); ctx.strokeStyle = D; ctx.lineWidth = 2.4;
-            ctx.beginPath();
-            ctx.moveTo(hx - r * 0.30, hy - r * 0.18); ctx.lineTo(hx - r * 0.14, hy - r * 0.32);
-            ctx.lineTo(hx + r * 0.22, hy - r * 0.28); ctx.lineTo(hx + r * 0.32, hy + r * 0.08);
-            ctx.lineTo(hx + r * 0.10, hy + r * 0.32); ctx.lineTo(hx - r * 0.24, hy + r * 0.22);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            sasso(hx, hy, r * 0.30, r * 0.30, sgn > 0 ? 3 : 6);
-            ctx.strokeStyle = crepa; ctx.lineWidth = 2.4;
-            ctx.beginPath(); ctx.moveTo(hx - r * 0.20, hy - r * 0.08); ctx.lineTo(hx + r * 0.18, hy + r * 0.06); ctx.stroke();
+            const sw = Math.sin(t * 2.1 + (sgn > 0 ? 0 : 1.7)) * r * 0.07;
+            const P3 = [[r * 0.04, sgn * r * 0.86], [r * 0.62, sgn * r * 1.16 + sw], [r * 1.12 + swing * r * 0.5, sgn * r * 1.00 + sw]];
+            for (let k = 0; k < P3.length; k++) {
+              const w3 = r * (0.34 - k * 0.04);
+              this._macchia(ctx, P3[k][0], P3[k][1], w3 * 1.6, w3 * 1.5, L(-58), 0.95);
+              this._macchia(ctx, P3[k][0] - w3 * 0.28, P3[k][1] - w3 * 0.30, w3 * 1.05, w3 * 0.95, L(6), 0.85);
+            }
+            ctx.strokeStyle = L(-46); ctx.lineCap = 'round'; ctx.lineWidth = r * 0.30;
+            ctx.beginPath(); ctx.moveTo(P3[0][0], P3[0][1]); ctx.lineTo(P3[1][0], P3[1][1]); ctx.lineTo(P3[2][0], P3[2][1]); ctx.stroke();
+            const hx = P3[2][0] + r * 0.22 + swing * r * 0.24, hy = P3[2][1] - sgn * r * 0.04;
+            this._macchia(ctx, hx, hy, r * 0.52, r * 0.48, '#000', 0.30);
+            lastra([[hx - r * 0.30, hy - r * 0.14], [hx - r * 0.12, hy - r * 0.32], [hx + r * 0.24, hy - r * 0.26],
+                    [hx + r * 0.33, hy + r * 0.10], [hx + r * 0.08, hy + r * 0.32], [hx - r * 0.26, hy + r * 0.20]], 14);
+            crepe([[hx - r * 0.20, hy - r * 0.08], [hx + r * 0.02, hy + r * 0.06], [hx + r * 0.22, hy - r * 0.02]], 1.3);
           };
           braccio(1);
           if (fase < 2) braccio(-1);
-          // SPALLE: i due lastroni. Sono la cosa piu' grande della sagoma, e si vedono per primi.
+
+          // ---- LA MASSA: sette macchie che costruiscono il volume prima di qualunque contorno ----
+          const massa = [
+            [r * 0.10, r * 0.26, 1.08, 0.94, -96, 1],      // il fondo: quasi nero, sotto e a destra
+            [-r * 0.30, 0, 1.02, 0.90, -70, 1],
+            [-r * 0.16, -r * 0.62, 0.74, 0.62, -52, 1],
+            [-r * 0.16, r * 0.62, 0.74, 0.62, -60, 1],
+            [r * 0.16, 0, 0.76, 0.64, -34, 0.95],
+            [-r * 0.38, -r * 0.34, 0.60, 0.50, 26, 0.8],   // la luce viene da in alto a sinistra
+            [-r * 0.44, -r * 0.52, 0.36, 0.30, 62, 0.5],
+            [-r * 0.28, r * 0.36, 0.54, 0.44, -12, 0.65],
+          ];
+          for (const b3 of massa) this._macchia(ctx, b3[0], b3[1] + passo * 0.4, r * b3[2], r * b3[3], L(b3[4]), b3[5]);
+
+          // ---- LE SPALLE: due lastroni sopra la massa, quello sinistro sparisce in fase 2 ----
           for (const sgn of [-1, 1]) {
-            if (fase >= 2 && sgn < 0) continue;                    // la spalla sinistra se ne va col braccio
-            const sg = this._grad('col_sp|' + r + '|' + col + '|' + sgn, () => { const g2 = ctx.createLinearGradient(-r * 0.8, 0, r * 0.6, 0); g2.addColorStop(0, this._shade(col, -40)); g2.addColorStop(0.55, col); g2.addColorStop(1, this._shade(col, 34)); return g2; });
-            ctx.fillStyle = sg; ctx.strokeStyle = D; ctx.lineWidth = 2.8;
-            const P = [[-r * 0.90, sgn * r * 0.30], [-r * 0.76, sgn * r * 0.74], [-r * 0.58, sgn * r * 1.10 + passo * sgn],
-              [-r * 0.10, sgn * r * 1.16 + passo * sgn], [r * 0.30, sgn * r * 0.98 + passo * sgn], [r * 0.56, sgn * r * 0.52], [r * 0.34, sgn * r * 0.30]];
-            ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]);
-            for (let k = 1; k < P.length; k++) ctx.lineTo(P[k][0], P[k][1]);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            sasso(-r * 0.24, sgn * r * 0.72, r * 0.5, r * 0.34, sgn > 0 ? 2 : 5);
-            bordoLuce([P[0], P[1], P[2]]);
-            ctx.strokeStyle = crepa; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.moveTo(-r * 0.62, sgn * r * 0.56); ctx.lineTo(-r * 0.06, sgn * r * 0.86); ctx.lineTo(r * 0.34, sgn * r * 0.62); ctx.stroke();
+            if (fase >= 2 && sgn < 0) continue;
+            const y0 = sgn * r * 0.34, y1 = sgn * r * 1.08 + passo * sgn;
+            lastra([[-r * 0.96, y0 * 0.74], [-r * 0.70, y1 * 1.06], [-r * 0.22, y1 * 1.12], [r * 0.16, y1 * 0.92],
+                    [r * 0.44, y1 * 0.52], [r * 0.52, y0 * 1.04], [r * 0.10, y0 * 0.70]], sgn > 0 ? -8 : -30);
+            crepe([[-r * 0.60, sgn * r * 0.50], [-r * 0.26, sgn * r * 0.78], [r * 0.06, sgn * r * 0.66], [r * 0.32, sgn * r * 0.80]], 1.4, [r * 0.10, sgn * r * 0.22]);
           }
-          if (fase >= 2) {   // il moncherino: pietra spezzata e luce che esce dalla frattura
-            ctx.fillStyle = this._shade(col, -55); ctx.strokeStyle = D; ctx.lineWidth = 2.4;
-            ctx.beginPath();
-            ctx.moveTo(-r * 0.70, -r * 0.36); ctx.lineTo(-r * 0.34, -r * 0.66); ctx.lineTo(r * 0.02, -r * 0.52); ctx.lineTo(-r * 0.16, -r * 0.30); ctx.closePath();
-            ctx.fill(); ctx.stroke();
+          if (fase >= 2) {   // la frattura: pietra spezzata, e da dentro esce la luce
+            lastra([[-r * 0.66, -r * 0.34], [-r * 0.40, -r * 0.62], [-r * 0.04, -r * 0.54],
+                    [-r * 0.12, -r * 0.28], [-r * 0.44, -r * 0.22]], -52);
             ctx.save(); ctx.globalCompositeOperation = 'lighter';
-            ctx.fillStyle = this._rgba(eye, 0.35 + 0.30 * puls);
-            ctx.beginPath(); ctx.ellipse(-r * 0.28, -r * 0.50, r * 0.22, r * 0.13, -0.4, 0, 7); ctx.fill();
+            this._macchia(ctx, -r * 0.30, -r * 0.44, r * 0.30, r * 0.22, eye, 0.30 + 0.25 * puls, -0.5);
+            ctx.restore();
+            crepe([[-r * 0.52, -r * 0.30], [-r * 0.30, -r * 0.46], [-r * 0.10, -r * 0.40]], 1.5, [-r * 0.06, -r * 0.16]);
+          }
+
+          // ---- IL PETTO: la lastra grande, con la venatura che lo attraversa ----
+          lastra([[-r * 0.72, -r * 0.40], [-r * 0.46, -r * 0.60], [r * 0.20, -r * 0.58], [r * 0.58, -r * 0.16],
+                  [r * 0.44, r * 0.40], [-r * 0.16, r * 0.60], [-r * 0.66, r * 0.34]], 4);
+          crepe([[-r * 0.62, -r * 0.06], [-r * 0.30, -r * 0.20], [-r * 0.02, r * 0.02], [r * 0.30, -r * 0.14], [r * 0.50, -r * 0.02]], 1.5, [r * 0.06, r * 0.26]);
+          crepe([[-r * 0.24, r * 0.44], [r * 0.02, r * 0.30], [r * 0.30, r * 0.34]], 1.2, [-r * 0.10, r * 0.16]);
+          crepe([[r * 0.16, -r * 0.50], [r * 0.28, -r * 0.30]], 1.1);
+
+          if (fase >= 3) {   // ---- IL NUCLEO: la lastra si spacca e sotto c'e' la faglia ----
+            ctx.fillStyle = '#06030c';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.40, -r * 0.30); ctx.lineTo(r * 0.06, -r * 0.44); ctx.lineTo(r * 0.34, -r * 0.02);
+            ctx.lineTo(r * 0.10, r * 0.42); ctx.lineTo(-r * 0.34, r * 0.24);
+            ctx.closePath(); ctx.fill();
+            ctx.save(); ctx.globalCompositeOperation = 'lighter';
+            this._macchia(ctx, -r * 0.02, 0, r * 0.62, r * 0.58, eye, 0.5 + 0.3 * puls);
+            this._macchia(ctx, -r * 0.02, 0, r * 0.26, r * 0.24, '#ffffff', 0.55 + 0.35 * puls);
+            for (let k = 0; k < 4; k++) {   // schegge che orbitano dentro la spaccatura
+              const a3 = t * 1.6 + k * 1.57;
+              this._macchia(ctx, Math.cos(a3) * r * 0.30, Math.sin(a3) * r * 0.26, r * 0.07, r * 0.06, '#e9d5ff', 0.7);
+            }
             ctx.restore();
           }
-          // TORSO: un blocco pentagonale, spalle larghe e petto stretto in avanti
-          const bg = this._grad('col_body|' + r + '|' + col, () => { const g2 = ctx.createLinearGradient(-r * 0.9, 0, r * 0.8, 0); g2.addColorStop(0, this._shade(col, -50)); g2.addColorStop(0.55, col); g2.addColorStop(1, this._shade(col, 40)); return g2; });
-          ctx.fillStyle = bg; ctx.strokeStyle = D; ctx.lineWidth = 3;
-          const T = [[-r * 0.84, -r * 0.44], [-r * 0.72, r * 0.14], [-r * 0.60, r * 0.56], [r * 0.10, r * 0.66],
-            [r * 0.46, r * 0.44], [r * 0.72, 0], [r * 0.44, -r * 0.58], [-r * 0.20, -r * 0.66]];
-          ctx.beginPath(); ctx.moveTo(T[0][0], T[0][1]);
-          for (let k = 1; k < T.length; k++) ctx.lineTo(T[k][0], T[k][1]);
-          ctx.closePath(); ctx.fill(); ctx.stroke();
-          sasso(-r * 0.10, 0, r * 0.62, r * 0.5, 1);
-          bordoLuce([T[7], T[0], T[1]]);
-          // le crepe del petto
-          ctx.strokeStyle = crepa; ctx.lineWidth = 3; ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(-r * 0.56, -r * 0.16); ctx.lineTo(-r * 0.04, r * 0.06); ctx.lineTo(r * 0.42, -r * 0.22);
-          ctx.moveTo(-r * 0.30, r * 0.38); ctx.lineTo(r * 0.24, r * 0.42);
-          ctx.stroke();
-          if (fase >= 3) {   // IL NUCLEO: il petto si spacca e resta scoperto. E' la finestra, e si vede da lontano.
-            ctx.fillStyle = '#07040e'; ctx.strokeStyle = D; ctx.lineWidth = 2.2;
-            ctx.beginPath();
-            ctx.moveTo(-r * 0.34, -r * 0.34); ctx.lineTo(r * 0.16, -r * 0.42); ctx.lineTo(r * 0.34, r * 0.10); ctx.lineTo(-r * 0.06, r * 0.40); ctx.lineTo(-r * 0.40, r * 0.08);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            ctx.save(); ctx.globalCompositeOperation = 'lighter';
-            const ng = this._grad('col_nuc|' + r + '|' + eye, () => { const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.55); g2.addColorStop(0, this._rgba(eye, 1)); g2.addColorStop(0.45, this._rgba(eye, 0.5)); g2.addColorStop(1, 'rgba(0,0,0,0)'); return g2; });
-            ctx.globalAlpha = 0.7 + 0.3 * puls;
-            ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.55, 0, 7); ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.globalAlpha = 0.55 + 0.4 * puls;
-            ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.14, 0, 7); ctx.fill();
-            ctx.restore(); ctx.globalAlpha = 1;
-          }
-          // TESTA: incassata fra le spalle, senza volto — una fenditura sottile con la luce dentro
-          ctx.fillStyle = this._shade(col, -22); ctx.strokeStyle = D; ctx.lineWidth = 2.6;
-          ctx.beginPath();
-          ctx.moveTo(r * 0.46, -r * 0.30); ctx.lineTo(r * 0.94, -r * 0.20); ctx.lineTo(r * 0.94, r * 0.20); ctx.lineTo(r * 0.46, r * 0.30);
-          ctx.closePath(); ctx.fill(); ctx.stroke();
+
+          // ---- LA TESTA: incassata, senza volto. Un incavo scuro e dentro la fessura accesa ----
+          this._macchia(ctx, r * 0.66, 0, r * 0.34, r * 0.30, '#000', 0.55);
+          lastra([[r * 0.42, -r * 0.28], [r * 0.72, -r * 0.34], [r * 0.94, -r * 0.16],
+                  [r * 0.94, r * 0.16], [r * 0.72, r * 0.34], [r * 0.42, r * 0.28]], -34);
+          ctx.fillStyle = '#07040e';
+          this._rr(ctx, r * 0.62, -r * 0.15, r * 0.30, r * 0.30, r * 0.06); ctx.fill();
           ctx.save(); ctx.globalCompositeOperation = 'lighter';
-          ctx.fillStyle = this._rgba(eye, 0.6 + 0.4 * puls);
-          this._rr(ctx, r * 0.72, -r * 0.13, r * 0.16, r * 0.26, r * 0.04); ctx.fill();
+          this._macchia(ctx, r * 0.80, 0, r * 0.15, r * 0.13, eye, 0.55 + 0.4 * puls);
+          ctx.fillStyle = this._rgba('#ffffff', 0.4 + 0.4 * puls);
+          this._rr(ctx, r * 0.74, -r * 0.09, r * 0.10, r * 0.18, r * 0.03); ctx.fill();
           ctx.restore();
+          // pietrisco che cade di continuo: e' cio' che dice che questa cosa si sta sbriciolando
+          if (Math.random() < (fase >= 2 ? 0.5 : 0.28)) this.particles.push({
+            x: MU.rand(-r * 0.8, r * 0.8), y: MU.rand(-r * 0.9, r * 0.9),
+            vx: MU.rand(-8, 8), vy: MU.rand(14, 40), life: 0.5, t: 0.5, color: L(-30), r: MU.rand(1, 2.4), over: true });
           break; }
         // v1.89 — AZ'GAROTH RIDIPINTO. La forma era giusta (visto dall'alto, ali aperte ai lati, testa in
         // avanti) ma era fatta di campiture piatte: un'ellisse bordeaux, due triangoli scuri per ali e una
@@ -3712,62 +3721,96 @@
             g2.addColorStop(0, this._shade(col, 52)); g2.addColorStop(0.45, col); g2.addColorStop(1, this._shade(dark, -10)); return g2;
           });
           ctx.fillStyle = bg; ctx.strokeStyle = D; ctx.lineWidth = 2.8;
-          ctx.beginPath(); ctx.ellipse(-r * 0.06, 0, r * 1.14, r * 0.72, 0, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(-r * 0.14, 0, r * 1.00, r * 0.64, 0, 0, 7); ctx.fill(); ctx.stroke();
           // placche del dorso, dalla coda alla nuca
-          ctx.strokeStyle = D; ctx.lineWidth = 1.8;
-          for (let k = 0; k < 5; k++) {
-            const px2 = -r * (0.55 - k * 0.28), h2 = r * (0.16 + 0.05 * Math.sin(k));
-            ctx.fillStyle = this._shade(col, 30 + k * 8);
-            ctx.beginPath(); ctx.moveTo(px2 - r * 0.12, 0); ctx.lineTo(px2, -h2); ctx.lineTo(px2 + r * 0.12, 0); ctx.lineTo(px2, h2); ctx.closePath(); ctx.fill(); ctx.stroke();
+          // le crepe si accendono SOLO in furia. A vita piena erano tre righe rosa sul dorso: era quello a
+          // far sembrare il drago un verme a strisce. Sotto il 40% invece devono urlare, ed e' il momento giusto.
+          if (furia) {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            const vena = (pp, w4) => {
+              ctx.strokeStyle = this._rgba('#ff9a2b', 0.13); ctx.lineWidth = w4 * 5;
+              ctx.beginPath(); ctx.moveTo(pp[0][0], pp[0][1]); for (let k = 1; k < pp.length; k++) ctx.lineTo(pp[k][0], pp[k][1]); ctx.stroke();
+              ctx.strokeStyle = magma; ctx.lineWidth = w4;
+              ctx.beginPath(); ctx.moveTo(pp[0][0], pp[0][1]); for (let k = 1; k < pp.length; k++) ctx.lineTo(pp[k][0], pp[k][1]); ctx.stroke();
+            };
+            vena([[-r * 0.80, -r * 0.28], [-r * 0.46, -r * 0.40], [-r * 0.14, -r * 0.26], [r * 0.20, -r * 0.38]], 1.5);
+            vena([[-r * 0.64, r * 0.32], [-r * 0.30, r * 0.44], [r * 0.02, r * 0.30]], 1.3);
+            ctx.restore();
+          } else {
+            // a riposo restano solo due solchi SCURI, che danno pelle invece di luce
+            ctx.save(); ctx.strokeStyle = 'rgba(10,4,10,.45)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.76, -r * 0.26); ctx.lineTo(-r * 0.40, -r * 0.36); ctx.lineTo(-r * 0.08, -r * 0.24);
+            ctx.moveTo(-r * 0.58, r * 0.30); ctx.lineTo(-r * 0.24, r * 0.40);
+            ctx.stroke(); ctx.restore();
           }
-          // le crepe: sempre presenti, ACCESE in furia — il corpo diventa una sorgente di luce
-          ctx.save(); if (furia) ctx.globalCompositeOperation = 'lighter';
-          ctx.strokeStyle = magma; ctx.lineWidth = furia ? 2.8 : 1.8; ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(-r * 0.80, -r * 0.30); ctx.lineTo(-r * 0.30, -r * 0.12); ctx.lineTo(r * 0.24, -r * 0.34);
-          ctx.moveTo(-r * 0.62, r * 0.34); ctx.lineTo(-r * 0.02, r * 0.46); ctx.lineTo(r * 0.42, r * 0.24);
-          ctx.stroke(); ctx.restore();
-
+          // la cresta del dorso: una striscia STRETTA lungo la spina, con quattro placche che puntano
+          // all'indietro. Larga come nella stesura precedente diventava una fascia a zigzag su tutto il
+          // corpo, e il drago sembrava un verme con una riga.
+          ctx.fillStyle = this._shade(col, -34);
+          ctx.beginPath(); ctx.moveTo(-r * 0.92, 0);
+          ctx.lineTo(-r * 0.30, -r * 0.07); ctx.lineTo(r * 0.72, -r * 0.05);
+          ctx.lineTo(r * 0.72, r * 0.05); ctx.lineTo(-r * 0.30, r * 0.07);
+          ctx.closePath(); ctx.fill();
+          for (let k = 0; k < 4; k++) {
+            const px2 = -r * (0.62 - k * 0.34), h3 = r * (0.17 - k * 0.018);
+            ctx.fillStyle = this._shade(col, 26 + k * 6); ctx.strokeStyle = 'rgba(6,8,14,.55)'; ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.moveTo(px2 - r * 0.16, 0); ctx.lineTo(px2 + r * 0.06, -h3); ctx.lineTo(px2 + r * 0.18, 0);
+            ctx.lineTo(px2 + r * 0.06, h3); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = this._rgba(this._shade(col, 88), 0.5);
+            ctx.beginPath(); ctx.moveTo(px2 - r * 0.10, -r * 0.01); ctx.lineTo(px2 + r * 0.05, -h3 * 0.85); ctx.lineTo(px2 + r * 0.09, -r * 0.02); ctx.closePath(); ctx.fill();
+          }
           // ---- COLLO E TESTA ----
+          // Niente trapezio del collo: a questa scala si leggeva come una scatola scura fra il corpo e il
+          // muso. Il collo e' fatto di due macchie che raccordano, e il cranio e' un cuneo DIPINTO — massa
+          // morbida sotto, piano chiaro sopra, e i dettagli (occhi, narici, zanne) solo alla fine.
           const jaw = swing;                                    // 0 chiusa, 1 spalancata
-          ctx.fillStyle = this._shade(col, 8); ctx.strokeStyle = D; ctx.lineWidth = 2.4;
+          this._macchia(ctx, r * 0.74, 0, r * 0.42, r * 0.34, this._shade(col, -20), 0.95);
+          this._macchia(ctx, r * 1.00, 0, r * 0.38, r * 0.29, this._shade(col, -6), 0.95);
+          this._macchia(ctx, r * 1.22, 0, r * 0.34, r * 0.26, this._shade(col, 8), 0.95);
+          // corna: corte, scure, all'indietro, disegnate PRIMA del cranio — se ne vedono le punte e basta
+          ctx.save(); ctx.lineCap = 'round';
+          for (const sg2 of [-1, 1]) {   // corna: due punte corte all'indietro, appena fuori dal cranio
+            ctx.strokeStyle = '#463f34'; ctx.lineWidth = r * 0.085;
+            ctx.beginPath(); ctx.moveTo(r * 1.30, sg2 * r * 0.19);
+            ctx.quadraticCurveTo(r * 1.14, sg2 * r * 0.32, r * 0.98, sg2 * r * 0.30); ctx.stroke();
+          }
+          ctx.restore();
+          // il cranio: massa morbida, poi il piano del muso piu' chiaro sopra
+          this._macchia(ctx, r * 1.44, 0, r * 0.50, r * 0.34, this._shade(col, 12), 1);
+          this._macchia(ctx, r * 1.40, -r * 0.06, r * 0.36, r * 0.20, this._shade(col, 48), 0.8);
+          ctx.fillStyle = this._shade(col, 30); ctx.strokeStyle = D; ctx.lineWidth = 2.2;
           ctx.beginPath();
-          ctx.moveTo(r * 0.62, -r * 0.26); ctx.quadraticCurveTo(r * 1.00, -r * 0.20, r * 1.14, -r * 0.15);
-          ctx.lineTo(r * 1.14, r * 0.15); ctx.quadraticCurveTo(r * 1.00, r * 0.20, r * 0.62, r * 0.26);
+          ctx.moveTo(r * 1.08, -r * 0.34); ctx.lineTo(r * 1.52, -r * 0.24);
+          ctx.lineTo(r * 1.84, -r * 0.10 - r * 0.05 * jaw); ctx.lineTo(r * 1.90, 0);
+          ctx.lineTo(r * 1.84, r * 0.10 + r * 0.05 * jaw); ctx.lineTo(r * 1.52, r * 0.24); ctx.lineTo(r * 1.08, r * 0.34);
           ctx.closePath(); ctx.fill(); ctx.stroke();
-          // cranio
-          const hg2 = this._grad('dr_testa|' + r + '|' + col, () => { const g2 = ctx.createLinearGradient(r * 1.0, -r * 0.4, r * 1.6, r * 0.4); g2.addColorStop(0, this._shade(col, 46)); g2.addColorStop(1, this._shade(col, -18)); return g2; });
-          ctx.fillStyle = hg2; ctx.strokeStyle = D; ctx.lineWidth = 2.6;
-          ctx.beginPath();
-          ctx.moveTo(r * 1.10, -r * 0.30); ctx.lineTo(r * 1.62, -r * 0.16 - r * 0.10 * jaw);
-          ctx.lineTo(r * 1.72, 0); ctx.lineTo(r * 1.62, r * 0.16 + r * 0.10 * jaw); ctx.lineTo(r * 1.10, r * 0.30);
-          ctx.closePath(); ctx.fill(); ctx.stroke();
-          // mandibola che si apre
+          // dorso del muso, il piano che prende luce
+          ctx.fillStyle = this._shade(col, 62);
+          ctx.beginPath(); ctx.moveTo(r * 1.26, -r * 0.13); ctx.lineTo(r * 1.78, -r * 0.05);
+          ctx.lineTo(r * 1.78, r * 0.05); ctx.lineTo(r * 1.26, r * 0.13); ctx.closePath(); ctx.fill();
+          // arcate sopraccigliari
+          ctx.fillStyle = this._shade(col, -38);
+          for (const sg3 of [-1, 1]) {
+            ctx.beginPath(); ctx.moveTo(r * 1.18, sg3 * r * 0.30); ctx.lineTo(r * 1.56, sg3 * r * 0.17);
+            ctx.lineTo(r * 1.52, sg3 * r * 0.03); ctx.lineTo(r * 1.16, sg3 * r * 0.14); ctx.closePath(); ctx.fill();
+          }
+          // mandibola spalancata
           if (jaw > 0.02) {
             ctx.fillStyle = '#2a0510';
-            ctx.beginPath(); ctx.moveTo(r * 1.18, 0); ctx.lineTo(r * 1.66, -r * 0.06 - r * 0.16 * jaw); ctx.lineTo(r * 1.66, r * 0.06 + r * 0.16 * jaw); ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#efe6d2';                          // zanne
-            for (const sg2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(r * 1.40, sg2 * (r * 0.05 + r * 0.10 * jaw)); ctx.lineTo(r * 1.50, sg2 * (r * 0.02 + r * 0.05 * jaw)); ctx.lineTo(r * 1.52, sg2 * (r * 0.09 + r * 0.14 * jaw)); ctx.closePath(); ctx.fill(); }
+            ctx.beginPath(); ctx.moveTo(r * 1.34, 0); ctx.lineTo(r * 1.88, -r * 0.05 - r * 0.20 * jaw); ctx.lineTo(r * 1.88, r * 0.05 + r * 0.20 * jaw); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#efe6d2';
+            for (const sg2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(r * 1.56, sg2 * (r * 0.05 + r * 0.12 * jaw)); ctx.lineTo(r * 1.68, sg2 * (r * 0.02 + r * 0.06 * jaw)); ctx.lineTo(r * 1.70, sg2 * (r * 0.10 + r * 0.17 * jaw)); ctx.closePath(); ctx.fill(); }
           }
-          // corna: due lame d'osso che escono dal cranio e vanno all'indietro. Sottili e opache: spesse e
-          // chiare come nella prima stesura diventavano un collare attorno alla testa.
-          for (const sg2 of [-1, 1]) {
-            ctx.fillStyle = '#cfc3a8'; ctx.strokeStyle = D; ctx.lineWidth = 1.6;
-            ctx.beginPath();
-            ctx.moveTo(r * 1.20, sg2 * r * 0.24);
-            ctx.quadraticCurveTo(r * 1.00, sg2 * r * 0.52, r * 0.64, sg2 * r * 0.60);
-            ctx.quadraticCurveTo(r * 0.98, sg2 * r * 0.40, r * 1.14, sg2 * r * 0.16);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-          }
-          // la GOLA che si accende prima del soffio: il telegrafo e' anche decorazione
+          ctx.fillStyle = '#1a0308';                             // narici
+          for (const sg4 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 1.70, sg4 * r * 0.06, r * 0.035, r * 0.022, 0, 0, 7); ctx.fill(); }
+          // la GOLA che si accende PRIMA del soffio: il telegrafo e' anche decorazione
           ctx.save(); ctx.globalCompositeOperation = 'lighter';
-          const gola = this._grad('dr_gola|' + r + '|' + eye, () => { const g2 = ctx.createRadialGradient(r * 1.25, 0, 0, r * 1.25, 0, r * 0.5); g2.addColorStop(0, this._rgba(eye, 0.95)); g2.addColorStop(1, 'rgba(0,0,0,0)'); return g2; });
-          ctx.globalAlpha = 0.25 + 0.65 * jaw + (furia ? 0.15 : 0);
-          ctx.fillStyle = gola; ctx.beginPath(); ctx.arc(r * 1.25, 0, r * 0.5, 0, 7); ctx.fill();
-          ctx.restore(); ctx.globalAlpha = 1;
-          // occhi
+          this._macchia(ctx, r * 1.66, 0, r * 0.44, r * 0.34, eye, 0.20 + 0.6 * jaw + (furia ? 0.14 : 0));
+          ctx.restore();
+          // occhi: incastonati sotto le arcate
           ctx.fillStyle = eye; ctx.shadowColor = eye; ctx.shadowBlur = 10;
-          for (const sg2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 1.30, sg2 * r * 0.13, r * 0.08, r * 0.05, 0, 0, 7); ctx.fill(); }
+          for (const sg2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 1.38, sg2 * r * 0.16, r * 0.085, r * 0.05, sg2 * 0.25, 0, 7); ctx.fill(); }
           ctx.shadowBlur = 0;
           if (Math.random() < (furia ? 0.5 : 0.25)) this.particles.push({ x: r * 1.7, y: MU.rand(-r * 0.1, r * 0.1), vx: 50, vy: 0, life: 0.6, t: 0, fire: true, r: 3, over: true });
           break; }

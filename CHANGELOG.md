@@ -2,6 +2,34 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.89.1] — 2026-09-05 · "Dipingerli, non disegnarli"
+
+La prima stesura dei due boss era fatta di **poligoni piatti col contorno nero**: esattamente il contrario di
+come sono fatte le creature che in questo gioco vengono bene. Il Beholder, i ragni e gli zombi nascono da
+**macchie morbide sovrapposte** (`_macchia`) — scure sotto, chiare in alto a sinistra — e solo alla fine
+prendono qualche spigolo netto. Rifatti tutti e due con quella tecnica.
+
+**Il Colosso.** La massa e' otto macchie sovrapposte, dal quasi-nero in basso a destra alla luce in alto a
+sinistra; le lastre stanno SOPRA la massa, poche e irregolari, ognuna col fianco scuro e il filo di luce sullo
+spigolo alto. Le **crepe** si disegnano due volte — una larga e fioca che fa il bagliore, una sottile e accesa
+che fa il taglio — e hanno una diramazione corta: e' l'irregolarita' a far leggere *spaccata*. Le prime erano
+tratti spessi e simmetrici, e sembravano **frecce dipinte sopra la roccia**. Aggiunto il pietrisco che cade di
+continuo, che e' cio' che dice che questa cosa si sta sbriciolando.
+
+**AZ'GAROTH.** Quattro correzioni, tutte per lo stesso motivo — a schermo si leggeva come una macchia:
+
+- **le corna** erano archi chiari aperti di lato: sembravano baffi, e in una stesura precedente un collare
+  attorno al muso. Adesso sono due punte corte e scure che vanno all'indietro, e si vedono appena;
+- **il collo** era un trapezio scuro fra corpo e testa — una scatola. Adesso e' fatto di tre macchie che
+  raccordano, e il cranio e' un cuneo dipinto con il dorso del muso piu' chiaro, le arcate sopraccigliari,
+  le narici e la mandibola che si apre;
+- **la cresta del dorso** e' una striscia stretta con quattro placche. Come cinque rombi sembrava una zip,
+  come cinque macchie una fila di bottoni, come fascia larga un verme a strisce;
+- **le crepe del corpo si accendono solo in furia**. A vita piena erano tre righe rosa sul dorso, ed erano
+  loro a fare tutto l'effetto sbagliato: a riposo restano due solchi scuri, che danno pelle invece di luce.
+
+---
+
 ### [1.89.0] — 2026-09-05 · "Due boss, non quattro"
 
 #### ⛰️ Perche' i boss stonavano
