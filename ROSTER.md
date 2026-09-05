@@ -247,9 +247,10 @@ Non entrano nel pool ondate; compaiono alle **ondate multiple di 5**.
 
 | Boss | id | PV | Comparsa | Note |
 |---|---|---:|---|---|
-| Signore della Guerra Orchesco | `orc_warlord` | 1600 | ondata 5/10 | melee, slam ad area, evoca zombie, enrage sotto il 50% PV |
-| Re Lich | `lich_king` | 2200 | ondata 5/15 | caster, scudo, nova di proiettili, evoca zombie |
-| AZ'GAROTH, il Divoratore di Mondi | `mega_dragon` | 9000 | ondata 20 | mega-boss multi-fase (respiro, nova, enrage) |
+| **Il Colosso della Faglia** | `rift_colossus` | 2600 | **ondata 10** | tre fasi: pugni ad area + onde d'urto concentriche → perde un braccio e lancia macerie → apre il nucleo (corre di piu', incassa +50%) |
+| AZ'GAROTH, il Divoratore di Mondi | `mega_dragon` | 9000 | **ondata 20** | mega-boss multi-fase (respiro, nova, meteore, enrage) |
+| ~~Signore della Guerra Orchesco~~ | `orc_warlord` | 1600 | *fuori rotazione (v1.89)* | la definizione resta nel file ma non entra piu' in nessuna ondata |
+| ~~Re Lich~~ | `lich_king` | 2200 | *fuori rotazione (v1.89)* | idem — erano gli ultimi due nemici disegnati DI LATO in un gioco visto dall'alto |
 
 Alle ondate 5 il boss è tirato a caso fra Warlord e Lich; la 10 è sempre il Warlord, la 15 sempre il Lich.
 

@@ -345,6 +345,62 @@
     summoner(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < m.def.atkRange * 0.5) flee(m, ctx, 0.85); else if (d > m.def.atkRange) seek(m, ctx, 0.85); else stop(m, p); m.summonT = (m.summonT || 0) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 6.5; for (let i = 0; i < (m.def.summonCount || 3); i++) { const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 40; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 0) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 8; m.shielded = m.def.shieldTime || 3; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.zoneT = (m.zoneT || MU.rand(3, 5)) - ctx.dt; if (m.zoneT <= 0 && d <= m.def.atkRange) { ctx.zone(p.x, p.y, 66, 1.0, m.dmg * 1.3, m.def.projColor); m.zoneT = MU.rand(4.5, 7); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },
     boss_warlord(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const e = m.hp / m.maxHp <= (m.def.enrageAtHp || 0.5); m.summonT = (m.summonT || 3) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 7; for (let i = 0; i < (m.def.summonCount || 4); i++) { const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } seek(m, ctx, e ? (m.def.enrageSpeed || 1.7) : 1.1); const d = MU.dist(m.x, m.y, p.x, p.y); if (d <= m.def.atkRange && m.atkT <= 0) { ctx.areaDamage(m.x, m.y, m.def.slamRadius || 90, m.dmg * (e ? 1.5 : 1), '#ff5252', 2.6); m.atkT = m.def.atkCd; ctx.emit({ t: 'slam', x: m.x, y: m.y, r: m.def.slamRadius || 90 }); } },
     boss_lich(m, ctx) { const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; } const d = MU.dist(m.x, m.y, p.x, p.y); if (d < 260) flee(m, ctx, 0.9); else if (d > m.def.atkRange) seek(m, ctx, 0.9); else stop(m, p); m.summonT = (m.summonT || 2) - ctx.dt; if (m.summonT <= 0) { m.summonT = m.def.summonCd || 5; for (let i = 0; i < (m.def.summonCount || 5); i++) { const a = Math.random() * Math.PI * 2, r = 50 + Math.random() * 50; ctx.summon(m.def.summon || 'skeleton', m.x + Math.cos(a) * r, m.y + Math.sin(a) * r); } ctx.emit({ t: 'summon', x: m.x, y: m.y }); } m.shieldT = (m.shieldT || 4) - ctx.dt; if (m.shieldT <= 0) { m.shieldT = m.def.shieldCd || 7; m.shielded = m.def.shieldTime || 3.5; ctx.emit({ t: 'shield', x: m.x, y: m.y }); } if (m.shielded > 0) m.shielded -= ctx.dt; m.novaT = (m.novaT || 3) - ctx.dt; if (m.novaT <= 0) { m.novaT = 5.5; for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; ctx.shoot(m, Math.cos(a), Math.sin(a), m.def.projSpeed * 0.8, m.dmg * 0.7, m.def.projColor); } ctx.emit({ t: 'nova', x: m.x, y: m.y }); } if (m.atkT <= 0 && d <= m.def.atkRange && ctx.losClear(m.x, m.y, p.x, p.y)) { const n = MU.norm(p.x - m.x, p.y - m.y); ctx.shoot(m, n.x, n.y, m.def.projSpeed, m.dmg, m.def.projColor); m.atkT = m.def.atkCd; } },
+    // v1.89 — IL COLOSSO DELLA FAGLIA. Tre fasi legate ai PV, e sono tre modi di combattere diversi:
+    //   1) MURO      — cammina addosso e schiaccia. Pugno telegrafato ad area + onde d'urto concentriche.
+    //   2) SFALDATO  — perso un braccio, il pugno arriva meno spesso ma lancia MACERIE a ventaglio.
+    //   3) NUCLEO    — si apre: corre, ma incassa meta' danni in piu'. E' la finestra, e dura poco.
+    // Il telegrafo del pugno e' lungo apposta (0,72s come lo slam del Troll): un boss lento che colpisce
+    // senza preavviso non e' difficile, e' ingiusto.
+    boss_colosso(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      const q = m.hp / m.maxHp;
+      const fase = q <= (m.def.fase3 || 0.33) ? 3 : q <= (m.def.fase2 || 0.66) ? 2 : 1;
+      if (m.fase !== fase) {                       // il passaggio di fase e' un EVENTO, non una soglia muta
+        m.fase = fase;
+        if (fase === 2) { m.braccio = 1; ctx.emit({ t: 'colosso_braccio', x: m.x, y: m.y, e: m.eid }); }
+        if (fase === 3) { m.nucleo = 1; ctx.emit({ t: 'colosso_nucleo', x: m.x, y: m.y, e: m.eid }); }
+      }
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+
+      // il pugno: telegrafo, poi l'area. Mentre carica il colpo sta fermo — si vede arrivare e si esce.
+      if (m.wind > 0) {
+        m.wind -= ctx.dt; m.mx = m.my = 0;
+        if (m.wind <= 0) {
+          ctx.areaDamage(m.tx, m.ty, m.def.slamRadius || 132, m.dmg * (fase === 3 ? 1.25 : 1), '#b061ff', 3.2);
+          ctx.emit({ t: 'colosso_pugno', x: m.tx, y: m.ty, r: m.def.slamRadius || 132 });
+        }
+        return;
+      }
+      seek(m, ctx, fase === 3 ? (m.def.nucleoSpeed || 1.55) : 1);
+      if (d <= (m.def.atkRange || 104) && m.atkT <= 0) {
+        m.atkT = (m.def.atkCd || 2.4) * (fase === 2 ? 1.3 : 1);
+        m.wind = m.def.slamWind || 0.72; m.tx = p.x; m.ty = p.y;
+        ctx.emit({ t: 'colosso_wind', x: m.x, y: m.y, tx: p.x, ty: p.y, r: m.def.slamRadius || 132, dur: m.wind, e: m.eid });
+        return;
+      }
+      // ONDE D'URTO: tre anelli concentrici che partono da lui e si allargano. Non seguono nessuno —
+      // si schivano andando FRA un anello e l'altro, ed e' l'unico attacco che punisce lo stare fermi.
+      m.ondaT = (m.ondaT || 3) - ctx.dt;
+      if (m.ondaT <= 0) {
+        m.ondaT = (m.def.ondaCd || 7) * (fase === 3 ? 0.7 : 1);
+        for (let k = 0; k < 3; k++) ctx.zone(m.x, m.y, 90 + k * 82, 0.85 + k * 0.42, m.dmg * 0.75, '#b061ff');
+        ctx.emit({ t: 'colosso_onda', x: m.x, y: m.y, e: m.eid });
+      }
+      // MACERIE: solo da quando ha perso il braccio. Lente e grosse: si vedono arrivare, ma se resti
+      // dietro a un muro di tele o in mezzo alla folla non hai dove andare.
+      if (fase >= 2) {
+        m.macT = (m.macT || 2) - ctx.dt;
+        if (m.macT <= 0 && ctx.losClear(m.x, m.y, p.x, p.y)) {
+          m.macT = m.def.macerieCd || 3.4;
+          const base = Math.atan2(p.y - m.y, p.x - m.x);
+          for (let k = -1; k <= 1; k++) {
+            const a = base + k * 0.20;
+            ctx.shoot(m, Math.cos(a), Math.sin(a), m.def.projSpeed || 250, m.dmg * 0.7, m.def.projColor || '#c9a8ff');
+          }
+          ctx.emit({ t: 'colosso_macerie', x: m.x, y: m.y, a: base, e: m.eid });
+        }
+      }
+    },
     boss_dragon(m, ctx) {
       const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
       const d = MU.dist(m.x, m.y, p.x, p.y); m.phase = m.phase || 'chase'; m.phaseT = (m.phaseT || 0) - ctx.dt;

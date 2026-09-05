@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.88.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.89.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.89 (i boss)
+- **🗿 Boss solo al 10 e al 20.** Erano quattro, uno ogni cinque ondate: al quinto turno avevi visto tre
+  nemici su dieci e ti arrivava gia' un boss. Adesso la prima meta' e' una salita vera.
+- **Nuovo boss dell'ondata 10: IL COLOSSO DELLA FAGLIA.** Lastre di roccia tenute insieme dalla luce della
+  faglia. **Tre fasi**: pugni ad area e onde d'urto concentriche → a 2/3 di vita **perde un braccio** e
+  lancia le macerie → a 1/3 **si apre il nucleo**, corre di piu' ma incassa il **50% in piu'**. Non lo
+  picchi e basta: aspetti che si apra.
+- **☄️ AZ'GAROTH ridipinto**: volume vero al posto delle campiture piatte, ali a ventaglio con le dita e
+  il bordo a festoni, coda a sei segmenti che ondeggia, mandibola che si apre e **gola che si accende prima
+  del soffio**, e sotto il 40% di vita le crepe del corpo si accendono come magma.
+- **Signore della Guerra e Re Lich fuori rotazione**: erano gli ultimi due nemici disegnati **di lato** in
+  un gioco visto dall'alto — e' per quello che stonavano. Le definizioni restano nel codice.
 
 ## 🆕 Novita v1.88 (l'equipaggiamento si vede addosso)
 - **⚔️ Quattro ranghi per ogni slot** invece di due o tre: **comune** (quello di partenza, gratis),

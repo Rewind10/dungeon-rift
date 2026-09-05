@@ -79,6 +79,16 @@
   const BOSSES = {
     orc_warlord: { id: 'orc_warlord', name: 'Signore della Guerra Orchesco', tier: 4, boss: true, hp: 1600, speed: 140, radius: 32, dmg: 34, atkRange: 60, atkCd: 1.0, ai: 'boss_warlord', atk: 'melee', xp: 150, weight: 0, color: '#2f5d2f', color2: '#16301a', eye: '#ff5252', shape: 'brute', enrageAtHp: 0.5, enrageSpeed: 1.7, enrageDmg: 1.5, slamRadius: 90, summon: 'skeleton', summonCd: 7, summonCount: 4 },
     lich_king: { id: 'lich_king', name: 'Re Lich', tier: 4, boss: true, hp: 2200, speed: 116, radius: 30, dmg: 26, atkRange: 420, atkCd: 1.1, ai: 'boss_lich', atk: 'ranged', xp: 200, weight: 0, color: '#2f4a6a', color2: '#12233a', eye: '#7dffea', shape: 'lich', projSpeed: 280, projColor: '#7dffea', summon: 'skeleton', summonCd: 5, summonCount: 5, shieldCd: 7, shieldTime: 3.5 },
+    // v1.89 — IL COLOSSO DELLA FAGLIA. Non e' carne: sono lastre di roccia tenute insieme dalla luce
+    // della faglia. Lento e telegrafato come il Troll, ma con una cosa che nessun altro ha — SI APRE:
+    // a due terzi di vita perde un braccio e comincia a lanciare le macerie, a un terzo si sfalda e
+    // scopre il NUCLEO, che lo fa correre ma gli fa incassare meta' danni in piu'. Non lo si picchia
+    // e basta: si aspetta che si apra, e nel frattempo si sopravvive.
+    rift_colossus: { id: 'rift_colossus', name: 'Il Colosso della Faglia', tier: 5, boss: true, hp: 2600,
+      speed: 74, radius: 38, dmg: 38, atkRange: 104, atkCd: 2.4, ai: 'boss_colosso', atk: 'melee', xp: 300,
+      weight: 0, color: '#4a4658', color2: '#23212e', eye: '#b061ff', shape: 'colosso',
+      slamRadius: 132, slamWind: 0.72, ondaCd: 7.0, fase2: 0.66, fase3: 0.33,
+      macerieCd: 3.4, projSpeed: 250, projColor: '#c9a8ff', nucleoDanno: 1.5, nucleoSpeed: 1.55 },
     mega_dragon: { id: 'mega_dragon', name: 'AZ\'GAROTH, il Divoratore di Mondi', tier: 6, boss: true, mega: true, hp: 9000, speed: 104, radius: 52, dmg: 52, atkRange: 520, atkCd: 0.9, ai: 'boss_dragon', atk: 'special', xp: 800, weight: 0, color: '#5a0d2a', color2: '#2a0512', eye: '#ff2d55', shape: 'dragon', projSpeed: 340, projColor: '#ff2d55', enrageAtHp: 0.4 },
   };
   // v1.79.2 — 'cave_brute' (il Troll delle Caverne) e' fuori dal bestiario: non compare piu' in nessuna

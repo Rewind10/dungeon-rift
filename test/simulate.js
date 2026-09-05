@@ -3312,8 +3312,8 @@ function testV180() {
   const r2 = new Room('v180b'); const q = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
   r2.pending = 0; r2.waveList = []; r2.monsters.length = 0;
   let messi = 0;
-  for (let k = 0; k < 40 && messi < 10; k++) {
-    const a = (k / 40) * Math.PI * 2, rr = 700 + (k % 5) * 130;
+  for (let k = 0; k < 90 && messi < 10; k++) {
+    const a = (k / 18) * Math.PI * 2, rr = 620 + (k % 7) * 110;
     const x = q.x + Math.cos(a) * rr, y = q.y + Math.sin(a) * rr;
     if (x < C.TILE || y < C.TILE || x > (r2.map.w - 1) * C.TILE || y > (r2.map.h - 1) * C.TILE) continue;
     if (r2.isWallAt(x, y)) continue;
@@ -3946,7 +3946,7 @@ function testV184() {
     let visto = false;
     for (let k = 0; k < 12; k++) {
       const r = new Room('v184f' + k); r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
-      while (r.wave < 5) { r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave(); }
+      while (r.wave < 10) { r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave(); }   // v1.89 — il boss e' al 10
       if (r.recinto) visto = true;
     }
     assert(!visto, 'nella mappa del boss non ci sono prigionieri: l attenzione non si divide');
@@ -4143,6 +4143,57 @@ function testV188() {
   ok('quattro ranghi per slot verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV189() {
+  const Mon = require('../shared/monsters.js');
+  console.log('\n[TEST 63] v1.89 — due boss soli: il Colosso al 10, AZ GAROTH al 20');
+  const conn = { send() {} };
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) le ondate col boss sono due, e sono quelle ---
+  {
+    const con = []; for (let w = 1; w <= 22; w++) if (Waves.isBossWave(w)) con.push(w);
+    assert(con.join(',') === '10,20,21,22', 'boss al 10 e dalla 20 in poi (' + con.join(',') + ')');
+    assert(!Waves.isBossWave(5) && !Waves.isBossWave(15), 'niente boss al 5 e al 15');
+    assert(Waves.bossForWave(10, 1).def.id === 'rift_colossus', 'al 10 arriva il Colosso');
+    assert(Waves.bossForWave(20, 1).def.id === 'mega_dragon', 'al 20 AZ GAROTH');
+    // togliere due boss non doveva rendere il finale piu' facile
+    const b20 = Waves.bossForWave(20, 1);
+    assert(Math.round(b20.def.hp * b20.hpMul) === 22500, 'e il finale ha i PV di prima (' + Math.round(b20.def.hp * b20.hpMul) + ')');
+  }
+
+  // --- 2) il Colosso: tre fasi, e ognuna cambia come combatte ---
+  {
+    const r = new Room('v189a'); const p = r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
+    r.wave = 9; r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave();
+    const b = r.monsters.find(m => m.boss);
+    assert(!!b && b.type === 'rift_colossus', 'alla decima ondata entra il Colosso');
+    for (let i = 0; i < C.TICK_RATE * 4; i++) r.update(dt);
+    assert(b.fase === 1, 'a vita piena e in prima fase');
+    assert(!b.braccio && !b.nucleo, 'con tutti e due i bracci e il nucleo coperto');
+    b.hp = b.maxHp * 0.5; for (let i = 0; i < C.TICK_RATE * 2; i++) r.update(dt);
+    assert(b.fase === 2 && !!b.braccio, 'a meta vita perde un braccio');
+    b.hp = b.maxHp * 0.2; for (let i = 0; i < C.TICK_RATE * 2; i++) r.update(dt);
+    assert(b.fase === 3 && !!b.nucleo, 'a un quinto si apre il nucleo');
+    // e col nucleo scoperto incassa di piu': e la finestra su cui e costruito il combattimento
+    const r2 = new Room('v189b'); const q = r2.addPlayer('a', conn, 'A', 'mago'); r2.startGame();
+    r2.wave = 9; r2.monsters.length = 0; r2.pending = 0; r2.waveList = []; r2.nextWave();
+    const c1 = r2.monsters.find(m => m.boss); const hp0 = c1.hp;
+    r2.damageMonster(c1, 200, q.x, q.y, 0, q); const senza = hp0 - c1.hp;
+    c1.hp = hp0; c1.nucleo = 1;
+    r2.damageMonster(c1, 200, q.x, q.y, 0, q); const con2 = hp0 - c1.hp;
+    assert(con2 > senza * 1.4, 'col nucleo scoperto incassa il 50% in piu (' + senza + ' -> ' + con2 + ')');
+  }
+
+  // --- 3) i due vecchi restano scritti ma non compaiono piu' ---
+  {
+    assert(!!Mon.BOSSES.orc_warlord && !!Mon.BOSSES.lich_king, 'le definizioni restano nel file');
+    let visti = 0;
+    for (let w = 1; w <= 30; w++) if (Waves.isBossWave(w)) { const id = Waves.bossForWave(w, 1).def.id; if (id === 'orc_warlord' || id === 'lich_king') visti++; }
+    assert(visti === 0, 'ma non entrano piu in nessuna ondata');
+  }
+  ok('i due boss verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

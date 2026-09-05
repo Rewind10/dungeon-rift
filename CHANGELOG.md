@@ -2,6 +2,59 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.89.0] — 2026-09-05 · "Due boss, non quattro"
+
+#### ⛰️ Perche' i boss stonavano
+Il Signore della Guerra usava la forma `brute` — gambe, ascia, fendente **di profilo** — e il Re Lich la
+forma `lich`, una veste che fluttua vista di lato. Sono rimasti al linguaggio visivo di prima della v1.26,
+mentre tutti i nemici d'ondata sono stati rifatti come **puppet dall'alto** dipinti a strati. In una mappa
+vista dall'alto c'erano due boss visti di lato: non e' questione di gusto, e' una prospettiva sbagliata.
+
+#### 🎯 I boss diventano due
+Erano quattro, uno ogni cinque ondate. Alla quinta avevi visto **tre nemici su dieci** e ti arrivava gia' un
+boss; alla quindicesima il boss era diventato un appuntamento invece di un evento. Adesso:
+
+| | Prima | Adesso |
+|---|---|---|
+| Ondate col boss | 5 · 10 · 15 · 20 | **10 · 20** |
+| Boss diversi | 3 | **2** |
+| Prima meta' della run | interrotta due volte | una salita continua fino al 10 |
+
+La curva dei PV e' stata ritarata perche' **AZ'GAROTH alla 20ª resti esattamente quello di prima** (×2,5,
+22.500 PV): togliere due boss non doveva rendere il finale piu' facile.
+
+#### 🗿 IL COLOSSO DELLA FAGLIA — ondata 10
+Non e' carne: sono **lastre di roccia tenute insieme dalla luce della faglia**, e nelle fessure si vede il
+vuoto acceso. Vista dall'alto e' tutta spalle, con la testa incassata in mezzo — nessun volto, solo una
+fenditura con la luce dentro — e due braccia lunghe coi pugni squadrati. Intorno gli orbitano cinque blocchi
+di pietra, tenuti su dalla stessa luce.
+
+**Tre fasi, e sono tre modi di combattere diversi:**
+
+| Fase | Vita | Come combatte |
+|---|---|---|
+| **Muro** | 100-66% | Ti cammina addosso. Pugno telegrafato (0,72s, come lo slam del Troll) su un'area di 132px, e ogni 7s **tre onde d'urto concentriche** che partono da lui: si schivano andando *fra* un anello e l'altro |
+| **Sfaldato** | 66-33% | Perde il braccio sinistro — spalla compresa, e dal moncherino esce luce. Il pugno arriva meno spesso, ma comincia a lanciare **macerie** a ventaglio di tre |
+| **Nucleo** | sotto il 33% | Il petto si spacca e resta scoperto il nucleo: corre una volta e mezza piu' veloce e le onde arrivano piu' spesso, ma **incassa il 50% di danni in piu'**. E' la finestra, e dura poco |
+
+Non lo si picchia e basta: si aspetta che si apra, e nel frattempo si sopravvive. Ed e' l'unico boss la cui
+**forma cambia** con la vita — non serve guardare la barra per sapere a che punto sei.
+
+#### ☄️ E AZ'GAROTH ridipinto
+La forma era giusta (dall'alto, ali aperte ai lati, testa in avanti) ma era fatta di campiture piatte:
+un'ellisse bordeaux, due triangoli scuri per ali, una testa piccola. A schermo si leggeva come una macchia.
+Rifatto col linguaggio dei nemici nuovi:
+
+- **ali a ventaglio** con quattro dita e la membrana **a festoni** fra una e l'altra — e' il bordo che
+  rientra a far leggere *ala di drago* invece di *pinna* — con un battito vero (giu' veloce, su lento);
+- **coda a sei segmenti** che ondeggiano con ritardo, con la punta a lama;
+- **corpo allungato** con le placche del dorso e il volume dato dal gradiente, non dal contorno;
+- **mandibola che si apre** con le zanne, e la **gola che si accende prima del soffio**: il telegrafo e'
+  anche decorazione;
+- sotto il **40% di vita** le crepe del corpo si accendono come magma e il drago diventa una sorgente di luce.
+
+---
+
 ### [1.88.0] — 2026-09-05 · "Si vede cosa hai addosso"
 
 #### ⚔️ Quattro ranghi per ogni slot

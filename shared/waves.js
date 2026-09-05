@@ -9,7 +9,11 @@
 })(typeof self !== 'undefined' ? self : this, function (Mon, MU) {
   'use strict';
   const MONSTERS = Mon.MONSTERS, BOSSES = Mon.BOSSES;
-  const BOSS_EVERY = 5, FINAL_WAVE = 20;
+  // v1.89 — I BOSS SONO DUE: uno a META' STRADA (10) e quello finale (20). Erano quattro, uno ogni cinque
+  // ondate: al quinto turno avevi visto tre nemici su dieci e ti arrivava gia' un boss, e al quindicesimo
+  // il boss era diventato un appuntamento invece di un evento. Con due, la prima meta' e' una salita vera.
+  const BOSS_EVERY = 10, FINAL_WAVE = 20;
+  const BOSS_WAVES = [10, 20];
 
   // Modalità ondata (le ondate boss restano a parte)
   const MODES = {
@@ -70,15 +74,17 @@
   // erano gia' tarate bene. Il numero di mostri VIVI insieme non cambia: quello lo decide MAX_ALIVE_CURVE,
   // e i mostri in eccesso restano in coda.
   function scaling(w, players) { const p = Math.max(1, players); return { hp: 1 + w * 0.15 + (p - 1) * 0.14, dmg: 1 + w * 0.055, speed: 1 + Math.min(0.30, w * 0.015), count: Math.round((10 + w * 1.6) * (0.78 + p * 0.22)), eliteChance: Math.min(0.26, 0.03 + w * 0.019) }; }
-  function isBossWave(w) { return w > 0 && w % BOSS_EVERY === 0; }
+  function isBossWave(w) { return w >= FINAL_WAVE || BOSS_WAVES.indexOf(w) >= 0; }
   function bossForWave(w, players) {
-    let def;
-    if (w >= FINAL_WAVE) def = BOSSES.mega_dragon;
-    else if (w === 15) def = BOSSES.lich_king;
-    else if (w === 10) def = BOSSES.orc_warlord;
-    else def = MU.chance(0.5) ? BOSSES.orc_warlord : BOSSES.lich_king;
+    // v1.89 — due boss, due identita': il COLOSSO a meta' strada (un muro che si apre solo quando si
+    // sfalda) e AZ'GAROTH alla fine (potenza pura). Il Signore della Guerra e il Re Lich restano scritti
+    // in monsters.js ma non compaiono piu': erano gli ultimi due nemici disegnati DI LATO in un gioco
+    // visto dall'alto, ed e' per quello che stonavano.
+    const def = w >= FINAL_WAVE ? BOSSES.mega_dragon : BOSSES.rift_colossus;
     const p = Math.max(1, players);
-    return { def, hpMul: 1 + (w - BOSS_EVERY) * 0.10 + (p - 1) * 0.5, dmgMul: 1 + w * 0.03 };
+    // la curva e' tarata perche' AZ'GAROTH alla 20ª resti esattamente quello di prima (x2,5): togliere due
+    // boss non doveva rendere il finale piu' facile.
+    return { def, hpMul: 1 + Math.max(0, w - 10) * 0.15 + (p - 1) * 0.5, dmgMul: 1 + w * 0.03 };
   }
   function buildWave(w, players, mode) {
     const s = scaling(w, players); const pool = poolForWave(w);
@@ -102,5 +108,5 @@
     mon.xp = Math.round(mon.def.xp * (elite ? 2.5 : 1)); mon.elite = !!elite;
     if (elite && MU.chance(0.5)) mon.def = Object.assign({}, mon.def, { regen: (mon.def.regen || 0) + 8 });
   }
-  return { BOSS_EVERY, FINAL_WAVE, MODES, modeForWave, poolForWave, scaling, isBossWave, bossForWave, buildWave, applyScaling };
+  return { BOSS_EVERY, BOSS_WAVES, FINAL_WAVE, MODES, modeForWave, poolForWave, scaling, isBossWave, bossForWave, buildWave, applyScaling };
 });

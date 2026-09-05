@@ -101,6 +101,15 @@
         R.floater(ev.x, ev.y - 40, '+' + ev.monete + ' \uD83E\uDE99', '#ffcf4a', true); R.addShake(4); break;
       // v1.83 — colpo parato con lo scudo: l'arco si accende dalla parte in cui guardi
       case 'para': R.para(ev.x, ev.y, ev.a, (window.GAME.Constants.SCUDO_CONO || 1.22)); break;
+      // ===== v1.89 — IL COLOSSO DELLA FAGLIA =====
+      case 'colosso_wind': R.ring(ev.tx, ev.ty, '#b061ff', 6, ev.r || 132, ev.dur || 0.7); R.hitAttack(ev.e, (ev.dur || 0.7) + 0.2); break;
+      case 'colosso_pugno': A.explosion && A.explosion(); R.ring(ev.x, ev.y, '#b061ff', 10, ev.r || 132, 0.4); R.burst(ev.x, ev.y, '#c9a8ff', 26, 260, 0.55); R.addShake(9); break;
+      case 'colosso_onda': A.ability && A.ability('rift'); for (let k = 0; k < 3; k++) R.ring(ev.x, ev.y, '#b061ff', 20 + k * 40, 120 + k * 90, 0.7 + k * 0.2); R.addShake(4); break;
+      case 'colosso_braccio': A.kill && A.kill(false); R.burst(ev.x, ev.y, '#8d97a5', 34, 300, 0.9); R.ring(ev.x, ev.y, '#b061ff', 8, 140, 0.6); R.addShake(7);
+        HUD.killfeed('\uD83D\uDDFF <b style="color:#b061ff">Il Colosso perde un braccio</b> \u2014 ora lancia le macerie'); break;
+      case 'colosso_nucleo': A.levelUp && A.levelUp(); R.ring(ev.x, ev.y, '#e0ccff', 10, 200, 0.9); R.burst(ev.x, ev.y, '#ffffff', 40, 330, 1); R.addShake(12);
+        HUD.killfeed('\uD83D\uDCA0 <b style="color:#e0ccff">Il nucleo e scoperto</b> \u2014 incassa il 50% in piu'); break;
+      case 'colosso_macerie': R.burst(ev.x + Math.cos(ev.a) * 30, ev.y + Math.sin(ev.a) * 30, '#8d97a5', 10, 150, 0.4); break;
       // ===== v1.85 — le abilita' attive =====
       case 'abil': { const AB = (window.GAME.Abilities || {}).BY_ID || {}; const a = AB[ev.k] || {};
         A.ability && A.ability(ev.k); R.ring(ev.x, ev.y, ev.c || a.color || '#ffd27a', 8, 70, 0.35);

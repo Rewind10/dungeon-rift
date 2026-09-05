@@ -1466,6 +1466,9 @@ class Room {
     // v1.85 — MARCHIO: il segnato prende di piu' DA CHIUNQUE, non solo da chi l'ha segnato. E' li'
     // che sta il senso in cooperativa: e' il ladro che dice alla squadra dove picchiare.
     if (m.marchio > 0) d *= (m.marchioMult || 1.5);
+    // v1.89 — IL NUCLEO DEL COLOSSO: quando si sfalda e resta scoperto, incassa meta' danni in piu'.
+    // E' la finestra su cui e' costruito tutto il combattimento.
+    if (m.nucleo) d *= (m.def.nucleoDanno || 1.5);
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
     // v1.51 — COLPO DI GRAZIA: esecuzione sotto soglia. Mai sui boss, altrimenti banalizza le ondate 5/10/15/20.
     if (m.hp > 0 && !m.boss && src && src.boon && src.boon.execute > 0) {

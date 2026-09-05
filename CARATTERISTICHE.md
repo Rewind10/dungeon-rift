@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.88.0`
+**Versione attuale:** `1.89.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1163,7 +1163,7 @@ ufficiale, altrimenti l'ufficiale. **Mai entrambi insieme.**
 2. I nemici lasciano **XP** ✦ e **monete** 🪙 — oggetti no, dal v1.77.
 3. Uccisioni consecutive → **COMBO** con moltiplicatore XP crescente. *(v1.6)*
 4. Ripulita la mappa: **EXIT**, poi il **riepilogo**, le **carte** dovute ai livelli presi e i **punti** da spendere.
-5. Ogni 5 ondate → **BOSS**. Alla 20ª → **MEGA BOSS AZ'GAROTH**.
+5. **Due boss in tutta la run** *(v1.89)*: **il Colosso della Faglia alla 10ª** e **AZ'GAROTH alla 20ª**.
 
 ---
 
