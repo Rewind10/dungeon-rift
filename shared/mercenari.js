@@ -110,8 +110,16 @@
   // sganciarsi quando e' ridotto male. Qui in piu' c'e' il guinzaglio — se il capo si allontana troppo
   // molla tutto e lo raggiunge: un mercenario che resta indietro a picchiare non serve a niente.
   const FERMO = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false };
-  const LEASH = 380, RIENTRO = 150, INGAGGIO = 620, CORPO_A_CORPO = 140;
-  // v1.82.2 — quanto tempo di spinta a vuoto conta come "incastrato", e per quanto si aggira l'ostacolo
+  // v1.82.3 — LE DISTANZE. Un mercenario non e' un cacciatore, e' una scorta: sta col capo, e si occupa
+  // di cio' che minaccia il capo. Prima ingaggiava qualsiasi cosa entro 620 px DA SE', quindi partiva per
+  // conto suo dall'altra parte della stanza; e non aveva nessuna distanza minima, quindi finiva addosso
+  // al giocatore fino a sovrapporsi.
+  const SCORTA_MIN = 70;    // piu' vicino di cosi' si accavallano: si scosta, sempre
+  const SCORTA_IDEALE = 120; // la distanza in cui si tiene quando non c'e' niente da fare
+  const SCORTA_MAX = 190;   // piu' lontano di cosi', da fermo, si rifa' sotto
+  const MINACCIA = 360;     // un nemico e' affar suo se sta entro questo raggio DAL CAPO, non da lui
+  const LEASH = 300, RIENTRO = 170;   // il rientro non e' fino ai piedi del capo: si ferma appena e' di nuovo in formazione
+  const CORPO_A_CORPO = 140;
   const BLOCCO_T = 0.28, AGGIRA_T = 0.85, AGGIRA_ANG = 1.25;
 
   // Un mercenario si incastra in due modi, e sono lo stesso modo: spinge contro qualcosa che non cede.
@@ -127,7 +135,6 @@
     if (m._voleva && mosso < 0.7) m._bloccoT = (m._bloccoT || 0) + dt; else m._bloccoT = 0;
     if (m._bloccoT > BLOCCO_T) { m._bloccoT = 0; m._aggiraT = AGGIRA_T; m._lato = (m._lato === 1 ? -1 : 1); }
   }
-  // la direzione da tenere: dritta, oppure di traverso se si sta aggirando qualcosa
   function _dir(m, ang) {
     const a = (m._aggiraT > 0) ? ang + (m._lato || 1) * AGGIRA_ANG : ang;
     return { x: Math.cos(a), y: Math.sin(a) };
@@ -138,50 +145,63 @@
     _incastro(m, dt);
     if (!capo || m.dead || m.down) { m._voleva = 0; return FERMO; }
     const dxC = capo.x - m.x, dyC = capo.y - m.y;
-    const dC = Math.hypot(dxC, dyC) || 1;
+    const dC = Math.hypot(dxC, dyC) || 0.001;
     const aC = Math.atan2(dyC, dxC);
     const esci = (i) => { m._voleva = (Math.abs(i.mx) + Math.abs(i.my)) > 0.1 ? 1 : 0; return i; };
     // 1) GUINZAGLIO. Oltre questa distanza dal capo non esiste altro che tornare da lui, e non si molla
     //    finche' non si e' rientrati per bene (RIENTRO): senza l'isteresi il mercenario oscilla sul bordo,
     //    un tick insegue e un tick torna, e sembra rotto anche se sta facendo esattamente cio' che deve.
     if (dC > LEASH) m._torna = 1; else if (dC < RIENTRO) m._torna = 0;
-    if (m._torna) { const v = _dir(m, aC); return esci({ mx: v.x + (R() - 0.5) * 0.3, my: v.y + (R() - 0.5) * 0.3, aim: aC, shoot: false, q: false, e: false, dash: false }); }
-    // 2) IL BERSAGLIO: il piu' vicino che si possa DAVVERO raggiungere. Prendere il piu' vicino e basta
-    //    voleva dire puntare quello dietro al masso e restare li' a spingere: adesso serve la linea di
-    //    vista, e senza linea di vista vale solo chi ti e' praticamente addosso (dietro l'angolo).
+    // Rientrando puo' usare lo scatto: a parita' di velocita' con te, un compagno che si e' fermato a
+    // combattere non ti riprende PIU' — resterebbe indietro per sempre. Lo scatto (e il piccolo bonus di
+    // velocita' in Room.effSpeed) esistono solo mentre torna, cioe' quando e' dietro di te e non si vede.
+    if (m._torna) { const v = _dir(m, aC); return esci({ mx: v.x + (R() - 0.5) * 0.3, my: v.y + (R() - 0.5) * 0.3, aim: aC, shoot: false, q: false, e: false, dash: dC > 480 && m.cdDash <= 0 }); }
+    // 2) IL BERSAGLIO: chi MINACCIA IL CAPO, non chi passa di li'. La distanza si misura dal capo, cosi'
+    //    il mercenario non parte all'inseguimento per conto suo: resta una scorta. E deve essere
+    //    raggiungibile — serve la linea di vista, e senza vale solo chi gli e' praticamente addosso
+    //    (dietro l'angolo si mena lo stesso), se no si punta contro un masso e si resta li' a spingere.
     let n = null, bd = Infinity;
     for (const mo of room.monsters) {
       if (mo.dead) continue;
+      const dcx = mo.x - capo.x, dcy = mo.y - capo.y;
+      if (dcx * dcx + dcy * dcy > MINACCIA * MINACCIA) continue;
       const d2 = (mo.x - m.x) * (mo.x - m.x) + (mo.y - m.y) * (mo.y - m.y);
       if (d2 >= bd) continue;
       if (d2 > CORPO_A_CORPO * CORPO_A_CORPO && !room.losClear(m.x, m.y, mo.x, mo.y)) continue;
       bd = d2; n = mo;
     }
     const d = n ? Math.sqrt(bd) : Infinity;
-    if (!n || d > INGAGGIO) {
-      if (dC < 110 && m._aggiraT <= 0) return esci({ mx: 0, my: 0, aim: aC, shoot: false, q: false, e: false, dash: false });
-      const v = _dir(m, aC);
-      return esci({ mx: v.x, my: v.y, aim: aC, shoot: false, q: false, e: false, dash: false });
-    }
-    // 3) DA QUI IN GIU' E' LA TESTA DEI BOT DEI TEST, rifinita dalla v1.52 alla v1.66: la distanza giusta
-    //    e' quella della SUA arma (chi mena a 100 px non puo' tenersi a 160), ci si sgancia quando si e'
-    //    ridotti male, e in mischia si molla il contatto mentre l'arma ricarica invece di restare
-    //    appoggiati al nemico. Guidava le partite simulate; adesso guida un compagno vero.
-    const aim = Math.atan2(n.y - m.y, n.x - m.x);
-    const w = (m.hero && m.hero.weapon) || {};
-    const rMax = w.melee ? (w.arcRadius || 100) : 320, rMin = w.melee ? rMax * 0.55 : 160;
-    const ferito = m.hp / (m.maxHp + (m.stats ? m.stats.maxHpFlat || 0 : 0)) < 0.40;
-    const ricarica = w.melee && m.fireCd > 0.35 / (w.fireRate || 1);
-    const dir = (ferito || ricarica) ? 1 : (d < rMin ? -1 : (d > rMax ? 1 : 0));
-    const v = _dir(m, aim + (dir < 0 ? Math.PI : 0));
-    const passo = dir === 0 && m._aggiraT <= 0 ? 0 : 1;
-    const i = { mx: v.x * passo + (R() - 0.5) * 0.5, my: v.y * passo + (R() - 0.5) * 0.5, aim,
-      shoot: false, q: false, e: false, dash: false };
-    if (ferito && m.cdDash <= 0 && R() < 0.10) i.dash = true;
-    // si spara solo se il colpo puo' arrivare: contro un muro si sprecherebbe la ricarica
-    i.shoot = d <= (w.melee ? rMax + 20 : 520) && (w.melee || room.losClear(m.x, m.y, n.x, n.y));
+    let ang = aC, avanti = 0, aim = aC, spara = false;
+    if (n) {
+      // 3) DA QUI E' LA TESTA DEI BOT DEI TEST, rifinita dalla v1.52 alla v1.66: la distanza giusta e'
+      //    quella della SUA arma (chi mena a 100 px non puo' tenersi a 160), ci si sgancia quando si e'
+      //    ridotti male, e in mischia si molla il contatto mentre l'arma ricarica invece di restare
+      //    appoggiati al nemico.
+      aim = Math.atan2(n.y - m.y, n.x - m.x);
+      const w = (m.hero && m.hero.weapon) || {};
+      const rMax = w.melee ? (w.arcRadius || 100) : 320, rMin = w.melee ? rMax * 0.55 : 160;
+      const ferito = m.hp / (m.maxHp + (m.stats ? m.stats.maxHpFlat || 0 : 0)) < 0.40;
+      const ricarica = w.melee && m.fireCd > 0.35 / (w.fireRate || 1);
+      const dir = (ferito || ricarica) ? -1 : (d < rMin ? -1 : (d > rMax ? 1 : 0));
+      ang = aim + (dir < 0 ? Math.PI : 0); avanti = dir === 0 ? 0 : 1;
+      // si spara solo se il colpo puo' arrivare: contro un muro si sprecherebbe la ricarica
+      spara = d <= (w.melee ? rMax + 20 : 520) && (w.melee || room.losClear(m.x, m.y, n.x, n.y));
+    } else if (dC > SCORTA_MAX) { ang = aC; avanti = 1; }        // niente da fare: si rifa' sotto al capo
+    else if (dC < SCORTA_IDEALE) { ang = aC + Math.PI; avanti = 1; }   // ...e se e' troppo addosso si stacca
+    // ATTENZIONE alla differenza fra SCORTA_MIN e SCORTA_IDEALE: senza la seconda il mercenario si ferma
+    // esattamente sul minimo (66-70 px), cioe' appiccicato, e ci resta. La misura lo diceva chiaro: senza
+    // questa riga stava sotto i 70 px per meta' del tempo. Il minimo e' un divieto, l'ideale e' una meta'.
+    // 4) SPAZIO PERSONALE. Vale sopra ogni altra cosa: qualunque fosse l'intenzione, sotto questa
+    //    distanza dal capo ci si scosta — con una componente di lato, se no si rimbalza avanti e indietro
+    //    sulla stessa retta. E' l'unica regola che puo' contraddire il bersaglio, ed e' giusto cosi':
+    //    due sagome sovrapposte non si capisce piu' chi sei.
+    if (dC < SCORTA_MIN) { ang = aC + Math.PI + (m._lato || 1) * 0.5; avanti = 1; }
+    const v = _dir(m, ang);
+    const i = { mx: v.x * avanti + (R() - 0.5) * 0.25, my: v.y * avanti + (R() - 0.5) * 0.25,
+      aim, shoot: spara, q: false, e: false, dash: false };
+    if (m._aggiraT > 0 && avanti === 0) { i.mx = v.x; i.my = v.y; }   // se e' incastrato si muove comunque
     return esci(i);                            // niente q/e: un mercenario non ha abilita', ne' attive ne' passive
   }
 
-  return { NOMI, TINTE, CLASSI, COSTO_BASE, COSTO_PASSO, costo, punti, distribuisci, genera, palette, pensa, STAT_CLASSE, LEASH, INGAGGIO };
+  return { NOMI, TINTE, CLASSI, COSTO_BASE, COSTO_PASSO, costo, punti, distribuisci, genera, palette, pensa, STAT_CLASSE, LEASH, MINACCIA, SCORTA_MIN, SCORTA_MAX };
 });

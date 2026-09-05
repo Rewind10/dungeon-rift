@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.82.2',
+    VERSION: '1.82.3',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -30,7 +30,7 @@
     // per questo NON conta come giocatore in niente che regoli la difficolta' — l'ondata resta identica,
     // l'XP resta tutto tuo, e la sua morte non chiude la partita. Fra un'ondata e l'altra sparisce (non
     // ti segue al villaggio) e torna in campo curato del tutto.
-    MERC_MAX: 1, MERC_SOLO_SINGOLO: true, MERC_CURA_FINE_ONDATA: true,
+    MERC_MAX: 1, MERC_SOLO_SINGOLO: true, MERC_CURA_FINE_ONDATA: true, MERC_RIENTRO_MULT: 1.28,
     DASH_CD: 3.2, DASH_TIME: 0.20, DASH_IFRAME: 0.28, DASH_SPEED: 3.0,
     BULLET_RADIUS: 5, XP_MAGNET: 120, FINAL_WAVE: 20,
     // v1.63 — LA FAGLIA AI MARGINI. Restare attaccati al bordo esterno riduceva l'arco da difendere da

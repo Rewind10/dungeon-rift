@@ -3628,36 +3628,69 @@ function testV182() {
   }
   assert(bersaglio.dead || bersaglio.hp < hp0, 'e i nemici vicini se li prende lui (' + Math.round(hp0 - bersaglio.hp) + ' danni)');
 
-  // --- 13) v1.82.2: NON SI INCASTRA ---
-  // Il difetto: un nemico entra nel campo visivo ma fra i due c'e' un masso o un cunicolo stretto. Il
-  // mercenario puntava dritto e restava li' a spingere contro la roccia — il motore fa scivolare lungo i
-  // muri, ma se spingi PERPENDICOLARE non c'e' niente su cui scivolare. Due rimedi, uno per causa.
+  // --- 13) v1.82.2/3: non si incastra, sta a distanza, e non parte per conto suo ---
   {
-    const capoF = { x: -100, y: 0, dead: false };
-    const mF = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.guerriero, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
     const meta = () => 0.5;   // niente jitter: si misura la direzione, non il caso
-    // a) SENZA LINEA DI VISTA un nemico lontano non e' un bersaglio: si torna dal capo invece di spingere
-    const cieco = { dt: 1 / C.TICK_RATE, monsters: [{ x: 300, y: 0, dead: false }], losClear: () => false };
-    let i1 = Mrc.pensa(cieco, mF, capoF, meta);
-    assert(i1.mx < 0, 'col nemico dietro al masso non ci punta contro: torna verso il capo');
-    // b) e se comunque resta a spingere senza spostarsi, dopo un attimo cammina DI TRAVERSO
-    const dir0 = Math.atan2(i1.my, i1.mx);
-    let i2 = i1;
-    for (let k = 0; k < 14; k++) i2 = Mrc.pensa(cieco, mF, capoF, meta);   // mF non si muove mai: e' incastrato
-    const dir1 = Math.atan2(i2.my, i2.mx);
-    let scarto = Math.abs(((dir1 - dir0 + Math.PI) % (Math.PI * 2)) - Math.PI);
-    assert(scarto > 0.8, 'spinge e non si sposta: dopo un quarto di secondo cambia direzione (' + (scarto * 57).toFixed(0) + ' gradi)');
-    // c) col nemico A PORTATA DI MANO lo prende comunque, linea di vista o no (e' dietro l angolo)
-    const vicino = { dt: 1 / C.TICK_RATE, monsters: [{ x: 90, y: 0, dead: false }], losClear: () => false };
-    const mG = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.guerriero, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
-    const i3 = Mrc.pensa(vicino, mG, capoF, meta);
-    assert(i3.aim === 0, 'un nemico a novanta px lo affronta comunque: dietro l angolo si mena lo stesso');
-    // d) il mago non spara contro il muro
-    const mM = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.mago, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
-    const conVista = { dt: 1 / C.TICK_RATE, monsters: [{ x: 300, y: 0, dead: false }], losClear: () => true };
-    const senzaVista = { dt: 1 / C.TICK_RATE, monsters: [{ x: 120, y: 0, dead: false }], losClear: () => false };
-    assert(Mrc.pensa(conVista, mM, capoF, meta).shoot === true, 'con la strada libera il mago spara');
-    assert(Mrc.pensa(senzaVista, { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.mago, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 }, capoF, meta).shoot === false, 'contro il muro no: sprecherebbe la ricarica');
+    const nuovoM = (h) => ({ x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES[h || 'guerriero'], stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 });
+    const stanza = (mostri, vista) => ({ dt: 1 / C.TICK_RATE, monsters: mostri, losClear: () => vista !== false });
+    const verso = (i, ax, ay) => (i.mx * ax + i.my * ay);   // >0 se si muove in quella direzione
+
+    // a) SPAZIO PERSONALE: appiccicato al capo si scosta, sempre — anche con un nemico addosso.
+    {
+      const m = nuovoM(); const capo = { x: 30, y: 0, dead: false };
+      const i = Mrc.pensa(stanza([{ x: 60, y: 0, dead: false }], true), m, capo, meta);
+      assert(verso(i, 1, 0) < 0, 'incollato al capo si scosta invece di sovrapporsi');
+      assert(Math.abs(i.aim) < 0.01, 'ma continua a guardare il nemico');
+    }
+    // b) MENO AGGRESSIVO: un nemico lontano dal CAPO non e' affar suo, anche se lui lo vede benissimo.
+    {
+      const m = nuovoM(); const capo = { x: -150, y: 0, dead: false };   // nella fascia di scorta: fermo
+      const lontano = { x: 300, y: 0, dead: false };            // 450 px dal capo: fuori dalla minaccia
+      const i = Mrc.pensa(stanza([lontano], true), m, capo, meta);
+      assert(i.shoot === false, 'non ingaggia chi non minaccia il capo');
+      assert(verso(i, 1, 0) <= 0.01, 'e non gli parte incontro');
+      // lo stesso nemico, col capo vicino a lui, diventa affar suo
+      const capo2 = { x: 100, y: 0, dead: false };
+      const i2 = Mrc.pensa(stanza([{ x: 200, y: 0, dead: false }], true), nuovoM(), capo2, meta);
+      assert(Math.abs(i2.aim) < 0.01, 'ma se minaccia il capo lo affronta');
+    }
+    // c) fermo nella fascia di scorta: non insegue e non si accavalla
+    {
+      const m = nuovoM(); const capo = { x: 150, y: 0, dead: false };
+      const i = Mrc.pensa(stanza([], true), m, capo, meta);
+      assert(Math.abs(i.mx) < 0.01 && Math.abs(i.my) < 0.01, 'a distanza giusta e senza nemici sta fermo');
+      // troppo addosso: si stacca fino alla distanza di scorta, non si limita a non accavallarsi
+      const i0 = Mrc.pensa(stanza([], true), nuovoM(), { x: 90, y: 0, dead: false }, meta);
+      assert(verso(i0, -1, 0) > 0.5, 'troppo addosso al capo: si stacca (' + i0.mx.toFixed(2) + ')');
+      const lontanissimo = { x: 260, y: 0, dead: false };
+      const i2 = Mrc.pensa(stanza([], true), nuovoM(), lontanissimo, meta);
+      assert(verso(i2, 1, 0) > 0.5, 'se il capo si allontana lo raggiunge');
+    }
+    // d) SENZA LINEA DI VISTA un nemico non e' un bersaglio: non ci si punta contro
+    {
+      const m = nuovoM(); const capo = { x: 100, y: 0, dead: false };
+      const i = Mrc.pensa(stanza([{ x: 200, y: 0, dead: false }], false), m, capo, meta);
+      assert(i.shoot === false, 'col nemico dietro al masso non lo affronta');
+      // ...ma a portata di mano lo prende comunque: dietro l angolo si mena lo stesso
+      const i2 = Mrc.pensa(stanza([{ x: 90, y: 0, dead: false }], false), nuovoM(), capo, meta);
+      assert(Math.abs(i2.aim) < 0.01, 'un nemico a novanta px lo affronta anche senza linea di vista');
+    }
+    // e) ANTI-INCASTRO: se spinge e non si sposta, dopo un attimo cammina di traverso
+    {
+      const m = nuovoM(); const capo = { x: -260, y: 0, dead: false };   // lontano: vuole muoversi
+      let i = Mrc.pensa(stanza([], true), m, capo, meta);
+      assert(verso(i, -1, 0) > 0.5, 'parte verso il capo');
+      const dir0 = Math.atan2(i.my, i.mx);
+      for (let k = 0; k < 14; k++) i = Mrc.pensa(stanza([], true), m, capo, meta);   // m non si muove mai
+      const scarto = Math.abs(((Math.atan2(i.my, i.mx) - dir0 + Math.PI) % (Math.PI * 2)) - Math.PI);
+      assert(scarto > 0.8, 'spinge e non si sposta: cambia direzione (' + (scarto * 57).toFixed(0) + ' gradi)');
+    }
+    // f) il mago non spara contro il muro
+    {
+      const capo = { x: 100, y: 0, dead: false };
+      assert(Mrc.pensa(stanza([{ x: 200, y: 0, dead: false }], true), nuovoM('mago'), capo, meta).shoot === true, 'con la strada libera il mago spara');
+      assert(Mrc.pensa(stanza([{ x: 200, y: 0, dead: false }], false), nuovoM('mago'), capo, meta).shoot === false, 'contro il muro no: sprecherebbe la ricarica');
+    }
   }
   // e) sul campo vero: messo con la faccia contro la roccia, dopo qualche secondo si e' spostato
   {

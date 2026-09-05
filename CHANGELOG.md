@@ -2,6 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.82.3] — 2026-09-05 · "Il mercenario impara le distanze"
+
+Due difetti segnalati sul campo: *"sta troppo vicino al personaggio principale quasi si sovrappone"* ed
+*"e' troppo aggressivo"*. Sono la stessa cosa vista da due lati — il mercenario non aveva **nessuna idea
+di distanza**, ne' da te ne' dai nemici.
+
+#### 📏 Lo spazio personale
+Adesso ha tre soglie invece di nessuna:
+
+| | |
+|---:|---|
+| **70 px** | il minimo assoluto: sotto, si scosta e basta — vale **sopra ogni altra cosa**, anche col nemico addosso, perche' due sagome sovrapposte non fanno piu' capire chi sei |
+| **120 px** | la distanza in cui si tiene quando non c'e' niente da fare |
+| **190 px** | oltre, da fermo, si rifa' sotto |
+
+La distinzione fra il **minimo** e l'**ideale** e' tutta la differenza, e me l'ha detta la misura: con il
+solo minimo il mercenario si fermava esattamente sulla soglia — appiccicato — e ci restava. Stava sotto i
+70 px per **meta' del tempo**. Con la distanza ideale sta a **123-186 px di mediana** e sotto i 70 px
+finisce nel 2-9% dei tick, quasi sempre perche' sei tu che gli cammini addosso.
+
+#### 🛡️ Una scorta, non un cacciatore
+Prima ingaggiava qualunque cosa entro 620 px **da se'**, e partiva per conto suo dall'altra parte della
+stanza. Adesso un nemico e' affar suo se sta entro **360 px dal CAPO**: si occupa di cio' che minaccia te.
+Misurato con il giocatore fermo per un minuto: uccide 21-23 nemici (fa il suo mestiere) e **non si allontana
+mai oltre 157-215 px**.
+
+E siccome a parita' di velocita' un compagno che si ferma a combattere non ti riprenderebbe **mai piu'**,
+mentre rientra ha un piccolo bonus di velocita' (+28%) e puo' usare lo scatto oltre i 480 px: due cose che
+esistono solo quando ti sta dietro, cioe' quando non si vedono.
+
+Verificato nel browser: dopo lo schieramento si assesta su **122-131 px** e resta li'.
+
+**1410 test passati, 0 falliti.** Le prove nuove: incollato al capo si scosta ma continua a guardare il
+nemico; un nemico lontano dal capo non lo ingaggia e non gli parte incontro; troppo addosso si stacca fino
+alla distanza di scorta; a distanza giusta e senza nemici sta fermo.
+
 ### [1.82.2] — 2026-09-05 · "Colori veri, e non ci si incastra piu'"
 
 #### 🎨 Il mercenario adesso e' di un altro COLORE
