@@ -2,6 +2,57 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.82.2] — 2026-09-05 · "Colori veri, e non ci si incastra piu'"
+
+#### 🎨 Il mercenario adesso e' di un altro COLORE
+La prima passata spostava il tono di poco, e in gioco — con la luce della caverna addosso — due ladri
+restavano due macchie verdi uguali. Adesso ogni variante e' un **colore suo**: ruggine, ferro, viola,
+ottone per il guerriero; cremisi e oro, verde e lime, cenere e brace, porpora per il mago; bordeaux, blu
+notte, viola, cuoio per il ladro. Restano scuri e sporchi, perche' la caverna e' scura e un colore acceso
+pieno sembrerebbe incollato sopra, ma la tinta si legge a colpo d'occhio.
+
+Il problema pero' non era solo la scelta dei colori: era **dove finivano**. Dall'alto di un ladro si vedono
+soprattutto la **mantellina** e il **cappuccio**, e di un guerriero **elmo, piastra e spalline** — e tutte
+queste superfici avevano colori scritti a mano nel renderer, fuori dalla palette. Si tingeva il torso, cioe'
+la parte che si vede meno. Adesso:
+
+- il **ladro** ha `mant` e `capp` nella palette;
+- il **guerriero** ha `metallo`, un colore solo da cui nascono elmo, piastra e spalline con le sue
+  schiariture: cambiarlo cambia l'armatura intera;
+- il **mago** era gia' a posto (la sua veste e' il gradiente del corpo).
+
+Le chiavi nuove entrano tutte nella firma della palette, quindi la cache dei gradienti resta separata per
+variante — la correzione della 1.82.1 vale anche per queste.
+
+#### 🧱 Il mercenario non si incastra piu'
+Segnalato: *"quando un nemico entra nel campo visivo ma tra di loro c'e' un ostacolo o un cunicolo stretto
+tende a bloccarsi"*. Vero, e la causa e' meccanica: il motore fa **scivolare** lungo i muri (`moveCircle`
+muove un asse per volta), ma se spingi **perpendicolare** alla roccia non c'e' niente su cui scivolare — e
+chi punta dritto a un nemico che sta dall'altra parte di un masso spinge esattamente cosi'.
+
+Due rimedi, uno per causa:
+
+1. **Il bersaglio deve essere raggiungibile.** Prima prendeva il piu' vicino e basta; adesso serve la
+   **linea di vista**, e senza linea di vista vale solo chi gli e' praticamente addosso (140 px: dietro
+   l'angolo si mena lo stesso). Un nemico dietro al masso non e' piu' un bersaglio, quindi non ci si punta
+   contro. Di conseguenza il mago non spreca piu' colpi contro la roccia.
+2. **L'anti-incastro.** Si misura l'**intento** contro lo **spostamento vero**: se per un quarto di secondo
+   il primo c'e' e il secondo no, per otto decimi si cammina **di traverso** (75°, un lato per volta,
+   alternandolo) invece che dritto. E' l'equivalente di dare una spallata e girare attorno. Vale per tutto:
+   inseguimento, ritirata e ritorno dal capo lungo i cunicoli.
+
+#### 🧪 Tre test che erano un lancio di dadi
+Non c'entrano coi mercenari, ma sono saltati fuori girando la suite otto volte di fila e andavano chiusi:
+la prova del teletrasporto (v1.76.1) non teneva conto delle spintarelle dell'**anti-incastro** dei mostri
+(`_recoverStuck` sposta di una decina di px chi si e' wedgiato in un angolo) e contava un "scatto" da 23 px
+come se fosse un teletrasporto — la soglia adesso e' larga rispetto a quelle, e resta venti volte piu'
+stretta del difetto che deve prendere (619 px in un tick); la prova della caccia partiva anche da 1.500 px,
+che su una mappa a corridoi in 30 s non sono percorribili a piedi (adesso 700-1.050 px in 40 s); e il Fungo
+Sporifero poteva essere **spinto** di una ventina di px dai corpi che gli passavano addosso pur non
+camminando mai.
+
+**1401 test passati, 0 falliti** su otto esecuzioni di fila. Client verde.
+
 ### [1.82.1] — 2026-09-05 · "Il giocatore si e' ritrovato addosso i colori del mercenario"
 
 #### 🐛 Il difetto

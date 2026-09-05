@@ -1991,7 +1991,7 @@
     _palKey(pal) {
       if (!pal) return '';
       let k = '';
-      for (const c of ['cloth', 'clothDk', 'body', 'bodyDk', 'steelDk', 'skin', 'wood', 'accent', 'pelo', 'orlo']) if (pal[c]) k += pal[c];
+      for (const c of ['cloth', 'clothDk', 'body', 'bodyDk', 'steelDk', 'skin', 'wood', 'accent', 'pelo', 'orlo', 'mant', 'capp', 'metallo']) if (pal[c]) k += pal[c];
       return k;
     },
     _hero(ctx, id, r, t, dashing, atk, eq) {
@@ -2128,6 +2128,11 @@
     _heroGuerriero(ctx, r, t, atk, eq) {
       const _P = (eq && eq.pal) || {};
       const DK = '#0a0c12', clothDk = _P.clothDk || '#243516', cloth = _P.cloth || '#3f5a2c', steelDk = _P.steelDk || '#3a424e';
+      // v1.82.2 — DALL'ALTO IL GUERRIERO E' QUASI TUTTO METALLO: elmo, piastra e spalline coprivano la
+      // sagoma e avevano tre grigi scritti a mano, quindi la tinta del vestito non si vedeva. Adesso i tre
+      // pezzi nascono da UN colore (`metallo`) e dalle sue schiariture: cambiarlo cambia l'armatura intera.
+      const met = _P.metallo || '#7f8895';
+      const metS = this._shade(met, -69), metM = this._shade(met, 46), metL = this._shade(met, 99);
       const sway = Math.sin(t * 5) * 0.12;
       ctx.lineJoin = 'round';
       ctx.fillStyle = steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
@@ -2141,13 +2146,13 @@
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
       const gr = this._grad('h_torso|gue|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
       ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
-      const pg = this._grad('h_plate|' + r, () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, '#3a424e'); q.addColorStop(0.5, '#7f8895'); q.addColorStop(1, '#c2c9d4'); return q; });
+      const pg = this._grad('h_plate|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, metS); q.addColorStop(0.5, met); q.addColorStop(1, '#c2c9d4'); return q; });
       ctx.fillStyle = pg; this._rr(ctx, -r * 0.36, -r * 0.34, r * 0.74, r * 0.68, r * 0.26); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = 1.8;
       ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.30); ctx.lineTo(r * 0.24, -r * 0.24); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-r * 0.32, 0); ctx.lineTo(r * 0.28, 0); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.30); ctx.lineTo(r * 0.24, r * 0.24); ctx.stroke();
-      const sp = this._grad('h_spall|' + r, () => { const q = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); q.addColorStop(0, '#20262e'); q.addColorStop(1, '#525b68'); return q; });
+      const sp = this._grad('h_spall|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); q.addColorStop(0, this._shade(met, -95)); q.addColorStop(1, this._shade(met, -45)); return q; });
       for (const sgy of [-1, 1]) { ctx.fillStyle = sp; ctx.strokeStyle = DK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-r * 0.14, sgy * r * 0.60, r * 0.30, r * 0.21, sgy * 0.3, 0, 7); ctx.fill(); ctx.stroke(); }
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
       // v1.75 — CIVILE: la stessa sagoma senza scudo e senza elmo. La usano i mercanti, che condividono
@@ -2178,7 +2183,7 @@
         ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.1, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.1, r * 0.045, 0, 7); ctx.fill();
         return;
       }
-      const hg = this._grad('h_elmo|' + r, () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, '#6e7784'); q.addColorStop(0.5, '#aeb6c2'); q.addColorStop(1, '#e2e7ee'); return q; });
+      const hg = this._grad('h_elmo|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, this._shade(met, -17)); q.addColorStop(0.5, metM); q.addColorStop(1, '#e2e7ee'); return q; });
       ctx.fillStyle = hg; ctx.strokeStyle = DK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.46, 0, 7); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#0b0e13'; this._rr(ctx, r * 0.16, -r * 0.22, r * 0.30, r * 0.44, 3); ctx.fill();   // feritoia
       ctx.fillStyle = '#0b0e13'; this._rr(ctx, -r * 0.02, -r * 0.06, r * 0.34, r * 0.12, 2); ctx.fill();
@@ -2191,9 +2196,12 @@
     _heroLadro(ctx, r, t, atk, eq) {
       const _P = (eq && eq.pal) || {};
       const DK = '#0a0c12', cloth = _P.cloth || '#3c5140', clothDk = _P.clothDk || '#1d2a22', skin = _P.skin || '#c99a6a', wood = _P.wood || '#8a6534';
+      // v1.82.2 — dall'alto del ladro si vedono soprattutto MANTELLINA e CAPPUCCIO: erano due verdi
+      // scritti a mano, quindi due ladri di tinta diversa restavano due macchie verdi uguali.
+      const mant = _P.mant || '#25342b', capp = _P.capp || '#33443a';
       const sway = Math.sin(t * 5) * 0.12, draw = atk;
       ctx.lineJoin = 'round';
-      ctx.fillStyle = '#25342b'; ctx.strokeStyle = DK; ctx.lineWidth = 2;      // mantellina dietro
+      ctx.fillStyle = mant; ctx.strokeStyle = DK; ctx.lineWidth = 2;           // mantellina dietro
       ctx.beginPath(); ctx.moveTo(-r * 0.10, -r * 0.58); ctx.quadraticCurveTo(-r * 1.20, -r * (0.62 + sway), -r * 1.10, 0);
       ctx.quadraticCurveTo(-r * 1.20, r * (0.62 - sway), -r * 0.10, r * 0.58); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = clothDk; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
@@ -2237,7 +2245,7 @@
       }
       ctx.lineCap = 'butt';
       ctx.fillStyle = skin; ctx.strokeStyle = DK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.48, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#33443a'; ctx.strokeStyle = DK; ctx.lineWidth = 2;      // cappuccio a punta
+      ctx.fillStyle = capp; ctx.strokeStyle = DK; ctx.lineWidth = 2;           // cappuccio a punta
       ctx.beginPath(); ctx.moveTo(r * 0.20, -r * 0.44); ctx.quadraticCurveTo(-r * 0.45, -r * 0.50, -r * 0.92, -r * 0.10);
       ctx.quadraticCurveTo(-r * 0.98, 0, -r * 0.92, r * 0.10);
       ctx.quadraticCurveTo(-r * 0.45, r * 0.50, r * 0.20, r * 0.44); ctx.closePath(); ctx.fill(); ctx.stroke();

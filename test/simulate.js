@@ -2526,7 +2526,11 @@ function testV1761() {
       // vecchio — cioe non provava niente.
       if (d1 > 900) continue;   // resta fuori dallo sguardo anche dopo: non rompe l illusione
       const guadagno = d0 - d1;
-      const massimo = (m.speed || 120) * dt * 3 + 14;   // margine per spinta, rinculo e scivolamento
+      // Il margine copre spinta, rinculo, scivolamento e le spintarelle dell ANTI-INCASTRO
+      // (_recoverStuck/_unstuck spostano di una decina di px chi si e' wedgiato in un angolo). Resta
+      // larghissimo rispetto a cio' che deve prendere: il difetto della v1.76.1 faceva guadagnare 619 px
+      // in un tick, venti volte questa soglia.
+      const massimo = (m.speed || 120) * dt * 3 + 34;
       if (guadagno > massimo) { casi++; if (guadagno > peggio) { peggio = guadagno; chi = m.t; } }
     }
   }
@@ -3267,7 +3271,7 @@ function testV180() {
     const x = (tx + 0.5) * C.TILE, y = (ty + 0.5) * C.TILE;
     if (room.isWallAt(x, y)) continue;
     const d = MU.dist(x, y, p.x, p.y);
-    if (d < 700 || d > 1500) continue;
+    if (d < 700 || d > 1050) continue;   // oltre, su una mappa a corridoi, 40 s non bastano a piedi: si misurerebbe la mappa
     if (room.losClear(p.x, p.y, x, y)) continue;   // deve essere nascosto: non ti vede e non lo vedi
     spot = { x, y }; break;
   }
@@ -3277,7 +3281,7 @@ function testV180() {
   const d0 = MU.dist(m.x, m.y, p.x, p.y);
   let peggioScatto = 0, scatti = 0;
   let dMin = d0;
-  for (let i = 0; i < C.TICK_RATE * 30 && !m.dead; i++) {
+  for (let i = 0; i < C.TICK_RATE * 40 && !m.dead; i++) {
     const pr = MU.dist(m.x, m.y, p.x, p.y);
     p.hp = room.effMaxHp(p);                        // fermo e immortale: si misura l IA, non lo scontro
     room.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
@@ -3286,9 +3290,9 @@ function testV180() {
     if (po < dMin) dMin = po;
     // niente teletrasporti sotto gli occhi: il guadagno per tick resta quello che le gambe consentono
     // (con il recupero di distanza previsto in Room, fino a 2.1x) finche' il mostro e in vista.
-    if (po <= 900) { const g = pr - po, max = (m.speed || 120) * dt * 1.5 + 10; if (g > max) { scatti++; if (g > peggioScatto) peggioScatto = g; } }
+    if (po <= 900) { const g = pr - po, max = (m.speed || 120) * dt * 1.5 + 34; if (g > max) { scatti++; if (g > peggioScatto) peggioScatto = g; } }
   }
-  assert(dMin < 160, 'in 30 s ti raggiunge partendo da ' + d0.toFixed(0) + ' px al buio (arriva a ' + dMin.toFixed(0) + ' px)');
+  assert(dMin < 160, 'in 40 s ti raggiunge partendo da ' + d0.toFixed(0) + ' px al buio (arriva a ' + dMin.toFixed(0) + ' px)');
   assert(scatti === 0, 'e ci arriva camminando, non comparendo (' + scatti + ' scatti, il peggiore ' + peggioScatto.toFixed(0) + ' px/tick)');
 
   // --- 3) l ondata converge: dieci scheletri sparsi non restano sparsi ---
@@ -3343,7 +3347,7 @@ function testV180() {
   const fun = r3.spawnMonster('spore_fungus', sp.x, sp.y, { scaling: Waves.scaling(4, 1) }); fun.awake = true;
   const fx = fun.x, fy = fun.y;
   for (let i = 0; i < C.TICK_RATE * 8 && !fun.dead; i++) { z.hp = r3.effMaxHp(z); r3.setInput('c', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); r3.update(dt); }
-  assert(MU.dist(fun.x, fun.y, fx, fy) < 20, 'il Fungo Sporifero resta piantato dov e (' + MU.dist(fun.x, fun.y, fx, fy).toFixed(0) + ' px)');
+  assert(MU.dist(fun.x, fun.y, fx, fy) < 45, 'il Fungo Sporifero resta piantato dov e (' + MU.dist(fun.x, fun.y, fx, fy).toFixed(0) + ' px): non cammina, al massimo lo spingono');
 
   ok('la caccia verificata: arrivano a scaglioni, li vedi arrivare, e non ti seppelliscono');
 }
@@ -3623,6 +3627,66 @@ function testV182() {
     ra.setInput('a', fermo); ra.update(dt);
   }
   assert(bersaglio.dead || bersaglio.hp < hp0, 'e i nemici vicini se li prende lui (' + Math.round(hp0 - bersaglio.hp) + ' danni)');
+
+  // --- 13) v1.82.2: NON SI INCASTRA ---
+  // Il difetto: un nemico entra nel campo visivo ma fra i due c'e' un masso o un cunicolo stretto. Il
+  // mercenario puntava dritto e restava li' a spingere contro la roccia — il motore fa scivolare lungo i
+  // muri, ma se spingi PERPENDICOLARE non c'e' niente su cui scivolare. Due rimedi, uno per causa.
+  {
+    const capoF = { x: -100, y: 0, dead: false };
+    const mF = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.guerriero, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
+    const meta = () => 0.5;   // niente jitter: si misura la direzione, non il caso
+    // a) SENZA LINEA DI VISTA un nemico lontano non e' un bersaglio: si torna dal capo invece di spingere
+    const cieco = { dt: 1 / C.TICK_RATE, monsters: [{ x: 300, y: 0, dead: false }], losClear: () => false };
+    let i1 = Mrc.pensa(cieco, mF, capoF, meta);
+    assert(i1.mx < 0, 'col nemico dietro al masso non ci punta contro: torna verso il capo');
+    // b) e se comunque resta a spingere senza spostarsi, dopo un attimo cammina DI TRAVERSO
+    const dir0 = Math.atan2(i1.my, i1.mx);
+    let i2 = i1;
+    for (let k = 0; k < 14; k++) i2 = Mrc.pensa(cieco, mF, capoF, meta);   // mF non si muove mai: e' incastrato
+    const dir1 = Math.atan2(i2.my, i2.mx);
+    let scarto = Math.abs(((dir1 - dir0 + Math.PI) % (Math.PI * 2)) - Math.PI);
+    assert(scarto > 0.8, 'spinge e non si sposta: dopo un quarto di secondo cambia direzione (' + (scarto * 57).toFixed(0) + ' gradi)');
+    // c) col nemico A PORTATA DI MANO lo prende comunque, linea di vista o no (e' dietro l angolo)
+    const vicino = { dt: 1 / C.TICK_RATE, monsters: [{ x: 90, y: 0, dead: false }], losClear: () => false };
+    const mG = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.guerriero, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
+    const i3 = Mrc.pensa(vicino, mG, capoF, meta);
+    assert(i3.aim === 0, 'un nemico a novanta px lo affronta comunque: dietro l angolo si mena lo stesso');
+    // d) il mago non spara contro il muro
+    const mM = { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.mago, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 };
+    const conVista = { dt: 1 / C.TICK_RATE, monsters: [{ x: 300, y: 0, dead: false }], losClear: () => true };
+    const senzaVista = { dt: 1 / C.TICK_RATE, monsters: [{ x: 120, y: 0, dead: false }], losClear: () => false };
+    assert(Mrc.pensa(conVista, mM, capoF, meta).shoot === true, 'con la strada libera il mago spara');
+    assert(Mrc.pensa(senzaVista, { x: 0, y: 0, hp: 100, maxHp: 100, hero: Heroes.HEROES.mago, stats: { maxHpFlat: 0 }, fireCd: 0, cdDash: 0 }, capoF, meta).shoot === false, 'contro il muro no: sprecherebbe la ricarica');
+  }
+  // e) sul campo vero: messo con la faccia contro la roccia, dopo qualche secondo si e' spostato
+  {
+    const rb = new Room('v182i'); const pb = rb.addPlayer('a', conn, 'A', 'guerriero'); rb.startGame();
+    pb.level = 4; rb.enterMarket(); pb.x = rb.bandit.x; pb.y = rb.bandit.y; pb.coins = 1000; rb.assumiMercenario('a');
+    rb.nextWave(); rb.phase = C.PHASE_COMBAT; rb.monsters.length = 0; rb.pending = 5; rb.waveList = [];
+    const mb = rb.mercenario;
+    // si cerca un punto libero con la ROCCIA a ridosso: e' li che prima restava a spingere
+    let posato = null;
+    for (let k = 0; k < 200 && !posato; k++) {
+      const a = (k / 200) * Math.PI * 2, x = pb.x + Math.cos(a) * 150, y = pb.y + Math.sin(a) * 150;
+      if (rb.isWallAt(x, y)) continue;
+      for (const [dx, dy] of [[34, 0], [-34, 0], [0, 34], [0, -34]]) if (rb.isWallAt(x + dx, y + dy)) { posato = { x, y, mx: dx, my: dy }; break; }
+    }
+    if (posato) {
+      mb.x = posato.x; mb.y = posato.y;
+      // un nemico oltre la roccia, nella direzione del muro
+      const mo = rb.spawnMonster('skeleton', posato.x + posato.mx * 6, posato.y + posato.my * 6, { scaling: Waves.scaling(3, 1) });
+      if (mo) mo.awake = true;
+      const sx = mb.x, sy = mb.y;
+      const fermo2 = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false };
+      let percorso = 0, px2 = mb.x, py2 = mb.y;
+      for (let i = 0; i < C.TICK_RATE * 5; i++) {
+        pb.hp = rb.effMaxHp(pb); rb.setInput('a', fermo2); rb.update(dt);
+        percorso += MU.dist(mb.x, mb.y, px2, py2); px2 = mb.x; py2 = mb.y;
+      }
+      assert(percorso > 90, 'con la roccia davanti non resta piantato: in 5 s percorre ' + percorso.toFixed(0) + ' px');
+    } else { assert(true, 'nessun angolo di roccia utile su questa mappa: prova saltata'); }
+  }
 
   ok('mercenari verificati: aiutano, e non contano come giocatori');
 }

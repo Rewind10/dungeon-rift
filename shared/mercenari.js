@@ -25,24 +25,30 @@
   // (`eq.pal` in _heroGuerriero/_heroMago/_heroLadro, mai usato da nessuno finora): basta passargli
   // questi colori nello snapshot. Quattro varianti per classe — abbastanza perche' due mercenari di
   // fila non si somiglino, poche perche' restino riconoscibili come "un guerriero", non come il TUO.
+  // v1.82.2 — COLORI DAVVERO DIVERSI. La prima passata spostava il tono di poco e in gioco, con la luce
+  // della caverna addosso, due ladri restavano due macchie verdi uguali. Adesso ogni variante e' un COLORE
+  // suo — rosso, blu, viola, ocra — non una sfumatura: a colpo d'occhio devi sapere subito chi sei tu.
+  // Restano scuri e sporchi (la caverna e' scura: un colore acceso pieno sembrerebbe incollato sopra), ma
+  // la tinta si legge. Ogni chiave qui dentro finisce nella firma della palette (renderer._palKey), quindi
+  // due varianti non possono mai spartirsi un gradiente in cache.
   const TINTE = {
     guerriero: [
-      { cloth: '#5a3a2c', clothDk: '#2e1c14', steelDk: '#454b56', pelo: '#3a2a18', skin: '#c08a5e' },
-      { cloth: '#2c4a5a', clothDk: '#14262e', steelDk: '#38404a', pelo: '#5a4a2a', skin: '#d0a578' },
-      { cloth: '#5a2c3a', clothDk: '#2c141c', steelDk: '#4a4048', pelo: '#221a12', skin: '#b8845c' },
-      { cloth: '#4a4a2c', clothDk: '#242414', steelDk: '#3e4652', pelo: '#6a5a3a', skin: '#c9a074' },
+      { cloth: '#7a2f22', clothDk: '#3c1610', steelDk: '#5a3a30', metallo: '#96685a', pelo: '#2a1a10', skin: '#c98f5e' },  // ruggine
+      { cloth: '#25406e', clothDk: '#101f36', steelDk: '#2f3f5a', metallo: '#6a7d9c', pelo: '#4a4030', skin: '#d6ad82' },  // ferro
+      { cloth: '#54306e', clothDk: '#271636', steelDk: '#4a3358', metallo: '#8a7a9e', pelo: '#241826', skin: '#bb8a68' },  // viola
+      { cloth: '#8a6a1e', clothDk: '#3f300c', steelDk: '#5a4a24', metallo: '#9e8f60', pelo: '#5a4420', skin: '#e0b487' },  // ottone
     ],
     mago: [
-      { body: '#3a2c6a', bodyDk: '#150f2c', accent: '#c88cff', skin: '#d8cfc4', orlo: 'rgba(200,140,255,.75)' },
-      { body: '#2c5a4a', bodyDk: '#0f2620', accent: '#7dffc0', skin: '#cfc6bb', orlo: 'rgba(125,255,192,.75)' },
-      { body: '#6a3a2c', bodyDk: '#2c1610', accent: '#ffb066', skin: '#dcd2c6', orlo: 'rgba(255,176,102,.75)' },
-      { body: '#243a5a', bodyDk: '#0e1828', accent: '#8ac8ff', skin: '#d2cabf', orlo: 'rgba(138,200,255,.75)' },
+      { body: '#7a1230', bodyDk: '#2c0713', accent: '#ffcf4a', skin: '#e2d6c6', orlo: 'rgba(255,207,74,.75)' },   // cremisi e oro
+      { body: '#1d5a3a', bodyDk: '#0a2416', accent: '#a6ff3a', skin: '#cfc8bb', orlo: 'rgba(166,255,58,.75)' },   // verde e lime
+      { body: '#2a2a30', bodyDk: '#0c0c10', accent: '#ff7a2b', skin: '#d8cec2', orlo: 'rgba(255,122,43,.75)' },   // cenere e brace
+      { body: '#5e1d6e', bodyDk: '#230a2c', accent: '#ff5ad0', skin: '#e6dcd2', orlo: 'rgba(255,90,208,.75)' },   // porpora
     ],
     ladro: [
-      { cloth: '#4a3a2c', clothDk: '#241c14', skin: '#c08a5e', wood: '#6a4a28' },
-      { cloth: '#2c3a52', clothDk: '#141c28', skin: '#d0a578', wood: '#7a5a34' },
-      { cloth: '#52304a', clothDk: '#281826', skin: '#b8845c', wood: '#5e422a' },
-      { cloth: '#2c4a34', clothDk: '#14261a', skin: '#c9a074', wood: '#8a6534' },
+      { cloth: '#6a1f2c', clothDk: '#2e0d13', mant: '#3a1119', capp: '#5c1b28', skin: '#c08a5e', wood: '#5e3a1e' },   // bordeaux
+      { cloth: '#1f3560', clothDk: '#0d1730', mant: '#101c33', capp: '#1c2f56', skin: '#d3ab80', wood: '#6a4a28' },   // blu notte
+      { cloth: '#4a2a68', clothDk: '#1e1030', mant: '#251434', capp: '#3e2358', skin: '#b8845c', wood: '#4e3520' },   // viola
+      { cloth: '#8a5a1e', clothDk: '#3c260a', mant: '#472c0e', capp: '#70481a', skin: '#e0b487', wood: '#a07440' },   // cuoio
     ],
   };
 
@@ -104,41 +110,77 @@
   // sganciarsi quando e' ridotto male. Qui in piu' c'e' il guinzaglio — se il capo si allontana troppo
   // molla tutto e lo raggiunge: un mercenario che resta indietro a picchiare non serve a niente.
   const FERMO = { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false };
-  const LEASH = 380, RIENTRO = 150, INGAGGIO = 620;
+  const LEASH = 380, RIENTRO = 150, INGAGGIO = 620, CORPO_A_CORPO = 140;
+  // v1.82.2 — quanto tempo di spinta a vuoto conta come "incastrato", e per quanto si aggira l'ostacolo
+  const BLOCCO_T = 0.28, AGGIRA_T = 0.85, AGGIRA_ANG = 1.25;
+
+  // Un mercenario si incastra in due modi, e sono lo stesso modo: spinge contro qualcosa che non cede.
+  // Il motore fa scivolare lungo i muri (moveCircle muove un asse per volta), ma se spingi PERPENDICOLARE
+  // alla roccia non c'e' niente su cui scivolare — e chi punta dritto a un nemico che sta dall'altra parte
+  // di un masso spinge esattamente cosi'. Qui si misura l'INTENTO contro lo SPOSTAMENTO VERO: se per un
+  // quarto di secondo il primo c'e' e il secondo no, per un secondo scarso si cammina di traverso (un lato
+  // per volta, alternandolo) invece che dritto. E' l'equivalente di dare una spallata e girare attorno.
+  function _incastro(m, dt) {
+    const mosso = (m._px == null) ? 999 : Math.hypot(m.x - m._px, m.y - m._py);
+    m._px = m.x; m._py = m.y;
+    if (m._aggiraT > 0) { m._aggiraT -= dt; return; }
+    if (m._voleva && mosso < 0.7) m._bloccoT = (m._bloccoT || 0) + dt; else m._bloccoT = 0;
+    if (m._bloccoT > BLOCCO_T) { m._bloccoT = 0; m._aggiraT = AGGIRA_T; m._lato = (m._lato === 1 ? -1 : 1); }
+  }
+  // la direzione da tenere: dritta, oppure di traverso se si sta aggirando qualcosa
+  function _dir(m, ang) {
+    const a = (m._aggiraT > 0) ? ang + (m._lato || 1) * AGGIRA_ANG : ang;
+    return { x: Math.cos(a), y: Math.sin(a) };
+  }
   function pensa(room, m, capo, rnd) {
     const R = rnd || Math.random;
-    if (!capo || m.dead || m.down) return FERMO;
+    const dt = room.dt || 1 / 30;
+    _incastro(m, dt);
+    if (!capo || m.dead || m.down) { m._voleva = 0; return FERMO; }
     const dxC = capo.x - m.x, dyC = capo.y - m.y;
     const dC = Math.hypot(dxC, dyC) || 1;
     const aC = Math.atan2(dyC, dxC);
+    const esci = (i) => { m._voleva = (Math.abs(i.mx) + Math.abs(i.my)) > 0.1 ? 1 : 0; return i; };
     // 1) GUINZAGLIO. Oltre questa distanza dal capo non esiste altro che tornare da lui, e non si molla
     //    finche' non si e' rientrati per bene (RIENTRO): senza l'isteresi il mercenario oscilla sul bordo,
     //    un tick insegue e un tick torna, e sembra rotto anche se sta facendo esattamente cio' che deve.
     if (dC > LEASH) m._torna = 1; else if (dC < RIENTRO) m._torna = 0;
-    if (m._torna) return { mx: Math.cos(aC) + (R() - 0.5) * 0.4, my: Math.sin(aC) + (R() - 0.5) * 0.4, aim: aC, shoot: false, q: false, e: false, dash: false };
-    // 2) il bersaglio: il mostro vivo piu' vicino, dentro il raggio d'ingaggio
+    if (m._torna) { const v = _dir(m, aC); return esci({ mx: v.x + (R() - 0.5) * 0.3, my: v.y + (R() - 0.5) * 0.3, aim: aC, shoot: false, q: false, e: false, dash: false }); }
+    // 2) IL BERSAGLIO: il piu' vicino che si possa DAVVERO raggiungere. Prendere il piu' vicino e basta
+    //    voleva dire puntare quello dietro al masso e restare li' a spingere: adesso serve la linea di
+    //    vista, e senza linea di vista vale solo chi ti e' praticamente addosso (dietro l'angolo).
     let n = null, bd = Infinity;
-    for (const mo of room.monsters) { if (mo.dead) continue; const d2 = (mo.x - m.x) * (mo.x - m.x) + (mo.y - m.y) * (mo.y - m.y); if (d2 < bd) { bd = d2; n = mo; } }
+    for (const mo of room.monsters) {
+      if (mo.dead) continue;
+      const d2 = (mo.x - m.x) * (mo.x - m.x) + (mo.y - m.y) * (mo.y - m.y);
+      if (d2 >= bd) continue;
+      if (d2 > CORPO_A_CORPO * CORPO_A_CORPO && !room.losClear(m.x, m.y, mo.x, mo.y)) continue;
+      bd = d2; n = mo;
+    }
     const d = n ? Math.sqrt(bd) : Infinity;
     if (!n || d > INGAGGIO) {
-      if (dC < 110) return { mx: 0, my: 0, aim: aC, shoot: false, q: false, e: false, dash: false };
-      return { mx: Math.cos(aC), my: Math.sin(aC), aim: aC, shoot: false, q: false, e: false, dash: false };
+      if (dC < 110 && m._aggiraT <= 0) return esci({ mx: 0, my: 0, aim: aC, shoot: false, q: false, e: false, dash: false });
+      const v = _dir(m, aC);
+      return esci({ mx: v.x, my: v.y, aim: aC, shoot: false, q: false, e: false, dash: false });
     }
     // 3) DA QUI IN GIU' E' LA TESTA DEI BOT DEI TEST, rifinita dalla v1.52 alla v1.66: la distanza giusta
     //    e' quella della SUA arma (chi mena a 100 px non puo' tenersi a 160), ci si sgancia quando si e'
     //    ridotti male, e in mischia si molla il contatto mentre l'arma ricarica invece di restare
     //    appoggiati al nemico. Guidava le partite simulate; adesso guida un compagno vero.
-    const i = { mx: 0, my: 0, aim: Math.atan2(n.y - m.y, n.x - m.x), shoot: false, q: false, e: false, dash: false };
+    const aim = Math.atan2(n.y - m.y, n.x - m.x);
     const w = (m.hero && m.hero.weapon) || {};
     const rMax = w.melee ? (w.arcRadius || 100) : 320, rMin = w.melee ? rMax * 0.55 : 160;
     const ferito = m.hp / (m.maxHp + (m.stats ? m.stats.maxHpFlat || 0 : 0)) < 0.40;
     const ricarica = w.melee && m.fireCd > 0.35 / (w.fireRate || 1);
     const dir = (ferito || ricarica) ? 1 : (d < rMin ? -1 : (d > rMax ? 1 : 0));
-    i.mx = Math.cos(i.aim) * dir + (R() - 0.5) * 0.6;
-    i.my = Math.sin(i.aim) * dir + (R() - 0.5) * 0.6;
+    const v = _dir(m, aim + (dir < 0 ? Math.PI : 0));
+    const passo = dir === 0 && m._aggiraT <= 0 ? 0 : 1;
+    const i = { mx: v.x * passo + (R() - 0.5) * 0.5, my: v.y * passo + (R() - 0.5) * 0.5, aim,
+      shoot: false, q: false, e: false, dash: false };
     if (ferito && m.cdDash <= 0 && R() < 0.10) i.dash = true;
-    i.shoot = d <= (w.melee ? rMax + 20 : 520);
-    return i;                                  // niente q/e: un mercenario non ha abilita', ne' attive ne' passive
+    // si spara solo se il colpo puo' arrivare: contro un muro si sprecherebbe la ricarica
+    i.shoot = d <= (w.melee ? rMax + 20 : 520) && (w.melee || room.losClear(m.x, m.y, n.x, n.y));
+    return esci(i);                            // niente q/e: un mercenario non ha abilita', ne' attive ne' passive
   }
 
   return { NOMI, TINTE, CLASSI, COSTO_BASE, COSTO_PASSO, costo, punti, distribuisci, genera, palette, pensa, STAT_CLASSE, LEASH, INGAGGIO };

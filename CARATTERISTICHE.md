@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.82.1`
+**Versione attuale:** `1.82.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -146,8 +146,16 @@ bravissimo**, non ad alzare l'asticella — ogni riga di questo paragrafo ha il 
 380 px dal capo molla tutto e torna indietro. E' la stessa testa dei bot che guidano le partite simulate
 dei test, spostata in `shared/mercenari.js`.
 
-**Come si vede.** Stessa sagoma e stesso vestito della sua classe, **tono diverso** (quattro tinte per
-classe), col nome, il livello e il rango sopra la testa. Quindici nomi per classe.
+**Come si vede.** Stessa sagoma e stesso vestito della sua classe, ma di un **colore suo** — quattro tinte
+per classe, non sfumature: ruggine/ferro/viola/ottone il guerriero, cremisi/lime/brace/porpora il mago,
+bordeaux/blu notte/viola/cuoio il ladro. La tinta arriva dove si vede davvero: mantellina e cappuccio del
+ladro, metallo dell'armatura del guerriero, veste del mago. Sopra la testa ha nome, livello e rango.
+Quindici nomi per classe.
+
+**Se trova un ostacolo.** Un nemico dietro a un masso non e' un bersaglio: serve la linea di vista, e senza
+vale solo chi gli e' addosso (140 px). E se comunque si ritrova a spingere contro la roccia senza
+spostarsi, dopo un quarto di secondo cammina **di traverso** per otto decimi — una spallata e via, invece
+di restare piantato li'.
 
 ---
 
