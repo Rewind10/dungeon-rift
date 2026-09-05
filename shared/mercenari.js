@@ -171,7 +171,7 @@
       bd = d2; n = mo;
     }
     const d = n ? Math.sqrt(bd) : Infinity;
-    let ang = aC, avanti = 0, aim = aC, spara = false;
+    let ang = aC, avanti = 0, aim = aC, spara = false, aTiro = false;
     if (n) {
       // 3) DA QUI E' LA TESTA DEI BOT DEI TEST, rifinita dalla v1.52 alla v1.66: la distanza giusta e'
       //    quella della SUA arma (chi mena a 100 px non puo' tenersi a 160), ci si sgancia quando si e'
@@ -184,18 +184,27 @@
       const ricarica = w.melee && m.fireCd > 0.35 / (w.fireRate || 1);
       const dir = (ferito || ricarica) ? -1 : (d < rMin ? -1 : (d > rMax ? 1 : 0));
       ang = aim + (dir < 0 ? Math.PI : 0); avanti = dir === 0 ? 0 : 1;
+      aTiro = d <= rMax + 24;                                    // il nemico e' nel suo raggio d'attacco
       // si spara solo se il colpo puo' arrivare: contro un muro si sprecherebbe la ricarica
       spara = d <= (w.melee ? rMax + 20 : 520) && (w.melee || room.losClear(m.x, m.y, n.x, n.y));
-    } else if (dC > SCORTA_MAX) { ang = aC; avanti = 1; }        // niente da fare: si rifa' sotto al capo
-    else if (dC < SCORTA_IDEALE) { ang = aC + Math.PI; avanti = 1; }   // ...e se e' troppo addosso si stacca
-    // ATTENZIONE alla differenza fra SCORTA_MIN e SCORTA_IDEALE: senza la seconda il mercenario si ferma
-    // esattamente sul minimo (66-70 px), cioe' appiccicato, e ci resta. La misura lo diceva chiaro: senza
-    // questa riga stava sotto i 70 px per meta' del tempo. Il minimo e' un divieto, l'ideale e' una meta'.
-    // 4) SPAZIO PERSONALE. Vale sopra ogni altra cosa: qualunque fosse l'intenzione, sotto questa
-    //    distanza dal capo ci si scosta — con una componente di lato, se no si rimbalza avanti e indietro
-    //    sulla stessa retta. E' l'unica regola che puo' contraddire il bersaglio, ed e' giusto cosi':
-    //    due sagome sovrapposte non si capisce piu' chi sei.
-    if (dC < SCORTA_MIN) { ang = aC + Math.PI + (m._lato || 1) * 0.5; avanti = 1; }
+    } else {
+      // LA FASCIA DI SCORTA VALE SOLO QUANDO NON C'E' NIENTE DA FARE. Se c'e' un bersaglio comanda il
+      // combattimento e basta: la priorita' non e' seguirti, e' attaccare. Tenere una distanza da te
+      // mentre si mena voleva dire arretrare a meta' scontro, che e' peggio di stare un po' addosso.
+      if (dC > SCORTA_MAX) { ang = aC; avanti = 1; }             // il capo si allontana: gli si va dietro
+      else if (dC < SCORTA_IDEALE) {                              // troppo appiccicato: si stacca
+        ang = aC + Math.PI + (dC < SCORTA_MIN ? (m._lato || 1) * 0.5 : 0);   // di lato, se no si rimbalza sulla stessa retta
+        avanti = 1;
+      }
+      // ATTENZIONE alla differenza fra SCORTA_MIN e SCORTA_IDEALE: senza la seconda il mercenario si ferma
+      // esattamente sul minimo (70 px), cioe' appiccicato, e ci resta. La misura lo diceva chiaro: senza
+      // questa riga stava sotto i 70 px per meta' del tempo. Il minimo e' un divieto, l'ideale e' una meta'.
+    }
+    // 4) SPAZIO PERSONALE. Vale finche' non ha nessuno A TIRO: due sagome sovrapposte non fanno piu'
+    //    capire chi sei, ma farlo arretrare mentre ha il nemico sotto l'arma sarebbe peggio del difetto
+    //    che risolve. Quindi: se e' impegnato resta dov'e' e mena; appena il nemico esce dal suo raggio
+    //    d'attacco (o muore) torna a prendersi il suo spazio.
+    if (dC < SCORTA_MIN && !aTiro) { ang = aC + Math.PI + (m._lato || 1) * 0.5; avanti = 1; }
     const v = _dir(m, ang);
     const i = { mx: v.x * avanti + (R() - 0.5) * 0.25, my: v.y * avanti + (R() - 0.5) * 0.25,
       aim, shoot: spara, q: false, e: false, dash: false };

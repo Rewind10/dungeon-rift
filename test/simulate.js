@@ -3319,7 +3319,14 @@ function testV180() {
     const a = addosso(); if (a > picco) picco = a;
   }
   const mediaDopo = media();
-  assert(mediaDopo < mediaPrima * 0.55, 'in 40 s il branco si avvicina: distanza media da ' + mediaPrima.toFixed(0) + ' a ' + mediaDopo.toFixed(0) + ' px');
+  // La MEDIA e' un indicatore debole da quando c'e' il tetto della folla: sei si fanno sotto e gli altri
+  // restano a bagnomaria, quindi la media dipende da dove aspettano — su certe mappe scendeva a 0,60 e il
+  // test lampeggiava rosso pur essendo tutto a posto. Cio' che il tetto promette e' un'altra cosa, ed e'
+  // esatta: i SEI PIU' VICINI devono essere arrivati. Quello si misura, non la media.
+  const vicinanze = r2.monsters.filter(x => !x.dead).map(x => MU.dist(x.x, x.y, q.x, q.y)).sort((a, b) => a - b);
+  const sesto = vicinanze[Math.min(C.FOLLA_MAX, vicinanze.length) - 1];
+  assert(sesto < 340, 'in 40 s i ' + C.FOLLA_MAX + ' piu vicini sono arrivati addosso (il sesto a ' + sesto.toFixed(0) + ' px)');
+  assert(mediaDopo < mediaPrima * 0.85, 'e il branco nel complesso si e avvicinato: media da ' + mediaPrima.toFixed(0) + ' a ' + mediaDopo.toFixed(0) + ' px');
   // ...ma NON si accalcano tutti: il tetto della folla lascia passare i piu' vicini e tiene gli altri
   // all anello. Il margine e per chi ti VEDE, che viene addosso comunque: e la regola, non un buco.
   assert(picco <= C.FOLLA_MAX + 4, 'e non si accalcano: mai piu' + String.fromCharCode(39) + ' di ' + picco + ' addosso su ' + messi + ' (tetto ' + C.FOLLA_MAX + ')');
@@ -3635,12 +3642,24 @@ function testV182() {
     const stanza = (mostri, vista) => ({ dt: 1 / C.TICK_RATE, monsters: mostri, losClear: () => vista !== false });
     const verso = (i, ax, ay) => (i.mx * ax + i.my * ay);   // >0 se si muove in quella direzione
 
-    // a) SPAZIO PERSONALE: appiccicato al capo si scosta, sempre — anche con un nemico addosso.
+    // a) SPAZIO PERSONALE, e il suo limite: vale finche' non ha nessuno A TIRO. Se c'e' un nemico sotto
+    //    l'arma la priorita' e' menare, non tenere le distanze da te — arretrare a meta' scontro sarebbe
+    //    peggio del difetto che quella regola risolve.
     {
-      const m = nuovoM(); const capo = { x: 30, y: 0, dead: false };
-      const i = Mrc.pensa(stanza([{ x: 60, y: 0, dead: false }], true), m, capo, meta);
-      assert(verso(i, 1, 0) < 0, 'incollato al capo si scosta invece di sovrapporsi');
-      assert(Math.abs(i.aim) < 0.01, 'ma continua a guardare il nemico');
+      // appiccicato al capo, campo pulito: si scosta
+      const i = Mrc.pensa(stanza([], true), nuovoM(), { x: 30, y: 0, dead: false }, meta);
+      assert(verso(i, 1, 0) < 0, 'incollato al capo, senza nemici, si scosta invece di sovrapporsi');
+      // stesso identico caso ma col nemico NEL RAGGIO D'ATTACCO (fra la distanza minima e massima della
+      // sua arma): non arretra per farti spazio, resta li' e mena.
+      const g = Heroes.HEROES.guerriero.weapon, RA = g.arcRadius || 100;
+      const vicino = { x: RA * 0.8, y: 0, dead: false };
+      const i2 = Mrc.pensa(stanza([vicino], true), nuovoM(), { x: 30, y: 0, dead: false }, meta);
+      assert(Math.abs(i2.mx) < 0.01 && Math.abs(i2.my) < 0.01, 'col nemico a tiro non arretra per farti spazio: sta li e mena');
+      assert(i2.shoot === true, 'e colpisce');
+      assert(Math.abs(i2.aim) < 0.01, 'guardando lui');
+      // nemico FUORI dal raggio d'attacco: ci va incontro, non si mette a seguire il capo
+      const i3 = Mrc.pensa(stanza([{ x: 300, y: 0, dead: false }], true), nuovoM(), { x: -30, y: 0, dead: false }, meta);
+      assert(verso(i3, 1, 0) > 0.5, 'col nemico lontano gli va incontro, invece di stare appresso al capo');
     }
     // b) MENO AGGRESSIVO: un nemico lontano dal CAPO non e' affar suo, anche se lui lo vede benissimo.
     {

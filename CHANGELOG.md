@@ -2,6 +2,41 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.82.4] — 2026-09-05 · "Quando c'e' da menare, si mena"
+
+Rifinitura della 1.82.3. Le distanze erano giuste ma avevano la precedenza sbagliata: *"se ci sono nemici
+la priorita' non puo' essere seguirmi ma attaccare; la distanza minima vale se non ci sono nemici nel
+raggio di attacco"*.
+
+#### ⚔️ La precedenza, adesso
+- **La fascia di scorta** (120 px ideali, 190 per rifarsi sotto) vale **solo quando non c'e' niente da
+  fare**. Con un bersaglio comanda il combattimento e basta: prima la fascia lo faceva arretrare a meta'
+  scontro per tenere le distanze da te, che e' peggio del difetto che risolveva.
+- **Lo spazio personale** (70 px) resta, ma si **sospende quando ha un nemico nel raggio della sua arma**.
+  Sotto l'arma non si arretra per far spazio a nessuno: si colpisce. Appena il nemico esce dal raggio — o
+  muore — torna a prendersi il suo spazio.
+
+Il minimo resta un divieto, non una preferenza: e' li' perche' due sagome sovrapposte non fanno piu' capire
+chi sei. Ma un divieto che vale *anche* mentre meni non e' una regola di leggibilita', e' una regola che ti
+toglie il compagno proprio quando serve.
+
+#### 📏 Misurato (un minuto per prova, ondata vera)
+| | mediana | max | sotto 70 px | in mischia | uccisi |
+|---|---:|---:|---:|---:|---:|
+| capo fermo | 135 px | 210 | 11% | 11% del tempo | 23 |
+| capo in movimento | 223 px | 325 | 1% | 41% del tempo | 6 |
+| capo in movimento | 221 px | 359 | 1% | 49% del tempo | 10 |
+
+L'11% sotto i 70 px del primo caso e' esattamente il caso nuovo: sta addosso **mentre combatte**, che e'
+cio' che deve fare. Fuori dal combattimento la fascia regge.
+
+**1414 test passati, 0 falliti** su otto esecuzioni di fila (una prova della v1.80 misurava la
+distanza MEDIA del branco, che col tetto della folla dipende da dove aspettano quelli in eccesso: adesso
+misura cio' che il tetto promette davvero, cioe' che i sei piu' vicini siano arrivati). Le prove nuove sono
+la coppia che descrive la regola: appiccicato al capo
+**senza** nemici si scosta; nello stesso identico caso ma **col nemico a tiro** non arretra, sta li' e
+colpisce; e col nemico fuori portata gli va incontro invece di stare appresso al capo.
+
 ### [1.82.3] — 2026-09-05 · "Il mercenario impara le distanze"
 
 Due difetti segnalati sul campo: *"sta troppo vicino al personaggio principale quasi si sovrappone"* ed

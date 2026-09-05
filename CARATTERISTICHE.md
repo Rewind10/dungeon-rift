@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.82.3`
+**Versione attuale:** `1.82.4`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -145,8 +145,8 @@ bravissimo**, non ad alzare l'asticella — ogni riga di questo paragrafo ha il 
 che minaccia **te**, cioe' dei nemici entro **360 px dal capo** — non di quello che vede lui dall'altra
 parte della stanza. Contro il bersaglio tiene la distanza della **sua** arma, si sgancia sotto il 40% di
 vita e in mischia molla il contatto mentre l'arma ricarica. Sta a **120 px** da te quando non c'e' niente
-da fare, non scende mai sotto **70** (si scosta, anche in mezzo al combattimento) e oltre **300** molla
-tutto e rientra — con un piccolo bonus di velocita' mentre torna, se no a parita' di passo non ti
+da fare e non scende sotto **70** — ma **solo finche' non ha un nemico a tiro**: sotto l'arma non arretra
+per far spazio a nessuno, la priorita' e' colpire. Oltre **300** molla tutto e rientra — con un piccolo bonus di velocita' mentre torna, se no a parita' di passo non ti
 riprenderebbe mai. E' la stessa testa dei bot che guidano le partite simulate dei test, spostata in
 `shared/mercenari.js`.
 
