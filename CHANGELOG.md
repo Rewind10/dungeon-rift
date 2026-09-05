@@ -2,6 +2,56 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.84.0] — 2026-09-05 · "Qualcuno da tirare fuori"
+
+#### 🔒 I prigionieri
+Ogni tanto — **una mappa su tre** circa — in un angolo lontano c'e' un **recinto di pali** con dentro della
+gente. Sopra c'e' scritto cosa gli serve: *prigionieri · serve una chiave*.
+
+| | |
+|---|---|
+| Quanti | da **1 a 5**, e il tetto cresce con le ondate: alla prima ne trovi uno o due, dalla dodicesima anche cinque |
+| Quanto pagano | **100 monete a testa** — fino a 500, quanto un pezzo di equipaggiamento di rango 2 |
+| La chiave | **addosso a un elite** se in quell'ondata ne e' previsto uno (cade quando cade lui), altrimenti **a terra accanto alle casse** |
+| Obbligatorio? | **No.** L'ondata si chiude lo stesso: e' una deviazione che si sceglie, e il prezzo e' il tempo che passi a cercare invece che a uccidere |
+| Nelle ondate del boss | non compare: quella mappa non divide l'attenzione |
+
+Sono disegnati con la stessa figura dei mercanti del villaggio (`_hero` in versione civile), uno per
+palette, cosi' non sono cinque copie dello stesso tizio. Il recinto e' basso e **non blocca il passaggio**:
+i pali servono a farsi capire, non a fare da muro — e un muro invisibile al pathfinding avrebbe incastrato
+i mostri. Quando li liberi i pali cadono e la scritta diventa *liberi*.
+
+L'alone attorno al recinto e' **giallo se hai la chiave** e spento se non ce l'hai: la regola si legge da
+lontano senza dover leggere niente. Sulla minimappa il recinto si vede; **la chiave no** — e' nascosta, e
+una mappa che te la indica non la nasconde piu'.
+
+Il **mercenario** non raccoglie la chiave e non libera nessuno: come per l'XP e le monete, non e' un
+giocatore per le regole. C'e' un test anche per questo.
+
+#### 🌀 La faglia, al posto del pulsante EXIT
+Il pulsante verde in mezzo allo schermo non c'e' piu'. Quando la mappa e' ripulita si apre uno **squarcio**
+a un passo da te — non addosso, se no ci finivi dentro mentre raccogli, e non fuori vista — e ci si passa
+dentro per proseguire. Il gesto e' lo stesso, ma succede **nel gioco** invece che nell'interfaccia; e in
+una mappa che si chiama Dungeon Rift lo squarcio e' di casa.
+
+Il conto alla rovescia anti-AFK resta, la scritta in alto dice cosa fare, e in cooperativa dice quanti sono
+gia' passati. In pratica sparisce un pezzo di UI e ne guadagna il mondo di gioco.
+
+#### 🧱 Un difetto trovato per caso
+Aggiungendo i prigionieri sono cambiate le estrazioni casuali a valle, e due test hanno iniziato a
+lampeggiare. Uno dei due indicava una cosa vera: il **recupero anti-stallo** dei mostri cercava un punto
+libero fra 950 e 1500 px dal giocatore e fuori dalla sua vista, e su certe mappe un punto cosi' **non
+esiste** — il mostro bloccato non si spostava mai e l'ondata poteva restare aperta per sempre, che e'
+esattamente cio' che quella regola doveva impedire. Adesso, se la prima passata non trova niente, ne fa una
+seconda piu' larga (700-1100 px) **senza allentare la condizione che conta**: fuori dallo sguardo. Meglio
+riportarlo un po' piu' vicino che lasciarlo dov'e'; comparire davanti agli occhi resta vietato.
+
+**1457 test passati, 0 falliti.** Le prove: il recinto compare ogni tanto e mai oltre il tetto; alla prima
+ondata sono uno o due; senza chiave non si apre e non arriva una moneta; con la chiave si apre e paga cento
+a testa, **una volta sola**; la chiave sull'elite cade dove cade lui; il mercenario non la raccoglie; la
+faglia si apre a un passo dal giocatore, non nella roccia, e attraversarla chiude l'ondata mentre restarne
+fuori no; nelle ondate del boss non c'e' nessun recinto.
+
 ### [1.83.0] — 2026-09-05 · "Lo scudo sta davanti"
 
 Ribilanciamento delle tre classi giocabili, partendo da una misura invece che da una sensazione: dodici

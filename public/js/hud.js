@@ -90,34 +90,29 @@
     // cooperativa aspetta che tutti abbiano premuto (i caduti non si aspettano) e nel frattempo dice a
     // che punto e' l'attesa. Il conto alla rovescia e' l'anti-AFK, non una fretta.
     _aggiornaUscita(snap) {
-      const top = $('clearTop'), btn = $('exitBtn'); if (!top || !btn) return;
+      const top = $('clearTop'); if (!top) return;
       const hud = $('hud');
       if (snap.phase !== 'cleared') {
-        if (this._uscitaOn) { top.classList.add('hidden'); btn.classList.add('hidden'); btn.classList.remove('attesa'); if (hud) hud.classList.remove('ripulita'); this._uscitaOn = false; this._exitPremuto = false; }
+        if (this._uscitaOn) { top.classList.add('hidden'); if (hud) hud.classList.remove('ripulita'); this._uscitaOn = false; this._exitPremuto = false; }
         return;
       }
       this._uscitaOn = true;
       // gli annunci al centro (LEVEL UP, rango nuovo) nascono al 20% dell'altezza, cioe' esattamente
       // sopra la scritta: finche' la mappa e' ripulita scendono piu' in basso.
       if (hud) hud.classList.add('ripulita');
-      top.classList.remove('hidden'); btn.classList.remove('hidden');
+      top.classList.remove('hidden');
       const ex = snap.ex || { n: 0, tot: 1, t: 0 };
       const sub = $('clearSub');
-      if (this._exitPremuto) {
-        btn.classList.add('attesa');
-        btn.textContent = ex.tot > 1 ? 'IN ATTESA ' + ex.n + '/' + ex.tot : 'USCITA…';
-        if (sub) sub.innerHTML = ex.tot > 1
-          ? 'Aspettiamo gli altri: <b>' + ex.n + ' su ' + ex.tot + '</b> hanno premuto EXIT — uscita automatica fra ' + ex.t + 's'
-          : 'Uscita in corso…';
-      } else {
-        btn.classList.remove('attesa');
-        btn.textContent = 'EXIT';
-        if (sub) sub.innerHTML = 'Raccogli quello che resta, poi premi <b>EXIT</b> al centro per uscire'
-          + (ex.tot > 1 ? ' <span style="opacity:.75">(' + ex.n + '/' + ex.tot + ' pronti)</span>' : '')
+      // v1.84 — non c'e' piu' un pulsante da premere: si attraversa la faglia. La riga qui sotto dice
+      // solo cosa fare e quanto tempo resta; l'uscita e' un gesto di gioco, non un clic sull'interfaccia.
+      const mio = snap.players && snap.players.find(x => x.i === this._meId);
+      if (sub) sub.innerHTML = this._exitPremuto
+        ? (ex.tot > 1 ? 'Sei passato: <b>' + ex.n + ' su ' + ex.tot + '</b> — si parte quando ci siete tutti (o fra ' + ex.t + 's)' : 'Uscita in corso…')
+        : 'Raccogli quello che resta, poi attraversa la <b>faglia</b>'
+          + (ex.tot > 1 ? ' <span style="opacity:.75">(' + ex.n + '/' + ex.tot + ' passati)</span>' : '')
           + ' <span style="opacity:.6">— automatica fra ' + ex.t + 's</span>';
-      }
     },
-    exitPremuto() { this._exitPremuto = true; const b = $('exitBtn'); if (b) { b.classList.add('attesa'); b.textContent = 'USCITA…'; } },
+    exitPremuto() { this._exitPremuto = true; },
     // v1.78 — IL RIEPILOGO DI FINE LIVELLO, in cima al pannello di fine ondata.
     setWaveStats(m) {
       this._wstats = m;

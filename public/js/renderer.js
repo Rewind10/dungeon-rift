@@ -634,6 +634,14 @@
       // monsters
       for (const mo of world.mon) { const q = w2m(mo.x, mo.y); if (mo.tr) { ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); } else if (mo.b) { ctx.fillStyle = mo.mg ? '#ff2d55' : '#ff5a5a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill(); } else { ctx.fillStyle = mo.el ? '#ffb020' : 'rgba(255,90,90,.85)'; ctx.fillRect(q.x - 1, q.y - 1, 2, 2); } }
       // players
+      // v1.84 — sulla minimappa ci vanno il RECINTO (e' una meta, deve vedersi) e la FAGLIA d'uscita.
+      // La CHIAVE no: e' nascosta, e una mappa che te la indica non la nasconde piu'.
+      if (world.rec) { const q = w2m(world.rec.x, world.rec.y);
+        ctx.fillStyle = world.rec.lib ? '#9ef0b0' : '#c9a23a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.2, 0, 7); ctx.fill();
+        if (!world.rec.lib) { ctx.strokeStyle = 'rgba(255,210,74,' + (0.4 + 0.4 * Math.sin(this.time * 3)) + ')'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 5.6, 0, 7); ctx.stroke(); } }
+      if (world.fg) { const q = w2m(world.fg.x, world.fg.y);
+        ctx.fillStyle = '#c9a8ff'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(190,150,255,' + (0.45 + 0.4 * Math.sin(this.time * 4)) + ')'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 6.2, 0, 7); ctx.stroke(); }
       for (const p of world.players) { if (p.d) continue; const h = HERO[p.h] || HERO.guerriero; const q = w2m(p.x, p.y); const me = world.me && p.i === world.me.i; ctx.fillStyle = me ? '#ffffff' : (h.accent || '#8bd6ff'); ctx.beginPath(); ctx.arc(q.x, q.y, me ? 3 : 2.4, 0, 7); ctx.fill(); if (me) { ctx.strokeStyle = h.accent || '#8bd6ff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.6, 0, 7); ctx.stroke(); } }
       ctx.restore();
     },
@@ -1170,6 +1178,9 @@
       for (const b of world.bul) { if (b.x < vx0 || b.x > vx1 || b.y < vy0 || b.y > vy1) continue; this._drawBullet(ctx, b); }
       for (const m of world.mon) { if (m.x < vx0 || m.x > vx1 || m.y < vy0 || m.y > vy1) continue; this._drawMonster(ctx, m); }
       this._drawDeaths(ctx); // v1.26 — sprite di morte (crollo/dissolvenza)
+      if (world.rec) this._drawRecinto(ctx, world.rec, world.chIn || 0);
+      if (world.chv) this._drawChiave(ctx, world.chv);
+      if (world.fg) this._drawFaglia(ctx, world.fg);
       for (const p of world.players) this._drawPlayer(ctx, p, me && p.i === me.i);
       this._drawChains(ctx);
       this._drawParticles(ctx, true); this._drawSwings(ctx); this._drawFlashes(ctx); this._drawPare(ctx); this._drawFloaters(ctx); this._drawLevelUps(ctx, world);
@@ -1312,6 +1323,121 @@
       ctx.fillStyle = P.skin || '#e0be93';
       ctx.beginPath(); ctx.arc(r * 0.47, 0, r * 0.24, -1.3, 1.3); ctx.closePath(); ctx.fill();
       this._vendorTool(ctx, kind, r * 0.62);
+    },
+    // ===== v1.84 — IL RECINTO, LA CHIAVE, LA FAGLIA =========================================
+    // Tre oggetti disegnati a codice come tutto il resto. Il recinto e' una palizzata tonda: pali
+    // irregolari e due corrent i— e' basso, non blocca il passaggio, ma si legge subito come "qui non si
+    // entra". Dentro ci sta della gente, disegnata con la stessa figura dei mercanti del villaggio
+    // (_hero civile) e una palette per ciascuno, cosi' non sono cinque copie.
+    _drawRecinto(ctx, rec, chiaveInTasca) {
+      const t = this.time, R2 = rec.r;
+      ctx.save(); ctx.translate(rec.x, rec.y);
+      // terra battuta dentro al recinto
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, R2 * 0.16, R2 * 0.98, R2 * 0.62, 0, 0, 7); ctx.fill();
+      if (!rec.lib) {   // l alone: giallo se hai la chiave (puoi aprire), spento se non ce l hai
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const c = chiaveInTasca === 2 ? '#ffd24a' : '#7f8ba0';
+        const a = (chiaveInTasca === 2 ? 0.13 : 0.06) + 0.04 * Math.sin(t * 2.2);
+        const gr = this._grad('rec|' + c + '|' + Math.round(R2), () => { const q = ctx.createRadialGradient(0, 0, R2 * 0.2, 0, 0, R2 * 1.7); q.addColorStop(0, this._rgba(c, 0.5)); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; });
+        ctx.globalAlpha = a; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R2 * 1.7, 0, 7); ctx.fill(); ctx.restore();
+      }
+      // i pali: quelli DIETRO prima, cosi' la gente dentro sta in mezzo
+      const NP = 18;
+      const palo = (i, dietro) => {
+        const an = (i / NP) * Math.PI * 2;
+        const sy = Math.sin(an);
+        if ((sy < 0) !== !!dietro) return;
+        const px = Math.cos(an) * R2, py = sy * R2 * 0.62;
+        const h = R2 * (0.42 + ((i * 37) % 11) / 44);
+        const sp = rec.lib && (i % 3 === 0);                       // aperto: qualche palo e' caduto
+        ctx.save(); ctx.translate(px, py); if (sp) ctx.rotate(0.9 + (i % 5) * 0.1);
+        ctx.fillStyle = '#2a2018'; ctx.beginPath(); ctx.ellipse(0, 0, 4.6, 2.6, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#4a3a26'; ctx.lineWidth = 5.2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -h); ctx.stroke();
+        ctx.strokeStyle = '#6a5436'; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.moveTo(-1.1, -1); ctx.lineTo(-1.1, -h + 2); ctx.stroke();
+        ctx.restore();
+      };
+      const correnti = (dietro) => {
+        ctx.strokeStyle = 'rgba(74,58,38,.9)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        for (const q of [0.42, 0.72]) {
+          ctx.beginPath();
+          for (let i = 0; i <= NP; i++) {
+            const an = (i / NP) * Math.PI * 2, sy = Math.sin(an);
+            if ((sy < 0) !== !!dietro) { ctx.stroke(); ctx.beginPath(); continue; }
+            const px = Math.cos(an) * R2, py = sy * R2 * 0.62 - R2 * q;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+      };
+      for (let i = 0; i < NP; i++) palo(i, true);
+      if (!rec.lib) correnti(true);
+      ctx.restore();
+      // la gente dentro (in coordinate mondo, cosi' entra nell ordine di profondita' del resto)
+      if (!rec.lib) for (const pr of rec.pr) {
+        const px = rec.x + pr.dx, py = rec.y + pr.dy;
+        const bob = Math.sin(t * 1.3 + pr.dx * 0.05) * 1.1;
+        ctx.save(); ctx.translate(px, py + bob);
+        this._shadow(ctx, 0, 0, C.PLAYER_RADIUS * (C.VIS_SCALE || 1));
+        ctx.rotate(pr.f || 0);
+        this._hero(ctx, pr.h || 'ladro', C.PLAYER_RADIUS * (C.VIS_SCALE || 1), t + px * 0.01, false, 0,
+          { civile: 1, pal: { cloth: pr.c, clothDk: this._shade(pr.c, -40), body: pr.c, bodyDk: this._shade(pr.c, -40), accent: '#d8cfc4', skin: '#c99a6a' } });
+        ctx.restore();
+      }
+      ctx.save(); ctx.translate(rec.x, rec.y);
+      for (let i = 0; i < NP; i++) palo(i, false);
+      if (!rec.lib) correnti(false);
+      ctx.restore();
+      // la scritta sopra
+      ctx.save(); ctx.textAlign = 'center'; ctx.font = 'bold 13px Segoe UI';
+      const testo = rec.lib ? 'liberi' : (chiaveInTasca === 2 ? 'entra per liberarli' : 'prigionieri \u00b7 serve una chiave');
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(testo, rec.x, rec.y - R2 - 22);
+      ctx.fillStyle = rec.lib ? '#9ef0b0' : (chiaveInTasca === 2 ? '#ffd24a' : '#c9d2e6'); ctx.fillText(testo, rec.x, rec.y - R2 - 22);
+      ctx.textAlign = 'left'; ctx.restore();
+    },
+    _drawChiave(ctx, k) {
+      const t = this.time, b = 0.6 + 0.4 * Math.sin(t * 3);
+      ctx.save(); ctx.translate(k.x, k.y + Math.sin(t * 2) * 2.5);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + b * 0.22;
+      const gr = this._grad('chv', () => { const q = ctx.createRadialGradient(0, 0, 1, 0, 0, 34); q.addColorStop(0, 'rgba(255,210,74,.9)'); q.addColorStop(1, 'rgba(255,210,74,0)'); return q; });
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill(); ctx.restore();
+      ctx.rotate(-0.5);
+      ctx.strokeStyle = '#2a1e08'; ctx.lineWidth = 4.4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(-5, 0, 4.6, 0, 7); ctx.moveTo(-0.6, 0); ctx.lineTo(9, 0); ctx.moveTo(9, 0); ctx.lineTo(9, 4.4); ctx.moveTo(5.4, 0); ctx.lineTo(5.4, 3.4); ctx.stroke();
+      ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(-5, 0, 4.6, 0, 7); ctx.moveTo(-0.6, 0); ctx.lineTo(9, 0); ctx.moveTo(9, 0); ctx.lineTo(9, 4.4); ctx.moveTo(5.4, 0); ctx.lineTo(5.4, 3.4); ctx.stroke();
+      ctx.restore();
+    },
+    // LA FAGLIA D'USCITA. Uno squarcio verticale che pulsa: si attraversa per finire l'ondata. Disegnata
+    // a macchie come tutto il resto, con l'orlo piu' chiaro del dentro — il dentro e' un buco, e i buchi
+    // non hanno colore.
+    _drawFaglia(ctx, f) {
+      const t = this.time, R2 = C.FAGLIA_RAGGIO || 46;
+      const puls = 0.86 + 0.14 * Math.sin(t * 2.6);
+      ctx.save(); ctx.translate(f.x, f.y);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      this._macchia(ctx, 0, 0, R2 * 2.2 * puls, R2 * 2.9 * puls, '#8a5cff', 0.10);
+      this._macchia(ctx, 0, 0, R2 * 1.2, R2 * 1.9, '#c9a8ff', 0.12);
+      ctx.restore();
+      for (let i = 0; i < 5; i++) {
+        const k = i / 4;
+        this._macchia(ctx, Math.sin(t * 1.6 + i) * 2, (k - 0.5) * R2 * 1.5,
+          R2 * (0.60 - k * 0.10) * puls, R2 * (1.15 - Math.abs(k - 0.5)) * puls, '#0a0512', 0.75);
+      }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) {
+        const a = t * 1.1 + i * 0.9, rr = R2 * (0.5 + 0.5 * Math.sin(a * 0.7));
+        this._macchia(ctx, Math.cos(a) * rr * 0.5, Math.sin(a) * rr, R2 * 0.10, R2 * 0.22, '#e0ccff', 0.28);
+      }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(190,150,255,' + (0.35 + 0.25 * Math.sin(t * 3)) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, R2 * 0.86, R2 * 1.35, 0, 0, 7); ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.textAlign = 'center'; ctx.font = 'bold 13px Segoe UI';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText('attraversa la faglia', f.x, f.y - R2 * 1.5 - 10);
+      ctx.fillStyle = '#d9c6ff'; ctx.fillText('attraversa la faglia', f.x, f.y - R2 * 1.5 - 10);
+      ctx.textAlign = 'left'; ctx.restore();
     },
     _drawVendor(ctx, n, opts) {
       const o = opts || {}, t = this.time, x = n.x, y = n.y;

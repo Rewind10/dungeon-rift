@@ -490,31 +490,33 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
 
 // ===== v1.78 — USCITA DALLA MAPPA RIPULITA, RIEPILOGO, CARTE DAI LIVELLI ====================
 (function () {
-  console.log('\n-- v1.78: pulsante EXIT, riepilogo di fine livello, carte dai livelli');
-  const top = document.getElementById('clearTop'), btn = document.getElementById('exitBtn'), sub = document.getElementById('clearSub');
+  console.log('\n-- v1.84: la faglia d uscita (il pulsante EXIT non c e piu), riepilogo di fine livello');
+  const top = document.getElementById('clearTop'), sub = document.getElementById('clearSub');
   const snap = (o) => Object.assign({ wave: 3, mcount: 0, pend: 0, phase: 'combat', wt: 30, wp: 60 }, o);
+  // il DOM finto crea al volo qualunque id gli si chieda, quindi interrogarlo non prova niente: si
+  // guarda la PAGINA VERA, che e' l unico posto dove il pulsante poteva restare per sbaglio.
+  ok(fs.readFileSync(ROOT + 'public/index.html', 'utf8').indexOf('exitBtn') < 0, 'il pulsante EXIT e stato tolto dalla pagina');
   // in combattimento non si vede niente
   HUD.updateTop(snap({}), null);
-  ok(top.classList.contains('hidden') && btn.classList.contains('hidden'), 'in combattimento il pulsante EXIT non c e');
+  ok(top.classList.contains('hidden'), 'in combattimento l avviso di fine ondata non c e');
   // mappa ripulita, in singolo
   HUD.updateTop(snap({ phase: 'cleared', ex: { n: 0, tot: 1, t: 118 } }), null);
-  ok(!top.classList.contains('hidden') && !btn.classList.contains('hidden'), 'a mappa ripulita compaiono avviso e pulsante');
+  ok(!top.classList.contains('hidden'), 'a mappa ripulita compare l avviso');
   ok(document.getElementById('hud').classList.contains('ripulita'), 'e gli annunci al centro si spostano per non coprire la scritta');
-  ok(btn.textContent === 'EXIT', 'il pulsante dice EXIT');
   ok(document.getElementById('boonTitle') !== null, 'il titolo del mazzo ha un id, per poterlo cambiare');
-  ok(String(sub.innerHTML).indexOf('EXIT') > 0, 'e la scritta in alto spiega di premerlo');
+  ok(String(sub.innerHTML).indexOf('faglia') > 0, 'la scritta dice di attraversare la faglia');
   ok(String(sub.innerHTML).indexOf('118') > 0, 'dicendo anche fra quanto si esce da soli');
-  // premuto: il pulsante passa in attesa
+  // attraversata: la scritta cambia
   HUD.exitPremuto();
-  ok(btn.classList.contains('attesa'), 'premuto, il pulsante passa in attesa');
   HUD.updateTop(snap({ phase: 'cleared', ex: { n: 1, tot: 3, t: 90 } }), null);
-  ok(String(btn.textContent).indexOf('1/3') > 0, 'in cooperativa dice a quanti si sta aspettando');
-  // fase cambiata: tutto sparisce e il pulsante torna come nuovo
+  ok(String(sub.innerHTML).indexOf('1 su 3') > 0, 'in cooperativa dice a quanti si sta aspettando');
+  // fase cambiata: tutto sparisce
   HUD.updateTop(snap({ phase: 'shop' }), null);
-  ok(top.classList.contains('hidden') && btn.classList.contains('hidden'), 'finita l attesa spariscono');
+  ok(top.classList.contains('hidden'), 'finita l attesa sparisce');
   ok(!document.getElementById('hud').classList.contains('ripulita'), 'e gli annunci tornano al loro posto');
   HUD.updateTop(snap({ phase: 'cleared', ex: { n: 0, tot: 1, t: 120 } }), null);
-  ok(btn.textContent === 'EXIT' && !btn.classList.contains('attesa'), 'e all ondata dopo il pulsante e di nuovo premibile');
+  ok(String(sub.innerHTML).indexOf('faglia') > 0, 'e all ondata dopo l avviso torna quello di partenza');
+
   // e il contatore di combo non deve stare sopra alla scritta
   HUD.updateTop(snap({ phase: 'combat', ex: null }), { cmb: 9, cmx: 1.4, cmt: 0.5, hp: 10, mhp: 10, lv: 1, k: 0, xp: 0, co: 0, lives: 2, pot: [], cards: [] });
   ok(!document.getElementById('comboMeter').classList.contains('hidden'), 'in combattimento la combo si vede');

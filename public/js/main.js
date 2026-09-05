@@ -4,7 +4,7 @@
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const $ = (id) => document.getElementById(id);
-  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], tele: [], merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
+  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
 
@@ -26,7 +26,7 @@
   $('nextWaveBtn').onclick = () => { if ($('nextWaveBtn').disabled) return; Net.shopReady(); HUD.prontoPerOndata(); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
   Net.onWaveStats = (m) => { HUD.setWaveStats(m); };   // v1.78 — riepilogo di fine livello
-  $('exitBtn').onclick = () => { Net.exitWave(); HUD.exitPremuto(); };   // v1.78 — arriva solo se hai guadagnato livelli, e una volta per livello
+  // v1.84 — il pulsante EXIT non c'e' piu': si esce attraversando la faglia che si apre sulla mappa.
   Net.onOfferRank = (m) => { HUD.setRank(m, (id) => Net.pickRank(id)); };
   // v1.52 — l'offerta arriva sia dal pannello di fine ondata (se riabilitato) sia dal mercante del MERCATO:
   // 'near' distingue i due casi.
@@ -92,6 +92,12 @@
         R.burst(ev.x, ev.y, '#ffcf5a', 28, 300, 0.5); R.burst(ev.x, ev.y + 6, '#7a5a3a', 20, 160, 0.65);
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
+      // v1.84 — i prigionieri: la chiave e chi la libera
+      case 'chiave_elite': R.ring(ev.x, ev.y, '#ffd24a', 5, 60, 0.6); break;
+      case 'chiave_cade': R.ring(ev.x, ev.y, '#ffd24a', 6, 54, 0.5); R.burst(ev.x, ev.y, '#ffe08a', 16, 150, 0.6); break;
+      case 'chiave_presa': A.item && A.item(true); R.ring(ev.x, ev.y, '#ffd24a', 6, 46, 0.45); R.floater(ev.x, ev.y - 26, '\uD83D\uDD11 CHIAVE', '#ffd24a', true); break;
+      case 'liberati': A.levelUp && A.levelUp(); R.ring(ev.x, ev.y, '#9ef0b0', 8, 150, 0.7); R.burst(ev.x, ev.y, '#d8ffe4', 30, 220, 0.9);
+        R.floater(ev.x, ev.y - 40, '+' + ev.monete + ' \uD83E\uDE99', '#ffcf4a', true); R.addShake(4); break;
       // v1.83 — colpo parato con lo scudo: l'arco si accende dalla parte in cui guardi
       case 'para': R.para(ev.x, ev.y, ev.a, (window.GAME.Constants.SCUDO_CONO || 1.22)); break;
       // v1.81 — il ragno tesse: un anello che si apre e qualche filo che schizza
@@ -210,7 +216,7 @@
     const bm = {}; for (const b of prev.bul) bm[b.e] = b;
     w.bul = next.bul.map(nb => { const pb = bm[nb.e]; const o = Object.assign({}, nb); if (pb) { o.vx = (nb.x - pb.x) * C.SNAPSHOT_RATE; o.vy = (nb.y - pb.y) * C.SNAPSHOT_RATE; o.x = lerp(pb.x, nb.x, a); o.y = lerp(pb.y, nb.y, a); } return o; });
     w.orbs = next.orbs; w.met = next.met; w.crates = next.crates || []; w.wdrops = next.wdrops || [];
-    w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || []; w.tele = next.tele || [];
+    w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || []; w.tele = next.tele || []; w.rec = next.rec || null; w.chv = next.chv || null; w.chIn = next.chIn || 0; w.fg = next.fg || null;
     // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
     // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
     w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;

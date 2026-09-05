@@ -73,7 +73,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.mercData = null; this.mercCount = 0; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
@@ -98,7 +98,7 @@ class Room {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
     // v1.81 — zone e ragnatele sono POSTI sulla mappa vecchia: sulla nuova non vogliono dire niente.
-    this.zones.length = 0; this.ragnatele.length = 0;
+    this.zones.length = 0; this.ragnatele.length = 0; this.recinto = null; this.chiave = null; this.faglia = null;
     // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
     // collisione torna a costare esattamente quanto prima: un solo confronto con null.
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
@@ -188,6 +188,7 @@ class Room {
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    this._preparaPrigionieri();                                   // v1.84 — a volte c'e' gente da liberare
     this._schieraMercenario();                                    // v1.82 — il mercenario torna in campo, curato
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
     // v1.77.2 — ATTENZIONE AL RIPIEGO. Qui c'era scritto `this.time - (this.waveT0 || this.time)`:
@@ -244,6 +245,7 @@ class Room {
     if (opts.hpMul) { m.maxHp = Math.round(m.maxHp * opts.hpMul); m.hp = m.maxHp; }
     if (opts.dmgMul) m.dmg = Math.round(m.dmg * opts.dmgMul);
     m.radius = m.radius * (C.COL_SCALE || 1); // v1.13 — collisione leggermente piu grande (velocita invariata)
+    if (this.chiave && this.chiave.suEid === -1 && m.elite) this._chiaveAllElite(m);   // v1.84 — la chiave e' sua
     if (def.id === 'occhio') { m.gazeKind = ['weaken', 'slow', 'sunder'][(Math.random() * 3) | 0]; m.gazeActive = 0; } // v1.34 — tipo di sguardo fisso per l'occhio
     this.monsters.push(m); return m;
   }
@@ -951,6 +953,89 @@ class Room {
   // combattimento). Fra un'ondata e l'altra il corpo non c'e': non ti segue al villaggio, non compare nel
   // menu, non va contato da nessuna parte — e cosi' non serve ricordarsi di escluderlo in venti posti,
   // perche' semplicemente non esiste. Torna alla mappa dopo, curato del tutto.
+  // ===== v1.84 — I PRIGIONIERI ====================================================================
+  // Un recinto con dentro della gente, e la chiave da qualche altra parte. Nessun obbligo: se non ti va
+  // di cercarla, l'ondata si chiude lo stesso. Il numero cresce con le ondate perche' all'inizio trovarne
+  // cinque insieme direbbe "vai a fare la spesa" invece di "guarda, qualcuno la' in fondo".
+  _quantiPrigionieri() {
+    const tetto = Math.max(1, Math.min(C.PRIGIONE_MAX || 5, 1 + Math.floor(this.wave / 3)));
+    return 1 + ((Math.random() * tetto) | 0);
+  }
+  _preparaPrigionieri() {
+    this.recinto = null; this.chiave = null;
+    if (Waves.isBossWave(this.wave)) return;                 // la mappa del boss non si divide l'attenzione
+    if (Math.random() > (C.PRIGIONE_PROB || 0.35)) return;
+    const pos = this._postoLargo(C.PRIGIONE_RAGGIO + 26, 520);
+    if (!pos) return;
+    const n = this._quantiPrigionieri();
+    const PAL = ['#8a3b2e', '#2f5d7a', '#5a4a86', '#7a6a2a', '#356b4a', '#7a3560', '#4a4a55'];
+    const CL = ['guerriero', 'mago', 'ladro'];
+    const prigionieri = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+      const rr = n === 1 ? 0 : (C.PRIGIONE_RAGGIO * 0.42);
+      prigionieri.push({ dx: Math.round(Math.cos(a) * rr), dy: Math.round(Math.sin(a) * rr),
+        c: PAL[(Math.random() * PAL.length) | 0], h: CL[(Math.random() * CL.length) | 0], f: +(Math.random() * 6.28).toFixed(2) });
+    }
+    this.recinto = { x: Math.round(pos.x), y: Math.round(pos.y), r: C.PRIGIONE_RAGGIO || 62, prigionieri, liberato: false };
+    // LA CHIAVE. Addosso a un elite se in quest'ondata ne e' previsto almeno uno — si sapra' quando muore;
+    // se no accanto a una cassa, che e' l'altro posto dove uno guarderebbe.
+    const conElite = (this.waveList || []).some(x => x.elite);
+    if (conElite) this.chiave = { x: 0, y: 0, presa: false, suEid: -1 };   // -1 = "al primo elite che entra"
+    else {
+      const c = this.crates && this.crates.length ? this.crates[(Math.random() * this.crates.length) | 0] : null;
+      const q = c ? { x: c.x + MU.rand(-34, 34), y: c.y + MU.rand(-34, 34) } : this._postoLargo(24, 300);
+      if (!q || this.isWallAt(q.x, q.y)) return;             // niente posto per la chiave: niente recinto
+      this.chiave = { x: Math.round(q.x), y: Math.round(q.y), presa: false, suEid: null };
+    }
+  }
+  // un punto libero, lontano dai giocatori, con spazio attorno: serve al recinto e alla faglia
+  _postoLargo(spazio, lontano) {
+    const ap = this.alivePlayers;
+    for (let k = 0; k < 220; k++) {
+      const x = MU.rand(C.TILE * 2, (this.map.w - 2) * C.TILE), y = MU.rand(C.TILE * 2, (this.map.h - 2) * C.TILE);
+      if (this.isWallAt(x, y)) continue;
+      let ok = true;
+      for (let a = 0; a < 8 && ok; a++) { const an = a * Math.PI / 4; if (this.isWallAt(x + Math.cos(an) * spazio, y + Math.sin(an) * spazio)) ok = false; }
+      if (!ok) continue;
+      if (lontano) { let vicino = false; for (const p of ap) if (MU.dist(x, y, p.x, p.y) < lontano) vicino = true; if (vicino) continue; }
+      return { x, y };
+    }
+    return null;
+  }
+  // La chiave sull'elite: appena ne entra uno in campo se la prende lui. Quando cade, la chiave cade con lui.
+  _chiaveAllElite(m) {
+    if (!this.chiave || this.chiave.presa || this.chiave.suEid !== -1) return;
+    if (!m.elite || m.boss) return;
+    this.chiave.suEid = m.eid;
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'chiave_elite', x: m.x, y: m.y, id: m.type } });
+  }
+  _chiaveCade(m) {
+    if (!this.chiave || this.chiave.suEid !== m.eid) return;
+    this.chiave.suEid = null; this.chiave.x = Math.round(m.x); this.chiave.y = Math.round(m.y);
+    this.events.push({ t: 'chiave_cade', x: m.x, y: m.y });
+  }
+  _updatePrigionieri() {
+    if (this.chiave && !this.chiave.presa && this.chiave.suEid === null) {
+      for (const p of this.veri) {
+        if (MU.dist(p.x, p.y, this.chiave.x, this.chiave.y) > (C.CHIAVE_RAGGIO || 26) + p.radius) continue;
+        this.chiave.presa = true;
+        this.broadcast({ t: C.MSG.EVENT, ev: { t: 'chiave_presa', x: p.x, y: p.y, who: p.id, name: p.name } });
+        break;
+      }
+    }
+    const rc = this.recinto;
+    if (!rc || rc.liberato || !this.chiave || !this.chiave.presa) return;
+    for (const p of this.veri) {
+      if (MU.dist(p.x, p.y, rc.x, rc.y) > rc.r + p.radius + 10) continue;
+      rc.liberato = true;
+      const n = rc.prigionieri.length, monete = n * (C.PRIGIONE_MONETE || 100);
+      p.coins = (p.coins || 0) + monete;
+      if (p.ondata) p.ondata.monete += monete;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'liberati', x: rc.x, y: rc.y, n, monete, name: p.name } });
+      break;
+    }
+  }
   _puoAssumere(p) {
     if (!p || p.merc) return false;
     if (this.veri.length > 1 && C.MERC_SOLO_SINGOLO) return false;   // solo in singolo
@@ -1190,6 +1275,7 @@ class Room {
       this.events.push({ t: 'zone_tell', x: m.x, y: m.y, r: e.r || 100, delay: rit, c: m.def.eye });
       this.events.push({ t: 'larva_pop', x: m.x, y: m.y, c: m.def.eye });
     }
+    this._chiaveCade(m);                                          // v1.84 — se aveva la chiave, cade con lui
     this.events.push({ t: 'mkill', x: m.x, y: m.y, id: m.type, f: +(m.facing || 0).toFixed(2), boss: m.boss, elite: m.elite, mega: m.mega });
     if (m.boss || m.elite) this.events.push({ t: 'hitstop', d: m.mega ? 0.16 : (m.boss ? 0.12 : 0.06) });
     if (src) {
@@ -1601,7 +1687,7 @@ class Room {
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
       { const mc = this.mercenario; if (mc) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); } }
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -1636,18 +1722,27 @@ class Room {
         // un punto da cui il giocatore non lo vede. Se un posto cosi' non si trova non si sposta
         // niente: si riprova fra cinque secondi. Meglio un'ondata che dura qualche secondo in piu'
         // che un mostro che si materializza in mezzo allo schermo.
+        // v1.84 — DUE PASSATE. La prima e' quella di sempre: lontanissimo (950-1500 px) e fuori dallo
+        // sguardo. Su certe mappe pero' un punto cosi' non esiste — la stanza e' piccola, o il giocatore
+        // sta al centro — e allora il mostro bloccato non si spostava MAI e l'ondata poteva restare aperta
+        // per sempre, che e' esattamente cio' che questa regola doveva impedire. La seconda passata
+        // allenta la distanza (700-1100 px) ma NON la condizione che conta: fuori dallo sguardo. Meglio
+        // riportarlo un po' piu' vicino che lasciarlo dov'e' — comparire davanti agli occhi resta vietato.
         let dove = null;
-        for (let k = 0; k < 64; k++) {
-          const a = Math.random() * Math.PI * 2, r = 950 + Math.random() * 550;
-          const nx = vicino.x + Math.cos(a) * r, ny = vicino.y + Math.sin(a) * r;
-          if (this.isWallAt(nx, ny) || this._blk(nx, ny, m.radius * 0.8)) continue;
-          let visto = false, troppoVicino = false;
-          for (const p of ap) {
-            if (MU.dist(nx, ny, p.x, p.y) < 900) troppoVicino = true;
-            if (this.losClear(p.x, p.y, nx, ny)) visto = true;
+        for (const giro of [{ min: 950, sp: 550, lontano: 900 }, { min: 700, sp: 400, lontano: 650 }]) {
+          for (let k = 0; k < 64 && !dove; k++) {
+            const a = Math.random() * Math.PI * 2, r = giro.min + Math.random() * giro.sp;
+            const nx = vicino.x + Math.cos(a) * r, ny = vicino.y + Math.sin(a) * r;
+            if (this.isWallAt(nx, ny) || this._blk(nx, ny, m.radius * 0.8)) continue;
+            let visto = false, troppoVicino = false;
+            for (const p of ap) {
+              if (MU.dist(nx, ny, p.x, p.y) < giro.lontano) troppoVicino = true;
+              if (this.losClear(p.x, p.y, nx, ny)) visto = true;
+            }
+            if (visto || troppoVicino) continue;
+            dove = { x: nx, y: ny };
           }
-          if (visto || troppoVicino) continue;
-          dove = { x: nx, y: ny }; break;
+          if (dove) break;
         }
         if (dove) { m.x = dove.x; m.y = dove.y; m._avvicinaMin = undefined; }
         m._fermoT = 0;
@@ -1656,7 +1751,14 @@ class Room {
     // condizioni di fine ondata per modalità
     if (inCombat) this._checkWaveClear();
     // v1.78 — mappa ripulita: si aspetta il pulsante EXIT di tutti, con un tetto di tempo anti-AFK.
-    if (this.phase === C.PHASE_CLEARED) { this.exitT -= dt; if (this.exitT <= 0) this._waveDone(); }
+    if (this.phase === C.PHASE_CLEARED) {
+      // v1.84 — chi entra nella faglia esce: e' il pulsante EXIT, ma fatto di gioco.
+      if (this.faglia) for (const p of this.veri) {
+        if (p.exitOk) continue;
+        if (MU.dist(p.x, p.y, this.faglia.x, this.faglia.y) <= (C.FAGLIA_RAGGIO || 46) + p.radius) this.exitWave(p.id);
+      }
+      this.exitT -= dt; if (this.exitT <= 0) this._waveDone();
+    }
     if (this.phase === C.PHASE_MARKET) {
       this._checkMarketExit();
       if (this.phase === C.PHASE_MARKET) { this.marketTimer -= dt; let conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) conn++;
@@ -1684,6 +1786,22 @@ class Room {
     this.waveDur = this.time - this.waveT0;
     this.phase = C.PHASE_CLEARED; this.exitT = C.EXIT_TIMEOUT;
     for (const p of this.players.values()) p.exitOk = false;
+    // v1.84 — SI APRE LA FAGLIA. Al posto del pulsante EXIT in mezzo allo schermo: uno squarcio sulla
+    // mappa, e ci si passa dentro. Il gesto e' lo stesso, ma succede nel gioco invece che nell'interfaccia
+    // — e in una mappa che si chiama Dungeon Rift lo squarcio e' di casa. Si apre a un passo dal
+    // giocatore (non addosso: se no ci finisci dentro mentre raccogli), in un punto libero.
+    this.faglia = null;
+    const q = this.veri[0] || this.alivePlayers[0];
+    if (q) {
+      for (let k = 0; k < 48 && !this.faglia; k++) {
+        const a = (k / 48) * Math.PI * 2 + Math.random() * 0.3, r = 150 + (k % 5) * 26;
+        const x = q.x + Math.cos(a) * r, y = q.y + Math.sin(a) * r;
+        if (this.isWallAt(x, y) || this._blk(x, y, 34)) continue;
+        if (!this.losClear(q.x, q.y, x, y)) continue;       // dev'essere in vista: e' l'uscita, non un indovinello
+        this.faglia = { x: Math.round(x), y: Math.round(y) };
+      }
+      if (!this.faglia) this.faglia = { x: Math.round(q.x), y: Math.round(q.y) };
+    }
     const inTempo = this.parT > 0 && this.waveDur <= this.parT;
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'cleared', wave: this.wave, durata: +this.waveDur.toFixed(1), par: this.parT || 0, tempo: inTempo ? 1 : 0 } });
   }
@@ -2084,13 +2202,19 @@ class Room {
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });
     const zones = []; for (const z of this.zones) zones.push({ x: Math.round(z.x), y: Math.round(z.y), r: z.r, p: +(1 - z.t / z.max).toFixed(2), c: z.col });
+    // v1.84 — recinto, chiave e faglia. Sono tre oggetti soli e cambiano di rado: viaggiano interi.
+    const rec = this.recinto ? { x: this.recinto.x, y: this.recinto.y, r: this.recinto.r,
+      lib: this.recinto.liberato ? 1 : 0, pr: this.recinto.prigionieri } : null;
+    const chv = (this.chiave && !this.chiave.presa && this.chiave.suEid === null) ? { x: this.chiave.x, y: this.chiave.y } : null;
+    const chIn = this.chiave ? (this.chiave.presa ? 2 : (this.chiave.suEid !== null ? 1 : 0)) : 0;   // 0 a terra · 1 su un elite · 2 in tasca
+    const fg = (this.phase === C.PHASE_CLEARED && this.faglia) ? this.faglia : null;
     const tele = []; for (const w of this.ragnatele) tele.push({ x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2), c: w.col });
     const crates = []; for (const c of this.crates) crates.push({ e: c.eid, x: Math.round(c.x), y: Math.round(c.y) });
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, tele, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
     this.events = []; return s;
   }
 }

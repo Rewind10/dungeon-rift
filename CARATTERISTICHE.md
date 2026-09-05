@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.83.0`
+**Versione attuale:** `1.84.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -121,6 +121,33 @@ Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Es
 **Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace *(bonus XP, inutili col tetto)*, e in
 v1.79.2 🌵 Aura di Spine, ⛏️ Piede di Porco, 🔱 Sdoppiamento, 🎯 Mira Guidata, 😈 Furia Cieca, 🧿 Egida
 Ostinata, 🚩 Doppia Bolla, 🔊 Eco Arcana, 🌌 Implosione.
+
+## 🔒 I PRIGIONIERI *(v1.84)*
+
+Ogni tanto (**una mappa su tre**) in un angolo lontano c'e' un recinto di pali con dentro della gente.
+
+| | |
+|---|---|
+| Quanti | da 1 a 5; il tetto cresce con le ondate (alla prima uno o due, dalla dodicesima anche cinque) |
+| Ricompensa | **100 monete a testa** |
+| La chiave | addosso a un **elite** se l'ondata ne prevede uno — cade quando cade lui — se no **a terra vicino alle casse** |
+| Obbligatorio | **no**: l'ondata si chiude lo stesso |
+| Ondate del boss | niente recinto |
+
+Il recinto **non blocca il passaggio** (i pali si leggono, non fanno da muro: un muro che il pathfinding
+non conosce incastrerebbe i mostri). L'alone e' **giallo quando hai la chiave**, spento quando non ce
+l'hai. Sulla minimappa si vede il recinto ma **non la chiave**: e' nascosta, e indicarla sarebbe non
+nasconderla. Il mercenario non raccoglie la chiave e non libera nessuno.
+
+---
+
+## 🌀 LA FAGLIA D'USCITA *(v1.84, al posto del pulsante EXIT)*
+
+A mappa ripulita si apre uno squarcio **a un passo dal giocatore** — in vista, mai dentro la roccia, mai
+addosso (se no ci si finisce dentro mentre si raccoglie). Ci si passa dentro per chiudere l'ondata. Il
+conto alla rovescia anti-AFK resta, e in cooperativa la scritta dice quanti sono gia' passati.
+
+---
 
 ## 🗡️ I MERCENARI *(v1.82)*
 

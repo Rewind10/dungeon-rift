@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.83.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.84.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,13 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.84 (prigionieri, e la faglia al posto del pulsante)
+- **🔒 Prigionieri da liberare**: una mappa su tre ha un recinto con dentro **1-5 persone**. La chiave e'
+  nascosta — addosso a un elite, o a terra vicino alle casse. Liberarli paga **100 monete a testa**. Non e'
+  obbligatorio: e' una deviazione, e il prezzo e' il tempo.
+- **🌀 La faglia**: il pulsante EXIT verde in mezzo allo schermo non c'e' piu'. A mappa ripulita si apre uno
+  squarcio a un passo da te, e ci si passa dentro per proseguire.
 
 ## 🆕 Novita v1.83 (ribilanciamento delle classi)
 - **🛡️ Lo scudo del guerriero para davvero, e solo davanti**: −45% dai colpi che arrivano nel cono

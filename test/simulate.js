@@ -3337,7 +3337,9 @@ function testV180() {
     let vivi = r2.monsters.filter(x => !x.dead);
     const impegnatiPrima = vivi.filter(x => x.impegnato === 1).length;
     const attesaPrima = vivi.filter(x => x.impegnato === 0).length;
-    assert(attesaPrima > 0, 'con dieci nemici qualcuno sta aspettando il turno (' + attesaPrima + ')');
+    // su mappe strette ne entrano meno di quanti se ne volevano: l attesa esiste solo se ce ne sono
+    // piu' del tetto, se no non c e' niente da mettere in coda e il controllo non vuol dire nulla.
+    if (vivi.length > C.FOLLA_MAX) assert(attesaPrima > 0, 'con piu nemici del tetto qualcuno sta aspettando il turno (' + attesaPrima + ')');
     for (const x of vivi.filter(y => y.impegnato === 1).slice(0, 3)) { x.dead = true; }
     r2._assegnaFolla();
     const impegnatiDopo = r2.monsters.filter(x => !x.dead && x.impegnato === 1).length;
@@ -3817,6 +3819,128 @@ function testV183() {
   ok('ribilanciamento verificato');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 60 — v1.84: i prigionieri, la chiave, e la faglia al posto del pulsante
+// ============================================================================
+function testV184() {
+  console.log('\n[TEST 60] v1.84 — prigionieri da liberare e faglia d uscita');
+  const dt = 1 / C.TICK_RATE;
+  const conn = { send() {} };
+
+  // --- 1) il recinto compare ogni tanto, e non e' mai piu' grande del tetto ---
+  {
+    let conRecinto = 0, maxPr = 0, minPr = 99, ondate = 0;
+    for (let k = 0; k < 40; k++) {
+      const r = new Room('v184a' + k); r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+      for (let w = 0; w < 4; w++) {
+        ondate++;
+        if (r.recinto) { conRecinto++; const n = r.recinto.prigionieri.length; maxPr = Math.max(maxPr, n); minPr = Math.min(minPr, n); }
+        r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave();
+      }
+    }
+    const perc = conRecinto / ondate;
+    assert(perc > 0.15 && perc < 0.60, 'il recinto compare ogni tanto, non sempre (' + (perc * 100).toFixed(0) + '% delle ondate)');
+    assert(maxPr <= C.PRIGIONE_MAX, 'mai piu di ' + C.PRIGIONE_MAX + ' prigionieri (visto ' + maxPr + ')');
+    assert(minPr >= 1, 'e mai zero');
+  }
+  // --- 2) all inizio se ne trovano pochi ---
+  {
+    const conta = (ondata) => { let tot = 0, n = 0;
+      for (let k = 0; k < 400; k++) { const r = new Room('x'); r.wave = ondata;
+        r.map = { w: 40, h: 30 }; // non serve: _quantiPrigionieri guarda solo l ondata
+        tot += r._quantiPrigionieri(); n++; }
+      return tot / n; };
+    const presto = conta(1), tardi = conta(14);
+    assert(presto < tardi, 'nelle prime ondate se ne trovano meno (' + presto.toFixed(1) + ' contro ' + tardi.toFixed(1) + ')');
+    assert(presto <= 2.1, 'e alla prima ondata sono uno o due (' + presto.toFixed(1) + ')');
+  }
+  // --- 3) LA CHIAVE: senza non si libera nessuno, con la chiave si' ---
+  {
+    const r = new Room('v184b'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    // si mette un recinto a mano: la prova non deve dipendere dal caso
+    r.recinto = { x: p.x + 300, y: p.y, r: C.PRIGIONE_RAGGIO, liberato: false,
+      prigionieri: [{ dx: 0, dy: 0, c: '#8a3b2e', h: 'ladro', f: 0 }, { dx: 10, dy: 10, c: '#2f5d7a', h: 'mago', f: 1 }] };
+    r.chiave = { x: p.x - 300, y: p.y, presa: false, suEid: null };
+    const monete0 = p.coins || 0;
+    // ci si mette dentro al recinto SENZA chiave: non succede niente
+    p.x = r.recinto.x; p.y = r.recinto.y; r._updatePrigionieri();
+    assert(!r.recinto.liberato, 'senza chiave il recinto non si apre');
+    assert((p.coins || 0) === monete0, 'e non arriva una moneta');
+    // si va a prendere la chiave
+    p.x = r.chiave.x; p.y = r.chiave.y; r._updatePrigionieri();
+    assert(r.chiave.presa, 'passandoci sopra la chiave si raccoglie');
+    // e adesso il recinto si apre
+    p.x = r.recinto.x; p.y = r.recinto.y; r._updatePrigionieri();
+    assert(r.recinto.liberato, 'con la chiave il recinto si apre');
+    assert(p.coins - monete0 === 2 * C.PRIGIONE_MONETE, 'e paga ' + C.PRIGIONE_MONETE + ' monete a testa (' + (p.coins - monete0) + ' per due)');
+    // e non paga due volte
+    const dopo = p.coins; r._updatePrigionieri();
+    assert(p.coins === dopo, 'liberarli e' + String.fromCharCode(39) + ' una cosa sola: non si ripaga');
+  }
+  // --- 4) la chiave addosso all elite cade quando muore ---
+  {
+    const r = new Room('v184c'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    r.chiave = { x: 0, y: 0, presa: false, suEid: -1 };
+    const sp = losSpot(r, p, 260);
+    const el = r.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(3, 1), elite: true });
+    assert(!!el && el.elite, 'entrato un elite');
+    assert(r.chiave.suEid === el.eid, 'la chiave e sua');
+    assert(!r.recinto || true, '');
+    // finche' e' vivo la chiave non e' a terra
+    r._updatePrigionieri();
+    assert(!r.chiave.presa, 'e finche' + String.fromCharCode(39) + ' vivo non la si raccoglie da terra');
+    r.killMonster(el, p);
+    assert(r.chiave.suEid === null, 'quando cade, la chiave cade con lui');
+    assert(Math.abs(r.chiave.x - el.x) < 2, 'proprio dove e caduto');
+    p.x = r.chiave.x; p.y = r.chiave.y; r._updatePrigionieri();
+    assert(r.chiave.presa, 'e da li si raccoglie');
+  }
+  // --- 5) il mercenario non raccoglie la chiave e non libera nessuno: non e' un giocatore ---
+  {
+    const r = new Room('v184d'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    p.level = 4; r.enterMarket(); p.x = r.bandit.x; p.y = r.bandit.y; p.coins = 1000; r.assumiMercenario('a');
+    r.nextWave(); r.phase = C.PHASE_COMBAT;
+    const mc = r.mercenario; assert(!!mc, 'mercenario in campo');
+    r.chiave = { x: mc.x, y: mc.y, presa: false, suEid: null };
+    p.x = mc.x + 3000; p.y = mc.y + 3000;
+    r._updatePrigionieri();
+    assert(!r.chiave.presa, 'il mercenario ci cammina sopra e non la raccoglie');
+  }
+  // --- 6) LA FAGLIA: si apre a mappa ripulita, e attraversarla chiude l ondata ---
+  {
+    const r = new Room('v184e'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    assert(!r.faglia, 'durante l ondata la faglia non c e');
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    r._mappaRipulita();
+    assert(r.phase === C.PHASE_CLEARED, 'ripulita la mappa si passa alla fase di uscita');
+    assert(!!r.faglia, 'e si apre la faglia');
+    const d = MU.dist(r.faglia.x, r.faglia.y, p.x, p.y);
+    assert(d > C.FAGLIA_RAGGIO + 40, 'non addosso al giocatore (' + d.toFixed(0) + ' px), se no ci si finisce dentro raccogliendo');
+    assert(d < 460, 'ma nemmeno dall altra parte della mappa');
+    assert(!r.isWallAt(r.faglia.x, r.faglia.y), 'e non dentro la roccia');
+    // starci lontano non chiude niente
+    for (let i = 0; i < C.TICK_RATE; i++) r.update(dt);
+    assert(r.phase === C.PHASE_CLEARED, 'restando fuori l ondata non si chiude');
+    // attraversarla si'
+    p.x = r.faglia.x; p.y = r.faglia.y;
+    r.update(dt);
+    assert(r.phase !== C.PHASE_CLEARED, 'attraversandola l ondata si chiude');
+  }
+  // --- 7) niente recinto nelle ondate del boss ---
+  {
+    let visto = false;
+    for (let k = 0; k < 30; k++) {
+      const r = new Room('v184f' + k); r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
+      while (r.wave < 5) { r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave(); }
+      if (r.recinto) visto = true;
+    }
+    assert(!visto, 'nella mappa del boss non ci sono prigionieri: l attenzione non si divide');
+  }
+  ok('prigionieri e faglia verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

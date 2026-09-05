@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.83.0',
+    VERSION: '1.84.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -25,6 +25,17 @@
     // v1.83 — quanto e' largo il cono coperto dallo scudo, in radianti a mezzo (1,22 = 70 gradi per lato).
     // Largo abbastanza da poterci contare girandosi, stretto abbastanza che essere circondati faccia male.
     SCUDO_CONO: 1.22,
+    // v1.84 — I PRIGIONIERI. Ogni tanto una mappa ha un recinto con dentro della gente: la chiave e'
+    // nascosta altrove (addosso a un elite, o accanto alle casse) e liberarli paga. Non e' obbligatorio:
+    // e' una deviazione che si sceglie, e il prezzo e' il tempo che passi a cercare invece che a uccidere.
+    PRIGIONE_PROB: 0.35,        // quante mappe hanno un recinto
+    PRIGIONE_MONETE: 100,       // per testa
+    PRIGIONE_MAX: 5,
+    PRIGIONE_RAGGIO: 62,        // il recinto
+    CHIAVE_RAGGIO: 26,          // quanto vicino devi passarci per raccoglierla
+    // v1.84 — LA FAGLIA D'USCITA. Al posto del pulsante EXIT in mezzo allo schermo: si apre uno squarcio
+    // sulla mappa e ci si passa dentro. Il gesto e' lo stesso (uscire), ma succede nel gioco e non nell'UI.
+    FAGLIA_RAGGIO: 46,
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).
