@@ -3,7 +3,11 @@
   'use strict';
   const A = {
     ctx: null, master: null, musicGain: null, sfxGain: null, musicOn: true, sfxOn: true,
-    trackBuf: null, trackSrc: null, trackGain: null, scenaCorrente: null, TRACK_VOL: 0.85,   // v1.90 — il brano
+    trackBuf: null, trackSrc: null, trackGain: null, scenaCorrente: null, TRACK_VOL: 0.85,
+    // v1.90.1 — IL BRANO E' SPENTO. Provato in gioco, la musica procedurale suonava meglio: il brano
+    // registrato aveva un giro corto e in sottofondo si sentiva ripetersi. I file restano in
+    // assets/audio/ e tutto l'impianto pure — per riaccenderlo basta rimettere true qui.
+    TRACCIA: false,
     tempo: 74, step: 0, nextTime: 0, timer: null, bossMode: false,
     init() { if (this.ctx) return; const AC = window.AudioContext || window.webkitAudioContext; this.ctx = new AC(); this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.42; this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.6; this.musicGain.connect(this.master); this.sfxGain.connect(this.master); this.master.connect(this.ctx.destination); this.conv = this.ctx.createConvolver(); this.conv.buffer = this._imp(3.4, 3.0); this.reverbGain = this.ctx.createGain(); this.reverbGain.gain.value = 0.32; this.conv.connect(this.reverbGain); this.reverbGain.connect(this.master); this.musicLP = this.ctx.createBiquadFilter(); this.musicLP.type = 'lowpass'; this.musicLP.frequency.value = 2200; },
     resume() { this.init(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
@@ -148,8 +152,12 @@
       this.scenaCorrente = kind;
       this._gestoArmato();                            // se il browser non ha ancora sbloccato l'audio, si riprova al primo click
       if (kind === 'off') { this.stopTrack(0.6); this.stopMusic(); return; }
-      if (kind === 'menu' || kind === 'lobby' || kind === 'wave') { this.stopMusic(); this.playTrack(); return; }
-      this.stopTrack(0.7); this.startMusic(kind === 'boss');
+      if (this.TRACCIA && (kind === 'menu' || kind === 'lobby' || kind === 'wave')) { this.stopMusic(); this.playTrack(); return; }
+      this.stopTrack(0.7);
+      // menu e sala d'attesa non avevano musica prima della 1.90 e non l'hanno adesso: la partita
+      // comincia quando si entra in campo.
+      if (kind === 'menu' || kind === 'lobby') { this.stopMusic(); return; }
+      this.startMusic(kind === 'boss');
     },
     // I browser non fanno partire l'audio prima di un gesto dell'utente: il menu e' la prima cosa che si
     // vede, e li' un gesto non c'e' ancora stato. Ci si iscrive una volta sola e alla prima interazione

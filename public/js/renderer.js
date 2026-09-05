@@ -1094,6 +1094,7 @@
     addShake(v) { this.shake = Math.min(20, this.shake + v); },
     fire(x, y, n, up) { for (let i = 0; i < n; i++) { const a = MU.rand(-0.5, 0.5); this.particles.push({ x: x + MU.rand(-6, 6), y: y + MU.rand(-3, 3), vx: Math.sin(a) * 18, vy: -(up || 40) - Math.random() * 30, life: MU.rand(0.4, 0.8), t: 0, fire: true, r: MU.rand(3, 7), over: true }); } },
     render(dt, world) {
+      this.frameN = (this.frameN || 0) + 1;   // v1.90.2 — serve a spalmare le cotture delle pose
       this.time += dt; const ctx = this.ctx; ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); ctx.clearRect(0, 0, this.w, this.h); if (!this.map || !world) return;
       const me = world.me; if (me) { this.cam.x += (me.x - this.cam.x) * Math.min(1, dt * 8); this.cam.y += (me.y - this.cam.y) * Math.min(1, dt * 8); }
       let sx = 0, sy = 0; if (this.shake > 0.1) { sx = MU.rand(-this.shake, this.shake); sy = MU.rand(-this.shake, this.shake); this.shake *= 0.86; }
@@ -3009,19 +3010,69 @@
       }
       if (luce) this._macchia(ctx, fx, fy, w * 0.16, w * 0.13, P.orlo, 0.40);
     },
+    // v1.90.2 — I RAGNI ERANO IL COLLO DI BOTTIGLIA. Misurato con un profilo vero all'ondata 16: UN
+    // ragno costava 1313 macchie a frame (56 per zampa, sedici passaggi di zampa) — quasi cinque volte
+    // TUTTO il resto della scena messo insieme, e con 7 ragni in campo il frame passava da 2,3 a 5,3 ms.
+    // Il 23% del frame se ne andava nelle sole ctx.save().
+    //
+    // Soluzione: la stessa del Troll dalla v1.47 — si disegna la posa una volta in un riquadro fuori
+    // schermo e poi si incolla. Il ciclo di camminata si quantizza in 12 fasi, l'attacco in 3, e le pose
+    // si cuociono la prima volta che servono. Da 1313 fill a UN drawImage.
+    _ragnoPose: null,
+    _ragnoFrame(def, r, atk3, moving, fase) {
+      const base = def.pal + '|' + Math.round(r) + '|' + atk3 + '|' + (moving ? 1 : 0) + '|';
+      const cache = this._ragnoPose || (this._ragnoPose = new Map());
+      let f = cache.get(base + fase);
+      if (f) return f;
+      // UNA COTTURA PER FRAME. Cuocerne tre di fila costa 11ms e si vede: quando la posa esatta non c'e'
+      // ancora si usa la piu' vicina gia' pronta — a dodici fasi lo scarto e' mezzo passo, invisibile —
+      // e la posa giusta arrivera' al frame dopo. Cosi' la spesa si spalma invece di fare uno scatto.
+      if (this._cotturaN === this.frameN) {
+        for (let d = 1; d <= 6; d++) {
+          f = cache.get(base + ((fase + d) % 12)) || cache.get(base + ((fase + 12 - d) % 12));
+          if (f) return f;
+        }
+      }
+      this._cotturaN = this.frameN;
+      const S = Math.ceil(r * 3.4);                     // le zampe arrivano a ~1,5r: il riquadro le contiene
+      const dpr = this.dpr || 1;
+      const cv = document.createElement('canvas');
+      cv.width = Math.ceil(S * dpr); cv.height = Math.ceil(S * dpr);
+      const g = cv.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.translate(S / 2, S / 2);
+      this._ragnoPosa(g, r, def, atk3 / 2, moving, (fase / 12) * Math.PI * 2);
+      f = { cv, S };
+      if (cache.size > 220) cache.clear();              // cambio di risoluzione o troppe varianti: si riparte
+      cache.set(base + fase, f);
+      return f;
+    },
     _ragnoDip(ctx, m, r, def, atk, moving, dir) {
-      const t = this.time, e = (m.e || 0) * 0.8;
-      const P = this.PAL_RAGNO[def.pal] || this.PAL_RAGNO.vedova;
+      const e = (m.e || 0) * 0.8;
+      const ang = (this.time * 6.2 + e) % (Math.PI * 2);
+      const fase = Math.round(ang / (Math.PI * 2) * 12) % 12;
+      const atk3 = (atk || 0) > 0.66 ? 2 : (atk || 0) > 0.15 ? 1 : 0;
+      const f = this._ragnoFrame(def, r, atk3, moving, fase);
       const flip = Math.cos(m.f || 0) < 0 ? -1 : 1;
+      ctx.save(); ctx.scale(flip, 1);
+      ctx.drawImage(f.cv, -f.S / 2, -f.S / 2, f.S, f.S);
+      ctx.restore();
+    },
+    // v1.90.2 — LA POSA DEL RAGNO, disegnata UNA VOLTA per fase e poi riusata come immagine.
+    // Il disegno e' identico a prima: cambia solo che al posto del tempo prende un ANGOLO di fase, cosi'
+    // la stessa posa si puo' cuocere in un riquadro e ridisegnare con un drawImage invece di 1313 macchie.
+    _ragnoPosa(ctx, r, def, atk, moving, ang) {
+      const P = this.PAL_RAGNO[def.pal] || this.PAL_RAGNO.vedova;
       const sw = Math.sin((atk || 0) * Math.PI);
       const passo = moving ? 1 : 0.16;
-      const bob = Math.sin(t * (moving ? 7.5 : 1.8) + e) * r * (moving ? 0.05 : 0.02);
-      ctx.save(); ctx.scale(flip, 1); ctx.translate(0, bob);
+      const bob = Math.sin(ang * 1.21) * r * (moving ? 0.05 : 0.02);
+      const e = 0;
+      ctx.save(); ctx.translate(0, bob);
       ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#000';
       ctx.beginPath(); ctx.ellipse(0, r * 0.66, r * 1.25, r * 0.26, 0, 0, 7); ctx.fill(); ctx.restore();
       const SP = [-0.82, -0.34, 0.10, 0.52];          // apertura delle quattro zampe, dall'alto in basso
       const zampa = (i, lato, luce) => {
-        const on = Math.sin(t * 6.2 + i * 1.9 + (lato > 0 ? 2.8 : 0) + e) * passo;
+        const on = Math.sin(ang + i * 1.9 + (lato > 0 ? 2.8 : 0)) * passo;
         this._zampaRagno(ctx, lato * r * 0.16, -r * 0.02,
           lato, SP[i] + on * 0.13,
           r * (0.72 + i * 0.06), r * (0.58 + i * 0.06),
@@ -3040,7 +3091,7 @@
       this._macchia(ctx, ax + aw * 0.24, ay + aw * 0.12, aw * 0.20, aw * 0.11, P.segno, 0.60, 0.5);
       this._macchia(ctx, ax + aw * 0.02, ay + aw * 0.02, aw * 0.16, aw * 0.24, P.segno, 0.35);
       for (let i = 0; i < 16; i++) {   // peluria sul bordo
-        const a = (i / 16) * Math.PI * 2 + e;
+        const a = (i / 16) * Math.PI * 2;
         this._macchia(ctx, ax + Math.cos(a) * aw * 0.94, ay + Math.sin(a) * aw * 0.68, aw * 0.075, aw * 0.045, P.pelo, 0.55, a);
       }
       this._macchia(ctx, -r * 0.05, r * 0.02, r * 0.16, r * 0.13, P.buio, 0.9);   // peduncolo
@@ -3073,6 +3124,75 @@
       for (let i = 3; i >= 0; i--) { zampa(i, 1, true); zampa(i, -1, true); }     // le zampe di qua
       ctx.restore();
     },
+    // v1.90.2 — IL BEHOLDER ERA IL SECONDO COLLO DI BOTTIGLIA: 936 chiamate di disegno ciascuno (sei
+    // peduncoli da otto segmenti, il bordo sporco, le venature, i denti), cioe' piu' di tutti gli altri
+    // mostri della scena messi insieme. Stessa cura dei ragni, con una differenza: l'OCCHIO segue il
+    // bersaglio in continuazione e non si puo' cuocere. Quindi si cuoce il CORPO — massa, peduncoli,
+    // bocca — e l'occhio, l'iride e l'alone si disegnano vivi sopra: sono una quindicina di chiamate.
+    _behPose: null,
+    _beholderCorpo(ctx, r, P, spettrale, gcolHex, ang2, apriQ, seme) {
+      const cx = 0, cy = 0;          // il dondolio lo mette chi incolla l'immagine, non la posa
+      // ---- peduncoli, dietro alla massa ----
+      const NP = spettrale ? 8 : 6;
+      for (let i = 0; i < NP; i++) {
+        const a = -Math.PI + 0.35 + i * (Math.PI - 0.7) / (NP - 1) + Math.sin(ang2 + i) * 0.10;
+        this._peduncolo(ctx, cx, cy - r * 0.30, a, r * (1.35 + 0.20 * Math.sin(ang2 * 1.45 + i * 2.1)), r * 0.145, P.ped, gcolHex, ang2 * 1.64, i);
+      }
+      // ---- la massa: strati di macchie, dal buio al chiaro ----
+      if (spettrale) {
+        for (let i = 0; i < 14; i++) { const a = ang2 * 0.27 + i * 0.45, rr = r * (0.7 + 0.3 * Math.sin(ang2 + i * 1.7));
+          this._macchia(ctx, cx + Math.cos(a) * rr * 0.5, cy + Math.sin(a) * rr * 0.45, r * 0.32, r * 0.28, P.medio, 0.45); }
+      }
+      this._macchia(ctx, cx, cy, r * 1.08, r * 1.00, P.buio, spettrale ? 0.85 : 1);
+      this._macchia(ctx, cx, cy + r * 0.10, r * 0.97, r * 0.90, P.medio, spettrale ? 0.8 : 1);
+      this._macchia(ctx, cx - r * 0.10, cy - r * 0.08, r * 0.80, r * 0.72, P.chiaro, 0.40);
+      this._macchia(ctx, cx - r * 0.24, cy - r * 0.28, r * 0.68, r * 0.56, P.chiaro, 0.75);
+      this._macchia(ctx, cx - r * 0.34, cy - r * 0.40, r * 0.34, r * 0.26, P.luce, 0.30);
+      if (!spettrale) {
+        // bordo sporco: e' quello che toglie l'aria di plastica
+        for (let i = 0; i < 14; i++) { const a = (i * 2.399 + seme) % 6.283; const rr = r * (0.93 + ((i * 37) % 11) / 90);
+          this._macchia(ctx, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.94, r * 0.10, r * 0.08, (i % 2) ? P.buio : P.medio, 0.45); }
+        // venature
+        ctx.save(); ctx.globalAlpha = 0.22; ctx.strokeStyle = P.vena; ctx.lineWidth = Math.max(1, r * 0.05); ctx.lineCap = 'round';
+        for (let i = 0; i < 8; i++) { const a = i * 0.78 + 0.4; ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * r * 0.34, cy + Math.sin(a) * r * 0.32);
+          ctx.quadraticCurveTo(cx + Math.cos(a + 0.5) * r * 0.66, cy + Math.sin(a + 0.5) * r * 0.62, cx + Math.cos(a + 0.15) * r * 0.92, cy + Math.sin(a + 0.15) * r * 0.86);
+          ctx.stroke(); }
+        ctx.restore();
+        // bocca dentata: si spalanca quando morde
+        const apri = 1 + apriQ * 1.6;
+        this._macchia(ctx, cx, cy + r * 0.66, r * 0.40, r * 0.15 * apri, '#170611', 0.92);
+        ctx.save(); ctx.fillStyle = '#efe2cc';
+        for (let i = 0; i < 8; i++) { const x = cx - r * 0.33 + i * r * 0.095; ctx.beginPath();
+          ctx.moveTo(x, cy + r * 0.56); ctx.lineTo(x + r * 0.045, cy + r * 0.56); ctx.lineTo(x + r * 0.022, cy + r * (0.56 + 0.12 * apri)); ctx.closePath(); ctx.fill(); }
+        ctx.restore();
+      }
+    },
+    _beholderFrame(def, r, P, spettrale, gcolHex, fase, apriQ, seme) {
+      const key = (def.dipinto || 'v') + '|' + Math.round(r) + '|' + gcolHex + '|' + fase + '|' + apriQ + '|' + seme;
+      const cache = this._behPose || (this._behPose = new Map());
+      let f = cache.get(key);
+      if (f) return f;
+      if (this._cotturaN === this.frameN) {          // una cottura per frame, come per i ragni
+        for (let d = 1; d <= 5; d++) {
+          f = cache.get((def.dipinto || 'v') + '|' + Math.round(r) + '|' + gcolHex + '|' + ((fase + d) % 10) + '|' + apriQ + '|' + seme)
+           || cache.get((def.dipinto || 'v') + '|' + Math.round(r) + '|' + gcolHex + '|' + ((fase + 10 - d) % 10) + '|' + apriQ + '|' + seme);
+          if (f) return f;
+        }
+      }
+      this._cotturaN = this.frameN;
+      const S = Math.ceil(r * 4.2);                  // i peduncoli arrivano lontano: il riquadro li contiene
+      const dpr = this.dpr || 1;
+      const cv = document.createElement('canvas');
+      cv.width = Math.ceil(S * dpr); cv.height = Math.ceil(S * dpr);
+      const g = cv.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.translate(S / 2, S / 2);
+      this._beholderCorpo(g, r, P, spettrale, gcolHex, (fase / 10) * Math.PI * 2, apriQ / 2, seme);
+      f = { cv, S };
+      if (cache.size > 160) cache.clear();
+      cache.set(key, f);
+      return f;
+    },
     _beholderPuppet(ctx, m, r, def, atk, moving, dir) {
       const t = this.time;
       const PAL = {
@@ -3090,41 +3210,13 @@
       const ang = (m.f != null ? m.f : 0);
       const cx = 0, cy = bob;
 
-      // ---- peduncoli, dietro alla massa ----
-      const NP = spettrale ? 8 : 6;
-      for (let i = 0; i < NP; i++) {
-        const a = -Math.PI + 0.35 + i * (Math.PI - 0.7) / (NP - 1) + Math.sin(t * 1.1 + i) * 0.10;
-        this._peduncolo(ctx, cx, cy - r * 0.30, a, r * (1.35 + 0.20 * Math.sin(t * 1.6 + i * 2.1)), r * 0.145, P.ped, gcolHex, t, i);
-      }
-      // ---- la massa: strati di macchie, dal buio al chiaro ----
-      if (spettrale) {
-        for (let i = 0; i < 14; i++) { const a = t * 0.3 + i * 0.45, rr = r * (0.7 + 0.3 * Math.sin(t * 1.1 + i * 1.7));
-          this._macchia(ctx, cx + Math.cos(a) * rr * 0.5, cy + Math.sin(a) * rr * 0.45, r * 0.32, r * 0.28, P.medio, 0.45); }
-      }
-      this._macchia(ctx, cx, cy, r * 1.08, r * 1.00, P.buio, spettrale ? 0.85 : 1);
-      this._macchia(ctx, cx, cy + r * 0.10, r * 0.97, r * 0.90, P.medio, spettrale ? 0.8 : 1);
-      this._macchia(ctx, cx - r * 0.10, cy - r * 0.08, r * 0.80, r * 0.72, P.chiaro, 0.40);
-      this._macchia(ctx, cx - r * 0.24, cy - r * 0.28, r * 0.68, r * 0.56, P.chiaro, 0.75);
-      this._macchia(ctx, cx - r * 0.34, cy - r * 0.40, r * 0.34, r * 0.26, P.luce, 0.30);
-      if (!spettrale) {
-        // bordo sporco: e' quello che toglie l'aria di plastica
-        for (let i = 0; i < 14; i++) { const a = (i * 2.399 + m.e) % 6.283; const rr = r * (0.93 + ((i * 37) % 11) / 90);
-          this._macchia(ctx, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.94, r * 0.10, r * 0.08, (i % 2) ? P.buio : P.medio, 0.45); }
-        // venature
-        ctx.save(); ctx.globalAlpha = 0.22; ctx.strokeStyle = P.vena; ctx.lineWidth = Math.max(1, r * 0.05); ctx.lineCap = 'round';
-        for (let i = 0; i < 8; i++) { const a = i * 0.78 + 0.4; ctx.beginPath();
-          ctx.moveTo(cx + Math.cos(a) * r * 0.34, cy + Math.sin(a) * r * 0.32);
-          ctx.quadraticCurveTo(cx + Math.cos(a + 0.5) * r * 0.66, cy + Math.sin(a + 0.5) * r * 0.62, cx + Math.cos(a + 0.15) * r * 0.92, cy + Math.sin(a + 0.15) * r * 0.86);
-          ctx.stroke(); }
-        ctx.restore();
-        // bocca dentata: si spalanca quando morde
-        const apri = 1 + swing * 1.6;
-        this._macchia(ctx, cx, cy + r * 0.66, r * 0.40, r * 0.15 * apri, '#170611', 0.92);
-        ctx.save(); ctx.fillStyle = '#efe2cc';
-        for (let i = 0; i < 8; i++) { const x = cx - r * 0.33 + i * r * 0.095; ctx.beginPath();
-          ctx.moveTo(x, cy + r * 0.56); ctx.lineTo(x + r * 0.045, cy + r * 0.56); ctx.lineTo(x + r * 0.022, cy + r * (0.56 + 0.12 * apri)); ctx.closePath(); ctx.fill(); }
-        ctx.restore();
-      }
+      const fase = Math.round(((t * 1.1 + m.e) % (Math.PI * 2)) / (Math.PI * 2) * 10) % 10;
+      const apriQ = swing > 0.66 ? 2 : swing > 0.2 ? 1 : 0;
+      const seme = (m.e || 0) % 3;
+      const f = this._beholderFrame(def, r, P, spettrale, gcolHex, fase, apriQ, seme);
+      ctx.save(); ctx.translate(0, bob);
+      ctx.drawImage(f.cv, -f.S / 2, -f.S / 2, f.S, f.S);
+      ctx.restore();
       // ---- l'occhio ----
       const ex = cx + Math.cos(ang) * r * 0.09, ey = cy - r * 0.04 + Math.sin(ang) * r * 0.07;
       this._macchia(ctx, ex, ey, r * 0.56, r * 0.50, '#1b0a16', spettrale ? 0.9 : 1);

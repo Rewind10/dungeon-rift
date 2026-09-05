@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.90.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.90.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,13 +24,17 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
-## 🆕 Novita v1.90 (la musica)
-- **🎵 Un brano vero** al posto del solo sintetizzatore: `assets/audio/theme_loop.ogg` (+ `.m4a` per Safari),
-  **14,2 s in loop senza giunzione udibile**, ~200 KB.
-- **Suona dove serve**: menu, sala d'attesa e ondate. Nel **villaggio** e nel **riepilogo di fine ondata**
-  resta la musica **procedurale** — è l'unica cosa che quelle due schermate hanno di loro.
-- La regola sta in un punto solo (`A.scene()`), il tasto **M** spegne tutto e se il file manca il gioco
-  torna da solo al sintetizzatore.
+## 🆕 Novita v1.90.2 (prestazioni: i ragni e il Beholder)
+- **Il frame costa meno della metà.** Misurato con un profilo vero su una scena d'ondata 16: da **5,3 ms
+  a 2,0 ms** di mediana; all'ondata 12 da **6,4 a 1,8 ms**.
+- **I ragni erano il collo di bottiglia**: uno solo costava **1313 macchie a frame** (56 per zampa, sedici
+  passaggi di zampa) — quasi cinque volte tutto il resto della scena messo insieme.
+- **Il Beholder era il secondo**: 936 chiamate ciascuno.
+- Per tutti e due la cura è quella che il Troll usa dal v1.47: **la posa si disegna una volta in un
+  riquadro fuori schermo e poi si incolla**. Del Beholder si cuoce solo il corpo — l'occhio segue il
+  bersaglio e resta disegnato vivo. Il disegno è identico: verificato affiancando le due versioni.
+- 🎵 **La musica torna quella procedurale** (il brano non convinceva): i file restano in `assets/audio/`
+  e l'impianto pure — si riaccende con un `true` in `audio.js`.
 
 ## 🆕 Novita v1.89 (i boss)
 - **🗿 Boss solo al 10 e al 20.** Erano quattro, uno ogni cinque ondate: al quinto turno avevi visto tre

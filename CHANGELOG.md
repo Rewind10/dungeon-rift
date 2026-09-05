@@ -2,6 +2,60 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.90.2] — 2026-09-05 · "Dove finiva il frame rate"
+
+Paolo ha visto cali di fluidita' **dall'ondata 11 in poi**, quando entrano i ragni. Misurato invece che
+indovinato: una scena d'ondata vera (mappa, mostri, tele, luci) renderizzata in un browser headless 300
+volte, col profilo della CPU acceso.
+
+#### La misura
+| | prima | dopo |
+|---|---|---|
+| Ondata 8 | 4,8 ms | **2,2 ms** |
+| Ondata 12 | 6,4 ms | **1,8 ms** |
+| Ondata 16 | 5,3 ms | **2,0 ms** |
+
+E il colpevole si e' visto subito: **togliendo i 7 ragni da una scena di 38 mostri il frame scendeva del
+57%**. Il profilo diceva che il **23% del frame intero** se ne andava in `ctx.save()`.
+
+Contando le chiamate al contesto 2D, un frame d'ondata 16 ne faceva **11.266**, e **7.897 erano di un
+ragno solo** (gli altri erano fuori inquadratura): 1315 `save`, 1313 `fill`, 1313 `ellipse`. Da dove:
+`_zampaRagno` dipinge ogni zampa con **56 macchie** e le zampe si disegnano **sedici volte** (otto dietro
+e otto davanti, con le luci). Il secondo era il **Beholder, 936 chiamate** ciascuno — sei peduncoli da
+otto segmenti, bordo sporco, venature e denti.
+
+#### La cura, che il progetto usava gia'
+Il Troll dal v1.47 non si disegna: si **incolla**. Stessa cosa qui.
+
+- **Ragni**: la posa dipende dal tempo (il ciclo di camminata), dall'attacco e dal fatto che si muova o no.
+  Il ciclo si quantizza in **12 fasi**, l'attacco in **3**: ogni combinazione si disegna **una volta** in un
+  riquadro fuori schermo e da li' in poi e' **un `drawImage`**. Da 1313 `fill` a 1.
+- **Beholder**: l'occhio segue il bersaglio in continuazione e cuocerlo sarebbe sbagliato. Si cuoce il
+  **corpo** (massa, peduncoli, bocca) e si disegnano **vivi** occhio, iride e alone: una quindicina di
+  chiamate. Da 936 a 195.
+- **Una cottura per frame.** Cuocere una posa costa ~3,6 ms: tre di fila facevano un frame da 11 ms e si
+  vedeva. Quando la posa esatta non c'e' ancora si usa **la piu' vicina gia' pronta** — a dodici fasi lo
+  scarto e' mezzo passo, invisibile — e quella giusta arriva al frame dopo.
+
+Il disegno e' **identico**: verificato affiancando la versione dipinta a macchie e quella incollata, per il
+ragno e per il Beholder.
+
+#### E il server?
+Non c'entrava: tick mediano **0,108 ms**, massimo 7,7 ms su un budget di 33. Il problema era tutto nel
+disegno del client.
+
+---
+
+### [1.90.1] — 2026-09-05 · "Torna la musica di prima"
+
+Il brano registrato, provato in gioco, non reggeva il confronto con la musica procedurale: il giro e' corto
+e in sottofondo si sente ripetersi. Spento. I file restano in `assets/audio/` e tutto l'impianto della
+1.90.0 pure — `A.scene()`, il caricamento, le dissolvenze: per riaccenderlo basta rimettere `TRACCIA: true`
+in `audio.js`. Nel frattempo `A.scene()` continua a fare il suo mestiere, cioe' decidere in un punto solo
+cosa suona dove.
+
+---
+
 ### [1.90.0] — 2026-09-05 · "Una musica vera"
 
 Fino a qui la musica era **tutta sintetizzata** in `audio.js`: drone, pad, campane, battito. Adesso c'e' un
