@@ -5,9 +5,10 @@
    aveva il posto. Mancava solo cosa metterci. Qui c'e' cosa metterci.
 
    LE REGOLE:
-   1. QUATTRO ABILITA' PER CLASSE, due per slot. Lo slot Q si sblocca al livello 6, lo slot E al 12, e a
+   1. QUATTRO ABILITA' PER CLASSE, due per slot. Lo slot Q si sblocca al livello 8, lo slot E al 14, e a
       quei due livelli si sceglie fra le DUE abilita' di quello slot. La scelta e' definitiva, come le
-      passive: le due che non prendi sono il motivo per rigiocare la classe.
+      passive: le due che non prendi sono il motivo per rigiocare la classe. NON prendono il posto delle
+      passive (3/6/9/12): si aggiungono, in due livelli che prima non davano niente.
    2. RICARICHE LUNGHE — 30s per lo slot Q, 45s per lo slot E. Non sono colpi in piu': sono il momento
       in cui l'ondata cambia. Una ricarica corta le trasformerebbe in una seconda arma, e a quel punto
       il gioco lo giocherebbero loro.
@@ -16,7 +17,7 @@
    4. IL MERCENARIO NON HA ABILITA'. Come per l'XP, le monete e la chiave dei prigionieri: non e' un
       giocatore per le regole, e' un compagno d'arme.
 
-   I sei nomi del livello 12 (Turbine, Giuramento, Meteora, Catena Nera, Marchio, Salva) erano gia'
+   I sei nomi dello slot E (Turbine, Giuramento, Meteora, Catena Nera, Marchio, Salva) erano gia'
    promessi dalle specializzazioni in levels.js e non erano mai stati scritti. Adesso esistono, e la
    specializzazione al 15 non li regala piu': li POTENZIA, alzando `abilityMult`. */
 (function (root, factory) {
@@ -27,7 +28,7 @@
   'use strict';
 
   const CD_Q = 30, CD_E = 45;          // le due ricariche, uguali per tutte le classi
-  const LVL_Q = 6, LVL_E = 12;
+  const LVL_Q = 8, LVL_E = 14;   // v1.87 — spostati per non togliere il posto alle passive (3/6/9/12)
 
   // Ogni abilita' porta i propri numeri: il server non ne ha nessuno cucito addosso, li legge da qui.
   // I danni sono MOLTIPLICATORI del colpo base (effDamage), non numeri fissi: cosi' un'abilita' presa al

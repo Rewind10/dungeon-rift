@@ -30,18 +30,19 @@
   // I LIVELLI DOVE SI SCEGLIE UN'ABILITA' PASSIVA. Il 15 non e' qui: quello e' la specializzazione,
   // che e' un'altra cosa.
   //
-  // v1.85 — DA QUATTRO A DUE. I livelli 6 e 12 sono diventati le due ABILITA' ATTIVE (slot Q ed E,
-  // vedi abilities.js): a quei livelli si sceglie un'attiva, non una passiva. Perche' le due passive
-  // rimaste non lascino il personaggio piu' povero, salgono di scaglione — la prima e' RARA invece che
-  // non comune, la seconda DIVINA invece che epica. Meno scelte, ognuna piu' pesante: e' la stessa
-  // regola che regge tutto il resto della progressione.
+  // v1.87 — LE QUATTRO PASSIVE RESTANO QUELLE, AI LORO LIVELLI. Nella 1.85 erano scese a due (3 e 9) per
+  // fare posto alle abilita' attive: era un baratto che nessuno aveva chiesto, e toglieva meta' della
+  // crescita del personaggio per aggiungere un tasto. Le attive si prendono ai livelli **8 e 14**, che
+  // sono liberi: si SOMMANO alla progressione invece di sostituirne un pezzo.
   const SCAGLIONI = [
-    { lvl: 3, tier: 'rare' },
-    { lvl: 9, tier: 'divine' },
+    { lvl: 3,  tier: 'uncommon' },
+    { lvl: 6,  tier: 'rare' },
+    { lvl: 9,  tier: 'epic' },
+    { lvl: 12, tier: 'divine' },
   ];
   // I due livelli delle ABILITA' ATTIVE. Stanno qui e non in abilities.js perche' e' la progressione a
   // decidere QUANDO si sblocca uno slot; abilities.js decide COSA c'e' dentro.
-  const ABIL_SLOT = [{ lvl: 6, slot: 'q' }, { lvl: 12, slot: 'e' }];
+  const ABIL_SLOT = [{ lvl: 8, slot: 'q' }, { lvl: 14, slot: 'e' }];
   function slotPerLivello(L) { for (const a of ABIL_SLOT) if (a.lvl === L) return a.slot; return null; }
   // Il prossimo livello in cui si sceglie QUALCOSA (passiva o attiva), dopo il livello L.
   function prossimaScelta(L) {

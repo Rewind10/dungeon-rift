@@ -583,12 +583,12 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(document.getElementById('nextWaveBtn').disabled === false, 'scelta l abilita, il pulsante si accende');
   ok(document.getElementById('tabBadge').classList.contains('hidden'), 'e il richiamo sparisce');
 
-  // v1.85 — l'elenco ha sempre QUATTRO righe, ma adesso sono due passive (3 e 9) e due attive (6 e 12)
-  HUD.setActiveBoons([{ id: 'crit', icon: '🎯', name: 'Occhio di Falco', rarity: 'rare', n: 1, desc: 'critico', on: 1 }]);
+  // v1.87 — l'elenco ha SEI righe: le quattro passive (3, 6, 9, 12) e le due attive (8 e 14)
+  HUD.setActiveBoons([{ id: 'crit', icon: '🎯', name: 'Occhio di Falco', rarity: 'uncommon', n: 1, desc: 'critico', on: 1 }]);
   const righe = document.getElementById('abilElenco').innerHTML;
-  ok((righe.match(/ab-sc/g) || []).length === 4, 'l elenco ha una riga per ogni scelta della run');
+  ok((righe.match(/ab-sc/g) || []).length === 6, 'l elenco ha una riga per ogni scelta della run');
   ok(righe.indexOf('Occhio di Falco') > 0, 'con dentro la passiva gia presa');
-  ok(righe.indexOf('si sblocca al livello 12') > 0, 'e dice quando arrivano quelle che mancano');
+  ok(righe.indexOf('si sblocca al livello 14') > 0, 'e dice quando arrivano quelle che mancano');
   ok(righe.indexOf('attiva Q') > 0 && righe.indexOf('attiva E') > 0, 'e i due slot delle abilita attive sono in elenco');
 
   // v1.85 — LA BARRA DELLE ABILITA': quattro slot, e i due delle attive nascono col lucchetto
@@ -598,7 +598,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(String(barra.children[2].className).indexOf('locked') >= 0 && String(barra.children[3].className).indexOf('locked') >= 0,
     'Q ed E nascono chiusi');
   ok(String(barra.children[0].className).indexOf('locked') < 0, 'lo scatto no, quello c e da subito');
-  ok(String(barra.children[2].innerHTML).indexOf('Livello 6') > 0 && String(barra.children[3].innerHTML).indexOf('Livello 12') > 0,
+  ok(String(barra.children[2].innerHTML).indexOf('Livello 8') > 0 && String(barra.children[3].innerHTML).indexOf('Livello 14') > 0,
     'e dicono a che livello si aprono');
   HUD.updateAbilities({ cd: 0, aq: 'ab_velo', cq: 12.4, ae: null, ce: 0 });
   ok(true, 'la barra si aggiorna con l abilita presa senza rompersi');

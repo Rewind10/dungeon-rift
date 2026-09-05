@@ -1806,14 +1806,17 @@ function testV169() {
   const prTop = Lv.progress(Lv.xpForLevel(15) + 5000);
   assert(prTop.cap === true && prTop.frac === 1 && prTop.need === 0, 'al tetto la barra e piena e non si divide per zero');
 
-  // --- 2) GLI SCAGLIONI: v1.85 sono DUE (3 e 9), perche' il 6 e il 12 sono le ABILITA' ATTIVE ---
-  assert(Lv.SCAGLIONI.length === 2, 'le passive si scelgono due volte');
-  assert(Lv.SCAGLIONI.map(x => x.lvl).join(',') === '3,9', 'ai livelli 3 e 9');
-  assert(Lv.SCAGLIONI.map(x => x.tier).join(',') === 'rare,divine', 'e valgono di piu di prima: rara e divina');
-  assert(Lv.tierForLevel(9) === 'divine' && !Lv.tierForLevel(6) && !Lv.tierForLevel(12) && !Lv.tierForLevel(15), 'solo quei due livelli danno una passiva');
-  assert(Lv.slotPerLivello(6) === 'q' && Lv.slotPerLivello(12) === 'e' && !Lv.slotPerLivello(9), 'al 6 si apre lo slot Q, al 12 lo slot E');
-  assert(Lv.prossimaScelta(1) === 3 && Lv.prossimaScelta(3) === 6 && Lv.prossimaScelta(9) === 12 && Lv.prossimaScelta(12) === 0,
-    'le quattro scelte della run si alternano: 3, 6, 9, 12');
+  // --- 2) GLI SCAGLIONI: quattro passive (3, 6, 9, 12) + due slot di ABILITA' ATTIVE (8 e 14) ---
+  // v1.87 — nella 1.85 le passive erano scese a due per far posto alle attive: un baratto che nessuno
+  // aveva chiesto. Adesso le attive stanno a 8 e 14, due livelli che prima non davano niente.
+  assert(Lv.SCAGLIONI.length === 4, 'le passive restano quattro');
+  assert(Lv.SCAGLIONI.map(x => x.lvl).join(',') === '3,6,9,12', 'ai livelli 3, 6, 9 e 12');
+  assert(Lv.SCAGLIONI.map(x => x.tier).join(',') === 'uncommon,rare,epic,divine', 'e in ordine: non comune, raro, epico, divino');
+  assert(Lv.tierForLevel(9) === 'epic' && !Lv.tierForLevel(8) && !Lv.tierForLevel(14) && !Lv.tierForLevel(15), 'solo quei quattro livelli danno una passiva');
+  assert(Lv.slotPerLivello(8) === 'q' && Lv.slotPerLivello(14) === 'e' && !Lv.slotPerLivello(6) && !Lv.slotPerLivello(12),
+    'all 8 si apre lo slot Q, al 14 lo slot E — e non tolgono niente alle passive');
+  assert(Lv.prossimaScelta(1) === 3 && Lv.prossimaScelta(6) === 8 && Lv.prossimaScelta(8) === 9 && Lv.prossimaScelta(12) === 14 && Lv.prossimaScelta(14) === 0,
+    'le sei scelte della run si alternano: 3, 6, 8, 9, 12, 14');
 
   // --- 3) I RANGHI: 3/6/9/12/15, con la specializzazione in fondo ---
   assert(Lv.RANK_LEVELS.join(',') === '1,3,6,9,12,15', 'le fasce sono 1, 3, 6, 9, 12 e 15');
@@ -1840,7 +1843,7 @@ function testV169() {
   room.addXp(p, 99999);
   assert(p.level === 15, 'con esperienza a volonta si arriva al 15 (' + p.level + ')');
   assert(p.points === 18, 'e in mano ci sono 18 punti (' + p.points + ')');
-  assert((p.scaglioniDovuti || []).join(',') === 'rare,divine', 'con le due passive in coda');
+  assert((p.scaglioniDovuti || []).join(',') === 'uncommon,rare,epic,divine', 'con le quattro passive in coda');
   assert((p.abilDovute || []).join(',') === 'q,e', 'e i due slot delle abilita attive');
   assert(p.specOffer && p.specOffer.length === 2, 'e il bivio della specializzazione aperto');
   const xp0 = p.xpPool; room.addXp(p, 5000);
@@ -2806,8 +2809,8 @@ function testV178() {
   r6.phase = C.PHASE_COMBAT;
   r6.addXp(y, Lv2.xpForLevel(7));
   assert(y.level >= 7, 'con l esperienza di sette livelli si arriva almeno al 7 (' + y.level + ')');
-  assert((y.scaglioniDovuti || []).join(',') === 'rare', 'e si deve la passiva del 3');
-  assert((y.abilDovute || []).join(',') === 'q', 'e lo slot Q, che si apre al 6');
+  assert((y.scaglioniDovuti || []).join(',') === 'uncommon,rare', 'e si devono i primi due scaglioni');
+  assert((y.abilDovute || []).length === 0, 'ma non ancora lo slot Q, che si apre all 8');
   r6.monsters.length = 0; r6.pending = 0; r6._checkWaveClear(); r6.exitWave('a');
   const dovuti = (y.scaglioniDovuti || []).length + (y.abilDovute || []).length;
   let scelte = 0;
@@ -2935,19 +2938,19 @@ function testV179() {
   r1.addXp(p, Lv.xpForLevel(3) - 1);
   assert(p.level === 2 && (p.scaglioniDovuti || []).length === 0, 'al livello 2 non si sceglie niente');
   r1.addXp(p, 5);
-  assert(p.level === 3 && p.scaglioniDovuti.join(',') === 'rare', 'al 3 arriva la prima passiva');
+  assert(p.level === 3 && p.scaglioniDovuti.join(',') === 'uncommon', 'al 3 arriva il primo scaglione');
   r1.addXp(p, Lv.xpForLevel(5) - p.xpPool);
   assert(p.level === 5 && p.scaglioniDovuti.length === 1, 'al 4 e al 5 non arriva niente di nuovo');
   r1.addXp(p, Lv.xpForLevel(12) - p.xpPool);
-  assert(p.scaglioniDovuti.join(',') === 'rare,divine', 'e al 12 la coda ha le due passive');
-  assert(p.abilDovute.join(',') === 'q,e', 'e i due slot delle attive');
+  assert(p.scaglioniDovuti.join(',') === 'uncommon,rare,epic,divine', 'e al 12 la coda ha tutte e quattro le passive');
+  assert(p.abilDovute.join(',') === 'q', 'e lo slot Q dell 8 (quello del 14 non ancora)');
   r1.phase = C.PHASE_SHOP;
   let n = 0;
   while ((p.scaglioniDovuti.length || p.abilDovute.length) && n < 10) { r1.offerBoon(p); r1.pickBoon('a', p.boonOffer[0]); n++; }
-  assert(n === 4, 'si scelgono esattamente quattro volte in una run: due passive e due attive (' + n + ')');
+  assert(n === 5, 'al 12 si e scelto cinque volte: quattro passive e l attiva dell 8 (' + n + ')');
   const prese = Object.keys(p.boonsOwned).map(id => Loot.BOON_BY_ID[id]);
-  assert(new Set(prese.map(b => b.rarity)).size === 2, 'una passiva per scaglione, mai due dello stesso');
-  assert(!!p.abil.q && !!p.abil.e, 'e i due slot sono pieni');
+  assert(new Set(prese.map(b => b.rarity)).size === 4, 'una passiva per scaglione, mai due dello stesso');
+  assert(!!p.abil.q && !p.abil.e, 'e lo slot Q e pieno, il secondo aspetta il 14');
   assert(prese.every(b => b.hero === 'guerriero' || b.hero === '*'), 'e mai una di un altra classe');
 
   // --- 4) IL TETTO: al 15 si sceglie la specializzazione, e l esperienza smette di contare ---
@@ -3965,7 +3968,7 @@ function testV184() {
 }
 
 function testV185() {
-  console.log('\n[TEST 61] v1.85 — le abilita attive (slot Q al 6, slot E al 12)');
+  console.log('\n[TEST 61] v1.85 — le abilita attive (slot Q all 8, slot E al 14)');
   const dt = 1 / C.TICK_RATE;
   const conn = { send() {} };
   const Lv2 = require('../shared/levels.js');
@@ -3986,16 +3989,16 @@ function testV185() {
   // --- 2) lo slot si apre al livello giusto, e si sceglie fra DUE ---
   {
     const r = new Room('v185a'); const p = r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
-    r.addXp(p, Lv2.xpForLevel(6));
-    assert(p.level >= 6 && (p.abilDovute || []).join(',') === 'q', 'al 6 si deve lo slot Q');
+    r.addXp(p, Lv2.xpForLevel(8));
+    assert(p.level >= 8 && (p.abilDovute || []).join(',') === 'q', 'all 8 si deve lo slot Q');
     r.phase = C.PHASE_SHOP; r.offerBoon(p);
     assert(p.boonOffer.length === 2, 'e il pannello offre due abilita');
     assert(p.boonOffer.every(id => Ab.BY_ID[id] && Ab.BY_ID[id].hero === 'mago' && Ab.BY_ID[id].slot === 'q'), 'sono le due del mago per lo slot Q');
     r.pickBoon('a', p.boonOffer[1]);
     assert(!!p.abil.q && !p.abil.e, 'presa quella scelta, e solo quella');
     assert((p.abilDovute || []).length === 0, 'e lo slot esce dalla coda');
-    r.addXp(p, Lv2.xpForLevel(12) - p.xpPool);
-    assert((p.abilDovute || []).join(',') === 'e', 'al 12 si deve lo slot E');
+    r.addXp(p, Lv2.xpForLevel(14) - p.xpPool);
+    assert((p.abilDovute || []).join(',') === 'e', 'al 14 si deve lo slot E');
   }
 
   // --- 3) IL MERCENARIO NON HA ABILITA' ---

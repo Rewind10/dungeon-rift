@@ -2,6 +2,44 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.87.0] — 2026-09-05 · "Due rimedi"
+
+#### 🔒 I prigionieri erano diventati introvabili
+Nella 1.84.1 avevo tolto il segnalino del recinto dalla minimappa — richiesta giusta, la deviazione si deve
+trovare esplorando. Solo che quel segnalino era **l'unico modo per sapere che il recinto esisteva**: misurato
+adesso, stava a **930 px di mediana** dal giocatore, con punte a **1745**. Fuori schermo, al buio, senza un
+indizio. C'era nel 28% delle ondate e non lo vedeva nessuno.
+
+Due correzioni, tutte e due nella stessa direzione — *nascosto* non vuol dire *dall'altra parte della mappa*:
+
+- **Dove nasce**: `_postoLargo()` prende un terzo parametro, la distanza **massima**. Il recinto si piazza
+  fra **420 e 950 px** — fuori vista, ma dentro la stanza in cui stai combattendo. Misurato dopo: mediana
+  **738**, massimo **944**.
+- **Come si vede**: due **bracieri accesi** ai lati del recinto, con la loro luce nel sistema di
+  illuminazione. Un fuoco nel buio si legge da mezzo schermo. Se una cosa la si deve trovare guardandosi
+  intorno, allora deve essere una cosa che **si vede** — e resta una scoperta invece di una commissione.
+
+Sulla minimappa non torna niente, e la chiave resta invisibile fino a 118 px: quelle due regole restano.
+
+#### 🎴 Le passive tornano al loro posto, le attive si spostano all'8 e al 14
+Nella 1.85 le abilita' attive avevano preso il posto delle passive del **6** e del **12**, e le due rimaste
+erano salite di scaglione per compensare. Era un baratto: **meta' della crescita del personaggio** ceduta
+per aggiungere un tasto. Annullato.
+
+| | Prima (1.85) | Adesso (1.87) |
+|---|---|---|
+| Passive | 2 — livelli 3 e 9 (rara, divina) | **4** — livelli **3, 6, 9, 12** (non comune, rara, epica, divina) |
+| Attive | livelli 6 e 12 | livelli **8** e **14** |
+| Scelte in una run | 4 | **6** |
+
+L'8 e il 14 erano due livelli che non davano niente: adesso le attive **si sommano** alla progressione
+invece di sostituirne un pezzo. Ricariche invariate (30s e 45s), abilita' invariate, specializzazione al 15
+invariata. Cambiati solo i due numeri in `ABIL_SLOT` e la tabella `SCAGLIONI` tornata quella di prima —
+piu' i test 39, 51, 52 e 61, la barra dell'HUD (i lucchetti dicono 8 e 14), l'elenco delle scelte nel menu
+di pausa (adesso **sei righe**) e la guida.
+
+---
+
 ### [1.86.2] — 2026-09-05 · "In alto"
 
 Il pannello del menu e' **ancorato in alto** (4vh dal bordo) invece che centrato verticalmente. Da quando

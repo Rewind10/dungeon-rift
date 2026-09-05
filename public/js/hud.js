@@ -24,7 +24,7 @@
       const h = HERO[id]; const bar = $('abilityBar'); bar.innerHTML = '';
       const wi = { melee: '🗡️', magic: '🔮', ranged: '🏹' }[h.weapon.school] || '🔫';
       const slots = [{ k: 'DX', ic: '💨', t: 'Scatto' }, { k: 'SX', ic: wi, t: h.weapon.name },
-        { k: 'Q', ic: '🔒', t: 'Livello 6', lock: 1 }, { k: 'E', ic: '🔒', t: 'Livello 12', lock: 1 }];
+        { k: 'Q', ic: '🔒', t: 'Livello 8', lock: 1 }, { k: 'E', ic: '🔒', t: 'Livello 14', lock: 1 }];
       slots.forEach((s, i) => {
         const el = document.createElement('div'); el.className = 'ab-slot' + (s.lock ? ' locked' : ''); el.id = 'ab' + i; el.title = s.t || '';
         el.innerHTML = '<span class="key">' + s.k + '</span><span class="ic">' + s.ic + '</span><span class="lbl">' + (s.t || '') + '</span><div class="cd hidden"></div>';
@@ -302,7 +302,7 @@
         if (bs && this._boons.abil) bs.innerHTML = 'Si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
           + ((this._boons.boons[0] && this._boons.boons[0].cd) || 30) + 's</b> · livello <b>' + (this._boons.liv || 6) + '</b>'
           + ' <span style="opacity:.75">— la scelta vale per tutta la partita</span>';
-        else if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 2) + '</b> — '
+        else if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 4) + '</b> — '
           + '<b style="color:' + (this._boons.tierColor || '#fff') + '">' + (this._boons.tierName || '') + '</b>'
           + ' · livello <b>' + (this._boons.liv || 1) + '</b>'
           + (this._boons.resta > 1 ? ' <span style="opacity:.75">(ne restano ' + this._boons.resta + ')</span>' : '');
@@ -321,20 +321,20 @@
         if (bs) bs.innerHTML = this._boons.cap
           ? 'Sei al <b>livello ' + (this._boons.max || 15) + '</b>, il massimo: la crescita finisce qui.'
           : (this._boons.prossimo
-            ? 'Passive ai livelli <b>3</b> e <b>9</b>, abilità attive al <b>6</b> e al <b>12</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
+            ? 'Passive ai livelli <b>3, 6, 9 e 12</b>, abilità attive all\'<b>8</b> e al <b>14</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
               + (this._boons.manca ? ', fra <b>' + this._boons.manca + ' XP</b>' : '') + '.'
-            : 'Passive ai livelli <b>3</b> e <b>9</b>, abilità attive al <b>6</b> e al <b>12</b>.');
+            : 'Passive ai livelli <b>3, 6, 9 e 12</b>, abilità attive all\'<b>8</b> e al <b>14</b>.');
       } else { $('boonSection').classList.add('hidden'); }
       this._renderElencoAbilita();
     },
     // L'elenco per scaglione: quattro righe fisse, cosi' si vede a colpo d'occhio cosa manca ancora.
-    // v1.85 — QUATTRO RIGHE, non piu' quattro passive: due passive (3 e 9) e due abilita' attive (6 e 12),
-    // in ordine di livello. E' l'unico posto in cui si vede la run intera in una schermata: cosa hai preso,
+    // v1.87 — SEI RIGHE in ordine di livello: le quattro passive (3, 6, 9, 12) piu' le due abilita'
+    // attive (8 e 14). E' l'unico posto in cui si vede la run intera in una schermata: cosa hai preso,
     // cosa hai saltato e cosa manca ancora.
     _renderElencoAbilita() {
       const cont = $('abilElenco'); if (!cont) return;
-      const SC = [{ lvl: 3, tier: 'rare' }, { lvl: 6, slot: 'q', tasto: 'Q' },
-        { lvl: 9, tier: 'divine' }, { lvl: 12, slot: 'e', tasto: 'E' }];
+      const SC = [{ lvl: 3, tier: 'uncommon' }, { lvl: 6, tier: 'rare' }, { lvl: 8, slot: 'q', tasto: 'Q' },
+        { lvl: 9, tier: 'epic' }, { lvl: 12, tier: 'divine' }, { lvl: 14, slot: 'e', tasto: 'E' }];
       const prese = (this._active || []).filter(b => !b.syn);
       const liv = this._stats ? (this._stats.level || 1) : 1;
       const inArrivo = this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked ? this._boons.tier : null;

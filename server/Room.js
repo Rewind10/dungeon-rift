@@ -979,7 +979,9 @@ class Room {
     this.recinto = null; this.chiave = null;
     if (Waves.isBossWave(this.wave)) return;                 // la mappa del boss non si divide l'attenzione
     if (Math.random() > (C.PRIGIONE_PROB || 0.35)) return;
-    const pos = this._postoLargo(C.PRIGIONE_RAGGIO + 26, 520);
+    // fuori vista ma dentro la stanza in cui si combatte: 420-950px. Se in quella fascia non c'e' posto
+    // si ripiega sul vecchio criterio, che e' sempre meglio di niente recinto.
+    const pos = this._postoLargo(C.PRIGIONE_RAGGIO + 26, 420, 950) || this._postoLargo(C.PRIGIONE_RAGGIO + 26, 420);
     if (!pos) return;
     const n = this._quantiPrigionieri();
     const PAL = ['#8a3b2e', '#2f5d7a', '#5a4a86', '#7a6a2a', '#356b4a', '#7a3560', '#4a4a55'];
@@ -1004,7 +1006,12 @@ class Room {
     }
   }
   // un punto libero, lontano dai giocatori, con spazio attorno: serve al recinto e alla faglia
-  _postoLargo(spazio, lontano) {
+  // v1.87 — il terzo parametro e' la distanza MASSIMA. Senza, il posto era "il primo libero abbastanza
+  // lontano": mediana 930px dal giocatore, punte a 1700. Con la 1.84.1 il segnalino sulla minimappa e'
+  // sparito (giusto: la deviazione si trova esplorando) e cosi' il recinto e' diventato INTROVABILE —
+  // c'era ma non lo vedeva nessuno. Nascosto non vuol dire dall'altra parte della mappa: vuol dire che
+  // devi passarci vicino per accorgertene.
+  _postoLargo(spazio, lontano, massimo) {
     const ap = this.alivePlayers;
     for (let k = 0; k < 220; k++) {
       const x = MU.rand(C.TILE * 2, (this.map.w - 2) * C.TILE), y = MU.rand(C.TILE * 2, (this.map.h - 2) * C.TILE);
@@ -1013,6 +1020,7 @@ class Room {
       for (let a = 0; a < 8 && ok; a++) { const an = a * Math.PI / 4; if (this.isWallAt(x + Math.cos(an) * spazio, y + Math.sin(an) * spazio)) ok = false; }
       if (!ok) continue;
       if (lontano) { let vicino = false; for (const p of ap) if (MU.dist(x, y, p.x, p.y) < lontano) vicino = true; if (vicino) continue; }
+      if (massimo) { let dmin = Infinity; for (const p of ap) dmin = Math.min(dmin, MU.dist(x, y, p.x, p.y)); if (dmin > massimo) continue; }
       return { x, y };
     }
     return null;
