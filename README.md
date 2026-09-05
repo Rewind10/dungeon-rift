@@ -81,7 +81,8 @@ scelta vale per tutta la partita.
   nascosta — addosso a un elite, o a terra vicino alle casse — e **si vede solo da vicino** *(v1.84.1)*.
   Liberarli paga **100 monete a testa**. Non e' obbligatorio: e' una deviazione, e il prezzo e' il tempo.
 - **🌀 La faglia**: il pulsante EXIT verde in mezzo allo schermo non c'e' piu'. A mappa ripulita si apre uno
-  squarcio a un passo da te, e ci si passa dentro per proseguire.
+  squarcio a un passo da te, e ci si passa dentro per proseguire. *(Dalla v1.87.1 e' un **portale tondo
+  frontale**: anello con rune, vortice a quattro braccia, bocca scura al centro.)*
 
 ## 🆕 Novita v1.83 (ribilanciamento delle classi)
 - **🛡️ Lo scudo del guerriero para davvero, e solo davanti**: −45% dai colpi che arrivano nel cono

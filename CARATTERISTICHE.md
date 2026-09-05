@@ -181,7 +181,14 @@ cosa nascosta, e' una lista di cose da fare. Il mercenario non raccoglie la chia
 
 ---
 
-## 🌀 LA FAGLIA D'USCITA *(v1.84, al posto del pulsante EXIT)*
+## 🌀 LA FAGLIA D'USCITA *(v1.84, al posto del pulsante EXIT · disegnata come PORTALE in v1.87.1)*
+
+> 🌀 **E' un portale tondo e frontale**, quello che chiunque abbia giocato a un gioco riconosce senza
+> spiegazioni: anello di energia con sei rune incastonate che girano, **vortice a quattro braccia** dentro,
+> bocca **scura al centro** e accesa verso il bordo (un portale e' un buco: al centro dev'essere piu' scuro,
+> non piu' chiaro), pulviscolo risucchiato verso l'interno, luce viola a terra e nel sistema di
+> illuminazione. Fino alla 1.87 era uno *squarcio* verticale di macchie morbide: si leggeva come un'ombra o
+> un effetto, non come una cosa in cui si entra.
 
 A mappa ripulita si apre uno squarcio **a un passo dal giocatore** — in vista, mai dentro la roccia, mai
 addosso (se no ci si finisce dentro mentre si raccoglie). Ci si passa dentro per chiudere l'ondata. Il

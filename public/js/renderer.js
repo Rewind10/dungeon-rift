@@ -1479,31 +1479,120 @@
     // LA FAGLIA D'USCITA. Uno squarcio verticale che pulsa: si attraversa per finire l'ondata. Disegnata
     // a macchie come tutto il resto, con l'orlo piu' chiaro del dentro — il dentro e' un buco, e i buchi
     // non hanno colore.
+    // v1.87.1 — IL PORTALE. Fino alla 1.87 la faglia era uno SQUARCIO: un'ellisse verticale di macchie
+    // morbide, alta e stretta, come una crepa nell'aria. Sul campo si leggeva male — sembrava un'ombra o
+    // un effetto, non una cosa in cui si entra. Adesso e' un PORTALE TONDO E FRONTALE, quello che chiunque
+    // abbia giocato a un gioco riconosce senza spiegazioni: anello di energia, vortice dentro, rune che
+    // girano, luce a terra.
     _drawFaglia(ctx, f) {
-      const t = this.time, R2 = C.FAGLIA_RAGGIO || 46;
-      const puls = 0.86 + 0.14 * Math.sin(t * 2.6);
+      const t = this.time, R = (C.FAGLIA_RAGGIO || 46) * 1.55;
+      const puls = 0.97 + 0.03 * Math.sin(t * 2.2);
+      const RR = R * puls;
       ctx.save(); ctx.translate(f.x, f.y);
+
+      // 1) la luce a terra: il portale POGGIA nel mondo, non ci galleggia sopra
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      this._macchia(ctx, 0, 0, R2 * 2.2 * puls, R2 * 2.9 * puls, '#8a5cff', 0.10);
-      this._macchia(ctx, 0, 0, R2 * 1.2, R2 * 1.9, '#c9a8ff', 0.12);
+      const terra = this._grad('fg_terra|' + Math.round(R), () => {
+        const q = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.9);
+        q.addColorStop(0, 'rgba(150,90,255,.30)'); q.addColorStop(0.55, 'rgba(120,70,230,.12)'); q.addColorStop(1, 'rgba(0,0,0,0)');
+        return q;
+      });
+      ctx.fillStyle = terra; ctx.beginPath(); ctx.ellipse(0, R * 0.42, R * 1.9, R * 0.72, 0, 0, 7); ctx.fill();
       ctx.restore();
-      for (let i = 0; i < 5; i++) {
-        const k = i / 4;
-        this._macchia(ctx, Math.sin(t * 1.6 + i) * 2, (k - 0.5) * R2 * 1.5,
-          R2 * (0.60 - k * 0.10) * puls, R2 * (1.15 - Math.abs(k - 0.5)) * puls, '#0a0512', 0.75);
-      }
+
+      // 2) l'alone dietro all'anello
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 7; i++) {
-        const a = t * 1.1 + i * 0.9, rr = R2 * (0.5 + 0.5 * Math.sin(a * 0.7));
-        this._macchia(ctx, Math.cos(a) * rr * 0.5, Math.sin(a) * rr, R2 * 0.10, R2 * 0.22, '#e0ccff', 0.28);
+      const alone = this._grad('fg_alone|' + Math.round(R), () => {
+        const q = ctx.createRadialGradient(0, 0, RR * 0.55, 0, 0, RR * 1.75);
+        q.addColorStop(0, 'rgba(190,130,255,.32)'); q.addColorStop(0.45, 'rgba(140,80,255,.16)'); q.addColorStop(1, 'rgba(0,0,0,0)');
+        return q;
+      });
+      ctx.fillStyle = alone; ctx.beginPath(); ctx.arc(0, 0, RR * 1.75, 0, 7); ctx.fill();
+      ctx.restore();
+
+      // 3) LA BOCCA: scura al centro, viva verso il bordo. E' la profondita' — un portale e' un buco,
+      //    e un buco e' piu' scuro al centro, non piu' chiaro.
+      const bocca = this._grad('fg_bocca|' + Math.round(R), () => {
+        const q = ctx.createRadialGradient(0, 0, 0, 0, 0, RR);
+        q.addColorStop(0, '#05020a'); q.addColorStop(0.30, '#0d0520');
+        q.addColorStop(0.62, '#2d1070'); q.addColorStop(0.86, '#6d2ee0'); q.addColorStop(1, '#b382ff');
+        return q;
+      });
+      ctx.fillStyle = bocca; ctx.beginPath(); ctx.ellipse(0, 0, RR, RR * 0.94, 0, 0, 7); ctx.fill();
+
+      // 4) IL VORTICE: quattro braccia di spirale che girano dentro la bocca. Girano tutte insieme e
+      //    ognuna e' sfalsata di un quarto di giro: e' il movimento che dice "ci si entra".
+      ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, RR * 0.97, RR * 0.91, 0, 0, 7); ctx.clip();
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let b = 0; b < 4; b++) {
+        const off = b * Math.PI / 2 + t * 0.85;
+        // ogni braccio si disegna a segmenti: trasparente al centro, acceso al bordo. Un tratto solo
+        // avrebbe la stessa forza dappertutto e riempirebbe di luce proprio il buco.
+        for (let i = 0; i < 26; i++) {
+          const k0 = i / 26, k1 = (i + 1) / 26;
+          const a0 = off + k0 * 3.1, a1 = off + k1 * 3.1;
+          const r0 = RR * (0.10 + 0.86 * k0), r1 = RR * (0.10 + 0.86 * k1);
+          ctx.strokeStyle = 'rgba(196,140,255,' + (0.03 + 0.26 * k0 * k0) * (0.85 + 0.15 * Math.sin(t * 2 + b)) + ')';
+          ctx.lineWidth = 1.6 + 2.4 * k0;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a0) * r0, Math.sin(a0) * r0 * 0.94);
+          ctx.lineTo(Math.cos(a1) * r1, Math.sin(a1) * r1 * 0.94);
+          ctx.stroke();
+        }
       }
+      // pulviscolo che gira e viene risucchiato verso il centro
+      for (let i = 0; i < 14; i++) {
+        const sp = ((t * 0.42 + i * 0.137) % 1);        // 1 = bordo, 0 = centro
+        const k = 1 - sp;
+        const ang = i * 2.39 + t * 1.6 + sp * 2.2;
+        const rad = RR * (0.06 + 0.92 * sp);
+        ctx.globalAlpha = 0.75 * Math.min(1, sp * 2.4);
+        ctx.fillStyle = i % 3 === 0 ? '#ffd9ff' : '#c9a8ff';
+        ctx.beginPath(); ctx.arc(Math.cos(ang) * rad, Math.sin(ang) * rad * 0.94, 1.1 + k * 1.4, 0, 7); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
       ctx.restore();
-      ctx.strokeStyle = 'rgba(190,150,255,' + (0.35 + 0.25 * Math.sin(t * 3)) + ')'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(0, 0, R2 * 0.86, R2 * 1.35, 0, 0, 7); ctx.stroke();
+
+      // 5) L'ANELLO: due tratti: uno largo e morbido (l'energia), uno sottile e acceso (il bordo netto).
+      // il filo scuro fuori dall'anello: senza, su un pavimento chiaro il portale non ha un bordo e
+      // sembra una macchia luminosa appoggiata sopra.
+      ctx.strokeStyle = 'rgba(6,3,14,.8)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(0, 0, RR * 1.10, RR * 1.04, 0, 0, 7); ctx.stroke();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(150,90,255,.50)'; ctx.lineWidth = 8;
+      ctx.beginPath(); ctx.ellipse(0, 0, RR * 1.02, RR * 0.96, 0, 0, 7); ctx.stroke();
+      ctx.strokeStyle = 'rgba(245,228,255,' + (0.85 + 0.15 * Math.sin(t * 3.1)) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, RR * 1.02, RR * 0.96, 0, 0, 7); ctx.stroke();
+      // 6) le RUNE: sei rombi incastonati NELL'anello (non sparsi fuori: li' sembravano graffi),
+      //    che girano lenti e si accendono a turno.
+      for (let i = 0; i < 6; i++) {
+        const a = t * 0.30 + i * Math.PI / 3;
+        const x = Math.cos(a) * RR * 1.02, y = Math.sin(a) * RR * 0.96;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+        const on = 0.35 + 0.55 * Math.max(0, Math.sin(t * 1.6 + i * 1.05));
+        ctx.globalAlpha = on;
+        ctx.fillStyle = '#fff0ff';
+        ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(3.4, 0); ctx.lineTo(0, 5); ctx.lineTo(-3.4, 0); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = on * 0.55; ctx.fillStyle = '#c9a8ff';
+        ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(5.5, 0); ctx.lineTo(0, 9); ctx.lineTo(-5.5, 0); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      // 7) scintille che risalgono lungo il bordo
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + Math.sin(t * 0.8 + i * 1.7) * 2.6;
+        const rr = RR * (1.02 + 0.06 * Math.sin(t * 3 + i));
+        ctx.globalAlpha = 0.35 + 0.4 * Math.abs(Math.sin(t * 2.2 + i));
+        ctx.fillStyle = '#fff0ff';
+        ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.94, 1.6, 0, 7); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
       ctx.restore();
+      ctx.restore();
+
       ctx.save(); ctx.textAlign = 'center'; ctx.font = 'bold 13px Segoe UI';
-      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText('attraversa la faglia', f.x, f.y - R2 * 1.5 - 10);
-      ctx.fillStyle = '#d9c6ff'; ctx.fillText('attraversa la faglia', f.x, f.y - R2 * 1.5 - 10);
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText('attraversa la faglia', f.x, f.y - R * 1.35 - 10);
+      ctx.fillStyle = '#e2d0ff'; ctx.fillText('attraversa la faglia', f.x, f.y - R * 1.35 - 10);
       ctx.textAlign = 'left'; ctx.restore();
     },
     _drawVendor(ctx, n, opts) {
@@ -1977,7 +2066,7 @@
     // v1.64 — la funzione light() prende il gradiente dalla CACHE: prima ne allocava uno per OGNI sorgente
     // a ogni frame (torce, proiettili, monete, oggetti, giocatori, boss...). ATTENZIONE: questo metodo e' una
     // sola istruzione lunghissima, i commenti vanno sopra la riga, mai in coda.
-    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
+    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {
       if (!this.torch || !this.darkCv || !this.map) return;

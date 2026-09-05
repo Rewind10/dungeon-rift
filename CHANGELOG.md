@@ -2,6 +2,27 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.87.1] — 2026-09-05 · "Un portale, non una crepa"
+
+La faglia d'uscita era uno **squarcio**: un'ellisse verticale di macchie morbide, alta e stretta, come una
+crepa nell'aria. In mezzo a un pavimento scuro si leggeva come un'ombra o un effetto — non come una cosa in
+cui si entra. Rifatta come **portale tondo e frontale**, quello che chiunque abbia giocato a un gioco
+riconosce senza che glielo si spieghi:
+
+- **La bocca e' scura al centro** e accesa verso il bordo. E' la regola che fa la differenza fra un portale e
+  un disco luminoso: un portale e' un **buco**, e un buco al centro e' piu' scuro.
+- **Vortice a quattro braccia** che girano insieme, disegnate a segmenti: quasi trasparenti al centro,
+  accese verso il bordo. Un tratto di forza uniforme avrebbe riempito di luce proprio il buco.
+- **Pulviscolo risucchiato** verso l'interno, quattordici granelli che rientrano e ricominciano dal bordo.
+- **Anello** a tre tratti — un filo scuro fuori (senza, su un pavimento chiaro il portale non ha un bordo e
+  sembra una macchia appoggiata sopra), l'energia morbida, il bordo netto acceso — con **sei rune a rombo
+  incastonate** che girano lente e si accendono a turno. Le prime erano otto tacche *fuori* dall'anello:
+  sembravano graffi.
+- **Luce viola a terra** e nel sistema di illuminazione, come le torce e i bracieri: il portale illumina la
+  stanza invece di stare appiccicato sopra.
+
+---
+
 ### [1.87.0] — 2026-09-05 · "Due rimedi"
 
 #### 🔒 I prigionieri erano diventati introvabili
