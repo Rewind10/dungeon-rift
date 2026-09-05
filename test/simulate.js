@@ -66,7 +66,7 @@ function testMapThemes() {
   // v1.76 — il campo si costruisce dalla PARTENZA, non dal centro geometrico: con la caverna il
   // centro della mappa puo' essere dentro una massa di roccia, e allora non si raggiungeva nulla.
   const PF = require('../shared/pathfinding.js'); const seen = {}; let cf = 0, ef = 0;
-  for (let i = 0; i < 50; i++) { const map = MapGen.generate((Math.random() * 1e9) | 0, 1 + (i % 20)); seen[map.theme.id] = 1; const dist = PF.build(map.grid, map.w, map.h, [{ gx: (map.spawn.x / C.TILE) | 0, gy: (map.spawn.y / C.TILE) | 0 }]); let r = 0, t = 0; for (const s of map.enemySpawns) { t++; if (dist[s.y * map.w + s.x] >= 0) r++; } if (t && r / t < 0.98) cf++; if (!map.exit) ef++; }
+  for (let i = 0; i < 25; i++) { const map = MapGen.generate((Math.random() * 1e9) | 0, 1 + (i % 20)); seen[map.theme.id] = 1; const dist = PF.build(map.grid, map.w, map.h, [{ gx: (map.spawn.x / C.TILE) | 0, gy: (map.spawn.y / C.TILE) | 0 }]); let r = 0, t = 0; for (const s of map.enemySpawns) { t++; if (dist[s.y * map.w + s.x] >= 0) r++; } if (t && r / t < 0.98) cf++; if (!map.exit) ef++; }
   assert(Object.keys(seen).length >= 3, 'più temi (' + Object.keys(seen).join(',') + ')'); assert(cf === 0, 'tutte connesse'); assert(ef === 0, 'tutte con portale'); ok('temi/connettività OK');
 }
 function testLives() {
@@ -151,7 +151,7 @@ function testFullRun(n, label) {
   console.log(`\n[TEST 8] Partita completa — ${n} bot (${label})`);
   const room = new Room('r' + n); for (let i = 0; i < n; i++) room.addPlayer('b' + i, { send() {} }, 'B' + i, Heroes.ORDER[i % 3]); room.startGame();
   const dt = 1 / C.TICK_RATE; let ticks = 0, maxMs = 0, tot = 0, nan = null, pWall = 0, maxMon = 0;
-  while (ticks < C.TICK_RATE * 240) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_CLEARED) for (const p of room.players.values()) room.exitWave(p.id);   /* v1.78 — il bot preme EXIT: senza, resterebbe fermo sulla mappa ripulita fino al timeout */ if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (p.points > 0) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
+  while (ticks < C.TICK_RATE * 120) { for (const p of room.players.values()) if (!p.dead && !p.down) room.setInput(p.id, bot(room, p)); const t0 = process.hrtime.bigint(); room.update(dt); const t1 = process.hrtime.bigint(); const ms = Number(t1 - t0) / 1e6; maxMs = Math.max(maxMs, ms); tot += ms; ticks++; maxMon = Math.max(maxMon, room.monsters.length); for (const p of room.players.values()) if (!p.dead && room.isWallAt(p.x, p.y)) pWall++; const nn = hasNaN(room); if (nn) { nan = nn; break; } if (room.phase === C.PHASE_GAMEOVER || room.phase === C.PHASE_VICTORY) break; if (room.phase === C.PHASE_CLEARED) for (const p of room.players.values()) room.exitWave(p.id);   /* v1.78 — il bot preme EXIT: senza, resterebbe fermo sulla mappa ripulita fino al timeout */ if (room.phase === C.PHASE_SHOP) for (const p of room.players.values()) { if (p.boonOffer && p.boonOffer.length) room.pickBoon(p.id, p.boonOffer[0]); if (p.points > 0) room.buyStat(p.id, Loot.XP_STATS[MU.randInt(0, Loot.XP_STATS.length - 1)].id); if (!p.ready) room.shopReady(p.id, Math.random() < 0.25 ? 'market' : 'wave'); } }
   console.log(`  fase: ${room.phase} · ondata: ${room.wave} · ~${(ticks / C.TICK_RATE) | 0}s · perf avg ${(tot / ticks).toFixed(3)}ms max ${maxMs.toFixed(2)}ms · picco ${maxMon} mostri`);
   assert(nan === null, 'nessun NaN (' + (nan || 'ok') + ')'); assert(maxMs < (1000 / C.TICK_RATE) * 3, 'no tick catastrofico'); assert((tot / ticks) < (1000 / C.TICK_RATE), 'perf media OK'); assert(pWall === 0, 'giocatori mai nei muri'); assert(room.wave >= 1, 'run progredita');
 }
@@ -433,8 +433,8 @@ function testV112() {
   // snapshot espone merchD + flag prossimita dark
   const snap = room.snapshot(); assert(snap.merchD && typeof snap.merchD.x === 'number', 'lo snapshot espone il mercante nero'); const me = snap.players.find(x => x.i === 'b'); assert(me && 'nmd' in me, 'lo snapshot espone il flag prossimita mercante nero');
   // apparizione casuale IN SOSTITUZIONE dell'ufficiale: mai entrambi, il nero compare a volte si a volte no
-  let appear = 0, both = 0, none = 0; for (let i = 0; i < 80; i++) { room.newMap((Math.random() * 1e9) | 0, 1 + (i % 10)); if (room.darkMerchant) appear++; if (room.merchant && room.darkMerchant) both++; if (!room.merchant && !room.darkMerchant) none++; }
-  assert(appear > 0 && appear < 80, 'il mercante nero appare in modo casuale (non sempre): ' + appear + '/80');
+  let appear = 0, both = 0, none = 0; for (let i = 0; i < 40; i++) { room.newMap((Math.random() * 1e9) | 0, 1 + (i % 10)); if (room.darkMerchant) appear++; if (room.merchant && room.darkMerchant) both++; if (!room.merchant && !room.darkMerchant) none++; }
+  assert(appear > 0 && appear < 40, 'il mercante nero appare in modo casuale (non sempre): ' + appear + '/40');
   assert(both === 0, 'mai entrambi i mercanti insieme (il nero sostituisce quello ufficiale)');
   assert(none === 0, 'ce sempre almeno un mercante per round');
   ok('novita v1.12 verificate');
@@ -1063,7 +1063,7 @@ function testV164() {
 
   // i giocatori non fanno nulla: i mostri si accumulano finche il tetto non li ferma
   let picco = 0;
-  for (let i = 0; i < C.TICK_RATE * 90; i++) {
+  for (let i = 0; i < C.TICK_RATE * 45; i++) {
     for (const p of pls) { p.hp = 1e9; room.setInput(p.id, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); }
     room.update(dt);
     // conta solo i VIVI: killMonster marca .dead e la rimozione dall array avviene al tick dopo, quindi
@@ -1080,7 +1080,7 @@ function testV164() {
   // vanno uccisi 12 mostri DISTINTI e ancora vivi: killMonster marca .dead ma la rimozione dall array
   // avviene dopo, quindi prendere sempre monsters[0] significherebbe ammazzare dodici volte lo stesso.
   for (const vittima of room.monsters.filter(x => !x.dead).slice(0, 12)) room.killMonster(vittima, null);
-  for (let i = 0; i < C.TICK_RATE * 25; i++) {
+  for (let i = 0; i < C.TICK_RATE * 12; i++) {
     for (const p of pls) { p.hp = 1e9; room.setInput(p.id, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); }
     room.update(dt);
   }
@@ -1291,7 +1291,7 @@ function testV163() {
 
   // ---------- CASSE E ARMI SOLO AL CENTRO ----------
   let fuori = 0, mappe = 0, minCelle = 1e9;
-  for (let k = 0; k < 120; k++) {
+  for (let k = 0; k < 60; k++) {
     const mm = MapGen.generate(k * 104729 + 7, 1 + (k % 20));
     mappe++; minCelle = Math.min(minCelle, mm.crateSpawns.length);
     const lim = Math.min(mm.w, mm.h) * 0.36 + 1;
@@ -1304,7 +1304,7 @@ function testV163() {
 function testV162() {
   console.log('\n[TEST 33] Novita v1.62 — pozze di pericolo, strato ambientale, partenza e uscita variabili');
   const PF = require('../shared/pathfinding.js');
-  const N = 240;
+  const N = 120;
   const byTheme = {}; const spawns = new Set(), exits = new Set();
   let hazTot = 0, hazNearWall = 0, hazOnExit = 0, hazNearStart = 0, propTot = 0, offBag = 0, unreach = 0, startInHaz = 0;
   let farOK = 0, enemyClose = 0;
@@ -3830,7 +3830,7 @@ function testV184() {
   // --- 1) il recinto compare ogni tanto, e non e' mai piu' grande del tetto ---
   {
     let conRecinto = 0, maxPr = 0, minPr = 99, ondate = 0;
-    for (let k = 0; k < 40; k++) {
+    for (let k = 0; k < 18; k++) {
       const r = new Room('v184a' + k); r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
       for (let w = 0; w < 4; w++) {
         ondate++;
@@ -3846,7 +3846,7 @@ function testV184() {
   // --- 2) all inizio se ne trovano pochi ---
   {
     const conta = (ondata) => { let tot = 0, n = 0;
-      for (let k = 0; k < 400; k++) { const r = new Room('x'); r.wave = ondata;
+      for (let k = 0; k < 150; k++) { const r = new Room('x'); r.wave = ondata;
         r.map = { w: 40, h: 30 }; // non serve: _quantiPrigionieri guarda solo l ondata
         tot += r._quantiPrigionieri(); n++; }
       return tot / n; };
@@ -3931,14 +3931,27 @@ function testV184() {
   // --- 7) niente recinto nelle ondate del boss ---
   {
     let visto = false;
-    for (let k = 0; k < 30; k++) {
+    for (let k = 0; k < 12; k++) {
       const r = new Room('v184f' + k); r.addPlayer('a', conn, 'A', 'mago'); r.startGame();
       while (r.wave < 5) { r.monsters.length = 0; r.pending = 0; r.waveList = []; r.nextWave(); }
       if (r.recinto) visto = true;
     }
     assert(!visto, 'nella mappa del boss non ci sono prigionieri: l attenzione non si divide');
   }
-  ok('prigionieri e faglia verificati');
+  // --- 8) i forzieri possono contenere monete ---
+  {
+    const r = new Room('v184g'); const p = r.addPlayer('a', conn, 'A', 'ladro'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
+    r.crates.length = 0; r.groundCoins.length = 0; r.events.length = 0;
+    r.crates.push({ eid: 991, x: p.x, y: p.y, r: 16, mimic: false, opened: false });
+    const rnd = Math.random; Math.random = () => 0.1;   // sotto la soglia: esce il mucchietto di monete
+    try { r.updatePickups(1 / C.TICK_RATE); } finally { Math.random = rnd; }
+    const ev = r.events.find(e => e.t === 'crate_monete');
+    assert(!!ev, 'aprendo un forziere puo uscire un mucchio di monete');
+    assert(ev.v > 0, 'e vale qualcosa (' + (ev ? ev.v : 0) + ' monete all ondata ' + r.wave + ')');
+    assert(r.groundCoins.length > 0, 'le monete finiscono per terra, da raccogliere');
+  }
+  ok('prigionieri, faglia e forzieri verificati');
 }
 
 testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');

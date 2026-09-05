@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.84.0',
+    VERSION: '1.84.1',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -28,6 +28,8 @@
     // v1.84 — I PRIGIONIERI. Ogni tanto una mappa ha un recinto con dentro della gente: la chiave e'
     // nascosta altrove (addosso a un elite, o accanto alle casse) e liberarli paga. Non e' obbligatorio:
     // e' una deviazione che si sceglie, e il prezzo e' il tempo che passi a cercare invece che a uccidere.
+    // v1.84.1 — quante casse contengono monete invece di un potenziamento a tempo, e quanto danno.
+    CASSA_MONETE_PROB: 0.5, CASSA_MONETE: 22, CASSA_MONETE_ONDATA: 3,
     PRIGIONE_PROB: 0.35,        // quante mappe hanno un recinto
     PRIGIONE_MONETE: 100,       // per testa
     PRIGIONE_MAX: 5,

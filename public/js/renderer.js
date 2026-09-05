@@ -634,11 +634,8 @@
       // monsters
       for (const mo of world.mon) { const q = w2m(mo.x, mo.y); if (mo.tr) { ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); } else if (mo.b) { ctx.fillStyle = mo.mg ? '#ff2d55' : '#ff5a5a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill(); } else { ctx.fillStyle = mo.el ? '#ffb020' : 'rgba(255,90,90,.85)'; ctx.fillRect(q.x - 1, q.y - 1, 2, 2); } }
       // players
-      // v1.84 — sulla minimappa ci vanno il RECINTO (e' una meta, deve vedersi) e la FAGLIA d'uscita.
-      // La CHIAVE no: e' nascosta, e una mappa che te la indica non la nasconde piu'.
-      if (world.rec) { const q = w2m(world.rec.x, world.rec.y);
-        ctx.fillStyle = world.rec.lib ? '#9ef0b0' : '#c9a23a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.2, 0, 7); ctx.fill();
-        if (!world.rec.lib) { ctx.strokeStyle = 'rgba(255,210,74,' + (0.4 + 0.4 * Math.sin(this.time * 3)) + ')'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 5.6, 0, 7); ctx.stroke(); } }
+      // v1.84.1 — sulla minimappa c'e' solo la FAGLIA d'uscita. Ne' la chiave ne' il recinto: la
+      // deviazione dei prigionieri si trova ESPLORANDO, e una mappa che te la segna te la toglie.
       if (world.fg) { const q = w2m(world.fg.x, world.fg.y);
         ctx.fillStyle = '#c9a8ff'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill();
         ctx.strokeStyle = 'rgba(190,150,255,' + (0.45 + 0.4 * Math.sin(this.time * 4)) + ')'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 6.2, 0, 7); ctx.stroke(); }
@@ -1179,7 +1176,13 @@
       for (const m of world.mon) { if (m.x < vx0 || m.x > vx1 || m.y < vy0 || m.y > vy1) continue; this._drawMonster(ctx, m); }
       this._drawDeaths(ctx); // v1.26 — sprite di morte (crollo/dissolvenza)
       if (world.rec) this._drawRecinto(ctx, world.rec, world.chIn || 0);
-      if (world.chv) this._drawChiave(ctx, world.chv);
+      // v1.84.1 — LA CHIAVE NON SI VEDE. Prima aveva un alone giallo che la indicava da mezzo schermo:
+      // cosi' non la trovavi esplorando, la vedevi e ci andavi. Adesso compare solo quando ci sei quasi
+      // sopra (e sfuma negli ultimi metri), che e' il modo in cui si trova una cosa nascosta: passandoci.
+      if (world.chv && world.me) {
+        const dch = Math.hypot(world.chv.x - world.me.x, world.chv.y - world.me.y);
+        if (dch < 118) this._drawChiave(ctx, world.chv, Math.max(0, Math.min(1, (118 - dch) / 46)));
+      }
       if (world.fg) this._drawFaglia(ctx, world.fg);
       for (const p of world.players) this._drawPlayer(ctx, p, me && p.i === me.i);
       this._drawChains(ctx);
@@ -1396,10 +1399,10 @@
       ctx.fillStyle = rec.lib ? '#9ef0b0' : (chiaveInTasca === 2 ? '#ffd24a' : '#c9d2e6'); ctx.fillText(testo, rec.x, rec.y - R2 - 22);
       ctx.textAlign = 'left'; ctx.restore();
     },
-    _drawChiave(ctx, k) {
-      const t = this.time, b = 0.6 + 0.4 * Math.sin(t * 3);
-      ctx.save(); ctx.translate(k.x, k.y + Math.sin(t * 2) * 2.5);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + b * 0.22;
+    _drawChiave(ctx, k, vis) {
+      const t = this.time, b = 0.6 + 0.4 * Math.sin(t * 3), V = vis == null ? 1 : vis;
+      ctx.save(); ctx.globalAlpha = V; ctx.translate(k.x, k.y + Math.sin(t * 2) * 2.5);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.18 + b * 0.22) * V;
       const gr = this._grad('chv', () => { const q = ctx.createRadialGradient(0, 0, 1, 0, 0, 34); q.addColorStop(0, 'rgba(255,210,74,.9)'); q.addColorStop(1, 'rgba(255,210,74,0)'); return q; });
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill(); ctx.restore();
       ctx.rotate(-0.5);
@@ -1407,7 +1410,7 @@
       ctx.beginPath(); ctx.arc(-5, 0, 4.6, 0, 7); ctx.moveTo(-0.6, 0); ctx.lineTo(9, 0); ctx.moveTo(9, 0); ctx.lineTo(9, 4.4); ctx.moveTo(5.4, 0); ctx.lineTo(5.4, 3.4); ctx.stroke();
       ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 2.6;
       ctx.beginPath(); ctx.arc(-5, 0, 4.6, 0, 7); ctx.moveTo(-0.6, 0); ctx.lineTo(9, 0); ctx.moveTo(9, 0); ctx.lineTo(9, 4.4); ctx.moveTo(5.4, 0); ctx.lineTo(5.4, 3.4); ctx.stroke();
-      ctx.restore();
+      ctx.restore(); ctx.globalAlpha = 1;
     },
     // LA FAGLIA D'USCITA. Uno squarcio verticale che pulsa: si attraversa per finire l'ondata. Disegnata
     // a macchie come tutto il resto, con l'orlo piu' chiaro del dentro — il dentro e' un buco, e i buchi

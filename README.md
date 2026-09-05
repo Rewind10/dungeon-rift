@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.84.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.84.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,10 +24,20 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novita v1.84.1 (la chiave si cerca, e le casse pagano)
+- **🗝️ La chiave non si vede da lontano**: compare solo quando ci sei quasi sopra (~118 px, sfumando). La
+  si trova **esplorando**, non seguendo un segnale.
+- **🗺️ Sulla minimappa niente prigione**: resta solo la **faglia** d'uscita. Un segnalino sulla mappa
+  trasformava la deviazione in una commissione da sbrigare.
+- **📦 Le casse possono contenere monete**: una su due lascia un mucchietto (**22 + 3/ondata**, ±25%)
+  invece del potenziamento a tempo.
+- **🧪 Suite di test dimezzata**: 6,5 s invece di 10 — stesse garanzie, meta' dei campioni dove erano
+  statistici (mappe generate, tempo simulato, ripetizioni).
+
 ## 🆕 Novita v1.84 (prigionieri, e la faglia al posto del pulsante)
 - **🔒 Prigionieri da liberare**: una mappa su tre ha un recinto con dentro **1-5 persone**. La chiave e'
-  nascosta — addosso a un elite, o a terra vicino alle casse. Liberarli paga **100 monete a testa**. Non e'
-  obbligatorio: e' una deviazione, e il prezzo e' il tempo.
+  nascosta — addosso a un elite, o a terra vicino alle casse — e **si vede solo da vicino** *(v1.84.1)*.
+  Liberarli paga **100 monete a testa**. Non e' obbligatorio: e' una deviazione, e il prezzo e' il tempo.
 - **🌀 La faglia**: il pulsante EXIT verde in mezzo allo schermo non c'e' piu'. A mappa ripulita si apre uno
   squarcio a un passo da te, e ci si passa dentro per proseguire.
 

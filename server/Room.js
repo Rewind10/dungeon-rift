@@ -1905,7 +1905,15 @@ class Room {
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
     for (const it of this.items) { if (it.dead) continue; it.t -= scade; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.raccoglitori) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);
-    for (const c of this.crates) { if (c.opened) continue; for (const p of this.raccoglitori) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.raccoglitori.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
+    for (const c of this.crates) { if (c.opened) continue; for (const p of this.raccoglitori) { if (MU.dist(c.x, c.y, p.x, p.y) < p.radius + c.r + 6) { c.opened = true; if (c.mimic && this._postiLiberi() > 0) { const mm = this.spawnMonster('mimic', c.x, c.y, { scaling: this.waveScaling || Waves.scaling(this.wave, this.raccoglitori.length || 1) }); mm.awake = true; this.events.push({ t: 'crate_mimic', x: c.x, y: c.y }); } else if (Math.random() < (C.CASSA_MONETE_PROB || 0.4)) {
+          // v1.84.1 — UNA CASSA SU DUE E' UN GRUZZOLO. Prima ogni cassa dava un potenziamento a tempo, e
+          // dodici secondi di +60% danno mentre stai esplorando (cioe' quando non c'e' niente da colpire)
+          // sono spesso niente. Le monete non scadono: valgono anche quando le apri a mappa ripulita.
+          const val = Math.round((C.CASSA_MONETE + this.wave * C.CASSA_MONETE_ONDATA) * MU.rand(0.8, 1.25));
+          for (const cp of Loot.coinsFor(val, C.COINS)) { const a = Math.random() * Math.PI * 2, rr = MU.rand(6, 26);
+            this.groundCoins.push({ eid: NEXT++, x: c.x + Math.cos(a) * rr, y: c.y + Math.sin(a) * rr, v: cp.v, cid: cp.id, t: 30 }); }
+          this.events.push({ t: 'crate_monete', x: c.x, y: c.y, v: val, name2: p.name });
+        } else { const b = Loot.CRATE_BUFFS[(Math.random() * Loot.CRATE_BUFFS.length) | 0]; p.buffs[b.id] = b.dur; this.events.push({ t: 'crate_buff', x: c.x, y: c.y, id: b.id, name: b.name, icon: b.icon, color: b.color, name2: p.name }); }
         // v1.70 — aprire una cassa e' esperienza: esplorare deve far crescere quanto combattere.
         this.xpCondivisa(C.XP_CASSA + this.wave * C.XP_CASSA_ONDATA, 'cassa');
         this.bountyTick(p, 'casse', 1);

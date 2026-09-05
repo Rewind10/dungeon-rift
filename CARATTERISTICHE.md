@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.84.0`
+**Versione attuale:** `1.84.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -130,14 +130,15 @@ Ogni tanto (**una mappa su tre**) in un angolo lontano c'e' un recinto di pali c
 |---|---|
 | Quanti | da 1 a 5; il tetto cresce con le ondate (alla prima uno o due, dalla dodicesima anche cinque) |
 | Ricompensa | **100 monete a testa** |
-| La chiave | addosso a un **elite** se l'ondata ne prevede uno — cade quando cade lui — se no **a terra vicino alle casse** |
+| La chiave | addosso a un **elite** se l'ondata ne prevede uno — cade quando cade lui — se no **a terra vicino alle casse**. **Non si vede da lontano**: compare solo entro ~118 px, sfumando |
 | Obbligatorio | **no**: l'ondata si chiude lo stesso |
 | Ondate del boss | niente recinto |
 
 Il recinto **non blocca il passaggio** (i pali si leggono, non fanno da muro: un muro che il pathfinding
 non conosce incastrerebbe i mostri). L'alone e' **giallo quando hai la chiave**, spento quando non ce
-l'hai. Sulla minimappa si vede il recinto ma **non la chiave**: e' nascosta, e indicarla sarebbe non
-nasconderla. Il mercenario non raccoglie la chiave e non libera nessuno.
+l'hai. Sulla minimappa **non c'e' ne' il recinto ne' la chiave** *(v1.84.1)*: si vede solo la faglia
+d'uscita. La deviazione dei prigionieri si trova **esplorando** — una mappa che te la indica non e' una
+cosa nascosta, e' una lista di cose da fare. Il mercenario non raccoglie la chiave e non libera nessuno.
 
 ---
 
@@ -1135,6 +1136,7 @@ La XP non e' una valuta da spendere ma una **barra che sale**, e arriva da piu' 
 | **Tetto ai livelli** | **nessuno**: si sale finche' si accumula esperienza |
 | **Curva** | `107 · L^1,54` — 10.670 XP per il livello 20, 20.040 per il 30 |
 | **Fonti dell'esperienza** | nemici uccisi · **casse aperte** (45 + 9/ondata) · **potenziamenti raccolti** (30 + 6/ondata) |
+| **Monete dalle casse** *(v1.84.1)* | una cassa su due lascia un mucchietto di monete invece del potenziamento: **22 + 3/ondata**, ±25% |
 | **Ranghi** | **5**, uno ogni 5 livelli: danno il titolo nuovo e un punto in piu' |
 | **Punti** | 1 per livello + 1 per rango |
 | **Statistica al tetto** | **22 punti** — o ti specializzi, o ti distribuisci |
@@ -1267,6 +1269,13 @@ delle piccole notifiche in alto a destra.
 Un **mercante errante** neutrale appare in mappa (spesso in una micro-area), con bancarella e lanterna.
 Avvicinandoti si apre un pannello con **3 offerte casuali** acquistabili con le **monete**: cura, +PV massimi,
 cassa armi, un potere, vita extra, +danno, +velocità o riduzione danni. I nemici lo ignorano.
+
+## 📦 Cosa c'e' dentro una cassa *(aggiornato in v1.84.1)*
+
+Aprendone una: **~30%** e' una **cassa-mima** (un nemico), e del resto **meta' e' un mucchietto di monete**
+(`22 + 3 per ondata`, con uno scarto del ±25%, sparso a terra da raccogliere) e meta' un **potenziamento a
+tempo**. Prima era sempre il potenziamento: aprire una cassa mentre stai per comprare l'equipaggiamento
+adesso puo' anche essere il pezzo che ti mancava.
 
 ## 👹 Nemici *(ridisegnati in v1.11)*
 

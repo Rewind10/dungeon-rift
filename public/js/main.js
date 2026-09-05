@@ -93,6 +93,7 @@
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
       // v1.84 — i prigionieri: la chiave e chi la libera
+      case 'crate_monete': A.crate && A.crate(); R.floater(ev.x, ev.y - 20, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', true); break;
       case 'chiave_elite': R.ring(ev.x, ev.y, '#ffd24a', 5, 60, 0.6); break;
       case 'chiave_cade': R.ring(ev.x, ev.y, '#ffd24a', 6, 54, 0.5); R.burst(ev.x, ev.y, '#ffe08a', 16, 150, 0.6); break;
       case 'chiave_presa': A.item && A.item(true); R.ring(ev.x, ev.y, '#ffd24a', 6, 46, 0.45); R.floater(ev.x, ev.y - 26, '\uD83D\uDD11 CHIAVE', '#ffd24a', true); break;

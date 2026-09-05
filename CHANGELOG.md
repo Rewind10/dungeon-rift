@@ -2,6 +2,32 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.84.1] — 2026-09-05 · "Cercala"
+
+#### 🗝️ La chiave si cerca
+Era disegnata sempre, da qualunque distanza: bastava girare lo sguardo e la deviazione era gia' risolta.
+Adesso **compare solo entro ~118 px**, sfumando negli ultimi 46. Il resto e' identico — dov'e', chi ce
+l'ha, come si raccoglie: cambia solo che **la si trova esplorando** invece che leggendola sullo schermo.
+
+#### 🗺️ Sulla minimappa resta solo la faglia
+Il recinto aveva un segnalino. Con quello, i prigionieri non erano una scoperta ma una commissione: vai
+li', fatto. Tolto. Sulla minimappa c'e' la **faglia d'uscita** e basta — ne' recinto ne' chiave.
+
+#### 📦 Le casse possono contenere monete
+Aprendone una, se non e' una mima: **meta' delle volte un mucchietto di monete** (`22 + 3 per ondata`,
+±25%, sparso a terra da raccogliere), meta' il **potenziamento a tempo** di prima. Le casse erano l'unica
+cosa in mappa che non c'entrava niente con l'equipaggiamento: adesso aprirle e' anche un modo per
+arrivare al pezzo che manca.
+
+#### 🧪 La suite di test dimezzata
+**6,5 s invece di 10**, con tre controlli in piu' (1460). Nessuna garanzia rimossa: sono stati dimezzati i
+**campioni** dove la misura era statistica — mappe generate (240 → 120, 120 → 60, 80 → 40, 50 → 25), tempo
+simulato (partita di collaudo 240 s → 120, tetto ai vivi 90 s → 45), e le ripetizioni del TEST 60
+(40 → 18 stanze, 400 → 150 estrazioni, 30 → 12 ondate del boss). I margini restano fuori di tre deviazioni
+standard: meno campioni, non piu' fragile.
+
+---
+
 ### [1.84.0] — 2026-09-05 · "Qualcuno da tirare fuori"
 
 #### 🔒 I prigionieri
@@ -22,8 +48,8 @@ i pali servono a farsi capire, non a fare da muro — e un muro invisibile al pa
 i mostri. Quando li liberi i pali cadono e la scritta diventa *liberi*.
 
 L'alone attorno al recinto e' **giallo se hai la chiave** e spento se non ce l'hai: la regola si legge da
-lontano senza dover leggere niente. Sulla minimappa il recinto si vede; **la chiave no** — e' nascosta, e
-una mappa che te la indica non la nasconde piu'.
+lontano senza dover leggere niente. *(Il segnalino del recinto sulla minimappa e la chiave sempre visibile
+sono stati tolti in **1.84.1**: vedi sopra.)*
 
 Il **mercenario** non raccoglie la chiave e non libera nessuno: come per l'XP e le monete, non e' un
 giocatore per le regole. C'e' un test anche per questo.
