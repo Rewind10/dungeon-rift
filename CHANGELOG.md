@@ -2,6 +2,34 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.5] — 2026-09-06 · "Lo slot della E c'era, ma stava sotto"
+
+Paolo: *"nella barra di menu vedi il tasto Q ma non quello della E, va aggiunto."*
+
+Da aggiungere non c'era niente: **lo slot della E era gia' li'**, con l'icona e il nome giusti — solo che
+il riquadro dell'eroe ci stava sopra. E lo stesso valeva a sinistra per il **DX (Scatto)**, coperto dalla
+cintura delle pozioni. Due slot su quattro invisibili, per un problema di posizioni.
+
+I margini erano tarati su quando la barra aveva **due** slot. Con quattro e' larga 446 px, cioe' **223 px
+per lato dal centro**, mentre gli altri due pannelli stavano molto piu' dentro:
+
+| | prima | dopo |
+|---|---|---|
+| 🧪 cintura delle pozioni (`#beltBar`) | fino a **120 px** dal centro | **240 px** |
+| 🧍 riquadro dell'eroe (`#heroBox`) | da **116 px** dal centro | **240 px** |
+| ❤️ ampolla dei PV (`#vitals`) | da 258 px | **390 px** (dopo il riquadro) |
+
+**Sotto i 1440 px** quella fila non ci sta piu' — cintura, quattro abilita', riquadro ed ampolla fanno
+circa 1200 px — e la cintura finiva sopra la minimappa: li' sale di una riga, centrata sopra le abilita'.
+Verificato a 1600x900 e a 1366x768.
+
+**Tre controlli nuovi nel test del client** perche' non si ripeta: i margini della cintura e del riquadro
+devono essere **>= 223 px**, e l'ampolla deve stare dopo il riquadro. Chi li stringe se ne accorge subito.
+
+**File toccati**: `public/style.css`, `test/client.js`, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.93.4] — 2026-09-06 · "L'immagine intera su qualsiasi schermo"
 
 Paolo: *"l'immagine viene ritagliata, non si riesce a farla entrare esattamente intera a prescindere dalla

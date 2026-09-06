@@ -516,6 +516,19 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(css.indexOf("url('/assets/art/menu_key_art_1080.jpg')") > 0, 'il menu carica l artwork da assets/art/menu_key_art_1080.jpg');
     ok(css.indexOf('#menu::before') > 0, 'e ci mette sopra la velatura che tiene leggibile il pannello');
     ok(css.indexOf('radial-gradient(1200px 800px at 50% -10%') > 0, 'il gradiente scuro resta: senza il file il menu non si rompe');
+
+
+    // v1.93.5 — LA BARRA DELLE ABILITA NON DEVE ESSERE COPERTA. E centrata e larga 446 px con quattro
+    // slot: occupa 223 px per lato dal centro. Cintura e riquadro dell eroe stavano a 120 e 116 px dal
+    // centro e si mangiavano il primo slot (DX) e l ultimo (E) — quello della E era invisibile e
+    // sembrava non esistere. Chi cambia questi margini deve accorgersi di romperlo.
+    const marg = (re) => { const m = css.match(re); return m ? parseInt(m[1], 10) : -1; };
+    const belt = marg(/#beltBar\{position:absolute;bottom:20px;right:calc\(50% \+ (\d+)px\)/);
+    const eroe = marg(/#heroBox\{position:absolute;bottom:20px;left:calc\(50% \+ (\d+)px\)/);
+    const ampolla = marg(/#vitals\{position:absolute;bottom:10px;left:calc\(50% \+ (\d+)px\)/);
+    ok(belt >= 223, 'la cintura sta fuori dalla barra delle abilita (' + belt + ' px dal centro, servono 223)');
+    ok(eroe >= 223, 'e il riquadro dell eroe pure (' + eroe + ' px): senza, lo slot della E sparisce sotto');
+    ok(ampolla > eroe + 137, 'e l ampolla sta dopo il riquadro dell eroe (' + ampolla + ' > ' + (eroe + 137) + ')');
   }
   // in combattimento non si vede niente
   HUD.updateTop(snap({}), null);

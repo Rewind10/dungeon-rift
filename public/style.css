@@ -123,7 +123,7 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .cf-item.out{opacity:0;transform:translateY(-10px) scale(.96)}
 .cf-item b{font-size:22px}
 .cf-item img.gearmini{width:26px;height:26px;vertical-align:middle}
-#vitals{position:absolute;bottom:10px;left:calc(50% + 258px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.55))}
+#vitals{position:absolute;bottom:10px;left:calc(50% + 390px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.55))}
 #hpFlask{position:relative;width:118px;height:148px}
 #hpFlask svg{width:100%;height:100%;overflow:visible}
 #hpFlask.low #hpLiquid{fill:#ff1520}
@@ -313,7 +313,9 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
    Stesso linguaggio della barra abilita' (cornice, targhetta dorata del tasto) ma piu' stretti: la
    cintura non deve rubare la scena all'arma. Sta a SINISTRA della barra, non sotto la boccetta della
    vita, dove ci sarebbero due gruppi di icone in competizione nello stesso angolo. */
-#beltBar{position:absolute;bottom:20px;right:calc(50% + 120px);display:flex;gap:12px;padding:10px 13px;
+/* v1.93.5 — margine dalla barra delle abilita: con quattro slot arriva a centro-222 px, e la cintura
+   la copriva dal primo (DX). */
+#beltBar{position:absolute;bottom:20px;right:calc(50% + 240px);display:flex;gap:12px;padding:10px 13px;
   background:linear-gradient(180deg,rgba(10,13,24,.55),rgba(8,10,18,.75));border:1px solid rgba(120,140,200,.18);
   border-radius:20px;backdrop-filter:blur(7px);box-shadow:0 10px 34px rgba(0,0,0,.5);pointer-events:none;z-index:24}
 #beltBar.hidden{display:none}
@@ -373,6 +375,10 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .pc.in:hover{transform:none}
 .pc.pick{border-color:#9fe06a;box-shadow:0 0 0 1px rgba(159,224,106,.3),0 10px 24px rgba(80,180,60,.2);cursor:default}
 .pc.pick:hover{transform:none}
+/* v1.93.5 — sotto i 1440 px la fila non ci sta piu: cintura, quattro abilita, riquadro eroe e ampolla
+   somigliano a 1200 px di roba su una riga sola, e la cintura finiva sopra la minimappa. Li sotto la
+   cintura sale di una riga, centrata sopra la barra delle abilita. */
+@media (max-width:1440px){#beltBar{right:auto;left:50%;transform:translateX(-50%);bottom:124px}}
 @media (max-width:900px){#beltBar{right:auto;left:16px;bottom:150px}#potionCat{grid-template-columns:1fr 1fr}}
 
 /* ===== v1.72 — LA TAGLIA IN CORSO, in partita =====
@@ -434,7 +440,8 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
    le tre cose che erano sparse: NOME e LIVELLO (che stavano sopra la testa, dove coprivano il gioco) e le
    CARTE ATTIVE (prima una fila di gettoni senza contesto, #boonBar, ora rimossa). Gli slot vuoti restano
    visibili: il tetto di 5 e' una regola, e una regola che non si vede non esiste. */
-#heroBox{position:absolute;bottom:20px;left:calc(50% + 116px);width:138px;z-index:24;pointer-events:none;
+/* v1.93.5 — stessa storia dall altra parte: partiva da centro+116 e si mangiava lo slot della E. */
+#heroBox{position:absolute;bottom:20px;left:calc(50% + 240px);width:138px;z-index:24;pointer-events:none;
   background:linear-gradient(180deg,rgba(10,13,24,.55),rgba(8,10,18,.75));border:1px solid rgba(120,140,200,.18);
   border-radius:16px;padding:9px 10px 10px;backdrop-filter:blur(7px);box-shadow:0 10px 34px rgba(0,0,0,.5);text-align:center}
 #heroBox.hidden{display:none}
