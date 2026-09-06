@@ -143,9 +143,11 @@
   const SPECS = {
     guerriero: [
       { id: 'paladino', name: 'Paladino', icon: '✨', color: '#ffe9a8', hero: 'guerriero',
-        desc: 'Aura di 220px: cura i compagni e riduce del 18% i danni subiti, a te e a loro',
+        desc: 'Aura di 220px: riduce del 18% i danni subiti, a te e ai compagni',
         abilita: 'Giuramento — per 5s tu e i compagni nell aura siete immuni al primo colpo',
-        apply: p => { p.perk.aura = 220; p.perk.auraCura = 0.02; p.perk.auraDR = 0.18; } },
+        // v1.93 — l'aura curava i compagni (2% dei PV massimi al secondo, meta' a te): tolto. Resta la
+        // riduzione dei danni, che e' cio' che un Paladino deve fare senza rimettere PV in circolo.
+        apply: p => { p.perk.aura = 220; p.perk.auraDR = 0.18; } },
       { id: 'maestro', name: "Maestro d'Armi", icon: '⚔️', color: '#ffd27a', hero: 'guerriero',
         desc: '+35% cadenza del fendente, +20% apertura dell arco, rinculo x1,5',
         abilita: 'Turbine — tre fendenti a 360° in 1,2s',

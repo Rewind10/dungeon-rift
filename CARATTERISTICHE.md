@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.92.0`
+**Versione attuale:** `1.93.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -127,7 +127,7 @@ forte.
 | Scaglione | | |
 |---|---|---|
 | Non comune | 🗡 Arma Pesante — +8% danno | 🪓 Colpo Ampio — +5% per ogni nemico in piu nello stesso fendente (max +15%) |
-| Raro | 🩸 Vampirismo — +9% del danno ti cura | 💢 Rappresaglia — onda ampia quando incassi |
+| Raro | 🛡 Presa Salda — +60% rinculo dei tuoi colpi, -6% ai danni subiti *(v1.93, al posto di Vampirismo)* | 💢 Rappresaglia — onda ampia quando incassi |
 | Epico | 🔥 Adrenalina Pura — +8% cadenza per uccisione, fino a +48% | 🧍 Colosso — +35% PV massimi, +8% velocita |
 | Divino | ☄️ Deflagrazione Cadaverica — i morti esplodono | 🌀 Onda di Ritorno — meta delle uccisioni emette una nova |
 
@@ -150,7 +150,7 @@ forte.
 | Divino | 🎯 Punto Vitale — ogni 5° colpo e un critico garantito | 🌑 Uscita di Scena — sotto il 30% dei PV sparisci per 1,5s (ogni 20s) |
 
 **Le sinergie** restano sei, ognuna raggiungibile da **una sola classe** e a cavallo di **due scaglioni**:
-🌊 Onda d'Urto (Colpo Ampio + Rappresaglia) · 🩸 Sete di Sangue (Vampirismo + Adrenalina) · 🧊 Catena
+🌊 Onda d'Urto (Colpo Ampio + Rappresaglia) · 🛡 Muro d'Acciaio (Presa Salda + Adrenalina) · 🧊 Catena
 Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Esplosivi) · 🩸 Frecce Sporche
 (Perforazione + Lama Sporca) · 🎯 Cacciatore di Teste (Colpo alle Spalle + Colpo di Grazia).
 
@@ -280,6 +280,50 @@ d'ondata coprirebbero mezza stanza. Le tele spariscono col cambio mappa.
 Corre addosso come uno zombi e da sola fa poco male: il punto e' la sua morte. Quando cade lascia a terra
 il cerchio telegrafato delle zone, che detona dopo **3 s** su **104 px** per **2,4x il suo danno**. Chi
 arretra di un passo non prende niente. Le zone fanno male ai giocatori e non ai mostri: niente catene.
+
+---
+
+## 🚫 NIENTE CURE DALLE ABILITA', DALLE ARMI E DALLE ARMATURE *(regola, v1.93)*
+
+**Nessuna carta, sinergia, specializzazione, patto o pezzo di equipaggiamento rimette un solo PV.**
+Non e' una taratura, e' una regola: rimettersi in piedi deve costare qualcosa che si vede — monete,
+una carica di pozione, un giro dall'Ostessa. Una cura che arriva da sola mentre picchi cancella tutte
+e tre le cose insieme.
+
+Che cosa e' stato tolto in v1.93:
+
+| | Cosa faceva |
+|---|---|
+| 🩸 **Vampirismo** (carta rara, guerriero) | +9% del danno inflitto ti curava |
+| 🩸 **Sete di Sangue** (sinergia) | +6% di cura dal danno inflitto, sopra al Vampirismo |
+| 🩸 **Patto Sanguinario** (Mercante Nero) | +10% di vampirismo per 70 monete |
+| ✨ **Aura del Paladino** (rango V) | curava i compagni nel cerchio, 2% dei PV massimi al secondo |
+| ➕ **Vigore** (buff) | 8 PV/s per 10 s |
+| `stats.lifesteal`, `stats.regen` | **i due campi del motore**: tolti, non azzerati |
+
+Quei due campi sono il punto. Finche' `lifesteal` esiste fra le statistiche, prima o poi qualcosa lo
+riempie — ed e' esattamente cosi' che la cura era tornata. Adesso non c'e' proprio il posto dove metterla.
+
+Al posto di Vampirismo, perche' la griglia e' **2 carte per classe e per rarita'**: 🛡 **Presa Salda**
+(+60% rinculo dei tuoi colpi, -6% ai danni subiti), e la sinergia con Adrenalina Pura diventa
+🛡 **Muro d'Acciaio** (-6% in piu' ai danni subiti). Premiano lo stesso mestiere — stare in mezzo — senza
+restituire vita.
+
+**Il test 64 la impone.** Non controlla i nomi: prende **tutte** le carte, tutti i ranghi, tutti i patti e
+tutti i pezzi di equipaggiamento, e li prova uno per uno **giocando** — mezza vita, cinque secondi di colpi
+su un bersaglio eterno. Se i PV salgono di uno, il test fallisce e dice quale. Vale anche per la carta che
+verra' aggiunta domani.
+
+### Chi cura ancora, e a che prezzo
+
+| | Prezzo |
+|---|---|
+| 🍺 **Ostessa** | monete, al villaggio |
+| ❤️ **Pozione di Cura** e ➕ **Rigenerazione** | una carica della cintura, comprata dall'Erborista |
+| 🩹 **Bende del Viandante** | 45 monete dal Mercante Errante |
+| ❤️ **Pozione di Salute** a terra | va raccolta |
+| 🔥 **Combo di 40** | +25% PV: va costruita una catena di quaranta uccisioni |
+| ⏳ **Ultima Occasione** (carta divina) | non cura: invece di cadere, risorgi a meta' vita. Due volte |
 
 ---
 
@@ -589,10 +633,8 @@ rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il re
   altrimenti resterebbe fuori per sempre.
 - Allineate due porte secondarie: l'offerta "+PV massimi" del **Mercante Errante** e la Benedizione
   "+40 PV" del **Mercante Nero** ora alzano il tetto e basta.
-- Restano tredici vie per curarsi, e tutte chiedono di pagare, bere, raccogliere o compiere qualcosa:
-  Ostessa, pozioni di Cura e Rigenerazione, Pozione di Salute a terra, Bende del Viandante, buff Vigore,
-  carte **Vampirismo**, **Scudo Vitale** e **Ultima Occasione**, sinergia **Sete di Sangue**, **aura del
-  Paladino**, ricompensa della **combo di 40**, e la rianimazione.
+- *(Aggiornato in v1.93: le vie per curarsi sono scese a sei, e **nessuna** passa piu' da una carta, un
+  rango, un patto o un pezzo di equipaggiamento — vedi la sezione **NIENTE CURE DALLE ABILITA'**.)*
 
 ## 🍺 L'OSTESSA e la regola sui PV *(novita v1.74)*
 - Il villaggio e' **completo**: tutte e cinque le botteghe lavorano. L'Ostessa per ora fa una cosa sola,
@@ -1430,7 +1472,7 @@ Possedere due boon compatibili sblocca un effetto potenziato una tantum:
 - **🧪 Deflagrazione Tossica** — Tossina + Colpi Esplosivi → le esplosioni diffondono veleno.
 - **🧊 Catena Gelida** — Catena di Fulmini + Tocco Gelido → le catene rallentano i nemici.
 - **🔮 Cercatore** — Mira Guidata + Perforazione → i proiettili guidati perforano +1.
-- **🩸 Sete di Sangue** — Vampirismo + Adrenalina Pura → +6% cura dal danno inflitto.
+- **🛡 Muro d'Acciaio** *(v1.93, al posto di Sete di Sangue)* — Presa Salda + Adrenalina Pura → -6% in piu' ai danni subiti.
 
 ## 🎴 Poteri a scelta (Boon, stile Hades)
 

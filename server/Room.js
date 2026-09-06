@@ -29,7 +29,7 @@ function newPerk() {
     // ladro
     doppiaCocca: 0, dashLong: 0, ombra: 0, spalle: 0, spalleCrit: 0, pioggia: 0, elusione: 0,
     // rango V
-    aura: 0, auraCura: 0, auraDR: 0, arcoPiu: 0, catena: 0, catenaPiena: 0,
+    aura: 0, auraDR: 0, arcoPiu: 0, catena: 0, catenaPiena: 0,
   };
 }
 // v1.73 — LE STATISTICHE BASE, in un posto solo. Prima erano un letterale dentro addPlayer: per poter
@@ -43,8 +43,12 @@ function newStats() {
   // guerriero ha 200 PV e il mago 100: "+30 PV" varrebbe il triplo per il mago. maxHpFlat resta per le
   // statistiche e per l'equipaggiamento, che sono scelte di quel personaggio.
   return { dmgFlat: 0, dmgMult: 1, fireRateMult: 1, maxHpFlat: 0, maxHpMult: 1, speedMult: 1, critChance: 0.03, critMult: 2.0,
-    pierce: 0, extraProjectiles: 0, lifesteal: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1,
-    regen: 0, xpMult: 1, dmgReduce: 0,
+    // v1.93 — QUI C'ERANO 'lifesteal' e 'regen'. Non sono stati svuotati: sono stati TOLTI. Finche' il
+    // campo esiste, prima o poi qualcosa lo riempie — ed e' esattamente com'era tornata la cura. Nessuna
+    // carta, arma, armatura, specializzazione o patto rimette PV: quello e' il mestiere dell'Ostessa e
+    // delle pozioni. Il test 58 vieta il rientro di entrambi.
+    pierce: 0, extraProjectiles: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1,
+    xpMult: 1, dmgReduce: 0,
     schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } };
 }
 // L'effetto di UNA statistica comprata. Estratto da buyStat perche' il ricalcolo deve riapplicarle tutte.
@@ -599,7 +603,9 @@ class Room {
     return [
       { id: 'pact_berserk', name: 'Patto del Berserker', icon: '😈', color: '#ff3b3b', cost: 60, kind: 'pact_berserk', desc: '+35% danno, ma -25 PV massimi' },
       { id: 'pact_glass', name: 'Patto di Cristallo', icon: '🔮', color: '#ff6ad5', cost: 55, kind: 'pact_glass', desc: '+30% cadenza, ma +12% danni subiti' },
-      { id: 'pact_leech', name: 'Patto Sanguinario', icon: '🩸', color: '#a4133c', cost: 70, kind: 'pact_leech', desc: '+10% vampirismo, ma -8% velocita' },
+      // v1.93 — QUI C'ERA IL PATTO SANGUINARIO (+10% vampirismo, -8% velocita'): era l'ultima strada per
+      // farsi curare dal danno inflitto, e con il vampirismo se ne va anche lui. Il pool nero non ha
+      // simmetrie da rispettare: resta di cinque voci.
       { id: 'pact_swift', name: 'Patto dell\'Ombra', icon: '💨', color: '#9b5de5', cost: 55, kind: 'pact_swift', desc: '+18% velocita, ma -12% danno' },
       // v1.79.2 — QUI C'ERA L'OFFERTA DI SANGUE: +2 vite in cambio di meta' delle monete. Il prezzo non
       // era un prezzo: chi aveva poche monete pagava poco o niente e si portava a casa due vite, cioe'
@@ -636,7 +642,6 @@ class Room {
     let note = '';
     if (w.kind === 'pact_berserk') { p.stats.dmgMult += 0.35; p.stats.maxHpFlat = Math.max(-p.maxHp + 20, p.stats.maxHpFlat - 25); if (p.hp > this.effMaxHp(p)) p.hp = this.effMaxHp(p); note = 'Furia oscura'; }
     else if (w.kind === 'pact_glass') { p.stats.fireRateMult += 0.30; p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.12; note = 'Fragile ma letale'; }
-    else if (w.kind === 'pact_leech') { p.stats.lifesteal += 0.10; p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.08); note = 'Assetato'; }
     else if (w.kind === 'pact_swift') { p.stats.speedMult += 0.18; p.stats.dmgMult = Math.max(0.3, p.stats.dmgMult - 0.12); note = 'Rapido come un\'ombra'; }
     else if (w.kind === 'dark_relic') { p.stats.maxHpFlat = Math.max(-p.maxHp + 20, p.stats.maxHpFlat - 20); if (p.hp > this.effMaxHp(p)) p.hp = this.effMaxHp(p); this.offerBoon(p); note = 'Potere maledetto'; }
     else if (w.kind === 'gamble') { const good = Math.random() < 0.5; if (good) { const r = Math.random(); if (r < 0.34) { p.stats.dmgMult += 0.25; note = 'Benedizione: +25% danno!'; } else if (r < 0.67) { p.stats.maxHpFlat += 40; note = 'Benedizione: +40 PV massimi!'; } else { p.lives += 1; note = 'Benedizione: +1 vita!'; } } else { const r = Math.random(); if (r < 0.5) { p.stats.dmgReduce = (p.stats.dmgReduce || 0) - 0.10; note = 'Maledizione: +10% danni subiti'; } else { p.stats.speedMult = Math.max(0.4, p.stats.speedMult - 0.10); note = 'Maledizione: -10% velocita'; } } }
@@ -1536,7 +1541,7 @@ class Room {
     // cadenza dell arma. Adesso e' una forza PER BERSAGLIO, che il colpo rinnova senza accumulare.
     // v1.79.2 — `opts.poison` non e' piu' una forza ma il DANNO AL SECONDO gia' calcolato dal colpo.
     if (opts.poison) { m.poison = Math.max(m.poison || 0, opts.poison); m.poisonT = 3; m.poisonSrc = src ? src.id : null; }
-    if (src) { src.damageDealt += d; if (src.stats.lifesteal > 0) src.hp = Math.min(this.effMaxHp(src), src.hp + d * src.stats.lifesteal); }
+    if (src) src.damageDealt += d;   // v1.93 — qui il danno inflitto curava chi lo faceva (lifesteal). Mai piu'.
     // hit-stop feedback per crit / colpi grossi
     if (opts.crit) this.events.push({ t: 'hitstop', d: 0.05 });
     this.events.push({ t: 'mhit', x: m.x, y: m.y, d, crit: !!opts.crit });
@@ -2320,16 +2325,9 @@ class Room {
         if (p.salva.n <= 0) p.salva = null;
       }
       if (p.scudoAb) { p.scudoAb.t -= dt; if (p.scudoAb.t <= 0) this._rompiScudo(p); }
-      if (p.stats.regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + p.stats.regen * dt);
-      // v1.69 — AURA DEL PALADINO: cura i COMPAGNI dentro il cerchio (la riduzione danni la applica
-      // damagePlayer). Cura anche chi la porta, ma meta': in solitaria non deve essere il ramo migliore.
-      if (p.perk.aura > 0 && !p.dead && !p.down) {
-        for (const q of this.alivePlayers) {
-          const d = MU.dist(p.x, p.y, q.x, q.y); if (d > p.perk.aura) continue;
-          const quota = (q === p ? 0.5 : 1) * p.perk.auraCura;
-          q.hp = Math.min(this.effMaxHp(q), q.hp + this.effMaxHp(q) * quota * dt);
-        }
-      }
+      // v1.93 — QUI C'ERANO due cure: la rigenerazione passiva (p.stats.regen) e l'AURA DEL PALADINO,
+      // che rimetteva ai compagni nel cerchio il 2% dei PV massimi al secondo (meta' a chi la portava).
+      // L'aura resta, ma fa solo cio' che le compete: ridurre i danni (p.perk.auraDR, in damagePlayer).
       // SCUDO DI MANA: si ricarica solo dopo 8s senza prendere colpi (manaT azzerato in damagePlayer)
       if (p.perk.mana > 0 && !p.dead) {
         p.manaT = (p.manaT || 0) + dt;
@@ -2350,7 +2348,6 @@ class Room {
           }
         }
       }
-      if (p.buffs.b_regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + 8 * dt);
       if (p.buffs.po_regen && !p.dead && !p.down) p.hp = Math.min(this.effMaxHp(p), p.hp + Pot.EFF.regen * Pot.healMult(p.buys.st_cos || 0) * dt);
       if (p.down) {
         p.downT -= dt; p.vx *= 0.8; p.vy *= 0.8;
@@ -2547,7 +2544,7 @@ class Room {
   snapshot(slim) {
     const players = [];
     for (const p of this.players.values()) {
-      const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_regen', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln', 'po_dmg', 'po_rate', 'po_speed', 'po_armor', 'po_regen']) if (p.buffs[k] > 0) tb.push(k);
+      const tb = []; for (const k of ['b_dmg', 'b_speed', 'b_rate', 'b_shield', 'b_quad', 'i_speed', 'i_armor', 'i_power', 'i_rage', 'i_invuln', 'po_dmg', 'po_rate', 'po_speed', 'po_armor', 'po_regen']) if (p.buffs[k] > 0) tb.push(k);
       const nuovo = !slim || !p._sent; if (slim) p._sent = 1;
       const pr = Lv.progress(p.xpPool);
       const o = { i: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +p.aim.toFixed(2), hp: Math.round(p.hp), mhp: Math.round(this.effMaxHp(p)), lv: p.lives, cd: +p.cdDash.toFixed(1), k: p.kills, xp: p.xpPool, co: p.coins || 0, cmx: +this.comboMult(p).toFixed(2), lvl: p.level, prg: +pr.frac.toFixed(2), pt: p.points };

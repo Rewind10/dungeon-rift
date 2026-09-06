@@ -2,6 +2,61 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.0] — 2026-09-06 · "Nessuna abilita', arma o armatura cura piu'"
+
+Paolo: *"Ci sono ancora abilita' e/o armi o armature che curano il personaggio: il guerriero divino si
+cura moltissimo per ogni colpo inflitto ai nemici. NON devono esistere abilita' e/o armi o armature che
+curano il personaggio!"*
+
+Il colpevole era il **Vampirismo** (carta rara del guerriero, +9% del danno inflitto), moltiplicato dalla
+sinergia **Sete di Sangue** (+6%) e dal **Patto Sanguinario** del Mercante Nero (+10%): con tutti e tre,
+il 25% di ogni colpo tornava in vita — e con l'equipaggiamento divino i colpi sono grossi.
+
+#### Cosa e' sparito
+
+| | Cosa faceva |
+|---|---|
+| 🩸 **Vampirismo** (carta rara, guerriero) | +9% del danno inflitto ti curava |
+| 🩸 **Sete di Sangue** (sinergia Vampirismo + Adrenalina) | +6% di cura, sopra al Vampirismo |
+| 🩸 **Patto Sanguinario** (Mercante Nero, 70 monete) | +10% di vampirismo |
+| ✨ **Aura del Paladino** (rango V del guerriero) | curava i compagni nel cerchio, 2% dei PV al secondo |
+| ➕ **Vigore** (buff, 8 PV/s) | non lo assegnava piu' nessuno, ma era li' pronto |
+| `stats.lifesteal` e `stats.regen` | **i due campi del motore** |
+
+I due campi sono la parte che conta. Non li ho azzerati: li ho **tolti**. Finche' `lifesteal` esiste fra
+le statistiche di un giocatore, prima o poi qualcosa lo riempie — ed e' esattamente cosi' che la cura era
+sopravvissuta a tutte le pulizie precedenti (l'ultima in v1.79.2, che aveva gia' tolto la rigenerazione a
+Scudo Vitale). Adesso non c'e' proprio il posto dove rimetterla.
+
+#### Cosa e' arrivato al suo posto, e perche'
+Il catalogo delle carte e' una griglia rigida: **2 carte per classe e per rarita'**. Togliere Vampirismo
+lasciava il guerriero con una sola rara, quindi il posto andava riempito:
+
+- 🛡 **Presa Salda** (rara, guerriero) — *+60% rinculo dei tuoi colpi e -6% ai danni subiti*
+- 🛡 **Muro d'Acciaio** (sinergia Presa Salda + Adrenalina Pura) — *-6% in piu' ai danni subiti*
+
+Premiano lo stesso mestiere del Vampirismo — stare in mezzo alla mischia — senza restituire un PV. Se non
+convincono, si cambiano: sono due righe.
+
+#### Il test 64, che impedisce il ritorno
+La regola non va ricordata, va **imposta**. Il test non guarda i nomi: prende **tutte** le carte, tutti i
+ranghi, tutti i patti e tutti i pezzi di equipaggiamento — **51 casi** — e li prova uno per uno
+*giocando*: personaggio a meta' vita, cinque secondi con il colpo premuto su un bersaglio eterno. Se i PV
+salgono di uno, il test fallisce e **dice quale**. Vale anche per la carta che verra' aggiunta domani.
+Piu' due controlli di struttura (`stats.lifesteal` e `stats.regen` non devono esistere) e uno di verso
+opposto: la **pozione di Cura deve continuare a curare**.
+
+#### Chi cura ancora
+Ostessa (monete), pozioni di Cura e Rigenerazione (cariche comprate), Bende del Viandante (45 monete),
+Pozione di Salute a terra (va raccolta), ricompensa della **combo di 40** (+25% PV, dopo quaranta
+uccisioni di fila) e **Ultima Occasione**, che non cura ma ti rimette in piedi a meta' vita invece di
+farti cadere. **Nessuna** di queste e' un'abilita', un'arma o un'armatura.
+
+**File toccati**: `shared/loot.js`, `shared/levels.js`, `server/Room.js`, `test/simulate.js` (test 64 nuovo,
+tre vecchie asserzioni riscritte), `shared/constants.js`, `package.json`, e i .md.
+
+---
+
 ### [1.92.0] — 2026-09-06 · "I nemici tornano a cercarti con gli occhi"
 
 Paolo: *"i nemici devono tornare al comportamento precedente, quello in cui girano per la mappa

@@ -90,8 +90,11 @@ function testBoons() {
   p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); assert(p.boon.chain === 2, 'Catena di Fulmini applicata (2 rimbalzi)');
   // spara e verifica che i proiettili portino i flag delle passive
   room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 1 && b.chain === 2, 'i proiettili ereditano le passive');
-  // boon vampire cura
-  p.boonOffer = ['vampire']; const ls0 = p.stats.lifesteal; room.pickBoon('b', 'vampire'); assert(p.stats.lifesteal > ls0, 'boon Vampirismo aumenta lifesteal');
+  // v1.93 — qui si prendeva Vampirismo e si controllava che alzasse il lifesteal. Nessuna carta cura
+  // piu': al suo posto c'e' Presa Salda, che sul rinculo e sulla resistenza non rimette un PV.
+  p.boonOffer = ['saldo']; const kn0 = p.stats.knockMult; room.pickBoon('b', 'saldo');
+  assert(p.stats.knockMult > kn0, 'boon Presa Salda aumenta il rinculo');
+  assert(p.stats.lifesteal === undefined, 'e il lifesteal non esiste proprio piu');
   // v1.79 — NIENTE IMPILAMENTO: ogni abilita' si prende una volta sola, e riproporla non fa niente.
   p.boonOffer = ['pierce']; const pv = p.boon.pierce; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pv, 'la stessa abilita non si prende due volte');
   assert(Loot.BOONS.every(x => x.max === 1), 'e nessuna abilita e impilabile');
@@ -3013,7 +3016,7 @@ function testV179() {
   // v1.79.2 — Scudo Vitale non alza piu' i PV ne' rigenera: da' resistenza, e basta.
   const dr0 = m8.stats.dmgReduce; prendi('overheal');
   assert(Math.abs(m8.stats.dmgReduce - (dr0 + 0.05)) < 1e-9, 'Scudo Vitale da -5% ai danni subiti');
-  assert(m8.stats.regen === 0, 'e non rigenera piu un solo PV');
+  assert(m8.stats.regen === undefined, 'e non rigenera piu un solo PV (dalla v1.93 il campo non esiste)');
   prendi('chain'); assert(m8.boon.chain === 2, 'Catena di Fulmini: due rimbalzi');
   prendi('concentra'); assert(m8.boon.concentra === 0.10, 'Concentrazione: +10% al colpo piazzato');
   prendi('lentezza'); assert(m8.boon.lentezza === 200, 'Campo di Lentezza: raggio 200');
@@ -3102,7 +3105,7 @@ function testV1792() {
   { const { p } = nuova('ladro', 'crit'); assert(Math.abs(p.stats.critChance - (0.03 + 0.10)) < 1e-9, 'Occhio di Falco: +10% critico e basta'); }
   { const { p } = nuova('ladro', 'executioner'); assert(Math.abs(p.stats.critChance - 0.08) < 1e-9 && Math.abs(p.stats.critMult - 2.30) < 1e-9, 'Giustiziere: +5% critico e +30% danno critico'); }
   { const { p } = nuova('ladro', 'bulwark'); assert(Math.abs(p.stats.dmgReduce - 0.10) < 1e-9, 'Baluardo: -10%'); }
-  { const { p } = nuova('ladro', 'overheal'); assert(Math.abs(p.stats.dmgReduce - 0.05) < 1e-9 && p.stats.regen === 0, 'Scudo Vitale: -5% e nessuna cura'); }
+  { const { p } = nuova('ladro', 'overheal'); assert(Math.abs(p.stats.dmgReduce - 0.05) < 1e-9 && p.stats.regen === undefined, 'Scudo Vitale: -5% e nessuna cura'); }
   { const { p } = nuova('guerriero', 'heavyarm'); assert(Math.abs(p.stats.dmgMult - 1.08) < 1e-9 && !p.perk.arcoPiu, 'Arma Pesante: +8% danno, niente altro'); }
 
   // --- TOSSINA: una quota del colpo, non un numero fisso ---
@@ -4212,6 +4215,78 @@ function testV189() {
   ok('i due boss verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================
+// TEST 64 — v1.93: NESSUNA abilita', arma o armatura cura il personaggio
+// ============================================================================
+// E' una regola del gioco, non una taratura: rimettere PV e' il mestiere delle POZIONI e dell'OSTESSA,
+// e di nient'altro. Il test non si fida dei nomi delle carte — le PROVA tutte, una per una, giocando:
+// mezza vita, cinque secondi di colpi su un bersaglio eterno, e i PV non devono salire di uno. Vale
+// anche per la carta che verra' aggiunta domani, ed e' il punto: la regola non va ricordata, va imposta.
+function testV193() {
+  console.log('\n[TEST 64] v1.93 — niente cura da carte, ranghi, patti o equipaggiamento');
+  const dt = 1 / C.TICK_RATE;
+  const Loot = require('../shared/loot.js');
+  const Gear = require('../shared/gear.js');
+  const Lv = require('../shared/levels.js');
+  const conn = { send() {} };
+
+  // --- 1) i campi che rendevano possibile la cura non esistono piu' ---
+  {
+    const r = new Room('v193a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    assert(p.stats.lifesteal === undefined, 'fra le statistiche non esiste piu lifesteal');
+    assert(p.stats.regen === undefined, 'ne regen');
+    assert(p.perk.auraCura === undefined, 'e l aura del Paladino non ha piu una quota di cura');
+    const src = fs.readFileSync(__dirname + '/../server/Room.js', 'utf8');
+    assert(!/stats\.lifesteal/.test(src), 'nel server non resta una riga che curi con il lifesteal');
+    assert(!/stats\.regen\s*&&/.test(src), 'ne una che rigeneri nel tempo');
+    assert(!Loot.BOON_BY_ID.vampire && !Loot.BOON_BY_ID.bloodlust, 'Vampirismo e Sete di Sangue non sono piu nel catalogo');
+  }
+
+  // --- 2) PROVA SUL CAMPO: ogni carta, ogni rango, ogni patto, ogni pezzo di equipaggiamento ---
+  const provaCura = (etichetta, prepara) => {
+    const r = new Room('c' + Math.random().toString(36).slice(2, 7));
+    const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    prepara(r, p);
+    const mx = r.effMaxHp(p); p.hp = Math.floor(mx * 0.5); const hp0 = p.hp;
+    const sp = losSpot(r, p, 150);
+    const m = r.spawnMonster('skeleton', sp.x, sp.y, { scaling: Waves.scaling(1, 1) });
+    m.awake = true;
+    let picco = hp0;
+    for (let i = 0; i < C.TICK_RATE * 5; i++) {
+      m.hp = m.maxHp; m.dead = false;                     // bersaglio eterno: si misura la cura, non la resa
+      r.setInput('a', { mx: 0, my: 0, aim: Math.atan2(m.y - p.y, m.x - p.x), shoot: true, q: true, e: true });
+      r.update(dt);
+      if (p.hp > picco) picco = p.hp;
+    }
+    return { etichetta, guadagno: picco - hp0 };
+  };
+
+  const casi = [];
+  for (const b of Loot.BOONS) casi.push(['carta ' + b.id, (r, p) => { p.boonsOwned[b.id] = 1; p.cardOn[b.id] = 1; r._recomputeBoons(p); }]);
+  for (const eroe of ['guerriero', 'mago', 'ladro']) for (const sp of (Lv.SPECS[eroe] || [])) casi.push(['rango ' + sp.id, (r, p) => { p.spec = sp.id; r._recomputeBoons(p); }]);
+  for (const slot of Gear.slotsFor('guerriero')) for (const it of Gear.itemsFor('guerriero', slot)) casi.push(['equip ' + it.id, (r, p) => { p.gear[slot] = it.id; p.owned[it.id] = 1; r._recomputeGear(p); }]);
+  {
+    const r0 = new Room('v193p'); r0.addPlayer('z', conn, 'Z', 'guerriero'); r0.startGame();
+    for (const w of r0.darkWaresPool()) casi.push(['patto ' + w.id, (r, p) => { p.coins = 9999; r.darkMerchant = { x: p.x, y: p.y, r: 18, wares: [w] }; r.buyDark('a', w.id); }]);
+  }
+
+  const colpevoli = casi.map(([et, prep]) => provaCura(et, prep)).filter(x => x.guadagno > 0);
+  assert(casi.length > 40, 'la prova copre tutto il catalogo (' + casi.length + ' fra carte, ranghi, patti ed equipaggiamento)');
+  assert(colpevoli.length === 0, 'e nessuno cura: ' + (colpevoli.length ? colpevoli.map(x => x.etichetta + ' +' + x.guadagno + ' PV').join(', ') : 'zero PV rimessi da chiunque'));
+
+  // --- 3) cio' che PUO' curare, e deve continuare a farlo: la pozione della cintura ---
+  {
+    const r = new Room('v193c'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
+    const mx = r.effMaxHp(p); p.hp = Math.floor(mx * 0.4); const prima = p.hp;
+    p.belt[0] = { id: 'p_cura', n: 1 }; p.potCd = 0;
+    r.usePotion(p, 0);
+    assert(p.hp > prima, 'la pozione di Cura cura eccome (' + Math.round(prima) + ' -> ' + Math.round(p.hp) + '/' + mx + ')');
+  }
+  ok('nessuna cura fuori posto: 0 PV rimessi da carte, ranghi, patti ed equipaggiamento');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

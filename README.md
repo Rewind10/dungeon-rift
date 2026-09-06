@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.92.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.93.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,24 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.93 (nessuna abilita', arma o armatura cura piu')
+- **🚫 Regola, non taratura.** Nessuna carta, sinergia, specializzazione, patto o pezzo di equipaggiamento
+  rimette un solo PV. Rimettersi in piedi deve costare qualcosa che si vede: monete, una carica di pozione,
+  un giro dall'Ostessa.
+- **Cosa e' sparito**: 🩸 **Vampirismo** (+9% del danno inflitto ti curava), la sinergia 🩸 **Sete di
+  Sangue** (+6%), il 🩸 **Patto Sanguinario** del Mercante Nero (+10%), la cura dell'✨ **aura del
+  Paladino** e il buff ➕ **Vigore**. Col Vampirismo divino il 25% di ogni colpo tornava in vita.
+- **🔧 E soprattutto i due campi del motore**, `stats.lifesteal` e `stats.regen`: **tolti, non azzerati**.
+  Finche' il campo esiste, prima o poi qualcosa lo riempie — ed e' cosi' che la cura era sopravvissuta a
+  tutte le pulizie precedenti.
+- **🛡 Al suo posto** (la griglia e' 2 carte per classe e rarita'): **Presa Salda** — +60% rinculo dei tuoi
+  colpi, -6% ai danni subiti — e la sinergia **Muro d'Acciaio** con Adrenalina Pura.
+- **🧪 Test 64**: prova **tutte** le carte, i ranghi, i patti e l'equipaggiamento (51 casi) *giocando* —
+  mezza vita, cinque secondi di colpi — e fallisce col nome del colpevole se i PV salgono di uno. Vale
+  anche per la carta che verra' aggiunta domani.
+- **Chi cura ancora**: Ostessa, pozioni, Bende del Viandante, Pozione di Salute a terra, ricompensa della
+  combo di 40 e Ultima Occasione. Nessuna e' un'abilita', un'arma o un'armatura.
 
 ## 🆕 Novita v1.92 (i nemici tornano a cercarti con gli occhi)
 - **🐾 Chi non ti vede VAGA, non ti cerca.** Dalla v1.80 chi non ti vedeva ti veniva a prendere lo stesso

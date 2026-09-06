@@ -205,7 +205,7 @@ si parte, cosi' si vede sempre quanto e' cambiata.
 |---|---|---|---|
 | Non comune | 🗡 **Arma Pesante** | **+25% apertura dell'arco, +18% danno** | +2 raggio · +15% (×2) |
 | Non comune | 🌵 **Aura di Spine** | riflette **25 danni + 10% del danno subito** | 12 danni (×3) |
-| Raro | 🩸 **Vampirismo** | **+9%** del danno inflitto ti cura | +4% (×3) |
+| Raro | 🛡 **Presa Salda** | **+60%** rinculo dei tuoi colpi, **-6%** ai danni subiti *(v1.93, al posto di Vampirismo)* | — |
 | Raro | 💢 **Rappresaglia** | onda di **forza 2**: piu' ampia e piu' danno | forza 1 (×3) |
 | Epico | 🔥 **Adrenalina Pura** | **+8% cadenza per uccisione, fino a +40%**, dura 3s | esiste, valori interni da fissare (×1) |
 | Epico | 🧍 **Colosso** | **+35% PV massimi** (non curano) e **+8% velocita'** | +45 PV · +6% (×2) |
@@ -270,7 +270,7 @@ Verificato sulla griglia: tutte e sei restano raggiungibili, ognuna cade dentro 
 | Sinergia | Classe | Come si ottiene |
 |---|---|---|
 | 🌊 Onda d'Urto | Guerriero | Aura di Spine (3) + Rappresaglia (6) |
-| 🩸 Sete di Sangue | Guerriero | Vampirismo (6) + Adrenalina Pura (9) |
+| 🛡 Muro d'Acciaio | Guerriero | Presa Salda (6) + Adrenalina Pura (9) |
 | 🧊 Catena Gelida | Mago | Tocco Gelido (3) + Catena di Fulmini (6) |
 | 🧪 Deflagrazione Tossica | Mago | Tossina (6, neutra) + Colpi Esplosivi (9) |
 | 🔮 Cercatore | Ladro | Perforazione (3) + Mira Guidata (9) |
@@ -288,7 +288,7 @@ attive del **livello 12** — e la specializzazione, al posto di regalarne una, 
 
 | Classe | | |
 |---|---|---|
-| Guerriero | ✨ **Paladino** — aura che cura i compagni e riduce i danni, a te e a loro | ⚔️ **Maestro d'Armi** — molta piu' cadenza e apertura del fendente, rinculo aumentato |
+| Guerriero | ✨ **Paladino** — aura che riduce i danni, a te e ai compagni *(dalla v1.93 non cura piu')* | ⚔️ **Maestro d'Armi** — molta piu' cadenza e apertura del fendente, rinculo aumentato |
 | Mago | 🔮 **Arcimago** — ogni bolla esplode ad area | 🕯️ **Stregone** — la bolla diventa un dardo che rimbalza su tre nemici a danno pieno |
 | Ladro | 🔪 **Assassino** — critico e danno critico altissimi, i colpi alle spalle sempre critici | 🎯 **Cacciatore di Teste** — ogni tiro e' un ventaglio di tre frecce perforanti |
 

@@ -11,7 +11,8 @@
     { id: 'b_speed', name: 'Fretta', icon: '💨', color: '#8bd6ff', dur: 12, desc: '+45% velocità' },
     { id: 'b_rate', name: 'Frenesia', icon: '⚡', color: '#ffd24a', dur: 12, desc: '+70% cadenza' },
     { id: 'b_shield', name: 'Egida', icon: '🛡️', color: '#7dffea', dur: 10, desc: '-50% danni' },
-    { id: 'b_regen', name: 'Vigore', icon: '➕', color: '#4bd66b', dur: 10, desc: 'Rigeneri 8 PV/s' },
+    // v1.93 — QUI C'ERA VIGORE (8 PV/s per 10 s). Nessuno lo assegnava piu' da tempo, ma era una cura
+    // pronta all'uso: tolta la definizione, non puo' rientrare per sbaglio.
     { id: 'b_quad', name: 'Salve Multiple', icon: '🔱', color: '#b061ff', dur: 10, desc: '+2 proiettili' },
   ];
 
@@ -156,9 +157,13 @@
     { id: 'ampio', name: 'Colpo Ampio', icon: '🪓', rarity: 'uncommon', hero: 'guerriero', max: 1,
       desc: 'Ogni nemico in piu colpito dal fendente aggiunge +5% danno al colpo (fino a +15%)',
       apply: p => { p.boon.ampio = 0.05; } },
-    { id: 'vampire', name: 'Vampirismo', icon: '🩸', rarity: 'rare', hero: 'guerriero', max: 1,
-      desc: '+9% del danno inflitto ti cura',
-      apply: p => { p.stats.lifesteal += 0.09; } },
+    // v1.93 — QUI C'ERA VAMPIRISMO (+9% del danno inflitto ti curava). NESSUNA carta, arma o armatura
+    // cura piu' il personaggio: rimettersi in piedi e' il mestiere dell'Ostessa e delle pozioni, e basta.
+    // Il posto non resta vuoto perche' la griglia e' 2 carte per classe e per rarita': al suo posto una
+    // rara che premia lo stesso mestiere (stare in mezzo) senza restituire un solo PV.
+    { id: 'saldo', name: 'Presa Salda', icon: '🛡', rarity: 'rare', hero: 'guerriero', max: 1,
+      desc: '+60% rinculo dei tuoi colpi e -6% ai danni subiti',
+      apply: p => { p.stats.knockMult *= 1.6; p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.06); } },
     { id: 'retaliate', name: 'Rappresaglia', icon: '💢', rarity: 'rare', hero: 'guerriero', max: 1,
       desc: 'Quando vieni colpito emetti un onda ampia che danneggia e respinge',
       apply: p => { p.boon.retaliate += 2; } },
@@ -247,7 +252,8 @@
     // v1.79.2 — Mira Guidata non esiste piu': al suo posto la coppia del ladro che ha davvero senso,
     // perforare e far sanguinare. L'emorragia arriva anche a chi sta dietro al primo bersaglio.
     { id: 'frecce_sporche', name: 'Frecce Sporche', icon: '🩸', need: ['pierce', 'lamasporca'], desc: 'L emorragia colpisce anche i nemici perforati dietro al primo', apply: p => p.boon.bleedCrit += 0.10 },
-    { id: 'bloodlust', name: 'Sete di Sangue', icon: '🩸', need: ['vampire', 'adrenaline'], desc: '+6% cura dal danno inflitto', apply: p => p.stats.lifesteal += 0.06 },
+    // v1.93 — era Sete di Sangue (vampire + adrenaline): +6% di cura dal danno inflitto. Via con Vampirismo.
+    { id: 'acciaio', name: 'Muro d\'Acciaio', icon: '🛡', need: ['saldo', 'adrenaline'], desc: '-6% in piu\' ai danni subiti', apply: p => { p.stats.dmgReduce = Math.min(0.6, p.stats.dmgReduce + 0.06); } },
     // v1.51 — legano i poteri nuovi a quelli storici
     { id: 'headhunter', name: 'Cacciatore di Teste', icon: '🎯', need: ['execute', 'spalle'], desc: 'La soglia del Colpo di Grazia sale di 6 punti', apply: p => p.boon.executeBonus = 0.06 },
     { id: 'shockwave', name: 'Onda d\'Urto', icon: '🌊', need: ['retaliate', 'ampio'], desc: 'L\'onda di Rappresaglia e\' molto piu\' ampia', apply: p => p.boon.retaliateWide = 1 },
