@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.93.5 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.96.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.96 (dall'ondata 9 se ne vedono 22 alla volta)
+- **👥 Il tetto dei vivi diventa due numeri**: **40** fino all'ottava ondata, **22 dalla nona in poi**.
+  Alla 19 erano quaranta mostri in campo insieme: non e' un combattimento, e' una calca, e la mappa
+  sotto non si vede piu'.
+- **🔢 Il totale dell'ondata non cambia di un nemico.** Cambia quanti ne hai addosso, non quanti ne devi
+  uccidere: chi non ci sta aspetta in **coda** ed entra quando ne muore uno.
+- **⏱ E l'ondata non si allunga**: con un giocatore che uccide a ritmo costante, la 15 si chiudeva in 21 s
+  e adesso in 23, la 18 in 24 e adesso in 22. Nei limiti del rumore.
+- **📉 In campo insieme, prima → dopo**: ondata 9 da 28 a **22**, 12 da 35 a **22**, 15 da 38 a **22**,
+  19 da 40 a **22**.
+- Il numero e' una riga in `constants.js` (`MAX_ALIVE_TARDI`), lo scaglione pure (`MAX_ALIVE_TARDI_DA`).
 
 ## 🆕 Novita v1.93 (nessuna abilita', arma o armatura cura piu')
 - **🚫 Regola, non taratura.** Nessuna carta, sinergia, specializzazione, patto o pezzo di equipaggiamento
@@ -206,7 +218,7 @@ scelta vale per tutta la partita.
 - **🚫 Nessuno compare addosso**: la regola della v1.76.1 vale ancora, i nemici li vedi **arrivare**.
 
 ## 🆕 Novita v1.79.2 (i nemici si vedono tutti, passive ritarate, tre Beholder)
-- **👁 Tutti i nemici in campo**: il tetto dei vivi e uno solo e alto (40). Prima una curva ne teneva 8
+- **👁 Tutti i nemici in campo**: il tetto dei vivi e uno solo e alto (40) — *dalla v1.96 vale fino all ottava ondata: dalla nona scende a 22*. Prima una curva ne teneva 8
   alla prima ondata e gli altri in coda: si aggiungevano nemici e a schermo non cambiava niente.
 - **🎴 Passive ritarate**: quasi ognuna faceva due cose, adesso ne fa una. Via la rigenerazione di Scudo
   Vitale (era una cura gratis e continua), il veleno diventa una quota del colpo.

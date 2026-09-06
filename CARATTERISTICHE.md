@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.93.5`
+**Versione attuale:** `1.96.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -345,6 +345,21 @@ mappa: un nemico deve **accorgersi** di te. Adesso ti trova con gli occhi, non c
 **Le eccezioni.** Il **Fungo Sporifero** non si muove mai: e' una sentinella, nega il terreno invece di
 inseguirti. Il **Fuoco Fatuo** attraversa i muri e va in linea retta. La **Sfera d'Ossa** rotola piano in
 giro finche' non ti trova, poi si carica e parte.
+
+### Quanti ne vedi in campo *(v1.96)*
+
+Due tetti diversi, che non vanno confusi:
+
+| | Cosa limita | Valore |
+|---|---|---|
+| **Tetto dei vivi** | quanti nemici esistono in mappa nello stesso momento | **40** fino all ondata 8, **22** dalla 9 |
+| **Tetto alla folla** | quanti di quelli ti si fanno addosso | **6** per giocatore |
+
+Il tetto dei vivi era uno solo e alto (40) dalla v1.79.2. Con le ondate di adesso, alla 19 erano quaranta
+mostri in campo insieme e la mappa non si vedeva piu'. Dalla nona scende a 22: il **totale dell ondata non
+cambia**, chi non ci sta aspetta in coda ed entra quando ne muore uno. In campo insieme, prima -> dopo:
+ondata 9 da 28 a 22, 12 da 35 a 22, 15 da 38 a 22, 19 da 40 a 22. Il tempo per chiudere l ondata resta
+quello di prima (21-24 s con un giocatore che uccide uno ogni 0,7 s).
 
 ### Il tetto alla folla *(v1.80, non toccato)*
 

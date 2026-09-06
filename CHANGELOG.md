@@ -2,6 +2,52 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.96.0] — 2026-09-06 · "Dall'ondata 9 se ne vedono 22 alla volta"
+
+Paolo: *"dall'ondata 9 fino alla 20 i nemici contemporaneamente visibili in pista scendono a 22, altrimenti
+si riempie troppo. I restanti stanno in coda e subentrano in base al totale definito per le varie ondate."*
+
+Il tetto dei vivi era **uno solo e alto** dalla v1.79.2: quaranta, uguale a ogni ondata. Era la risposta
+giusta a un problema di allora (una curva teneva nascosta meta' dell'ondata proprio dove serviva vedere che
+i nemici erano aumentati), ma con le ondate di adesso alla 19 sono **quaranta mostri in campo insieme**: non
+e' un combattimento, e' una calca, e la mappa sotto non si vede piu'.
+
+Adesso il tetto e' **due numeri**: `MAX_ALIVE` = 40 fino all'ottava, `MAX_ALIVE_TARDI` = **22 dalla nona**
+(`MAX_ALIVE_TARDI_DA`). Il meccanismo della coda non e' nuovo — e' lo stesso rifornimento di sempre.
+
+#### Quanti se ne vedono, prima e dopo (giocatore fermo, in singolo)
+| Ondata | prima | **dopo** | in coda a 90 s |
+|---|---|---|---|
+| 9 | 28 | **22** | 4 |
+| 12 | 35 | **22** | 7 |
+| 15 | 38 | **22** | 12 |
+| 18 | 39 | **22** | 19 |
+| 19 | 40 | **22** | 18 |
+
+#### Il totale non cambia di un nemico
+E' la parte che conta: cambia **quanti ne hai addosso**, non quanti ne devi uccidere. Chi non ci sta
+aspetta in coda ed entra quando ne muore uno — e la coda si svuota alla stessa velocita' di prima.
+Misurato con un giocatore che uccide a ritmo costante (uno ogni 0,7 s):
+
+| Ondata | prima | dopo |
+|---|---|---|
+| 12 | 22 s | 23 s |
+| 15 | 21 s | 23 s |
+| 18 | 24 s | 22 s |
+| 19 | 24 s | 23 s |
+
+**Il test 40, riscritto**: chiedeva *"ondata 19: il tetto e 40"*, adesso verifica i due scaglioni (40 fino
+all'8, 22 dalla 9 alla 30), che fino all'ottava in singolo ci stiano ancora tutti in campo, e che dalla nona
+il **totale resti sopra il tetto** — altrimenti la coda non servirebbe a niente. Il test 30 (rifornimento e
+coda) ora legge `room.tettoVivi()` invece della costante, perche' gira sull'ondata 17.
+
+**In gruppo** il tetto e' lo stesso: a sei giocatori le ondate sono molto piu' grosse e la coda lavora di
+piu'. Se in cooperativa 22 dovessero risultare pochi, il numero e' una riga in `constants.js`.
+
+**File toccati**: `shared/constants.js`, `server/Room.js` (`tettoVivi`), `test/simulate.js`, `package.json`.
+
+---
+
 ### [1.93.5] — 2026-09-06 · "Lo slot della E c'era, ma stava sotto"
 
 Paolo: *"nella barra di menu vedi il tasto Q ma non quello della E, va aggiunto."*

@@ -435,15 +435,18 @@ class Room {
   // v1.69 — quanti posti restano sotto il tetto dei vivi. I mostri morti sono ancora nell'array finche'
   // non viene filtrato, quindi contarli farebbe rifiutare comparse che invece ci starebbero.
   _postiLiberi() { let vivi = 0; for (const m of this.monsters) if (!m.dead) vivi++; return this.tettoVivi() - vivi; }
-  // v1.79.2 — quanti nemici possono stare in campo insieme: un numero solo, quaranta, uguale a ogni
-  // ondata. La curva che li centellinava nelle prime ondate e' stata tolta — teneva nascosta meta'
-  // dell'ondata proprio dove serviva vedere che i nemici erano aumentati. Se un giorno tornasse una
-  // curva, basta rimettere MAX_ALIVE_CURVE a un array e questa funzione la rilegge.
+  // v1.79.2 — quanti nemici possono stare in campo insieme. Era un numero solo, quaranta, uguale a ogni
+  // ondata: la curva che li centellinava nelle prime ondate era stata tolta perche' teneva nascosta meta'
+  // dell'ondata proprio dove serviva vedere che i nemici erano aumentati.
+  // v1.96 — resta vero per le prime otto ondate, ma DALLA NONA il tetto scende a MAX_ALIVE_TARDI (22).
+  // Alla 19 erano quaranta mostri in campo insieme e la mappa non si vedeva piu'. Il totale dell'ondata
+  // non cambia: chi non ci sta aspetta in coda (this.pending) ed entra quando ne muore uno.
   tettoVivi() {
-    const cur = C.MAX_ALIVE_CURVE;
-    if (!cur || !cur.length) return C.MAX_ALIVE || 40;
     const w = Math.max(1, this.wave | 0);
-    return w >= cur.length ? (C.MAX_ALIVE || 40) : cur[w - 1];
+    const cur = C.MAX_ALIVE_CURVE;
+    if (cur && cur.length) return w >= cur.length ? (C.MAX_ALIVE || 40) : cur[w - 1];
+    if (C.MAX_ALIVE_TARDI && w >= (C.MAX_ALIVE_TARDI_DA || 9)) return C.MAX_ALIVE_TARDI;
+    return C.MAX_ALIVE || 40;
   }
   _nearestPlayer(x, y) {
     let best = null, bd = Infinity;

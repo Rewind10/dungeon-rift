@@ -1731,7 +1731,8 @@ function testV168() {
   // essa la generazione — misureremmo il gameover, non la coda.
   const dt = 1 / C.TICK_RATE; let picco = 0;
   for (let i = 0; i < C.TICK_RATE * 60; i++) { p.hp = room.effMaxHp(p); p.down = false; p.dead = false; room.update(dt); picco = Math.max(picco, room.monsters.length); }
-  assert(picco <= C.MAX_ALIVE, 'in campo non ce ne sono mai piu di ' + C.MAX_ALIVE + ' (picco ' + picco + ')');
+  const tetto = room.tettoVivi();   // v1.96 — dall'ondata 9 in poi non e' piu' MAX_ALIVE: e' MAX_ALIVE_TARDI
+  assert(picco <= tetto, 'in campo non ce ne sono mai piu di ' + tetto + ' (picco ' + picco + ')');
   // nessuno sta uccidendo, quindi l'arena resta piena e la coda NON puo' svuotarsi: la prova e' che il
   // conto torni sempre — quelli che non entrano sono in coda, non spariti.
   // NB: in campo possono essercene piu' di quanti ne ha versati la coda, perche' negromanti e melme ne
@@ -1739,8 +1740,8 @@ function testV168() {
   // dei mancanti devono dire la stessa cosa, cioe' nessuno viene perso per strada.
   assert(room.waveList.length === room.pending, 'coda e contatore coincidono: nessuno perso (' + room.waveList.length + ' vs ' + room.pending + ')');
   assert(room.pending > 0, 'i nemici in eccesso stanno aspettando in coda (' + room.pending + ' di ' + totale + ')');
-  assert(totale - room.pending <= C.MAX_ALIVE, 'e ne e uscito solo quanti ne stanno in campo');
-  assert(room.monsters.length === C.MAX_ALIVE, 'l arena resta piena fino al tetto');
+  assert(totale - room.pending <= tetto, 'e ne e uscito solo quanti ne stanno in campo');
+  assert(room.monsters.length === tetto, 'l arena resta piena fino al tetto (' + tetto + ')');
   // ora si uccide: la coda deve ricominciare a versare
   for (let k = 0; k < 12; k++) { const m = room.monsters.find(x => !x.dead); if (m) room.killMonster(m, null); }
   room.monsters = room.monsters.filter(x => !x.dead);
@@ -1754,10 +1755,11 @@ function testV168() {
   r2.wave = 17; r2.phase = C.PHASE_COMBAT; r2.mode = Waves.modeForWave(17);
   const w2 = Waves.buildWave(20, 6, r2.mode); r2.waveList = w2.list; r2.waveScaling = w2.scaling; r2.pending = w2.list.length; r2._peakAlive = 0;
   const q2 = r2.players.get('c');
-  for (let i = 0; i < C.TICK_RATE * 60 && r2.monsters.length < C.MAX_ALIVE; i++) { q2.hp = r2.effMaxHp(q2); q2.down = false; q2.dead = false; r2.update(dt); }
+  const tetto2 = r2.tettoVivi();
+  for (let i = 0; i < C.TICK_RATE * 60 && r2.monsters.length < tetto2; i++) { q2.hp = r2.effMaxHp(q2); q2.down = false; q2.dead = false; r2.update(dt); }
   q2.hp = r2.effMaxHp(q2); q2.down = false; q2.dead = false; r2.update(dt);   // un tick in piu': il picco si registra a inizio update
-  assert(r2.monsters.length === C.MAX_ALIVE, 'l arena si riempie fino al tetto');
-  assert(r2._peakAlive === C.MAX_ALIVE, 'il picco raggiunto viene ricordato');
+  assert(r2.monsters.length === tetto2, 'l arena si riempie fino al tetto (' + tetto2 + ')');
+  assert(r2._peakAlive === tetto2, 'il picco raggiunto viene ricordato');
   for (let k = 0; k < 8; k++) { const m = r2.monsters.find(x => !x.dead); if (m) r2.killMonster(m, null); }
   r2.monsters = r2.monsters.filter(x => !x.dead);
   r2.spawnTimer = 0; r2.update(dt);
@@ -1863,15 +1865,26 @@ function testV169() {
 function testV170() {
   console.log('\n[TEST 40] Novita v1.70 — tetto progressivo, XP da piu fonti, LEVEL UP');
   const Lv = require('../shared/levels.js');
-  // --- 1) v1.79.2 — IL TETTO E' UNO SOLO, ALTO, UGUALE A OGNI ONDATA ---
-  // Prima era una curva (8 alla prima ondata, 30 dalla decima): teneva in coda meta' dell'ondata proprio
-  // dove serviva vedere che i nemici erano aumentati.
+  // --- 1) v1.96 — IL TETTO DEI VIVI E' DUE NUMERI: 40 fino all'ottava, 22 dalla nona ---
+  // La v1.79.2 lo aveva reso uno solo e alto (40) per non tenere nascosta meta' dell'ondata. Giusto
+  // finche' le ondate erano piccole: dalla nona in avanti quaranta mostri in campo non sono un
+  // combattimento, sono una calca, e la mappa non si vede piu'. Il TOTALE dell'ondata non cambia —
+  // l'eccesso aspetta in coda ed entra man mano che ne muore uno.
   const room = new Room('v170'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
-  assert(C.MAX_ALIVE === 40, 'il tetto dei nemici vivi e 40');
-  for (const w of [1, 2, 5, 10, 19, 30]) { room.wave = w; assert(room.tettoVivi() === 40, 'ondata ' + w + ': il tetto e 40 (letto ' + room.tettoVivi() + ')'); }
-  // e in singolo NESSUNA ondata supera il tetto: si vedono tutti, sempre
-  for (let w = 1; w <= 19; w++) if (!Waves.isBossWave(w))
+  assert(C.MAX_ALIVE === 40, 'il tetto delle prime ondate e 40');
+  assert(C.MAX_ALIVE_TARDI === 22, 'e quello dalla nona in poi e 22');
+  assert(C.MAX_ALIVE_TARDI_DA === 9, 'e scatta all ondata 9');
+  for (const w of [1, 2, 5, 8]) { room.wave = w; assert(room.tettoVivi() === 40, 'ondata ' + w + ': il tetto e 40 (letto ' + room.tettoVivi() + ')'); }
+  for (const w of [9, 10, 15, 19, 20, 30]) { room.wave = w; assert(room.tettoVivi() === 22, 'ondata ' + w + ': il tetto e 22 (letto ' + room.tettoVivi() + ')'); }
+  // fino all ottava, in singolo, si vedono ancora TUTTI in campo insieme
+  for (let w = 1; w <= 8; w++) if (!Waves.isBossWave(w))
     assert(Waves.scaling(w, 1).count <= C.MAX_ALIVE, 'ondata ' + w + ' in singolo ci sta tutta in campo (' + Waves.scaling(w, 1).count + ')');
+  // e il totale dell ondata non e stato toccato: dalla nona in poi resta sopra il tetto, ed e' il punto
+  {
+    let sopra = 0;
+    for (let w = 9; w <= 19; w++) if (!Waves.isBossWave(w) && Waves.scaling(w, 1).count > C.MAX_ALIVE_TARDI) sopra++;
+    assert(sopra >= 8, 'e dalla nona in poi il totale resta piu alto del tetto (' + sopra + ' ondate su 11): la coda serve a qualcosa');
+  }
   // --- 2) in GRUPPO le ondate crescono e l eccesso resta in coda, senza perdere nessuno ---
   const r2 = new Room('v170b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'ladro'); r2.startGame();
   r2.wave = 12; r2.mode = Waves.modeForWave(12); r2.phase = C.PHASE_COMBAT;

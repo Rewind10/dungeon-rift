@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.93.5',
+    VERSION: '1.96.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -95,6 +95,14 @@
     // diciannovesima ne ha 40), quindi si vedono tutti; in gruppo, dove le ondate scalano, l'eccesso
     // continua a entrare in coda man mano che si fa posto.
     MAX_ALIVE: 40,
+    // v1.96 — DALL'ONDATA 9 IN POI SE NE VEDONO 22 ALLA VOLTA. Il tetto unico di quaranta era giusto
+    // finche' le ondate erano piccole, ma dalla nona in avanti la mappa si riempiva: alla 19 erano
+    // quaranta mostri in campo insieme, e non e' piu' un combattimento, e' una calca. Il TOTALE
+    // dell'ondata non cambia di un nemico: quelli che non ci stanno restano in CODA ed entrano man mano
+    // che ne muore uno, come gia' faceva il rifornimento. Cambia quanti ne hai addosso, non quanti ne devi
+    // uccidere.
+    MAX_ALIVE_TARDI: 22,
+    MAX_ALIVE_TARDI_DA: 9,
     // v1.80 — TETTO ALLA FOLLA. I nemici ti cercano, ma non si fanno sotto tutti insieme: solo i
     // FOLLA_MAX piu' vicini a ciascun giocatore si avvicinano davvero. Gli altri risalgono fino
     // all'ANELLO_ATTESA e li' girano, fuori dallo sguardo, finche' non si libera un posto — e un
