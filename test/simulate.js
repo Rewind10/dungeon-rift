@@ -3305,6 +3305,10 @@ function testV180() {
   // E' il cuore della v1.92, ed e' l'esatto contrario di cio' che questo test chiedeva nella v1.80:
   // un nemico che non ti ha mai visto non deve sapere dove sei. Cammina, gira, ma non arriva.
   const room = new Room('v192'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero'); room.startGame();
+  // v1.97 — questa prova vuole la CAVERNA: dalla 1.97 le ondate 1-2 si giocano nel cimitero, che e' molto
+  // piu' aperto (2350 tessere libere contro 1370) e quindi ti fa vedere da lontano. Li' il branco arriva
+  // per un motivo giusto — ti VEDE — e non si misurerebbe piu' il vagabondaggio, si misurerebbe la mappa.
+  room.newMap(4242, 5); room.wave = 5;
   room.pending = 0; room.waveList = []; room.monsters.length = 0;
   let spot = null;
   for (let ty = 1; ty < room.map.h - 1 && !spot; ty++) for (let tx = 1; tx < room.map.w - 1; tx++) {
@@ -3345,6 +3349,7 @@ function testV180() {
 
   // --- 3) dieci scheletri sparsi NON convergono tutti su di te ---
   const r2 = new Room('v192b'); const q = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
+  r2.newMap(4343, 5); r2.wave = 5;                    // v1.97 — anche qui la caverna, non il cimitero
   r2.pending = 0; r2.waveList = []; r2.monsters.length = 0;
   let messi = 0;
   for (let k = 0; k < 90 && messi < 10; k++) {
@@ -4300,6 +4305,83 @@ function testV193() {
   ok('nessuna cura fuori posto: 0 PV rimessi da carte, ranghi, patti ed equipaggiamento');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================
+// TEST 65 — v1.97: il CIMITERO delle prime due ondate
+// ============================================================================
+function testV197() {
+  console.log('\n[TEST 65] v1.97 — il cimitero (ondate 1-2), la caverna dalla terza');
+  const MG = require('../shared/mapgen.js');
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) chi gioca dove ---
+  for (const lv of [1, 2]) assert(MG.generate(1000 + lv, lv).archetipo === 'cimitero', 'ondata ' + lv + ': si gioca nel cimitero');
+  for (const lv of [3, 7, 20]) assert(MG.generate(1000 + lv, lv).archetipo !== 'cimitero', 'ondata ' + lv + ': si torna nella caverna');
+  assert(C.CIMITERO_FINO_A === 2, 'e il confine e un numero solo, in constants (' + C.CIMITERO_FINO_A + ')');
+
+  // --- 2) la pianta regge: connessa, con le sue lapidi, e niente vulcano ---
+  for (const seed of [11, 222, 3333, 44444, 555555]) {
+    const m = MG.generate(seed, 1);
+    // connettivita': dallo spawn si deve raggiungere TUTTO il pavimento
+    const W = m.w, H = m.h, gri = m.grid;
+    const sx = (m.spawn.x / m.tile) | 0, sy = (m.spawn.y / m.tile) | 0;
+    assert(gri[sy * W + sx] !== C.T_WALL, 'seme ' + seed + ': si nasce su pavimento, non dentro una lapide');
+    const vis = new Uint8Array(W * H); const st = [sy * W + sx]; vis[st[0]] = 1; let visti = 1;
+    while (st.length) { const i = st.pop(), x = i % W, y = (i / W) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx; if (vis[j] || gri[j] === C.T_WALL) continue; vis[j] = 1; visti++; st.push(j); } }
+    let liberi = 0; for (let i = 0; i < gri.length; i++) if (gri[i] !== C.T_WALL) liberi++;
+    assert(visti === liberi, 'seme ' + seed + ': tutto il pavimento e raggiungibile (' + visti + '/' + liberi + ')');
+    // le lapidi ci sono, e sono tante: sono LORO il cimitero
+    let lap = 0, cinta = 0, pietra = 0;
+    for (let i = 0; i < gri.length; i++) { if (gri[i] !== C.T_WALL || !m.muri) continue;
+      const t = m.muri[i]; if (t === 1) lap++; else if (t === 3) cinta++; else if (t === 2) pietra++; }
+    assert(lap >= 40, 'seme ' + seed + ': le file di lapidi ci sono (' + lap + ')');
+    assert(cinta >= 200, 'seme ' + seed + ': e il muro di cinta gira tutto attorno (' + cinta + ')');
+    assert(pietra >= 10, 'seme ' + seed + ': con mausolei e muri crollati (' + pietra + ')');
+    assert(m.theme.id !== 'lava', 'seme ' + seed + ': un cimitero dentro un vulcano no (' + m.theme.name + ')');
+    assert(!!m.exit || m.enemySpawns.length > 0, 'seme ' + seed + ': la mappa e giocabile (uscita e caselle di comparsa)');
+    // spazio: il cimitero e' APERTO, ed e' il suo carattere. Se scendesse sotto la caverna sarebbe un errore.
+    assert(liberi > 1800, 'seme ' + seed + ': resta uno spazio aperto (' + liberi + ' tessere libere)');
+  }
+
+  // --- 3) i tipi delle tessere sono solo un'informazione per il renderer ---
+  // La griglia resta binaria: e' questo a permettere al cimitero di non toccare una riga di IA.
+  {
+    const m = MG.generate(9090, 1);
+    let fuoriPosto = 0;
+    for (let i = 0; i < m.grid.length; i++) if (m.grid[i] !== C.T_WALL && m.muri[i] && m.muri[i] !== 1 && m.muri[i] !== 4) fuoriPosto++;
+    assert(fuoriPosto < 40, 'i tipi restano allineati alla griglia dopo il ritocco anti-imbuto (' + fuoriPosto + ' scarti)');
+    assert(MG.generate(9090, 5).muri === null, 'e nella caverna il campo non esiste proprio');
+  }
+
+  // --- 4) SI GIOCA: trenta secondi di ondata vera nel cimitero, e nessuno resta incastrato ---
+  {
+    const room = new Room('v197'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
+    room.startGame();
+    assert(room.map.archetipo === 'cimitero', 'la prima ondata di una partita vera e nel cimitero');
+    const partenze = new Map();
+    for (let i = 0; i < C.TICK_RATE * 30; i++) {
+      p.hp = room.effMaxHp(p); p.down = false; p.dead = false;
+      room.setInput('a', { mx: 0, my: 0, aim: 0 });
+      room.update(dt);
+      for (const mo of room.monsters) if (!mo.dead && !partenze.has(mo.eid)) partenze.set(mo.eid, { x: mo.x, y: mo.y, t: i });
+    }
+    let fermi = 0, contati = 0;
+    for (const mo of room.monsters) {
+      if (mo.dead || mo.def.immobile) continue;
+      const p0 = partenze.get(mo.eid); if (!p0 || p0.t > C.TICK_RATE * 20) continue;   // e' nato da poco: non conta
+      contati++;
+      if (MU.dist(mo.x, mo.y, p0.x, p0.y) < 40) fermi++;
+    }
+    assert(contati > 3, 'ci sono abbastanza nemici per la prova (' + contati + ')');
+    assert(fermi <= contati * 0.34, 'e non restano incastrati fra le lapidi (' + fermi + ' fermi su ' + contati + ')');
+    for (const mo of room.monsters) if (!mo.dead) assert(!room.isWallAt(mo.x, mo.y), 'nessun nemico finisce dentro una tessera piena');
+  }
+  ok('cimitero verificato: connesso, giocabile, e solo per le prime due ondate');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

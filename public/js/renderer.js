@@ -282,7 +282,13 @@
       let _s = ((m.seed >>> 0) || 1) ^ 0x9e3779b9;
       const rnd = () => (_s = (_s * 1664525 + 1013904223) >>> 0) / 4294967296;
       const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1));
-      const suolo = (x, y) => x >= 0 && y >= 0 && x < W && y < H && m.grid[y * W + x] !== C.T_WALL;
+      // v1.97 — CIMITERO. Le lapidi e gli alberi secchi sono tessere-muro (cosi' collisioni, linea di
+      // vista e campo di flusso funzionano senza sapere niente di loro), ma NON sono roccia: se la
+      // cottura ci dipinge sopra la sua massa di pietra, il cimitero diventa una grotta con dei bozzi.
+      // Qui valgono come suolo — la roccia non le tocca — e poi ci si dipinge sopra la lapide vera.
+      const _mur = m.muri || null;
+      const _leggero = (x, y) => { if (!_mur) return false; const t = _mur[y * W + x]; return t === 1 || t === 4; };
+      const suolo = (x, y) => x >= 0 && y >= 0 && x < W && y < H && (m.grid[y * W + x] !== C.T_WALL || _leggero(x, y));
       const mix = (h1, h2, t) => { const a = this._hexToRgb(h1), b = this._hexToRgb(h2);
         return 'rgb(' + Math.round(a.r + (b.r - a.r) * t) + ',' + Math.round(a.g + (b.g - a.g) * t) + ',' + Math.round(a.b + (b.b - a.b) * t) + ')'; };
       // la palette esce dal TEMA, cosi' cripta, lava, ghiaccio, foresta e arcano restano diversi:
@@ -419,6 +425,120 @@
         if (!posabile(wx, wy)) continue;
         blob(wx, wy, rr(30, 62), 11, .4, .68); g.fillStyle = 'rgba(20,26,24,.24)'; g.fill(); }
     },
+    // v1.97 — LE LAPIDI, GLI ALBERI SECCHI E LA PIETRA SQUADRATA del cimitero. Si dipinge DOPO la
+    // cottura della caverna, sulla stessa tela fuori schermo: costa una volta per mappa, zero a
+    // fotogramma. La tecnica e' quella di casa — massa scura, corpo, luce dall'alto a sinistra, poi
+    // pochi bordi netti — perche' un cimitero disegnato a poligoni piatti stonerebbe con tutto il resto.
+    _dipingiCimitero(g, m, T, th) {
+      const mur = m.muri; if (!mur) return;
+      const W = m.w, H = m.h;
+      let _s = ((m.seed >>> 0) || 7) ^ 0x85ebca6b;
+      const rnd = () => (_s = (_s * 1664525 + 1013904223) >>> 0) / 4294967296;
+      const rr = (a, b) => a + rnd() * (b - a);
+      const mix = (h1, h2, t) => { const a = this._hexToRgb(h1), b = this._hexToRgb(h2);
+        return 'rgb(' + Math.round(a.r + (b.r - a.r) * t) + ',' + Math.round(a.g + (b.g - a.g) * t) + ',' + Math.round(a.b + (b.b - a.b) * t) + ')'; };
+      const chiaro = '#c9d2dc', scuro = '#0a0e14';
+      const PIETRA = mix(th.wallTop || '#262d4a', chiaro, .40);
+      const PIETRA_S = mix(th.wall || '#1b2036', scuro, .30);
+      const PIETRA_L = mix(th.wallTop || '#262d4a', chiaro, .62);
+      const INK = mix(scuro, th.wall || '#1b2036', .18);
+      const LEGNO = mix('#3a2c22', chiaro, .18), LEGNO_L = mix('#3a2c22', chiaro, .42);
+      const MUSCO = mix(th.accent || '#4d6b46', scuro, .42);
+
+      // (1) LE LAPIDI. Una tessera ciascuna, un po' storte, tre sagome diverse: stele arrotondata,
+      //     croce, lastra spezzata. L'ombra cade sempre dallo stesso lato — e' quella a farle "stare in
+      //     piedi" invece che sembrare disegnate sul pavimento.
+      const lapide = (px, py) => {
+        const cx = px + T / 2 + rr(-4, 4), cy = py + T / 2 + rr(-3, 3);
+        const w = T * rr(0.40, 0.52), h = T * rr(0.52, 0.68);
+        const rot = rr(-0.16, 0.16);
+        const forma = rnd();
+        g.save(); g.translate(cx, cy); g.rotate(rot);
+        g.fillStyle = 'rgba(0,0,0,.42)';                     // l'ombra, prima di tutto
+        g.beginPath(); g.ellipse(w * 0.22, h * 0.42, w * 0.62, h * 0.24, 0, 0, 6.29); g.fill();
+        g.fillStyle = PIETRA; g.strokeStyle = INK; g.lineWidth = 2.1; g.lineJoin = 'round';
+        g.beginPath();
+        if (forma < 0.62) {                                   // stele: spalle tonde
+          g.moveTo(-w / 2, h / 2); g.lineTo(-w / 2, -h * 0.18);
+          g.quadraticCurveTo(-w / 2, -h / 2, 0, -h / 2);
+          g.quadraticCurveTo(w / 2, -h / 2, w / 2, -h * 0.18);
+          g.lineTo(w / 2, h / 2); g.closePath();
+        } else if (forma < 0.85) {                            // croce
+          const b = w * 0.30, br = w * 0.52, ay = -h * 0.06;
+          g.moveTo(-b, h / 2); g.lineTo(-b, ay + b); g.lineTo(-br, ay + b); g.lineTo(-br, ay - b * 0.5);
+          g.lineTo(-b, ay - b * 0.5); g.lineTo(-b, -h / 2); g.lineTo(b, -h / 2); g.lineTo(b, ay - b * 0.5);
+          g.lineTo(br, ay - b * 0.5); g.lineTo(br, ay + b); g.lineTo(b, ay + b); g.lineTo(b, h / 2); g.closePath();
+        } else {                                              // lastra spezzata: manca un angolo
+          g.moveTo(-w / 2, h / 2); g.lineTo(-w / 2, -h * 0.38); g.lineTo(w * 0.10, -h / 2);
+          g.lineTo(w / 2, -h * 0.10); g.lineTo(w / 2, h / 2); g.closePath();
+        }
+        g.fill(); g.stroke();
+        g.fillStyle = PIETRA_L;                               // la luce sul bordo sinistro
+        g.fillRect(-w / 2 + 2, -h * 0.30, w * 0.16, h * 0.72);
+        g.fillStyle = PIETRA_S;                               // e l'ombra propria a destra
+        g.fillRect(w / 2 - w * 0.20, -h * 0.24, w * 0.16, h * 0.70);
+        if (rnd() < 0.45) { g.fillStyle = MUSCO; g.globalAlpha = 0.5;   // muschio alla base
+          g.beginPath(); g.ellipse(rr(-w * 0.2, w * 0.2), h * 0.36, w * 0.3, h * 0.10, 0, 0, 6.29); g.fill(); g.globalAlpha = 1; }
+        g.restore();
+      };
+
+      // (2) GLI ALBERI SECCHI: due o tre rami storti che partono da un tronco. Niente foglie — quelle
+      //     coprirebbero il gioco, e un cimitero d'inverno e' piu' credibile.
+      const albero = (px, py) => {
+        const cx = px + T / 2, cy = py + T / 2;
+        g.save(); g.translate(cx, cy);
+        g.fillStyle = 'rgba(0,0,0,.38)';
+        g.beginPath(); g.ellipse(4, 6, T * 0.34, T * 0.16, 0, 0, 6.29); g.fill();
+        g.strokeStyle = INK; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.lineWidth = T * 0.20; g.beginPath(); g.moveTo(0, T * 0.30); g.lineTo(rr(-3, 3), -T * 0.10); g.stroke();
+        g.strokeStyle = LEGNO; g.lineWidth = T * 0.13;
+        g.beginPath(); g.moveTo(0, T * 0.30); g.lineTo(rr(-3, 3), -T * 0.10); g.stroke();
+        for (let k = 0, n = 2 + (rnd() < 0.5 ? 1 : 0); k < n; k++) {
+          const a = -1.9 + rr(-0.7, 0.7) + k * 1.2, L = T * rr(0.22, 0.36);
+          g.strokeStyle = INK; g.lineWidth = T * 0.11;
+          g.beginPath(); g.moveTo(0, -T * 0.06); g.lineTo(Math.cos(a) * L, -T * 0.06 + Math.sin(a) * L); g.stroke();
+          g.strokeStyle = LEGNO_L; g.lineWidth = T * 0.06;
+          g.beginPath(); g.moveTo(0, -T * 0.06); g.lineTo(Math.cos(a) * L, -T * 0.06 + Math.sin(a) * L); g.stroke();
+        }
+        g.restore();
+      };
+
+      // (3) LA PIETRA SQUADRATA: mausolei, cappelle, muro di cinta. Sopra la roccia gia' cotta si
+      //     disegnano i CONCI — e' il solo modo di distinguere un muro costruito da una parete di grotta.
+      const concio = (px, py, x, y) => {
+        const dentro = (dx, dy) => { const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) return true;
+          return m.grid[ny * W + nx] === C.T_WALL; };
+        g.save(); g.beginPath(); g.rect(px, py, T, T); g.clip();
+        g.fillStyle = PIETRA_S; g.fillRect(px, py, T, T);
+        const rows = 2, hh = T / rows;
+        for (let r = 0; r < rows; r++) {
+          const off = ((y * rows + r) % 2) * (T * 0.25);
+          for (let bx = -1; bx <= 2; bx++) {
+            const X = px + off + bx * (T * 0.5), Y = py + r * hh;
+            g.fillStyle = mix(PIETRA, PIETRA_S, rnd() * 0.55);
+            g.fillRect(X + 1.2, Y + 1.2, T * 0.5 - 2.4, hh - 2.4);
+            g.fillStyle = 'rgba(255,255,255,.06)';
+            g.fillRect(X + 1.2, Y + 1.2, T * 0.5 - 2.4, 2);
+          }
+        }
+        if (!dentro(0, -1)) { g.fillStyle = PIETRA_L; g.fillRect(px, py, T, 3); }      // la faccia in luce
+        if (!dentro(0, 1)) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(px, py + T - 3, T, 3); }
+        g.strokeStyle = INK; g.lineWidth = 1.6; g.strokeRect(px + 0.8, py + 0.8, T - 1.6, T - 1.6);
+        g.restore();
+      };
+
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = y * W + x, t = mur[i];
+        if (!t) continue;
+        if (m.grid[i] !== C.T_WALL && t !== 1 && t !== 4) continue;   // demolita da allargaPerBoss: non c'e' piu'
+        if (m.grid[i] !== C.T_WALL) continue;
+        const px = x * T, py = y * T;
+        if (t === 1) lapide(px, py);
+        else if (t === 4) albero(px, py);
+        else concio(px, py, x, y);
+      }
+    },
     _bake() {
       const m = this.map; if (!m) return; const T = m.tile; const th = this.theme || {};
       const fA = th.floorA || '#12161f', fB = th.floorB || '#151a26', wl = th.wall || '#1b2036', wt = th.wallTop || '#262d4a', hz = th.hazard || '#ff5a1e', tint = th.tint || 'rgba(60,90,60,.15)';
@@ -439,6 +559,7 @@
       // villaggio (m.market) tiene la sua, che e' fatta apposta per le micro-stanze.
       const _nuova = !m.market;
       if (_nuova) this._bakeCaverna(g, m, T, th);
+      if (_nuova && m.muri) this._dipingiCimitero(g, m, T, th);   // v1.97 — lapidi, alberi secchi, conci
       else { g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height); }
       if (!_nuova) for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_WALL) continue; const px = x * T, py = y * T; g.save(); g.beginPath(); g.rect(px, py, T, T); g.clip(); g.fillStyle = wallPat; g.fillRect(px, py, T, T); g.restore(); }
       // v1.75 — IL PAVIMENTO DI OGNI STANZA. Il villaggio non e' piu' una sala sola: la taverna ha le assi,

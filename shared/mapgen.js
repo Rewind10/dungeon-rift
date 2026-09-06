@@ -315,21 +315,174 @@
     return ultima;
   }
 
+  // ===================== v1.97 — LA PIANTA DEL CIMITERO (ondate 1-2) =====================
+  // Perche' esiste: fino alla 1.96 ogni mappa di combattimento veniva dalla stessa funzione — una
+  // caverna scavata con dentro masse di roccia. Cambiavano palette e decorazioni, ma lo SPAZIO era
+  // sempre quello, e dopo venti ondate si sente. Il cimitero e' la prima pianta alternativa, e per
+  // cominciare vale solo per le prime due ondate: e' li' che il giocatore si forma l'idea del gioco.
+  //
+  // L'idea, in una riga: un cimitero non e' roba sparsa, e' SETTORI separati da VIALETTI, e dentro
+  // ogni settore file regolari. E' l'ORDINE che si legge a occhio a dire "questo non e' una grotta" —
+  // la caverna e' tutta disordine organico, qui ci sono linee rette e ripetizioni.
+  //
+  // La griglia resta BINARIA (pavimento/muro) perche' collisioni, linea di vista e campo di flusso
+  // devono continuare a funzionare senza sapere niente di lapidi. Cio' che le lapidi hanno in piu' e'
+  // un array parallelo `muri`, che dice al RENDERER come dipingere quella tessera: e' l'unico posto in
+  // cui il cimitero esiste come tale.
+  const M_ROCCIA = 0, M_LAPIDE = 1, M_PIETRA = 2, M_CINTA = 3, M_ALBERO = 4;
+
+  function piantaCimitero(rng) {
+    const rr = (a, b) => a + rng() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1));
+    const g = new Uint8Array(W * H).fill(C.T_FLOOR);
+    const muri = new Uint8Array(W * H);
+    const set = (x, y, tipo) => { if (x < 0 || y < 0 || x >= W || y >= H) return; g[idx(x, y)] = C.T_WALL; muri[idx(x, y)] = tipo; };
+    const libera = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return; g[idx(x, y)] = C.T_FLOOR; muri[idx(x, y)] = 0; };
+    const pieno = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : g[idx(x, y)] === C.T_WALL;
+    const rett = (x0, y0, w, h, tipo) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) set(x, y, tipo); };
+    const vuota = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) libera(x, y); };
+
+    // (1) IL MURO DI CINTA. E' la prima cosa che dice "cimitero", prima delle lapidi: c'e' un dentro e
+    //     un fuori. Non e' chiuso — tre o quattro brecce lo rompono, se no e' una scatola.
+    rett(0, 0, W, 2, M_CINTA); rett(0, H - 2, W, 2, M_CINTA);
+    rett(0, 0, 2, H, M_CINTA); rett(W - 2, 0, 2, H, M_CINTA);
+    for (let b = 0, n = ri(3, 5); b < n; b++) {
+      const lato = ri(0, 3), lung = ri(5, 8);
+      if (lato === 0) vuota(ri(6, W - 14), 0, lung, 2);
+      else if (lato === 1) vuota(ri(6, W - 14), H - 2, lung, 2);
+      else if (lato === 2) vuota(0, ri(5, H - 13), 2, lung);
+      else vuota(W - 2, ri(5, H - 13), 2, lung);
+    }
+
+    // (2) I SETTORI. Si taglia l'area interna in blocchi, e fra un blocco e l'altro resta un VIALETTO di
+    //     3-4 tessere — largo abbastanza da farci passare anche il boss piu' grosso (raggio 52).
+    //     I vialetti non si disegnano: sono lo spazio che i settori non occupano. E' per questo che si
+    //     leggono come strade invece che come corridoi scavati.
+    const settori = [];
+    (function taglia(x, y, w, h, prof) {
+      const minimo = 8;
+      if (prof >= 4 || (w < minimo * 2 && h < minimo * 2) || (prof >= 3 && rng() < 0.3)) { settori.push({ x, y, w, h }); return; }
+      const viale = ri(3, 4);
+      const orizz = h > w ? true : (w > h ? false : rng() < 0.5);
+      if (orizz && h >= minimo * 2 + viale) {
+        const t = ri(minimo, h - minimo - viale);
+        taglia(x, y, w, t, prof + 1); taglia(x, y + t + viale, w, h - t - viale, prof + 1);
+      } else if (!orizz && w >= minimo * 2 + viale) {
+        const t = ri(minimo, w - minimo - viale);
+        taglia(x, y, t, h, prof + 1); taglia(x + t + viale, y, w - t - viale, h, prof + 1);
+      } else settori.push({ x, y, w, h });
+    })(3, 3, W - 6, H - 6, 0);
+
+    // (3) OGNI SETTORE HA IL SUO MESTIERE. Tre, e sono tre modi diversi di combattere:
+    //     il MAUSOLEO e' una stanza vera (ci entri, e dentro puo' esserci qualcosa);
+    //     le ROVINE sono muri crollati, cioe' COPERTURA da cui ripararsi;
+    //     le FILE DI LAPIDI bloccano il tiro ma non il passo — ci giri intorno in un passo solo, ed e'
+    //     l'esatto contrario della roccia della caverna.
+    const passoY = ri(3, 4);   // la distanza fra le file: uguale in tutto il cimitero, come nella realta'
+    for (const s of settori) {
+      const sorte = rng();
+      if (sorte < 0.24 && s.w >= 6 && s.h >= 5) {
+        const w = Math.min(s.w, ri(6, 9)), h = Math.min(s.h, ri(5, 7));
+        const x = s.x + ((s.w - w) / 2 | 0), y = s.y + ((s.h - h) / 2 | 0);
+        rett(x, y, w, h, M_PIETRA); vuota(x + 1, y + 1, w - 2, h - 2);
+        const lato = ri(0, 3);   // la porta, larga 2: ci passa un giocatore, non un boss
+        if (lato === 0) vuota(x + (w / 2 | 0) - 1, y, 2, 1);
+        else if (lato === 1) vuota(x + (w / 2 | 0) - 1, y + h - 1, 2, 1);
+        else if (lato === 2) vuota(x, y + (h / 2 | 0) - 1, 1, 2);
+        else vuota(x + w - 1, y + (h / 2 | 0) - 1, 1, 2);
+        continue;
+      }
+      if (sorte < 0.32) {
+        const verso = rng() < 0.5;
+        for (let k = 0, n = ri(3, 6); k < n; k++) {
+          const lung = ri(3, 6);
+          const x = s.x + ri(1, Math.max(1, s.w - 2)), y = s.y + ri(1, Math.max(1, s.h - 2));
+          for (let i = 0; i < lung; i++) {
+            if (rng() < 0.22) continue;                       // il muro e' crollato: ha dei buchi
+            const xx = verso ? x + i : x, yy = verso ? y : y + i;
+            if (xx < s.x || yy < s.y || xx >= s.x + s.w || yy >= s.y + s.h) break;
+            if (!pieno(xx, yy)) set(xx, yy, M_PIETRA);
+          }
+        }
+        for (let k = 0, n = ri(1, 3); k < n; k++) {
+          const x = s.x + ri(1, Math.max(1, s.w - 2)), y = s.y + ri(1, Math.max(1, s.h - 2));
+          if (!pieno(x, y)) set(x, y, M_ALBERO);
+        }
+        continue;
+      }
+      const vecchio = rng() < 0.33;                            // un settore su tre e' abbandonato
+      const cappella = rng() < 0.28 && s.w >= 7 && s.h >= 6;
+      let cx = -9, cy = -9, cw = 0, ch = 0;
+      if (cappella) { cw = ri(3, 4); ch = ri(3, 4); cx = s.x + ((s.w - cw) / 2 | 0); cy = s.y + ((s.h - ch) / 2 | 0); }
+      for (let y = s.y + 1; y < s.y + s.h - 1; y += passoY) {
+        for (let x = s.x + 1; x < s.x + s.w - 1; x += 2) {
+          if (cappella && x >= cx - 1 && x <= cx + cw && y >= cy - 1 && y <= cy + ch) continue;
+          if (vecchio && rng() < 0.28) continue;               // buchi: nessuna fila e' intera
+          const jy = vecchio && rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0;   // e nessuna e' dritta
+          if (pieno(x, y + jy)) continue;
+          set(x, y + jy, M_LAPIDE);
+        }
+      }
+      if (cappella) {
+        rett(cx, cy, cw, ch, M_PIETRA); vuota(cx + 1, cy + 1, cw - 2, ch - 2);
+        if (cw > 2 && ch > 2) libera(cx + (cw / 2 | 0), cy + ch - 1);
+      }
+    }
+
+    // (4) LE FOSSE. Una o due chiazze tonde che cancellano le file e rompono la griglia: senza, il posto
+    //     ha l'aria di un foglio a quadretti invece che di un cimitero.
+    for (let k = 0, n = ri(1, 3); k < n; k++) {
+      const cx = ri(8, W - 9), cy = ri(8, H - 9), r = ri(3, 5);
+      for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
+        const d = Math.hypot(x - cx, y - cy) + rng() * 0.9;
+        if (d <= r && pieno(x, y) && (muri[idx(x, y)] === M_LAPIDE || muri[idx(x, y)] === M_ALBERO)) libera(x, y);
+      }
+    }
+
+    // le "camere" servono al resto di generate() per sapere dove mettere le cose: qui sono i centri dei
+    // settori, che e' esattamente cio' che le camere sono nella caverna.
+    const camere = settori.map(s => ({ x: s.x + s.w / 2, y: s.y + s.h / 2 }));
+    return { g, camere, archetipo: 'cimitero', muri, settori };
+  }
+
   function generate(seed, level) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
-    const theme = THEMES[Math.floor(rng() * THEMES.length)];
+    let theme = THEMES[Math.floor(rng() * THEMES.length)];
     const TILE = C.TILE, cxm = W >> 1, cym = H >> 1;
     // v1.22 — CONFORMAZIONE ORGANICA (caverna varia, non "piatta"): blob di muro + connettivita garantita
     // v1.76 — la pianta arriva da piantaCaverna(): caverna scavata + masse a scolpire le camere,
     // con zero tessere-strozzatura garantite. Il vecchio blocco (massi a caso + apertura dei muri
     // per connettivita') stava qui e produceva sempre la stessa mappa: e' scritto sopra il perche'.
-    const _p = piantaCaverna(rng, level);
+    // v1.97 — DUE PIANTE, NON PIU' UNA. Le prime due ondate si giocano in un CIMITERO (settori, vialetti,
+    // file di lapidi); dalla terza in poi torna la caverna di sempre. Il punto non e' la varieta' per la
+    // varieta': e' che le prime due ondate sono quelle in cui il giocatore si fa un'idea del gioco, e
+    // aprire dentro una grotta o dentro un camposanto non e' la stessa promessa.
+    const _cim = level <= (C.CIMITERO_FINO_A || 2);
+    const _p = _cim ? piantaCimitero(rng) : piantaCaverna(rng, level);
     const grid = _p.g; const camere = _p.camere; const archetipo = _p.archetipo;
+    // il tipo di ogni tessera-muro (lapide, pietra squadrata, cinta, albero): lo legge SOLO il renderer.
+    // La griglia resta binaria, quindi collisioni, linea di vista e campo di flusso non sanno niente di
+    // tutto questo — ed e' il motivo per cui il cimitero non tocca una riga di IA.
+    const muriTipo = _p.muri || null;
+    // il cimitero non si gioca dentro un vulcano: dei cinque temi restano i quattro che gli somigliano,
+    // e la zona prende un nome suo — quello che compare in alto a sinistra quando la mappa nasce.
+    if (_cim) {
+      const adatti = THEMES.filter(t => t.id !== 'lava');
+      const t = adatti[Math.floor(rng() * adatti.length)];
+      const nomi = { crypt: 'Il Vecchio Camposanto', forest: 'Il Cimitero Sommerso', ice: 'Il Campo di Gelo', arcane: 'Il Sepolcreto Arcano' };
+      theme = Object.assign({}, t, { name: nomi[t.id] || 'Il Vecchio Camposanto' });
+    }
     let seen;   // la usa il blocco di sicurezza qui sotto (murare le sacche staccate)
-    widenForBoss(grid); // v1.28 — garantisce corridoi >= 3 tile per il passaggio dei boss
-    allargaPerBoss(grid);   // v1.76 — e allarga i restringimenti sottili, senza demolire le masse
+    // v1.97 — QUESTE TRE FUNZIONI SONO SCRITTE PER LA CAVERNA, e sul cimitero fanno danno.
+    // widenForBoss() allarga ogni corridoio stretto e togliStrozzature() toglie gli imbuti: una LAPIDE
+    // isolata in mezzo a un vialetto e' esattamente un imbuto, quindi la prima passata se ne mangiava
+    // l'85% (misurato: da 155 lapidi a 19). Nel cimitero il passaggio e' garantito per COSTRUZIONE — i
+    // vialetti fra i settori sono larghi 3-4 tessere e nessun settore tocca la cinta — quindi qui non
+    // servono. Resta allargaPerBoss(), che non demolisce niente a caso: scava solo se il grafo delle
+    // celle larghe e' spezzato, e sul cimitero non lo e' mai. Ed e' la rete di sicurezza che serve.
+    if (!_cim) { widenForBoss(grid); allargaPerBoss(grid); }
+    else allargaPerBoss(grid);
     ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
-    togliStrozzature(grid); // v1.76 — e questa e' l'ultima parola: zero imbuti, misurato dai test
+    if (!_cim) togliStrozzature(grid); // v1.76 — e questa e' l'ultima parola: zero imbuti, misurato dai test
     const free = []; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] === C.T_FLOOR && seen[i]) free.push({ x, y, i, cd: 0 }); }
     const isW = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : grid[idx(x, y)] === C.T_WALL;
     const nearWall = (c) => isW(c.x - 1, c.y) || isW(c.x + 1, c.y) || isW(c.x, c.y - 1) || isW(c.x, c.y + 1);
@@ -538,7 +691,7 @@
       for (let i = 0; i < W * H; i++) if (dist[i] >= 0) out[i] = Math.max(0, 2 * M - M * dist[i]);
       return Array.from(out);
     })();
-    return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
+    return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, muri: muriTipo ? Array.from(muriTipo) : null, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
   }
 
   // ===================== v1.56 — MAPPA MERCATO: un VILLAGGIO, non una caverna =====================

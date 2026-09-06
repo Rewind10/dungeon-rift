@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.96.1`
+**Versione attuale:** `1.97.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -324,6 +324,39 @@ verra' aggiunta domani.
 | ❤️ **Pozione di Salute** a terra | va raccolta |
 | 🔥 **Combo di 40** | +25% PV: va costruita una catena di quaranta uccisioni |
 | ⏳ **Ultima Occasione** (carta divina) | non cura: invece di cadere, risorgi a meta' vita. Due volte |
+
+---
+
+## 🪦 IL CIMITERO *(v1.97 — ondate 1 e 2)*
+
+Dalla v1.97 le piante sono **due**. Le prime due ondate si giocano in un **cimitero**, dalla terza torna
+la **caverna** di sempre (`CIMITERO_FINO_A` in constants: alzalo, abbassalo, o mettilo a 0 e sparisce).
+
+Un cimitero non e roba sparsa: e **settori** separati da **vialetti**, e dentro ogni settore **file
+regolari**. E l ordine a dire che non e una grotta — la caverna e tutta disordine organico.
+
+| Pezzo | Cosa fa, giocando |
+|---|---|
+| **Muro di cinta** | ce un dentro e un fuori; tre-cinque brecce lo rompono |
+| **Vialetti** (3-4 tessere) | le strade: ci passa anche il boss piu grosso |
+| **File di lapidi** | **bloccano il tiro ma non il passo**: ci giri intorno in un passo |
+| **Mausolei** | stanze vere con una porta: ci si entra |
+| **Rovine** | muri crollati: copertura |
+| **Fosse** | chiazze tonde che cancellano le file e rompono la griglia |
+
+**La griglia resta binaria.** Le lapidi sono tessere-muro normali; il loro TIPO viaggia in un array
+parallelo che legge solo il renderer. Percio il cimitero non ha toccato una riga di IA, di collisioni o
+di pathfinding.
+
+**Due funzioni della caverna qui sono spente**:  e  vedono una lapide
+isolata come un imbuto e se ne mangiavano l 85% (da 155 a 19, misurato). Nel cimitero il passaggio e
+garantito per costruzione.
+
+**E piu APERTO della caverna**: ~2350 tessere libere contro ~1370. Ci si vede da lontano, quindi i nemici
+ti trovano prima — alle ondate 1-2, con pochi nemici in campo, e un buon inizio.
+
+**I temi scendono a quattro** (via la lava) e la zona prende un nome suo: *Il Vecchio Camposanto*,
+*Il Cimitero Sommerso*, *Il Campo di Gelo*, *Il Sepolcreto Arcano*.
 
 ---
 

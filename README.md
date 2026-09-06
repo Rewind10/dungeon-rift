@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.96.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.97.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,23 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.97 (il cimitero delle prime due ondate)
+- **🪦 La prima pianta che non e' una grotta.** Fino alla 1.96 ogni mappa di combattimento veniva dalla
+  stessa funzione — una caverna scavata. Le **ondate 1 e 2** adesso si giocano in un **cimitero**; dalla
+  terza torna la caverna di sempre. Il confine e' un numero solo: `CIMITERO_FINO_A` in `constants.js`.
+- **📐 Com'e' fatto**: settori separati da vialetti (3-4 tessere: ci passa anche il boss piu' grosso),
+  dentro file regolari di **lapidi**, e poi **mausolei** in cui si entra, **muri crollati** da cui
+  ripararsi, **fosse** che rompono la griglia. E' l'ordine — linee rette, ripetizioni — a farlo sembrare
+  un altro gioco: la caverna e' tutta disordine organico.
+- **🎯 Le lapidi bloccano il tiro ma non il passo**: ci giri intorno in un passo solo. E' l'opposto della
+  roccia, e cambia chi ci guadagna — il mago perde le linee lunghe, il guerriero no.
+- **🧩 Zero righe di IA toccate**: la griglia resta binaria e i tipi delle tessere (lapide, cinta, pietra,
+  albero) viaggiano in un array che legge **solo il renderer**.
+- **🖌️ Il disegno costa zero a fotogramma**: lapidi, alberi secchi e conci squadrati si dipingono una volta
+  per mappa sulla stessa tela fuori schermo della caverna.
+- **🌫️ E' molto piu' aperto della caverna** (2350 tessere libere contro 1370): ci si vede da lontano, e
+  quindi i nemici ti trovano prima. Alle prime due ondate e' un buon modo di cominciare.
 
 ## 🆕 Novita v1.96 (dall'ondata 9 se ne vedono 22 alla volta)
 - **👥 Il tetto dei vivi diventa due numeri**: **40** fino all'ottava ondata, **22 dalla nona in poi**.

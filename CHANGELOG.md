@@ -2,6 +2,69 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.97.0] — 2026-09-06 · "Il cimitero: la prima pianta che non e' una grotta"
+
+Paolo: *"prova a creare il cimitero, che verra' usato solo per le prime 2 ondate; poi dalla terza fino
+alla 20 usiamo la grotta."*
+
+Fino a ieri **ogni** mappa di combattimento veniva dalla stessa funzione: una caverna scavata con dentro
+masse di roccia. Cambiavano palette e decorazioni, ma lo spazio era sempre quello. Adesso le piante sono
+**due**, e la prima cosa che il giocatore vede non e' piu' una grotta.
+
+#### Come e' fatto
+Un cimitero non e' roba sparsa: e' **settori** separati da **vialetti**, e dentro ogni settore **file
+regolari**. E' l'ordine — linee rette, ripetizioni — a dire "questo non e' una caverna", perche' la
+caverna e' tutta disordine organico.
+
+| Pezzo | Cosa fa |
+|---|---|
+| **Muro di cinta** | c'e' un dentro e un fuori. Tre-cinque brecce lo rompono: e' un recinto, non una scatola |
+| **Settori** (un BSP) | fra un blocco e l'altro resta un vialetto di 3-4 tessere. I vialetti non si disegnano: sono lo spazio che i settori non occupano |
+| **File di lapidi** | una lapide, uno spazio, una lapide. **Bloccano il tiro ma non il passo** — ci giri intorno in un passo, l'opposto della roccia |
+| **Mausolei** | stanze vere, con una porta: ci entri |
+| **Rovine** | muri crollati e spezzati: copertura da cui ripararsi |
+| **Fosse** | una o due chiazze tonde che cancellano le file, se no ha l'aria di un foglio a quadretti |
+
+Un settore su tre e' "vecchio": le file sbandano e hanno dei buchi.
+
+#### La griglia resta binaria, ed e' il punto
+Le lapidi sono **tessere-muro normali**. Il tipo di ciascuna (lapide, pietra squadrata, cinta, albero
+secco) viaggia in un array parallelo `m.muri` che legge **solo il renderer**. Percio' collisioni, linea di
+vista e campo di flusso non sanno niente del cimitero, e **non e' stata toccata una riga di IA**.
+
+#### Due funzioni della caverna qui fanno danno
+`widenForBoss()` allarga ogni corridoio stretto e `togliStrozzature()` toglie gli imbuti. Una lapide
+isolata in mezzo a un vialetto **e'** un imbuto: la prima passata se ne mangiava l'85% — misurato, da 155
+lapidi a 19. Nel cimitero il passaggio e' garantito per costruzione (vialetti da 3-4 tessere, nessun
+settore attaccato alla cinta), quindi li' non servono. Resta `allargaPerBoss()`, che non demolisce niente
+a caso — scava solo se il grafo delle celle larghe e' spezzato — ed e' la rete di sicurezza.
+
+#### Il disegno
+Lapidi (stele, croci, lastre spezzate, un po' storte, con l'ombra sempre dallo stesso lato), alberi secchi
+e **conci squadrati** per mausolei e cinta: e' quello a distinguere un muro costruito da una parete di
+grotta. Si dipinge **dopo la cottura della caverna, sulla stessa tela fuori schermo**: costa una volta per
+mappa, **zero a fotogramma**. E i temi scendono da cinque a quattro — un cimitero dentro un vulcano no —
+con un nome di zona suo: *Il Vecchio Camposanto*, *Il Cimitero Sommerso*, *Il Campo di Gelo*, *Il Sepolcreto Arcano*.
+
+#### Una conseguenza che non avevo previsto
+Il cimitero e' molto piu' **aperto** della caverna: **2350 tessere libere contro 1370**. Con meno pareti la
+linea di vista e' lunga, quindi i nemici ti **vedono** da molto piu' lontano — e chi ti vede viene addosso
+comunque, per la regola della v1.92. Alle ondate 1-2, con pochi nemici, e' un buon inizio di partita; ma e'
+il motivo per cui il **test 56** (il vagabondaggio) adesso si genera la caverna a mano: li' si misura l'IA,
+e su una mappa aperta si misurerebbe la mappa.
+
+#### Il test 65
+Verifica che le ondate 1-2 siano cimitero e la 3, la 7 e la 20 no; che da ogni seme **tutto il pavimento
+sia raggiungibile dallo spawn**; che le lapidi ci siano davvero (>= 40 per mappa), la cinta giri tutta
+attorno e il tema non sia mai la lava. Poi **gioca**: trenta secondi di ondata vera, e nessun nemico deve
+restare incastrato fra le lapidi (non piu' di un terzo fermo) ne' finire dentro una tessera piena.
+
+**File toccati**: `shared/mapgen.js` (`piantaCimitero`, l'aggancio, i temi), `shared/constants.js`
+(`CIMITERO_FINO_A`), `public/js/renderer.js` (`_dipingiCimitero` e la cottura), `test/simulate.js`
+(test 65 nuovo, test 56 adattato), `package.json`.
+
+---
+
 ### [1.96.1] — 2026-09-06 · "La modalita' di prova si nasconde, non si toglie"
 
 Paolo: *"nascondi il link all'ambiente di test. Non rimuoverlo, potrebbe servirmi."*
