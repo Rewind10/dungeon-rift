@@ -2,6 +2,17 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.3] — 2026-09-06 · "Il menu torna al centro"
+
+Il pannello del menu stava in alto dalla v1.86.2 (`justify-content:flex-start` piu' 4vh di margine):
+serviva quando la velatura spegneva la fascia bassa dell'illustrazione e il pannello centrato lasciava un
+vuoto sotto. Con l'immagine intera della 1.93.2 quel motivo non esiste piu', e centrato ci sta meglio —
+il titolo dipinto resta sopra, gli eroi a destra, il portale a sinistra.
+
+**File toccati**: `public/style.css`, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.93.2] — 2026-09-06 · "L'immagine e basta"
 
 Paolo, sulla 1.93.1: *"l'effetto fa cagare... bastava prendere l'immagine in fullHD e metterla come sfondo

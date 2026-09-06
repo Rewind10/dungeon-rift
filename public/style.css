@@ -9,11 +9,11 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
    c'e', il gradiente della riga sopra resta visibile e il menu funziona identico: niente riquadro rotto.
    Sopra l'illustrazione c'e' una VELATURA a due strati — una vignettatura radiale e una sfumatura
    verticale — che serve a una cosa sola: tenere leggibile il pannello senza spegnere l'artwork. */
-/* v1.86.2 — il menu sta IN ALTO, non al centro: la card e' corta dalla 1.86.1 e centrata verticalmente
-   lasciava una fascia vuota sotto. In alto, l'illustrazione respira sotto il pannello invece che
-   attorno. */
+/* v1.93.3 — il menu torna CENTRATO, in orizzontale e in verticale. Dalla 1.86.2 stava in alto
+   (justify-content:flex-start + 4vh di margine): serviva quando la velatura spegneva la fascia bassa
+   dell'illustrazione e il pannello in mezzo lasciava un vuoto sotto. Con l'immagine intera della 1.93.2
+   quel motivo non c'e' piu', e il pannello al centro sta meglio. */
 #menu,#lobby{overflow:hidden}
-#menu{justify-content:flex-start;padding-top:4vh}
 #menu .menu-card{max-height:none}
 /* v1.93.2 — L'IMMAGINE E BASTA. Fino alla 1.93.1 questo strato faceva tre cose che nessuno aveva
    chiesto: partiva 2,5% fuori dai bordi, era ancorato al 44% invece che al centro, e derivava piano
