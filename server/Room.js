@@ -171,15 +171,62 @@ class Room {
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
   setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
 
-  startGame() {
+  // v1.91 — `da` e' la MODALITA' DI PROVA: si parte direttamente dall'ondata voluta invece di rifare
+  // quattordici livelli per vedere come si comporta il quindicesimo. Il personaggio non parte nudo — non
+  // direbbe niente sulla giocabilita' — ma con l'esperienza, le monete e l'equipaggiamento che a quel
+  // punto della partita avrebbe: vedi _preparaProva().
+  startGame(da) {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
+    da = Math.max(1, Math.min(C.PROVA_MAX_ONDATA || 20, (da | 0) || 1));
     // v1.82 — una run nuova parte SENZA compagnia: il mercenario e' un ingaggio di questa partita, e
 //     startGame() rimette a uno il livello di tutti i giocatori in camera — mercenario compreso, che si
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
     for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = { q: null, e: null }; p.abilDovute = []; p.cdQ = 0; p.cdE = 0; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
-    this.runStart = this.time; this.newMap((Math.random() * 1e9) | 0, 1); this.nextWave();
+    this.runStart = this.time;
+    this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
+    if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
+    this.newMap((Math.random() * 1e9) | 0, da); this.nextWave();
+  }
+  // Il personaggio come sarebbe arrivato a quell'ondata: esperienza (quindi livello, punti e scelte in
+  // coda), monete e l'equipaggiamento che uno si sarebbe comprato. Le scelte in sospeso si prendono da
+  // sole — la prima offerta — se no si entrerebbe in campo col pannello aperto.
+  _preparaProva(p, onda) {
+    // Il livello che a quell'ondata si ha davvero: la curva e' tarata perche' il 2 arrivi entro la
+    // seconda ondata, il primo scaglione (3) entro la quarta e il tetto (15) nell'ultimo quarto — e'
+    // scritto in PROGRESSIONE.md. Invece di rifare la somma dell'XP si punta dritti al livello.
+    const liv = Math.max(1, Math.min(Lv.MAX_LEVEL, Math.round(1 + (onda - 1) * 0.95)));
+    p.xpPool = 0; p.level = 1; p.points = 0; p.scaglioniDovuti = []; p.abilDovute = [];
+    this.addXp(p, Lv.xpForLevel(liv));
+    p.coins = Math.round(68 * (onda - 1));
+    // l'equipaggiamento: il rango che a quel punto ci si sarebbe potuti permettere
+    const rango = onda >= 16 ? 4 : onda >= 11 ? 3 : onda >= 6 ? 2 : 1;
+    for (const slot of Gear.slotsFor(p.heroId)) {
+      const l = Gear.itemsFor(p.heroId, slot); const it = l[Math.min(rango, l.length) - 1];
+      if (it) { p.gear[slot] = it.id; p.owned[it.id] = 1; }
+    }
+    this._recomputeGear(p);
+    // le scelte in coda si risolvono da sole, se no si entra in campo col pannello aperto
+    let giri = 0;
+    while (((p.scaglioniDovuti && p.scaglioniDovuti.length) || (p.abilDovute && p.abilDovute.length)) && giri++ < 12) {
+      const fase = this.phase; this.phase = C.PHASE_SHOP;
+      this.offerBoon(p);
+      if (p.boonOffer && p.boonOffer.length) this.pickBoon(p.id, p.boonOffer[0]);
+      else { p.scaglioniDovuti = []; p.abilDovute = []; }
+      this.phase = fase;
+    }
+    // i punti statistica si spendono da soli, in ordine, se no restano in mano e il personaggio e' finto
+    const stat = Loot.XP_STATS;
+    const fase2 = this.phase; this.phase = C.PHASE_SHOP;      // buyStat lavora solo a negozio aperto
+    let g2 = 0, fermi = 0;
+    while (p.points > 0 && g2 < 60 && fermi < stat.length) {
+      const st = stat[g2 % stat.length]; const pr = p.points;
+      this.buyStat(p.id, st.id); g2++;
+      fermi = p.points === pr ? fermi + 1 : 0;                 // statistica al tetto: si passa alla prossima
+    }
+    this.phase = fase2;
+    p.hp = this.effMaxHp(p);
   }
   nextWave() {
     this.wave++;

@@ -28,7 +28,7 @@ attach(server, (conn) => {
     switch (m.t) {
       case C.MSG.HELLO: { room = m.room ? getRoom(m.room) : joinable(); if (room.players.size >= C.MAX_PLAYERS) { conn.send(JSON.stringify({ t: 'full' })); conn.close(); return; } const p = room.addPlayer(pid, conn, m.name, m.hero); joined = true; conn.send(JSON.stringify({ t: C.MSG.WELCOME, id: pid, room: room.id, map: room.map, phase: room.phase, wave: room.wave, players: [...room.players.values()].map(x => ({ i: x.id, n: x.name, h: x.heroId })) })); room.broadcast({ t: C.MSG.EVENT, ev: { t: 'join', id: pid, name: p.name, count: room.players.size } }); break; }
       case C.MSG.INPUT: if (room) room.setInput(pid, m); break;
-      case 'start': if (room) room.startGame(); break;
+      case 'start': if (room) room.startGame(m.wave | 0); break;   // v1.91 — `wave` = modalita' di prova
       case C.MSG.BUY_STAT: if (room) room.buyStat(pid, m.id); break;
       case C.MSG.BUY_GEAR: if (room) room.buyGear(pid, m.id); break;
       case C.MSG.BUY_MERCHANT: if (room) { if (m.dark) room.buyDark(pid, m.id); else room.buyMerchant(pid, m.id); } break;

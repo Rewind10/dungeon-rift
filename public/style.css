@@ -54,6 +54,13 @@ button.primary{width:100%;margin-top:16px;color:#04121f;background:linear-gradie
 button.primary:hover{filter:brightness(1.08)}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);width:100%;margin-top:8px}
 #menuMsg{margin-top:10px;min-height:18px;font-size:14px;color:var(--gold);text-align:center}
+/* v1.91 — la griglia della modalita' di prova */
+#provaGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 2px}
+.pw{padding:9px 0;font-size:14px;font-weight:800;border-radius:9px;background:rgba(28,32,51,.7);border:1px solid rgba(146,164,214,.20);color:#cfd7ea;transition:.12s}
+.pw:hover{background:rgba(58,160,255,.22);border-color:var(--accent);transform:translateY(-1px)}
+.pw.boss{color:#ffd27a;border-color:rgba(255,176,32,.45)}
+.pw.boss:hover{background:rgba(255,176,32,.22);border-color:var(--gold)}
+.help.prova summary{color:var(--accent2)}
 .credits{margin-top:16px;color:#8d97ae;font-size:12px;text-shadow:0 1px 8px rgba(0,0,0,.95);letter-spacing:.3px}
 #heroSelect{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .hero-chip{background:rgba(28,32,51,.66);border:2px solid rgba(146,164,214,.18);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative}

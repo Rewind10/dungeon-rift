@@ -140,6 +140,8 @@
     // v1.85 — la specializzazione del livello 15 non regala piu' un'abilita' (adesso si scelgono al 6
     // e al 12): alza la POTENZA di quelle che hai. Vale su danno, assorbimento e cura delle abilita'.
     SPEC_ABIL_MULT: 1.30,
+    // v1.91 — MODALITA' DI PROVA: dal menu si puo' partire da un'ondata qualunque fino a questa.
+    PROVA_MAX_ONDATA: 20,
     RARITY: {
       common: { name: 'Comune', color: '#b8c0cc', weight: 60, mult: 1.00 },
       uncommon: { name: 'Non comune', color: '#4bd66b', weight: 26, mult: 1.18 },

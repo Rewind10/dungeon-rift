@@ -9,7 +9,7 @@
     connect(name, hero, room) { const pr = location.protocol === 'https:' ? 'wss' : 'ws'; this.ws = new WebSocket(pr + '://' + location.host); this.ws.onopen = () => { this.send({ t: C.MSG.HELLO, name, hero, room: room || '' }); this._ping(); }; this.ws.onmessage = e => this._recv(e.data); this.ws.onclose = () => { this.connected = false; if (this.onClose) this.onClose(); }; this.ws.onerror = () => {}; },
     send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
     sendInput(i) { i.t = C.MSG.INPUT; this.send(i); },
-    start() { this.send({ t: 'start' }); },
+    start(wave) { this.send({ t: 'start', wave: wave | 0 }); },   // v1.91 — wave>1 = prova da quell'ondata
     buyStat(id) { this.send({ t: C.MSG.BUY_STAT, id }); },
     buyGear(id) { this.send({ t: C.MSG.BUY_GEAR, id }); },
     buyMerchant(id, dark) { this.send({ t: C.MSG.BUY_MERCHANT, id, dark: dark ? 1 : 0 }); },

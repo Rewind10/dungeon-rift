@@ -8,6 +8,21 @@
   const EVO_NAME = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; if (w.evo) EVO_NAME[w.evo.id] = { name: w.evo.name, icon: w.icon, color: w.evo.color }; }
   const HUD = {
     selectedHero: 'guerriero', _boons: null, _stats: null, _gear: null, _active: [],
+    // v1.91 — la griglia della modalita' di prova: un pulsante per ondata. Le ondate col boss sono
+    // marcate, perche' sono quelle che uno vuole provare per prime.
+    buildProva(max, cb) {
+      const g = $('provaGrid'); if (!g) return;
+      g.innerHTML = '';
+      const BOSS = { 10: 1, 20: 1 };
+      for (let n = 1; n <= max; n++) {
+        const el = document.createElement('button');
+        el.className = 'pw' + (BOSS[n] ? ' boss' : '');
+        el.textContent = BOSS[n] ? (n + ' ☠') : String(n);
+        el.title = BOSS[n] ? ('Ondata ' + n + ' — boss') : ('Ondata ' + n);
+        el.onclick = () => cb(n);
+        g.appendChild(el);
+      }
+    },
     buildHeroSelect(cb) { const w = $('heroSelect'); w.innerHTML = ''; HORDER.forEach(id => { const h = HERO[id]; const el = document.createElement('div'); el.className = 'hero-chip' + (id === this.selectedHero ? ' sel' : ''); el.style.setProperty('--pick', h.color); el.innerHTML = `<div class="avatar" style="background:${h.color2};color:${h.accent}">${HeroIcon[id]}</div><div class="hname">${h.name}</div><div class="hrole">${h.title}</div>`; el.onclick = () => { this.selectedHero = id; this.buildHeroSelect(cb); this.showHeroDetail(id); if (cb) cb(id); }; w.appendChild(el); }); this.showHeroDetail(this.selectedHero); },
     // v1.66 — la scheda non mostra piu' Q/E (rimosse): al loro posto l'ARMA e la statistica che la governa,
     // che sono le due cose da sapere per scegliere la classe adesso.

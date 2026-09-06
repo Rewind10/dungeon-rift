@@ -6,9 +6,32 @@
   const $ = (id) => document.getElementById(id);
   const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
-  function initMenu() { $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100); HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero; $('connectBtn').onclick = () => { A.resume(); const name = $('nameInput').value.trim() || 'Eroe'; const room = $('roomInput').value.trim(); G.meHero = HUD.selectedHero; $('menuMsg').textContent = 'Connessione…'; Net.connect(name, G.meHero, room); }; }
+  function initMenu() {
+    $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100);
+    HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero;
+    $('connectBtn').onclick = () => { G.provaOnda = 0; entra($('roomInput').value.trim()); };
+    // v1.91 — MODALITA' DI PROVA: venti pulsanti, uno per ondata. Serve a guardare prestazioni e
+    // giocabilita' di un'ondata alta senza rigiocare le quattordici che vengono prima. Si entra in una
+    // stanza tutta propria (nome a caso) e la run parte da sola: niente sala d'attesa da attraversare.
+    HUD.buildProva((C.PROVA_MAX_ONDATA || 20), (n) => {
+      G.provaOnda = n;
+      entra('prova' + n + '-' + Math.floor(Math.random() * 9000 + 1000));
+    });
+  }
+  function entra(room) {
+    A.resume();
+    const name = $('nameInput').value.trim() || 'Eroe';
+    G.meHero = HUD.selectedHero;
+    $('menuMsg').textContent = G.provaOnda ? ('Prova dall\u2019ondata ' + G.provaOnda + '\u2026') : 'Connessione\u2026';
+    Net.connect(name, G.meHero, room);
+  }
 
-  Net.onWelcome = (m) => { $('menu').classList.add('hidden'); R.setMap(m.map); if (m.phase === C.PHASE_LOBBY) showLobby(m.players); else enterGame(); };
+  Net.onWelcome = (m) => {
+    $('menu').classList.add('hidden'); R.setMap(m.map);
+    // in prova non si passa dalla sala d'attesa: si e' soli e la run parte subito dall'ondata scelta
+    if (G.provaOnda && m.phase === C.PHASE_LOBBY) { Net.start(G.provaOnda); return; }
+    if (m.phase === C.PHASE_LOBBY) showLobby(m.players); else enterGame();
+  };
   Net.onMap = (m) => { R.setMap(m.map); HUD.zoneName(m.map && m.map.theme); };   // v1.62 — nome della zona in HUD
   Net.onFull = () => { $('menuMsg').textContent = 'Stanza piena, riprova.'; };
   Net.onClose = () => { $('menuMsg').textContent = 'Connessione persa.'; };
