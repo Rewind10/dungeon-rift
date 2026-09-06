@@ -2,6 +2,31 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.2] — 2026-09-06 · "L'immagine e basta"
+
+Paolo, sulla 1.93.1: *"l'effetto fa cagare... bastava prendere l'immagine in fullHD e metterla come sfondo
+senza zoomare o tagliare."*
+
+Aveva ragione, e il difetto era tutto mio. L'illustrazione era gia' fatta su misura, **1920x1080**, e lo
+strato che la mostrava faceva tre cose che nessuno aveva chiesto — tre modi diversi di zoomarla e tagliarla:
+
+| Cosa faceva | Ora |
+|---|---|
+| `inset:-2.5%` — partiva fuori dai bordi | `inset:0` |
+| `center 44%` — ancorata sopra il centro | `center center` |
+| `artDrift` — deriva di 48 s con scala fino a **1,055** | tolta |
+| velatura a **tre** sfumature (fascia centrale scura, cielo spento, vignettatura) | **un velo uniforme al 22%** |
+
+La velatura in particolare risolveva un problema che il pannello risolve gia' da solo: ha il fondo
+semitrasparente e la sfocatura, non gli serve che si spenga meta' illustrazione dietro.
+
+Il titolo dipinto in alto e il nastro in basso adesso si vedono — e va bene cosi': e' l'immagine, intera,
+alla sua risoluzione, senza una riga di CSS che le giri intorno.
+
+**File toccati**: `public/style.css`, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.93.1] — 2026-09-06 · "La key art nuova sul menu e sulla sala d'attesa"
 
 L'illustrazione di Paolo portata a **1920x1080** (`public/assets/art/menu_key_art_1080.jpg`) e messa come

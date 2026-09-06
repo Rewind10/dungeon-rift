@@ -15,23 +15,19 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
 #menu,#lobby{overflow:hidden}
 #menu{justify-content:flex-start;padding-top:4vh}
 #menu .menu-card{max-height:none}
-/* L'artwork sta su un suo strato: cosi' puo' respirare (deriva lentissima, 48s) senza trascinarsi
-   dietro il pannello. Se il file manca resta il gradiente scuro e il menu funziona identico. */
-#menu::after,#lobby::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
-  /* v1.93.1 — la key art nuova porta un titolo DIPINTO in alto (fino al 24% dell'altezza) e il nastro
-     'Tales of Valor & Magic' in basso (dal 90%): tutti e due spuntavano da dietro il pannello, e il
-     titolo finiva per vedersi due volte. Stringere l'inquadratura li toglieva ma tagliava mezza scena,
-     quindi restano dentro e li SPEGNE LA VELATURA qui sotto: niente zoom, niente perdita di nitidezza. */
-  background:url('/assets/art/menu_key_art_1080.jpg') center 44%/cover no-repeat;
-  animation:artDrift 48s ease-in-out infinite alternate}
-@keyframes artDrift{from{transform:scale(1.0) translate3d(0,0,0)}to{transform:scale(1.055) translate3d(-1.1%,-0.9%,0)}}
-/* La velatura scurisce LA FASCIA CENTRALE — quella dietro al pannello — e lascia accese le due fasce
-   laterali, che sono l'unica parte dell'illustrazione che si vede davvero. La prima versione faceva
-   l'opposto (vignettatura radiale: centro aperto, bordi spenti) e spegneva proprio gli eroi. */
-#menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:
-  linear-gradient(90deg,rgba(5,6,10,.10) 0%,rgba(5,6,10,.06) 16%,rgba(5,6,10,.42) 34%,rgba(5,6,10,.62) 50%,rgba(5,6,10,.42) 66%,rgba(5,6,10,.06) 84%,rgba(5,6,10,.10) 100%),
-  linear-gradient(180deg,rgba(5,6,10,.995) 0%,rgba(5,6,10,.99) 19%,rgba(5,6,10,.92) 24%,rgba(5,6,10,.52) 31%,rgba(5,6,10,.13) 41%,rgba(5,6,10,.16) 58%,rgba(5,6,10,.50) 78%,rgba(5,6,10,.88) 87%,rgba(5,6,10,.99) 93%,rgba(5,6,10,.995) 100%),
-  radial-gradient(1500px 950px at 50% 50%,rgba(5,6,10,0) 58%,rgba(5,6,10,.30) 84%,rgba(5,6,10,.60) 100%)}
+/* v1.93.2 — L'IMMAGINE E BASTA. Fino alla 1.93.1 questo strato faceva tre cose che nessuno aveva
+   chiesto: partiva 2,5% fuori dai bordi, era ancorato al 44% invece che al centro, e derivava piano
+   con una scala fino a 1,055. Tre modi diversi di zoomare e tagliare un'illustrazione gia' fatta su
+   misura, 1920x1080. Adesso: bordi esatti, centro esatto, nessuna animazione. Se il file manca resta
+   il gradiente scuro della riga sopra e il menu funziona identico. */
+#menu::after,#lobby::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:url('/assets/art/menu_key_art_1080.jpg') center center/cover no-repeat}
+/* v1.93.2 — E LA VELATURA IDEM: un velo uniforme leggero, e basta. Serve solo a staccare il pannello
+   dall'illustrazione — che poi il pannello ha per conto suo lo sfondo semitrasparente e la sfocatura.
+   Le tre sfumature di prima (fascia centrale scura, cielo spento, vignettatura) spegnevano meta'
+   immagine per risolvere un problema che il pannello risolve gia' da solo. */
+#menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:rgba(5,6,10,.22)}
 #menu>*,#lobby>*{position:relative;z-index:2}
 .menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,rgba(17,21,36,.70),rgba(8,11,22,.86));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid rgba(146,164,214,.20);border-radius:var(--radius);padding:26px 28px;
   box-shadow:0 40px 110px rgba(0,0,0,.78),0 0 60px rgba(0,240,200,.05),inset 0 1px 0 rgba(255,255,255,.07)}
