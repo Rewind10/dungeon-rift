@@ -2,6 +2,31 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.1] — 2026-09-06 · "La key art nuova sul menu e sulla sala d'attesa"
+
+L'illustrazione di Paolo portata a **1920x1080** (`public/assets/art/menu_key_art_1080.jpg`) e messa come
+sfondo del **menu principale** e della **sala d'attesa**. L'originale arrivava a 1376x768: tolti 11 px di
+larghezza per farla 16:9 esatti (6 a sinistra, 5 a destra, niente tocca titolo o personaggi), ingrandimento
+Lanczos 1,4x e una passata leggera di nitidezza. Un fattore cosi' basso non sgrana. Il file precedente
+(`menu_key_art.jpg`) resta nella cartella.
+
+#### Il problema che ha creato, e come e' stato risolto
+La nuova key art ha un **titolo dipinto** in alto (fino al 24% dell'altezza) e il nastro *Tales of Valor &
+Magic* in basso (dal 90%): con l'inquadratura di prima spuntavano tutti e due da dietro il pannello, e
+"DUNGEON RIFT" si leggeva **due volte**, una dipinta e una scritta.
+
+Il primo tentativo — stringere l'inquadratura (`auto 160%`, ancoraggio al 70%) — li toglieva ma tagliava
+via meta' scena: restava il guerriero gigante e basta. Visto in uno screenshot, non calcolato.
+
+La strada giusta era la **velatura**, che il menu ha gia' dalla v1.86: l'immagine resta intera e a
+risoluzione piena, e la sfumatura verticale sale a **0,99 di opacita' sopra il 19%** e sotto l'87%. Titolo
+dipinto e nastro spariscono nel buio, la scena — portale, drago verde, i tre eroi, le rovine — si vede
+tutta. Nessuno zoom, nessuna perdita di nitidezza.
+
+**File toccati**: `public/style.css` (inquadratura e velatura), il nuovo asset, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.93.0] — 2026-09-06 · "Nessuna abilita', arma o armatura cura piu'"
 
 Paolo: *"Ci sono ancora abilita' e/o armi o armature che curano il personaggio: il guerriero divino si

@@ -512,7 +512,8 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   // v1.86 — l'artwork del menu: il CSS lo carica, e il gradiente di prima resta come rete di sicurezza
   {
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
-    ok(css.indexOf("url('/assets/art/menu_key_art.jpg')") > 0, 'il menu carica l artwork da assets/art/menu_key_art.jpg');
+    // v1.93.1 — l'artwork e' la key art nuova, portata a 1920x1080
+    ok(css.indexOf("url('/assets/art/menu_key_art_1080.jpg')") > 0, 'il menu carica l artwork da assets/art/menu_key_art_1080.jpg');
     ok(css.indexOf('#menu::before') > 0, 'e ci mette sopra la velatura che tiene leggibile il pannello');
     ok(css.indexOf('radial-gradient(1200px 800px at 50% -10%') > 0, 'il gradiente scuro resta: senza il file il menu non si rompe');
   }

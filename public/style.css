@@ -4,7 +4,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .hidden{display:none !important}
 canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#05060a;cursor:crosshair}
 #menu,#lobby,#endScreen,#upgradeScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:40;background:radial-gradient(1200px 800px at 50% -10%,#161a2e 0%,#080910 60%,#05060a 100%)}
-/* v1.86 — L'ARTWORK DEL MENU. L'immagine sta in /assets/art/menu_key_art.jpg (1920x1080). Se il file non
+/* v1.86 — L'ARTWORK DEL MENU. v1.93.1: l'illustrazione e' menu_key_art_1080.jpg, la nuova key art
+   portata a 1920x1080 (la precedente, menu_key_art.jpg, resta nella cartella). Se il file non
    c'e', il gradiente della riga sopra resta visibile e il menu funziona identico: niente riquadro rotto.
    Sopra l'illustrazione c'e' una VELATURA a due strati — una vignettatura radiale e una sfumatura
    verticale — che serve a una cosa sola: tenere leggibile il pannello senza spegnere l'artwork. */
@@ -17,7 +18,11 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
 /* L'artwork sta su un suo strato: cosi' puo' respirare (deriva lentissima, 48s) senza trascinarsi
    dietro il pannello. Se il file manca resta il gradiente scuro e il menu funziona identico. */
 #menu::after,#lobby::after{content:'';position:absolute;inset:-2.5%;z-index:0;pointer-events:none;
-  background:url('/assets/art/menu_key_art.jpg') center 44%/cover no-repeat;
+  /* v1.93.1 — la key art nuova porta un titolo DIPINTO in alto (fino al 24% dell'altezza) e il nastro
+     'Tales of Valor & Magic' in basso (dal 90%): tutti e due spuntavano da dietro il pannello, e il
+     titolo finiva per vedersi due volte. Stringere l'inquadratura li toglieva ma tagliava mezza scena,
+     quindi restano dentro e li SPEGNE LA VELATURA qui sotto: niente zoom, niente perdita di nitidezza. */
+  background:url('/assets/art/menu_key_art_1080.jpg') center 44%/cover no-repeat;
   animation:artDrift 48s ease-in-out infinite alternate}
 @keyframes artDrift{from{transform:scale(1.0) translate3d(0,0,0)}to{transform:scale(1.055) translate3d(-1.1%,-0.9%,0)}}
 /* La velatura scurisce LA FASCIA CENTRALE — quella dietro al pannello — e lascia accese le due fasce
@@ -25,7 +30,7 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
    l'opposto (vignettatura radiale: centro aperto, bordi spenti) e spegneva proprio gli eroi. */
 #menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:
   linear-gradient(90deg,rgba(5,6,10,.10) 0%,rgba(5,6,10,.06) 16%,rgba(5,6,10,.42) 34%,rgba(5,6,10,.62) 50%,rgba(5,6,10,.42) 66%,rgba(5,6,10,.06) 84%,rgba(5,6,10,.10) 100%),
-  linear-gradient(180deg,rgba(5,6,10,.52) 0%,rgba(5,6,10,.04) 26%,rgba(5,6,10,.14) 58%,rgba(5,6,10,.82) 100%),
+  linear-gradient(180deg,rgba(5,6,10,.995) 0%,rgba(5,6,10,.99) 19%,rgba(5,6,10,.92) 24%,rgba(5,6,10,.52) 31%,rgba(5,6,10,.13) 41%,rgba(5,6,10,.16) 58%,rgba(5,6,10,.50) 78%,rgba(5,6,10,.88) 87%,rgba(5,6,10,.99) 93%,rgba(5,6,10,.995) 100%),
   radial-gradient(1500px 950px at 50% 50%,rgba(5,6,10,0) 58%,rgba(5,6,10,.30) 84%,rgba(5,6,10,.60) 100%)}
 #menu>*,#lobby>*{position:relative;z-index:2}
 .menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,rgba(17,21,36,.70),rgba(8,11,22,.86));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid rgba(146,164,214,.20);border-radius:var(--radius);padding:26px 28px;
