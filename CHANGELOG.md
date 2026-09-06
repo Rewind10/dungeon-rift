@@ -2,6 +2,90 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.92.0] — 2026-09-06 · "I nemici tornano a cercarti con gli occhi"
+
+Paolo: *"i nemici devono tornare al comportamento precedente, quello in cui girano per la mappa
+casualmente fino a quando non entri nel campo visivo. Ai livelli piu' alti avere tutti i nemici che
+conoscono la tua posizione e vengono ad attaccarti in massa e' troppo difficile."*
+
+Aveva ragione, e il difetto non era solo di difficolta': era di **idea**. Dalla v1.80 chi non ti vedeva
+ti **cercava** lo stesso, seguendo il campo di flusso verso tutti i giocatori vivi. Funzionava fin troppo
+bene — l'ondata intera sapeva sempre dove sei — e toglieva al gioco la cosa che rende viva una mappa:
+un nemico deve **accorgersi** di te.
+
+#### Che cosa cambia, in una riga
+`AI.caccia()` non segue piu' il flusso: **vaga**. Chi non ti vede sceglie un punto raggiungibile a caso e
+ci cammina, finche' non entri nel suo campo visivo (`sightRange` + linea di vista libera) — com'era fino
+alla v1.79. Il nome della funzione resta, perche' e' il punto in cui passano tutti i comportamenti:
+cambia cosa fa, non chi la chiama.
+
+#### Che cosa NON cambia
+Il **tetto alla folla** della v1.80 resta intero: solo i `FOLLA_MAX` = 6 piu' vicini hanno il permesso di
+farsi sotto, e chi e' oltre l'`ANELLO_ATTESA` = 900 px rientra (adesso con un `seek` diretto, non piu'
+passando dalla caccia). Serve a una cosa sola: che l'ondata resti **a portata di esplorazione** invece di
+dissolversi in un angolo della mappa. Restano anche la memoria dell'ultima posizione vista (`def.memory`,
+~3,5 s), l'investigazione, il Fungo Sporifero immobile e la regola "non compaiono, arrivano" della v1.76.1.
+
+#### La misura — giocatore FERMO, in singolo, nemici entro 620 px
+| | v1.91 (ti cercano) | **v1.92 (vagano)** |
+|---|---|---|
+| Ondata 1, dopo 45 s | 12 su 12 | **0 su 12** |
+| Ondata 6, dopo 60 s | 6 su 20 | **7 su 20** |
+| Ondata 12, dopo 60 s | 18 su 33 | **14 su 33** |
+
+E con un giocatore che **esplora** (tre semi, media), l'ondata si incontra lo stesso — cambia il momento:
+
+| | v1.91 | **v1.92** |
+|---|---|---|
+| Ondata 12, addosso a 15 s | 11,0 | **5,7** |
+| Ondata 12, incontrati a 90 s | 24 su 29 | **22,7 su 32** |
+| Ondata 16, addosso a 15 s | 8,3 | **6,7** |
+
+La differenza vera e' **all'inizio dell'ondata**: alla 12 il branco che ti trova nei primi quindici
+secondi si dimezza. Su tutta la durata i nemici li incontri comunque — ma perche' sei andato a cercarli.
+
+#### Il test 56, riscritto
+Chiedeva l'opposto: *"in 40 s ti raggiunge partendo da 976 px al buio"*. Adesso verifica che chi non ti ha
+mai visto **non arrivi**, e lo fa senza misurare la distanza minima — vagando a caso, una volta ogni tanto
+ti capita addosso davvero, ed e' giusto cosi'. Misura il **modo**: o ti vede, o vaga; il terzo stato della
+v1.80 non esiste piu'. Piu' due controlli che restano: non si accalcano (mai piu' di 6) e non si
+dissolvono (media entro 1,6 anelli).
+
+**File toccati**: `shared/ai.js` (caccia, attesa, commento della Sfera d'Ossa), `test/simulate.js` (test 56),
+`shared/constants.js`, `package.json`, e i .md.
+
+---
+
+### [1.91.0] — 2026-09-06 · "Modalita' di prova: si parte dall'ondata che vuoi"
+
+Paolo: *"ho bisogno di una modalita' di test per testare tutte le ondate... devo provare prestazioni e
+giocabilita' ma senza rifare i livelli decine di volte."*
+
+Nel menu principale, sotto **ENTRA IN PARTITA**, c'e' un pannello a scomparsa **"Modalita' di prova"** con
+**venti pulsanti**, uno per ondata (la 10 e la 20 marcate ☠ perche' sono i boss). Si clicca e si gioca:
+stanza tutta propria, niente sala d'attesa, la run parte dall'ondata scelta.
+
+#### Il personaggio non parte nudo
+Sarebbe stato inutile: alla 16 con l'equipaggiamento della 1 non si prova niente. `_preparaProva()`
+ricostruisce il personaggio che a quel punto **avresti**:
+
+| | come si ricava |
+|---|---|
+| **Livello** | `1 + (onda - 1) x 0,95`, arrotondato e limitato al massimo |
+| **Punti statistica** | spesi tutti, a rotazione sulle statistiche del livello |
+| **Passive e abilita'** | tutte quelle dovute fino a quel livello, prese dalla prima offerta |
+| **Equipaggiamento** | rango 1/2/3/4 secondo l'ondata (1-5, 6-10, 11-15, 16+) |
+| **Monete** | 68 per ondata saltata |
+
+Verificato in un browser vero (server reale + client headless): cliccando la **12** si arriva a
+*Ondata 12/20, Lv.11 Campione, 375 PV, 748 monete, Q sbloccata, E chiusa fino al 14*, senza errori.
+
+**File toccati**: `shared/constants.js` (`PROVA_MAX_ONDATA`), `server/Room.js` (`startGame(da)`,
+`_preparaProva`), `server/index.js`, `public/js/net.js`, `public/js/main.js`, `public/js/hud.js`
+(`buildProva`), `public/index.html`, `public/style.css`.
+
+---
+
 ### [1.90.2] — 2026-09-05 · "Dove finiva il frame rate"
 
 Paolo ha visto cali di fluidita' **dall'ondata 11 in poi**, quando entrano i ragni. Misurato invece che

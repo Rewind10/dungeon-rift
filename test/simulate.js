@@ -3258,33 +3258,44 @@ function testBeholder179() {
 // te, piu' piano di chi ti vede. Le due cose da provare sono che ARRIVA e che NON COMPARE.
 // ============================================================================
 function testV180() {
-  console.log('\n[TEST 56] v1.80 — i nemici ti cercano, ma non si fanno sotto tutti insieme');
+  console.log('\n[TEST 56] v1.92 — chi non ti vede VAGA, e non ti si accalca addosso');
   const dt = 1 / C.TICK_RATE;
   const AI = require('../shared/ai.js');
 
-  // --- 1) la caccia esiste, e va piu' piano dell'inseguimento a vista ---
+  // --- 1) la caccia della v1.80 non punta piu' verso di te: vaga ---
+  // Il contesto finto dice che il giocatore e' esattamente a destra (flusso 1,0 e nearest a +900 px).
+  // Chi CACCIAVA partiva dritto in quella direzione. Chi VAGA sceglie a caso: su venti mostri appena
+  // nati la direzione media verso il giocatore deve essere prossima allo zero.
   assert(typeof AI.caccia === 'function', 'shared/ai.js espone la caccia');
   {
     const fake = { dt, flowStep: () => ({ x: 1, y: 0, d: 5 }), nearest: () => ({ x: 900, y: 0, radius: 14 }), isWallAt: () => false, losClear: () => true };
-    const a = { x: 0, y: 0, mx: 0, my: 0, speed: 100, def: {} };
+    let somma = 0, verso = 0, fermi = 0, vmax = 0;
+    for (let k = 0; k < 20; k++) {
+      const a = { x: 0, y: 0, mx: 0, my: 0, speed: 100, def: {} };
+      AI.caccia(a, fake, 0.75);
+      const v = Math.hypot(a.mx, a.my); if (v < 1) fermi++; if (v > vmax) vmax = v;
+      if (v > 0) { const c = a.mx / v; somma += c; if (c > 0.5) verso++; }
+    }
+    const medio = somma / 20;
+    assert(fermi === 0, 'chi vaga si muove davvero (nessuno dei 20 e resta fermo)');
+    assert(Math.abs(medio) < 0.5, 'ma non verso di te: direzione media ' + medio.toFixed(2) + ' (0 = a caso, 1 = dritto addosso)');
+    assert(verso < 15, 'e non e un caso isolato: solo ' + verso + ' su 20 sono partiti nella tua direzione');
     const b = { x: 0, y: 0, mx: 0, my: 0, speed: 100, def: {} };
-    AI.caccia(a, fake, 0.75);
     AI.behaviors.charger(b, Object.assign({}, fake, { melee() {}, emit() {} }));
-    const va = Math.hypot(a.mx, a.my), vb = Math.hypot(b.mx, b.my);
-    assert(va > 40, 'chi caccia si muove davvero (' + va.toFixed(0) + ' px/s)');
-    assert(va < vb, 'ma piu' + String.fromCharCode(39) + ' piano di chi ti vede (' + va.toFixed(0) + ' < ' + vb.toFixed(0) + '): vederti conta ancora');
+    assert(vmax < Math.hypot(b.mx, b.my), 'e chi ti vede resta il piu veloce (' + vmax.toFixed(0) + ' < ' + Math.hypot(b.mx, b.my).toFixed(0) + '): vederti conta ancora');
   }
 
-  // --- 2) messo lontano e SENZA linea di vista, il nemico arriva ---
-  // Si prova il caso peggiore: fuori dalla portata dei sensi (sightRange 560) e dietro la roccia.
-  const room = new Room('v180'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero'); room.startGame();
+  // --- 2) messo lontano e SENZA linea di vista, il nemico NON ti trova da solo ---
+  // E' il cuore della v1.92, ed e' l'esatto contrario di cio' che questo test chiedeva nella v1.80:
+  // un nemico che non ti ha mai visto non deve sapere dove sei. Cammina, gira, ma non arriva.
+  const room = new Room('v192'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero'); room.startGame();
   room.pending = 0; room.waveList = []; room.monsters.length = 0;
   let spot = null;
   for (let ty = 1; ty < room.map.h - 1 && !spot; ty++) for (let tx = 1; tx < room.map.w - 1; tx++) {
     const x = (tx + 0.5) * C.TILE, y = (ty + 0.5) * C.TILE;
     if (room.isWallAt(x, y)) continue;
     const d = MU.dist(x, y, p.x, p.y);
-    if (d < 700 || d > 1050) continue;   // oltre, su una mappa a corridoi, 40 s non bastano a piedi: si misurerebbe la mappa
+    if (d < 700 || d > 1050) continue;
     if (room.losClear(p.x, p.y, x, y)) continue;   // deve essere nascosto: non ti vede e non lo vedi
     spot = { x, y }; break;
   }
@@ -3293,23 +3304,31 @@ function testV180() {
   m.awake = true;
   const d0 = MU.dist(m.x, m.y, p.x, p.y);
   let peggioScatto = 0, scatti = 0;
-  let dMin = d0;
+  let dMin = d0, percorso = 0, vagando = 0, visto = 0, tick = 0;
   for (let i = 0; i < C.TICK_RATE * 40 && !m.dead; i++) {
-    const pr = MU.dist(m.x, m.y, p.x, p.y);
+    const pr = MU.dist(m.x, m.y, p.x, p.y); const ax = m.x, ay = m.y;
     p.hp = room.effMaxHp(p);                        // fermo e immortale: si misura l IA, non lo scontro
     room.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
     room.update(dt);
     const po = MU.dist(m.x, m.y, p.x, p.y);
     if (po < dMin) dMin = po;
+    percorso += MU.dist(m.x, m.y, ax, ay);
+    tick++;
+    // in che modo si sta muovendo: 'wx' e' il bersaglio del vagabondaggio, e c'e' solo mentre vaga.
+    if (po <= (m.def.sightRange || 560) && room.losClear(m.x, m.y, p.x, p.y)) visto++; else if (m.wx != null) vagando++;
     // niente teletrasporti sotto gli occhi: il guadagno per tick resta quello che le gambe consentono
-    // (con il recupero di distanza previsto in Room, fino a 2.1x) finche' il mostro e in vista.
     if (po <= 900) { const g = pr - po, max = (m.speed || 120) * dt * 1.5 + 34; if (g > max) { scatti++; if (g > peggioScatto) peggioScatto = g; } }
   }
-  assert(dMin < 160, 'in 40 s ti raggiunge partendo da ' + d0.toFixed(0) + ' px al buio (arriva a ' + dMin.toFixed(0) + ' px)');
-  assert(scatti === 0, 'e ci arriva camminando, non comparendo (' + scatti + ' scatti, il peggiore ' + peggioScatto.toFixed(0) + ' px/tick)');
+  assert(percorso > 300, 'in 40 s cammina eccome (' + percorso.toFixed(0) + ' px di strada): vagare non e restare fermi');
+  // Non si misura "quanto e' arrivato vicino": vagando a caso, una volta ogni tanto ti capita addosso
+  // davvero, ed e' esattamente il gioco che vogliamo. Si misura COME si muove: o ti vede, o vaga. Non
+  // esiste piu' il terzo stato della v1.80 — quello in cui ti veniva a prendere senza averti mai visto.
+  assert(vagando + visto > tick * 0.9, 'in 40 s o ti vede o vaga, mai altro (' + vagando + ' vagando + ' + visto + ' in vista su ' + tick + ' tick; distanza minima toccata ' + dMin.toFixed(0) + ' px, partito da ' + d0.toFixed(0) + ')');
+  assert(visto < tick * 0.5, 'e per la maggior parte del tempo non ti ha visto affatto (' + (100 * visto / tick).toFixed(0) + '% dei tick)');
+  assert(scatti === 0, 'e non compare mai piu vicino di quanto le gambe consentano (' + scatti + ' scatti, il peggiore ' + peggioScatto.toFixed(0) + ' px/tick)');
 
-  // --- 3) l ondata converge: dieci scheletri sparsi non restano sparsi ---
-  const r2 = new Room('v180b'); const q = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
+  // --- 3) dieci scheletri sparsi NON convergono tutti su di te ---
+  const r2 = new Room('v192b'); const q = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
   r2.pending = 0; r2.waveList = []; r2.monsters.length = 0;
   let messi = 0;
   for (let k = 0; k < 90 && messi < 10; k++) {
@@ -3332,18 +3351,17 @@ function testV180() {
     const a = addosso(); if (a > picco) picco = a;
   }
   const mediaDopo = media();
-  // La MEDIA e' un indicatore debole da quando c'e' il tetto della folla: sei si fanno sotto e gli altri
-  // restano a bagnomaria, quindi la media dipende da dove aspettano — su certe mappe scendeva a 0,60 e il
-  // test lampeggiava rosso pur essendo tutto a posto. Cio' che il tetto promette e' un'altra cosa, ed e'
-  // esatta: i SEI PIU' VICINI devono essere arrivati. Quello si misura, non la media.
+  // v1.92 — quello che la v1.80 chiedeva qui (i sei piu' vicini addosso in 40 s) adesso e' esattamente
+  // cio' che NON deve succedere: stando fermo dietro un angolo il branco non ti trova. Restano pero' due
+  // promesse da tenere, e sono l'altra meta' del lavoro:
+  //   a. non si accalcano: il tetto della folla vale comunque;
+  //   b. non spariscono dall'altra parte della mappa: chi e' oltre l'ANELLO rientra (attesa -> seek),
+  //      cosi' l'ondata resta a portata di esplorazione invece di dissolversi in un angolo.
   const vicinanze = r2.monsters.filter(x => !x.dead).map(x => MU.dist(x.x, x.y, q.x, q.y)).sort((a, b) => a - b);
   const sesto = vicinanze[Math.min(C.FOLLA_MAX, vicinanze.length) - 1];
-  assert(sesto < 340, 'in 40 s i ' + C.FOLLA_MAX + ' piu vicini sono arrivati addosso (il sesto a ' + sesto.toFixed(0) + ' px)');
-  assert(mediaDopo < mediaPrima * 0.85, 'e il branco nel complesso si e avvicinato: media da ' + mediaPrima.toFixed(0) + ' a ' + mediaDopo.toFixed(0) + ' px');
-  // ...ma NON si accalcano tutti: il tetto della folla lascia passare i piu' vicini e tiene gli altri
-  // all anello. Il margine e per chi ti VEDE, che viene addosso comunque: e la regola, non un buco.
-  assert(picco <= C.FOLLA_MAX + 4, 'e non si accalcano: mai piu' + String.fromCharCode(39) + ' di ' + picco + ' addosso su ' + messi + ' (tetto ' + C.FOLLA_MAX + ')');
-  assert(picco >= 4, 'ma qualcuno arriva davvero (' + picco + ')');
+  assert(sesto > 400, 'in 40 s da fermo il branco non ti si e piantato addosso (il sesto piu vicino e a ' + sesto.toFixed(0) + ' px)');
+  assert(picco <= C.FOLLA_MAX, 'e non si accalcano: mai piu' + String.fromCharCode(39) + ' di ' + picco + ' addosso su ' + messi + ' (tetto ' + C.FOLLA_MAX + ')');
+  assert(mediaDopo < (C.ANELLO_ATTESA || 900) * 1.6, 'ma non si dissolvono nemmeno: media da ' + mediaPrima.toFixed(0) + ' a ' + mediaDopo.toFixed(0) + ' px, restano a portata di esplorazione');
 
   // --- 3-bis) il posto si libera uccidendo: chi aspetta prende il turno ---
   {
@@ -3371,7 +3389,7 @@ function testV180() {
   for (let i = 0; i < C.TICK_RATE * 8 && !fun.dead; i++) { z.hp = r3.effMaxHp(z); r3.setInput('c', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); r3.update(dt); }
   assert(MU.dist(fun.x, fun.y, fx, fy) < 45, 'il Fungo Sporifero resta piantato dov e (' + MU.dist(fun.x, fun.y, fx, fy).toFixed(0) + ' px): non cammina, al massimo lo spingono');
 
-  ok('la caccia verificata: arrivano a scaglioni, li vedi arrivare, e non ti seppelliscono');
+  ok('vagabondaggio verificato: ti cercano con gli occhi, non con la mappa');
 }
 
 // ============================================================================

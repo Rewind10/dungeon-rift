@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.90.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.92.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,27 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.92 (i nemici tornano a cercarti con gli occhi)
+- **🐾 Chi non ti vede VAGA, non ti cerca.** Dalla v1.80 chi non ti vedeva ti veniva a prendere lo stesso
+  seguendo il campo di flusso: alle ondate alte l'ondata intera sapeva sempre dove sei e ti arrivava
+  addosso in massa. Adesso gira per la mappa a caso finche' non entri nel suo **campo visivo**
+  (`sightRange` + linea di vista libera), com'era fino alla v1.79. Un nemico deve **accorgersi** di te.
+- **📉 Quanto cambia** (giocatore fermo, in singolo, nemici entro 620 px): ondata 1 dopo 45 s, da **12 su
+  12** a **0 su 12**. Con un giocatore che esplora la differenza e' tutta all'**inizio** dell'ondata: alla
+  12 quelli che ti trovano nei primi quindici secondi passano da **11 a 5,7**.
+- **👥 Il tetto alla folla resta**: sei alla volta si fanno sotto, gli altri stanno all'anello dei 900 px —
+  cosi' l'ondata resta a portata di esplorazione invece di dissolversi in un angolo.
+- **🧪 Test 56 riscritto**: non misura piu' "quanto ti arriva vicino" (vagando, ogni tanto ti capita
+  addosso davvero, ed e' giusto), misura il **modo**: o ti vede, o vaga. Il terzo stato non esiste piu'.
+
+## 🆕 Novita v1.91 (modalita' di prova)
+- **🧪 Venti pulsanti, uno per ondata.** Nel menu, sotto ENTRA IN PARTITA, un pannello a scomparsa
+  **"Modalita' di prova"**: si clicca l'ondata e la run parte da li', in una stanza tutta propria e senza
+  passare dalla sala d'attesa. La **10** e la **20** sono marcate ☠ (i boss).
+- **🎒 Il personaggio non parte nudo**: livello, punti spesi, passive, abilita', equipaggiamento del rango
+  giusto e monete sono quelli che a quel punto **avresti** — se no alla 16 non si prova niente.
+- Serve a guardare **prestazioni e giocabilita'** senza rigiocare quattordici livelli per vedere il quindicesimo.
 
 ## 🆕 Novita v1.90.2 (prestazioni: i ragni e il Beholder)
 - **Il frame costa meno della metà.** Misurato con un profilo vero su una scena d'ondata 16: da **5,3 ms
@@ -154,7 +175,7 @@ scelta vale per tutta la partita.
 - **👁 I Beholder si fanno avanti**: Viola alla **8** (era 9), di Carne alla **10** (era 12), Spettrale alla
   **12** (era 15) — il piu' lavorato dei tre non compare piu' a cinque ondate dalla fine.
 
-## 🆕 Novita v1.80 (i nemici ti cercano)
+## 🆕 Novita v1.80 (i nemici ti cercano) — *superata dalla v1.92: adesso vagano*
 - **🐾 Chi non ti vede ti CERCA.** Prima sceglieva un punto a caso entro 350 px: su una mappa grande meta'
   dell'ondata girava dove non saresti mai passato. Adesso segue il campo di flusso verso di te, ma **piu'
   piano di chi ti vede** (0,68-0,90 contro 1,00): vederti conta ancora.

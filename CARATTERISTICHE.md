@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.90.2`
+**Versione attuale:** `1.92.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -283,7 +283,7 @@ arretra di un passo non prende niente. Le zone fanno male ai giocatori e non ai 
 
 ---
 
-## 🐾 COME TI CERCANO I NEMICI *(v1.80)*
+## 🐾 COME TI CERCANO I NEMICI *(v1.92 — si torna al vagabondaggio della v1.43)*
 
 Ogni nemico che cammina ha tre modi di muoversi, e la differenza fra loro e' la **velocita'**:
 
@@ -291,26 +291,27 @@ Ogni nemico che cammina ha tre modi di muoversi, e la differenza fra loro e' la 
 |---|---|---|
 | **Ti vede** (entro `sightRange` e con linea di vista libera) | ti insegue, attacca | 1,00 |
 | **Ti ha visto** (memoria, `def.memory` ~3,5 s) | va all'ultima posizione nota | 0,95 |
-| **Non ti vede** | **ti cerca** seguendo il campo di flusso | 0,68 – 0,90 |
+| **Non ti vede** | **vaga**: sceglie un punto raggiungibile a caso entro 90-350 px e ci cammina | ≤ 0,60 |
 
-Il campo di flusso e' un BFS su tutta la griglia verso **tutti** i giocatori vivi, ricostruito ogni 0,12 s:
-il nemico che ti cerca fa il giro dei corridoi, non prova ad attraversare la roccia.
-
-Prima della v1.80 l'ultima riga diceva *vagabondaggio*: un punto a caso entro 350 px. Su una mappa da
-64x46 tile significava che meta' dell'ondata non ti incontrava mai. Il vagabondaggio resta solo come
-ripiego quando la caccia non porta da nessuna parte (nessun giocatore vivo, o mostro incastrato contro un
-muro da 0,8 s).
+**Non sa dove sei.** E' il punto della v1.92. Fra la v1.80 e la v1.91 l'ultima riga diceva *ti cerca*: chi
+non ti vedeva seguiva comunque il campo di flusso verso tutti i giocatori vivi. Funzionava fin troppo bene
+— alle ondate alte l'ondata **intera** ti arrivava addosso — e toglieva al gioco la cosa che rende viva una
+mappa: un nemico deve **accorgersi** di te. Adesso ti trova con gli occhi, non con la mappa.
 
 **Le eccezioni.** Il **Fungo Sporifero** non si muove mai: e' una sentinella, nega il terreno invece di
-inseguirti. Il **Fuoco Fatuo** attraversa i muri e va in linea retta, non gli serve il flusso. La **Sfera
-d'Ossa** dalla v1.80 rotola piano verso di te finche' non ti trova, poi si carica e parte.
+inseguirti. Il **Fuoco Fatuo** attraversa i muri e va in linea retta. La **Sfera d'Ossa** rotola piano in
+giro finche' non ti trova, poi si carica e parte.
 
-### Il tetto alla folla
+### Il tetto alla folla *(v1.80, non toccato)*
 
-Cercarti non vuol dire arrivarti addosso tutti insieme. Solo i **`FOLLA_MAX` = 6 piu' vicini** a ciascun
-giocatore hanno il permesso di avvicinarsi; gli altri risalgono fino all'**`ANELLO_ATTESA` = 900 px** e
-li' girano, fuori dallo sguardo. L'assegnazione si rifa' ogni 0,4 s in ordine di distanza, quindi il
-rimpiazzo e' automatico: **uccidi quello che hai addosso e il piu' vicino fra quelli in attesa si avvia.**
+Anche vagando, non devono potersi accumulare tutti addosso. Solo i **`FOLLA_MAX` = 6 piu' vicini** a
+ciascun giocatore hanno il permesso di avvicinarsi; gli altri risalgono fino all'**`ANELLO_ATTESA` = 900
+px** e li' girano, fuori dallo sguardo (il rientro all'anello lo fa un `seek` diretto, dalla v1.92, perche'
+la caccia non esiste piu'). L'assegnazione si rifa' ogni 0,4 s in ordine di distanza: **uccidi quello che
+hai addosso e il piu' vicino fra quelli in attesa si avvia.**
+
+L'anello ha adesso un secondo compito, ed e' quello che tiene in piedi l'ondata: impedisce che il branco
+si **dissolva** in un angolo della mappa. Vagano, ma vagano *dalle tue parti*.
 
 | Eccezione | Perche' |
 |---|---|
@@ -318,16 +319,52 @@ rimpiazzo e' automatico: **uccidi quello che hai addosso e il piu' vicino fra qu
 | chi e' **in mezzo a un'azione** (rotolata, slam, balzo) | interromperla a meta' si vedrebbe |
 | i **boss** e gli **immobili** | non sono folla |
 
-Quando ne restano pochi sono tutti dentro il tetto, e ti cercano tutti: la coda di fine ondata non esiste.
+### Quanto cambia, misurato
 
-**Quanto ci mettono ad arrivare, e quanti** (giocatore fermo, in singolo, nemici entro 620 px sul totale
-vivo): ondata 1 → 6/12 a 20 s; ondata 3 → 6/15 a 45 s; ondata 6 → 9/20 a 45 s (l'eccedenza sono quelli che
-ti vedono). Il **recupero di distanza** che faceva correre i lontani fino a 2,1x e' **spento** dalla v1.80:
-serviva quando vagavano a caso, adesso farebbe arrivare l'ondata in blocco.
+Giocatore **fermo**, in singolo, nemici entro 620 px:
+
+| | v1.91 (ti cercavano) | **v1.92 (vagano)** |
+|---|---|---|
+| Ondata 1, a 45 s | 12 / 12 | **0 / 12** |
+| Ondata 6, a 60 s | 6 / 20 | **7 / 20** |
+| Ondata 12, a 60 s | 18 / 33 | **14 / 33** |
+
+Giocatore che **esplora** (tre semi, media) — l'ondata la incontri lo stesso, ma perche' vai a cercarla:
+
+| | v1.91 | **v1.92** |
+|---|---|---|
+| Ondata 12, addosso a 15 s | 11,0 | **5,7** |
+| Ondata 12, incontrati entro 90 s | 24 / 29 | **22,7 / 32** |
+| Ondata 16, addosso a 15 s | 8,3 | **6,7** |
+
+La differenza vera e' **all'inizio dell'ondata**: alla 12 il branco che ti trova nei primi quindici secondi
+si dimezza. Il **recupero di distanza** che faceva correre i lontani fino a 2,1x resta **spento** (v1.80).
 
 **Non compaiono, arrivano**: la regola della v1.76.1 non e' stata toccata — nessun nemico in vista guadagna
 distanza di scatto, e il recupero anti-stallo sposta solo chi e' davvero bloccato, oltre i 950 px e fuori
 dallo sguardo.
+
+---
+
+## 🧪 LA MODALITA' DI PROVA *(v1.91)*
+
+Nel menu principale, sotto **ENTRA IN PARTITA**, un pannello a scomparsa con **venti pulsanti**, uno per
+ondata (la **10** e la **20** marcate ☠: sono i boss). Si clicca e si gioca — stanza tutta propria, nessuna
+sala d'attesa, la run parte dall'ondata scelta. Serve a guardare **prestazioni e giocabilita'** senza
+rigiocare quattordici livelli per vedere il quindicesimo.
+
+Il personaggio non parte nudo: `Room._preparaProva()` ricostruisce quello che a quel punto **avresti**.
+
+| | Come si ricava |
+|---|---|
+| **Livello** | `1 + (onda - 1) x 0,95`, arrotondato, limitato al massimo |
+| **Punti statistica** | spesi tutti, a rotazione sulle statistiche disponibili |
+| **Passive e abilita'** | tutte quelle dovute fino a quel livello (presa la prima di ogni offerta) |
+| **Equipaggiamento** | rango 1 (ondate 1-5), 2 (6-10), 3 (11-15), 4 (16+) su tutti gli slot |
+| **Monete** | 68 per ogni ondata saltata |
+
+Esempio verificato in un browser vero, cliccando la **12**: *Ondata 12/20 · Lv.11 Campione · 375 PV · 748
+monete · Q sbloccata, E chiusa fino al 14*.
 
 ---
 

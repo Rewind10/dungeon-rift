@@ -41,26 +41,25 @@
     if (MU.dist(mon.x, mon.y, mon.lkx, mon.lky) < 44) { mon.seeT = 0; return false; }
     seek(mon, ctx, 0.95); return true;
   }
-  // v1.80 — CACCIA: il nemico che non ti vede non vaga piu' a caso, ti CERCA. Segue lo stesso campo di
-  // flusso dell'inseguimento (ricostruito verso tutti i giocatori ogni 0.12 s) ma a velocita' ridotta:
-  // vederti conta ancora, perche' chi ti vede corre e chi ti fiuta cammina. Su una mappa grande questo
-  // e' l'unica cosa che tiene insieme l'ondata: senza, meta' dei mostri gira in un angolo che non vedrai
-  // mai. Il vagabondaggio resta come RIPIEGO per i due casi in cui la caccia non porta da nessuna parte:
-  // nessun giocatore vivo, oppure il mostro e' incastrato e il flusso continua a spingerlo contro il muro.
+  // v1.92 — SI TORNA AL VAGABONDAGGIO. Qui la v1.80 aveva messo una CACCIA: chi non ti vedeva ti cercava
+  // lo stesso, seguendo il campo di flusso verso i giocatori. Alle ondate alte il risultato era che
+  // l'ondata INTERA sapeva sempre dove sei e ti arrivava addosso in massa: troppo difficile, e soprattutto
+  // sbagliato come idea — un nemico deve ACCORGERSI di te, non saperlo gia'. Adesso chi non ti vede gira
+  // per la mappa a caso finche' non entri nel suo campo visivo (sightRange + linea di vista libera),
+  // com'era fino alla v1.79.
+  // Il nome resta 'caccia' perche' e' il punto in cui passano tutti i comportamenti: cambia cosa fa, non
+  // chi la chiama. La velocita' che il chiamante chiede vale come TETTO: si passeggia, non si corre a vuoto.
   function caccia(mon, ctx, sm = 0.75) {
-    if (mon._cacciaBlk > 0) { mon._cacciaBlk -= ctx.dt; wander(mon, ctx, sm); return; }
-    if (mon._cpx != null && (Math.abs(mon.mx) + Math.abs(mon.my)) > 1 && MU.dist(mon.x, mon.y, mon._cpx, mon._cpy) < 0.6) mon._cstuck = (mon._cstuck || 0) + ctx.dt; else mon._cstuck = 0;
-    mon._cpx = mon.x; mon._cpy = mon.y;
-    if (mon._cstuck > 0.8) { mon._cstuck = 0; mon._cacciaBlk = 1.6; mon.wx = null; wander(mon, ctx, sm); return; }
-    if (!ctx.nearest(mon)) { wander(mon, ctx, sm); return; }
-    seek(mon, ctx, sm);
+    wander(mon, ctx, Math.min(sm, 0.6));
   }
   // v1.80 — ATTESA: chi e' oltre il tetto della folla non sparisce dall'altra parte della mappa e non
   // ti viene addosso: risale fino all'anello e li' gira. Resta a portata di richiamo — appena si libera
   // un posto e' a pochi secondi da te — ma sta fuori dallo sguardo.
   function attesa(mon, ctx) {
     const p = ctx.nearest(mon);
-    if (p && MU.dist(mon.x, mon.y, p.x, p.y) > (ctx.ANELLO || 900)) { caccia(mon, ctx, 0.6); return; }
+    // v1.92 — il rientro all'anello lo fa il seek, non piu' la caccia (che adesso vaga): il tetto alla
+    // folla resta quello della v1.80, cambia solo cosa fa chi non ti vede ed e' dentro il tetto.
+    if (p && MU.dist(mon.x, mon.y, p.x, p.y) > (ctx.ANELLO || 900)) { seek(mon, ctx, 0.6); return; }
     wander(mon, ctx, 0.5);
   }
   // Vede il giocatore? Come perceive, ma senza toccare la memoria: serve solo a decidere se uno che
@@ -286,7 +285,7 @@
         m.mx = m.my = 0; m.rollCd = (m.rollCd || 0) - ctx.dt;
         m.facing = Math.atan2(p.y - m.y, p.x - m.x);
         if (m.rollCd > 0) { m.windT = 0; return; }
-        // v1.80 — se non ti vede non resta piantato ad aspettare: rotola piano verso di te finche' non ti trova.
+        // v1.92 — se non ti vede non resta piantato ad aspettare: rotola piano in giro finche' non ti trova.
         if (d > (m.def.sightRange || 470) || !ctx.losClear(m.x, m.y, p.x, p.y)) { m.windT = 0; caccia(m, ctx, 0.55); return; }
         if (!m.windT) ctx.emit({ t: 'roll_wind', e: m.eid, x: m.x, y: m.y, dur: m.def.rollWind || 0.62 });
         m.windT = (m.windT || 0) + ctx.dt;
