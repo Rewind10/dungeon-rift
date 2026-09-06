@@ -2,6 +2,30 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.96.1] — 2026-09-06 · "La modalita' di prova si nasconde, non si toglie"
+
+Paolo: *"nascondi il link all'ambiente di test. Non rimuoverlo, potrebbe servirmi."*
+
+Il pannello **"Modalita' di prova"** non compare piu' nel menu: chi apre il gioco vede *Entra in partita*
+e le due voci di sempre. Il codice pero' e' tutto al suo posto — pulsanti, `_preparaProva()`, il messaggio
+`start` con l'ondata — e per farlo ricomparire non serve toccare niente:
+
+| Come | Dove |
+|---|---|
+| **`?test` nell'indirizzo** | `http://localhost:8080/?test` (vale anche `#test`) |
+| **il tasto `T`** | stando fermi nel menu |
+
+La T non scatta mentre si scrive nel campo del nome o della stanza, e in partita non fa niente: il
+controllo guarda che il menu sia ancora aperto e che il fuoco non sia su un campo di testo.
+
+**Cinque controlli nuovi nel test del client**: che il pannello nasca `hidden`, che ci sia ancora tutto
+(`#provaGrid`), e che restino tutte e due le vie per aprirlo piu' la salvaguardia sul campo di testo.
+Nascosto non vuol dire tolto, e il test e' li' per dirlo.
+
+**File toccati**: `public/index.html`, `public/js/main.js`, `test/client.js`, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.96.0] — 2026-09-06 · "Dall'ondata 9 se ne vedono 22 alla volta"
 
 Paolo: *"dall'ondata 9 fino alla 20 i nemici contemporaneamente visibili in pista scendono a 22, altrimenti

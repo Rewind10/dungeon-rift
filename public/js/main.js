@@ -17,6 +17,21 @@
       G.provaOnda = n;
       entra('prova' + n + '-' + Math.floor(Math.random() * 9000 + 1000));
     });
+    // v1.96.1 — ...e resta NASCOSTA. E' uno strumento di sviluppo, non una voce del menu: chi apre il
+    // gioco vede "Entra in partita" e basta. Il pannello pero' c'e' tutto, e per tirarlo fuori bastano
+    // due strade, nessuna delle quali chiede di toccare il codice:
+    //   · ?test (o #test) nell'indirizzo  —  http://localhost:8080/?test
+    //   · il tasto T mentre si e' fermi nel menu
+    const prova = $('provaBox');
+    const mostraProva = () => { if (prova) { prova.classList.remove('hidden'); prova.open = true; } };
+    if (/[?&#]test\b/.test(location.search + location.hash)) mostraProva();
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 't' && e.key !== 'T') return;
+      if ($('menu').classList.contains('hidden')) return;    // solo nel menu: in partita la T non fa niente
+      const a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;   // stai scrivendo il nome
+      mostraProva();
+    });
   }
   function entra(room) {
     A.resume();

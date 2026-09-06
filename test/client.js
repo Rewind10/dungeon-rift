@@ -509,6 +509,17 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(mn.indexOf("C.PHASE_MARKET ? 'village'") > 0, 'il mercato chiede la scena villaggio');
   }
 
+  // v1.96.1 — la modalita' di prova e' NASCOSTA: c'e' tutta, ma non si vede finche' non la si chiama.
+  {
+    const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    const mn = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    ok(/<details class="help prova hidden" id="provaBox">/.test(html), 'il pannello di prova nasce nascosto');
+    ok(html.indexOf('id="provaGrid"') > 0, 'ma il pannello c e ancora, intero: nascosto non vuol dire tolto');
+    ok(/\[\?&#\]test/.test(mn), 'si apre con ?test nell indirizzo');
+    ok(mn.indexOf("e.key !== 't' && e.key !== 'T'") > 0, 'oppure col tasto T stando nel menu');
+    ok(mn.indexOf("a.tagName === 'INPUT'") > 0, 'e la T non scatta mentre scrivi il nome');
+  }
+
   // v1.86 — l'artwork del menu: il CSS lo carica, e il gradiente di prima resta come rete di sicurezza
   {
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');

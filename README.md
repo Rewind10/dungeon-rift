@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.96.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.96.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -68,6 +68,8 @@ Test: `npm test`
   addosso davvero, ed e' giusto), misura il **modo**: o ti vede, o vaga. Il terzo stato non esiste piu'.
 
 ## 🆕 Novita v1.91 (modalita' di prova)
+- **🙈 Dalla v1.96.1 e NASCOSTA**: si apre con **?test** nell indirizzo (`http://localhost:8080/?test`)
+  o col **tasto T** stando nel menu. Il codice resta tutto: nascosto non vuol dire tolto.
 - **🧪 Venti pulsanti, uno per ondata.** Nel menu, sotto ENTRA IN PARTITA, un pannello a scomparsa
   **"Modalita' di prova"**: si clicca l'ondata e la run parte da li', in una stanza tutta propria e senza
   passare dalla sala d'attesa. La **10** e la **20** sono marcate ☠ (i boss).

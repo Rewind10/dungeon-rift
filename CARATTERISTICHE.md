@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.96.0`
+**Versione attuale:** `1.96.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -405,7 +405,11 @@ dallo sguardo.
 
 ---
 
-## 🧪 LA MODALITA' DI PROVA *(v1.91)*
+## 🧪 LA MODALITA' DI PROVA *(v1.91 · nascosta dalla v1.96.1)*
+
+> **Non si vede.** Dalla v1.96.1 il pannello nasce nascosto: e uno strumento di sviluppo, non una voce
+> del menu. Per aprirlo, **?test** nell indirizzo (`http://localhost:8080/?test`) oppure il **tasto T**
+> stando fermi nel menu. Il codice e tutto al suo posto: nascosto non vuol dire tolto.
 
 Nel menu principale, sotto **ENTRA IN PARTITA**, un pannello a scomparsa con **venti pulsanti**, uno per
 ondata (la **10** e la **20** marcate ☠: sono i boss). Si clicca e si gioca — stanza tutta propria, nessuna
