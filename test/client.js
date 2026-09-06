@@ -509,6 +509,22 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(mn.indexOf("C.PHASE_MARKET ? 'village'") > 0, 'il mercato chiede la scena villaggio');
   }
 
+  // v1.97.1 — L'ELSE DI _bakeCaverna DEVE RESTARE ATTACCATO AL SUO IF.
+  // Storia vera, e costata cara: la chiamata a _dipingiCimitero era stata infilata FRA l'if e l'else,
+  //     if (_nuova) this._bakeCaverna(...);
+  //     if (_nuova && m.muri) this._dipingiCimitero(...);     <-- qui
+  //     else { riempi tutto di pavimento piatto }
+  // e cosi' l'else, che serviva al villaggio, e' finito attaccato alla riga nuova: su OGNI mappa senza
+  // cimitero — cioe' dalla terza ondata in poi — partiva il riempimento e cancellava la caverna appena
+  // cotta. Il gioco restava giocabile e nessun test se ne accorgeva: erano sparite solo le rocce.
+  {
+    const rd = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8').split('\n');
+    const i = rd.findIndex(r => r.indexOf('if (_nuova) this._bakeCaverna(') >= 0);
+    ok(i > 0, 'la cottura della caverna e al suo posto');
+    ok(/^\s*else \{/.test(rd[i + 1] || ''), 'e la riga SUBITO DOPO e il suo else: non infilare niente in mezzo');
+    ok(rd.some(r => r.indexOf('this._dipingiCimitero(') >= 0 && r.indexOf('m.muri') >= 0), 'il cimitero si dipinge solo quando la mappa ha le sue tessere');
+  }
+
   // v1.96.1 — la modalita' di prova e' NASCOSTA: c'e' tutta, ma non si vede finche' non la si chiama.
   {
     const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');

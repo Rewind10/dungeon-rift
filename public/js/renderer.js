@@ -559,8 +559,11 @@
       // villaggio (m.market) tiene la sua, che e' fatta apposta per le micro-stanze.
       const _nuova = !m.market;
       if (_nuova) this._bakeCaverna(g, m, T, th);
-      if (_nuova && m.muri) this._dipingiCimitero(g, m, T, th);   // v1.97 — lapidi, alberi secchi, conci
       else { g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height); }
+      // v1.97.1 — QUESTA RIGA VA DOPO L'ELSE, e la prima volta l'avevo messa in mezzo: l'else di
+      // _bakeCaverna e' finito attaccato a lei, quindi su OGNI mappa senza cimitero (dalla terza ondata
+      // in poi) scattava il riempimento piatto e cancellava la caverna appena cotta.
+      if (_nuova && m.muri) this._dipingiCimitero(g, m, T, th);   // lapidi, alberi secchi, conci
       if (!_nuova) for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_WALL) continue; const px = x * T, py = y * T; g.save(); g.beginPath(); g.rect(px, py, T, T); g.clip(); g.fillStyle = wallPat; g.fillRect(px, py, T, T); g.restore(); }
       // v1.75 — IL PAVIMENTO DI OGNI STANZA. Il villaggio non e' piu' una sala sola: la taverna ha le assi,
       // la fucina la pietra bruciata, l'antro il suo colore. Senza questo le sei stanze sarebbero sei

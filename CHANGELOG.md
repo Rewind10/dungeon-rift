@@ -2,6 +2,53 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.97.1] — 2026-09-06 · "La caverna cancellata: un else attaccato alla riga sbagliata"
+
+Paolo: *"nella prima mappa c'e' il cimitero, ma la grotta, con le varianti, dall'ondata 3 sono
+completamente sballate."*
+
+Aveva ragione, ed era **colpa mia**. La riga che dipinge il cimitero era stata infilata **fra un `if` e il
+suo `else`**:
+
+```
+if (_nuova) this._bakeCaverna(g, m, T, th);
+if (_nuova && m.muri) this._dipingiCimitero(g, m, T, th);   <-- inserita qui
+else { g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height); }
+```
+
+Quell'`else` apparteneva al **primo** `if` ed esisteva per il villaggio. Attaccato alla riga nuova, si e'
+messo a scattare su **ogni mappa senza cimitero** — cioe' dalla terza ondata in poi: riempiva l'intera tela
+col pavimento piatto e **cancellava la caverna appena cotta**. Niente rocce, niente pareti, niente massi:
+solo una distesa uniforme con le decorazioni sopra.
+
+La correzione e' spostare la riga **dopo** l'else. Tre righe, ma il difetto era grosso.
+
+#### Perche' non se n'era accorto nessuno
+Nel cimitero `m.muri` esiste, quindi l'else non scattava e le ondate 1-2 erano giuste: **ho verificato solo
+la cosa nuova**. E nessun test poteva vederlo, perche' tutti guardano la LOGICA (la griglia, la
+connettivita', gli spawn) e quella era rimasta perfetta: mappe generate **identiche bit per bit** a prima
+della 1.97. Il difetto stava solo nei pixel.
+
+#### Come e' stato accertato
+Confronto a parita' di mappa fra il renderer nuovo e quello di prima, cuocendo lo **stesso oggetto mappa**
+nei due e misurando quante celle-muro risultano dipinte:
+
+| | prima del fix | dopo |
+|---|---|---|
+| Ondata 5, seme 777777 | **1** cella muro dipinta su 1609 | **351** su 1609 (come la 1.96) |
+
+E su quattordici mappe (ondate 1, 2, 3, 5, 8, 12, 19 per due semi): **le dieci dalla terza in poi tornano
+identiche** alla versione precedente, impronta dei pixel compresa; diverse solo le quattro delle ondate 1-2,
+che sono il cimitero.
+
+#### Il controllo che impedisce il ritorno
+Nel test del client: la riga **subito dopo** `if (_nuova) this._bakeCaverna(...)` deve essere il suo `else`.
+Provato rompendolo apposta — il test fallisce, come deve.
+
+**File toccati**: `public/js/renderer.js` (tre righe), `test/client.js` (il controllo), `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.97.0] — 2026-09-06 · "Il cimitero: la prima pianta che non e' una grotta"
 
 Paolo: *"prova a creare il cimitero, che verra' usato solo per le prime 2 ondate; poi dalla terza fino
