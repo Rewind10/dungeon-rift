@@ -15,19 +15,21 @@ canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;backgr
    quel motivo non c'e' piu', e il pannello al centro sta meglio. */
 #menu,#lobby{overflow:hidden}
 #menu .menu-card{max-height:none}
-/* v1.93.2 — L'IMMAGINE E BASTA. Fino alla 1.93.1 questo strato faceva tre cose che nessuno aveva
-   chiesto: partiva 2,5% fuori dai bordi, era ancorato al 44% invece che al centro, e derivava piano
-   con una scala fino a 1,055. Tre modi diversi di zoomare e tagliare un'illustrazione gia' fatta su
-   misura, 1920x1080. Adesso: bordi esatti, centro esatto, nessuna animazione. Se il file manca resta
-   il gradiente scuro della riga sopra e il menu funziona identico. */
-#menu::after,#lobby::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
-  background:url('/assets/art/menu_key_art_1080.jpg') center center/cover no-repeat}
-/* v1.93.2 — E LA VELATURA IDEM: un velo uniforme leggero, e basta. Serve solo a staccare il pannello
-   dall'illustrazione — che poi il pannello ha per conto suo lo sfondo semitrasparente e la sfocatura.
-   Le tre sfumature di prima (fascia centrale scura, cielo spento, vignettatura) spegnevano meta'
-   immagine per risolvere un problema che il pannello risolve gia' da solo. */
-#menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:rgba(5,6,10,.22)}
+/* v1.93.4 — L'IMMAGINE INTERA, SU QUALSIASI SCHERMO. 'cover' riempie sempre la finestra ma taglia
+   tutto cio' che non ci sta: su un 16:9 esatto non si vede, su un 16:10 o un ultrawide sparisce una
+   fascia dell'illustrazione. Con 'contain' l'immagine entra SEMPRE intera, qualunque sia il rapporto
+   dello schermo — e cio' che avanza ai lati (o sopra e sotto) non e' una barra nera: e' la stessa
+   immagine in 'cover', sfocata e scurita, che fa da cornice. Due strati, un file solo. */
+#menu::after,#lobby::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:url('/assets/art/menu_key_art_1080.jpg') center center/contain no-repeat;
+  box-shadow:inset 0 0 0 100vmax rgba(5,6,10,.20)}
+/* v1.93.4 — LA CORNICE: la stessa immagine, sfocata e scura, dietro a quella intera. Riempie lo spazio
+   che 'contain' lascia scoperto quando lo schermo non e' 16:9, senza aggiungere un secondo file e senza
+   barre nere. Il 'scale(1.12)' serve solo a mangiare i bordi trasparenti che la sfocatura lascia. Il
+   velo che staccava il pannello dall'illustrazione e' diventato l'ombra interna dello strato sopra. */
+#menu::before,#lobby::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:url('/assets/art/menu_key_art_1080.jpg') center center/cover no-repeat;
+  filter:blur(26px) brightness(.42) saturate(.9);transform:scale(1.12)}
 #menu>*,#lobby>*{position:relative;z-index:2}
 .menu-card{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(180deg,rgba(17,21,36,.70),rgba(8,11,22,.86));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid rgba(146,164,214,.20);border-radius:var(--radius);padding:26px 28px;
   box-shadow:0 40px 110px rgba(0,0,0,.78),0 0 60px rgba(0,240,200,.05),inset 0 1px 0 rgba(255,255,255,.07)}

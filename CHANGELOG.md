@@ -2,6 +2,33 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.93.4] — 2026-09-06 · "L'immagine intera su qualsiasi schermo"
+
+Paolo: *"l'immagine viene ritagliata, non si riesce a farla entrare esattamente intera a prescindere dalla
+risoluzione dello schermo?"* Si': `contain` invece di `cover`.
+
+`cover` riempie sempre la finestra ma **taglia** cio' che non ci sta: su un 16:9 esatto non si vede niente,
+su un 16:10 o un ultrawide sparisce una fascia dell'illustrazione. `contain` fa il contrario — l'immagine
+entra **sempre intera**, qualunque sia il rapporto dello schermo — al prezzo di lasciare scoperto lo spazio
+che avanza.
+
+Quello spazio non e' una barra nera: e' **la stessa immagine**, in `cover`, sfocata di 26 px e scurita al
+42%, su uno strato sotto. Due strati, un file solo, nessun asset in piu'.
+
+| Schermo | Cosa si vede |
+|---|---|
+| 1920x1080 (16:9) | l'illustrazione riempie tutto, niente cornice |
+| 1680x1050 (16:10) | intera, due fasce sottili sfocate sopra e sotto |
+| 1366x768 | intera, cornice minima |
+| 2560x1080 (21:9) | intera al centro, cornice sfocata ai due lati |
+
+Verificato su tutti e quattro. Il velo che stacca il pannello dall'illustrazione e' diventato l'ombra
+interna dello strato dell'immagine (`box-shadow:inset 0 0 0 100vmax`), cosi' vale su tutta la finestra.
+
+**File toccati**: `public/style.css`, `shared/constants.js`, `package.json`.
+
+---
+
 ### [1.93.3] — 2026-09-06 · "Il menu torna al centro"
 
 Il pannello del menu stava in alto dalla v1.86.2 (`justify-content:flex-start` piu' 4vh di margine):
