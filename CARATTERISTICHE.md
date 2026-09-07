@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.98.0`
+**Versione attuale:** `1.99.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -324,6 +324,32 @@ verra' aggiunta domani.
 | ❤️ **Pozione di Salute** a terra | va raccolta |
 | 🔥 **Combo di 40** | +25% PV: va costruita una catena di quaranta uccisioni |
 | ⏳ **Ultima Occasione** (carta divina) | non cura: invece di cadere, risorgi a meta' vita. Due volte |
+
+---
+
+## 🌋 LA CALDERA *(v1.99 — ondate 10 e 20, quelle dei boss)*
+
+Le due ondate dei boss non si giocano piu in una caverna come tutte le altre. La caldera non e costruita
+da nessuno: e successa.
+
+| Pezzo | Cosa fa, giocando |
+|---|---|
+| **La conca** | bordo irregolare su tre frequenze, ~1230 tessere calpestabili |
+| **La cresta** | anello di roccia spezzata a meta pendio, con 3-5 varchi larghi: taglia la vista senza chiudere |
+| **Gli speroni** | 10-14 massi distanti fra loro: le coperture vere, quelle dietro cui ci si mette mentre il boss carica |
+| **La faglia** | crepe a raggiera dal centro: fanno male a chi ci cammina, **giocatore e mostri, boss compreso** |
+
+**Non e costata una riga di renderer**: speroni e cresta sono roccia come quella della caverna (la cottura
+li disegna gia), e le crepe sono `T_HAZARD`, le pozze di pericolo del motore dalla v1.62.
+
+**Il boss ci gira**: oltre 730 caselle larghe 3x3 connesse al 98,5-100% (un boss di raggio 52 si muove su
+quelle). In partita vera il Colosso si sposta di 1328 px in 40 s, AZ GAROTH di 577.
+
+**Le crepe rispettano le due regole delle pozze** (v1.62): mai a contatto con un muro, mai entro 7 tessere
+dalla partenza. Per questo non si scavano nella pianta ma dopo, quando la partenza e stata scelta.
+
+Le ondate sono un elenco in constants (`CALDERA_ONDATE: [10, 20]`). La zona si chiama *La Caldera* alla 10
+e *La Faglia Aperta* alla 20.
 
 ---
 

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.98.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.99.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,22 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v1.99 (la caldera dei boss, menu nero, prova visibile)
+- **🌋 Le ondate 10 e 20 si giocano nella CALDERA.** Non e' costruita da nessuno: e' successa. Conca larga,
+  **cresta** di roccia spezzata a meta' pendio, **speroni** come coperture, e in mezzo la **faglia aperta** —
+  crepe che fanno male a chi ci cammina, **giocatore e mostri, boss compreso**.
+- **🧱 Zero righe di renderer**: speroni e cresta sono roccia (la cottura li disegna gia'), le crepe sono le
+  pozze di pericolo che il motore ha dalla v1.62. L'elenco delle ondate e' in `constants.js`
+  (`CALDERA_ONDATE: [10, 20]`): una virgola per aggiungerne una, vuoto per spegnerla.
+- **🗿 E il boss ci gira**: oltre **730 caselle larghe 3x3** connesse al 98,5-100% (e' su quelle che si muove
+  un raggio 52). In partita: il Colosso si sposta di 1328 px in 40 s, AZ'GAROTH di 577.
+- **🐞 Corretto un ciclo infinito vecchio dalla v1.22**: `_drawCritters` cercava all'infinito un punto
+  non-muro dentro l'inquadratura. Se guardavi un angolo tutto roccia il gioco **si piantava** — con la
+  caverna non capitava quasi mai, con la caldera bastava un angolo.
+- **🖤 Il menu torna nero**: via l'illustrazione di sfondo da menu e sala d'attesa (i file restano in
+  `assets/art/`).
+- **🧪 La modalita' di prova e' di nuovo visibile** nel menu, con le sue venti ondate.
 
 ## 🆕 Novita v1.97 (il cimitero delle prime due ondate)
 - **🪦 La prima pianta che non e' una grotta.** Fino alla 1.96 ogni mappa di combattimento veniva dalla

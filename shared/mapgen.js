@@ -472,6 +472,78 @@
   }
 
 
+  // ===================== v1.99 — LA CALDERA (ondate 10 e 20: i due boss) =====================
+  // Perche' esiste: le due ondate dei boss si giocavano in una caverna come tutte le altre. Qui invece
+  // il posto dice da solo che ondata e': una conca larga, il cielo di roccia attorno, e in mezzo la
+  // FAGLIA aperta. Non e' costruita da nessuno — e' successa.
+  //
+  // La cosa importante e' che non serve una riga di renderer: gli speroni e la cresta sono ROCCIA come
+  // quella della caverna (la cottura li disegna gia'), e le crepe sono T_HAZARD, cioe' le pozze di
+  // pericolo che il motore ha dalla v1.62 — con il loro danno, il loro disegno e il loro suono.
+  // Il pavimento della caldera fa male a chi ci cammina sopra: al giocatore E ai mostri, boss compreso.
+  function piantaCaldera(rng) {
+    const rr = (a, b) => a + rng() * (b - a), ri = (a, b) => Math.floor(rr(a, b + 1));
+    const g = new Uint8Array(W * H).fill(C.T_WALL);
+    const set = (x, y, v) => { if (x >= 1 && y >= 1 && x < W - 1 && y < H - 1) g[idx(x, y)] = v; };
+    const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? C.T_WALL : g[idx(x, y)];
+
+    const cx = W / 2 + rr(-1.5, 1.5), cy = H / 2 + rr(-1, 1);
+    const RX = 28, RY = 19.5;
+    const f1 = rr(0, 6.283), f2 = rr(0, 6.283), f3 = rr(0, 6.283);
+    // il bordo ondeggia su tre frequenze: e' un crollo, non un cerchio
+    const raggio = (a) => 1 + Math.sin(a * 2 + f1) * 0.10 + Math.sin(a * 3 - f2) * 0.07 + Math.sin(a * 5 + f3) * 0.045;
+
+    // (1) LA CONCA
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = (x - cx) / RX, dy = (y - cy) / RY, a = Math.atan2(dy, dx);
+      if (Math.hypot(dx, dy) <= raggio(a) * 0.92) set(x, y, C.T_FLOOR);
+    }
+
+    // (2) LA CRESTA: un anello di roccia spezzata a meta' pendio. Non chiude — ha tre o cinque varchi
+    //     larghi — ma spezza la vista, ed e' l'unica cosa che impedisce alla caldera di essere una padella.
+    {
+      const buchi = [];
+      for (let b = 0, n = ri(3, 5); b < n; b++) buchi.push({ a: rr(0, 6.283), w: 0.30 + rr(0, 0.35) });
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        if (at(x, y) !== C.T_FLOOR) continue;
+        const dx = (x - cx) / RX, dy = (y - cy) / RY;
+        const d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+        const r = 0.62 + Math.sin(a * 4 + f2) * 0.05;
+        if (Math.abs(d - r) > 0.05) continue;
+        let salta = false;
+        for (const b of buchi) { const da = Math.abs(((a - b.a + Math.PI * 3) % 6.283) - Math.PI); if (da < b.w) { salta = true; break; } }
+        if (salta || rng() < 0.12) continue;
+        set(x, y, C.T_WALL);
+      }
+    }
+
+    // (3) GLI SPERONI: massi grossi dentro la conca, distanti fra loro. Sono le coperture vere, quelle
+    //     dietro cui ci si mette mentre il boss carica il colpo.
+    const messi = [];
+    for (let k = 0, tent = 0; k < ri(10, 14) && tent < 400; tent++) {
+      const a = rr(0, 6.283), d = 0.20 + rr(0, 0.60);
+      const x = cx + Math.cos(a) * RX * d, y = cy + Math.sin(a) * RY * d;
+      let male = false;
+      for (const m of messi) if (Math.hypot(x - m.x, y - m.y) < 5.5) { male = true; break; }
+      if (male) continue;
+      const rx = 1.2 + rr(0, 2.6), ry = 1.1 + rr(0, 1.9);
+      for (let py = Math.round(y - ry - 1); py <= y + ry + 1; py++) for (let px = Math.round(x - rx - 1); px <= x + rx + 1; px++) {
+        const dd = Math.hypot((px - x) / rx, (py - y) / ry) + rr(0, 0.25);
+        if (dd <= 1 && at(px, py) === C.T_FLOOR) set(px, py, C.T_WALL);
+      }
+      messi.push({ x, y }); k++;
+    }
+
+    // (4) LE CREPE DELLA FAGLIA non si scavano qui. Le pozze di pericolo hanno due regole loro, dalla
+    //     v1.62, e sono giuste: non devono MAI toccare un muro (se no chiudono un passaggio invece di
+    //     costringerti a scegliere) e non devono nascere addosso alla partenza. Tutte e due si possono
+    //     controllare solo dopo, quando la partenza e' stata scelta: le crepe si aprono li', in generate().
+    // le camere: il centro (dove nasce il boss) piu' quattro punti a meta' raggio, per le decorazioni
+    const camere = [{ x: cx, y: cy }];
+    for (let k = 0; k < 4; k++) { const a = rr(0, 6.283) + k * 1.57; camere.push({ x: cx + Math.cos(a) * RX * 0.45, y: cy + Math.sin(a) * RY * 0.45 }); }
+    return { g, camere, archetipo: 'caldera' };
+  }
+
   function generate(seed, level) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
     let theme = THEMES[Math.floor(rng() * THEMES.length)];
@@ -484,8 +556,11 @@
     // file di lapidi); dalla terza in poi torna la caverna di sempre. Il punto non e' la varieta' per la
     // varieta': e' che le prime due ondate sono quelle in cui il giocatore si fa un'idea del gioco, e
     // aprire dentro una grotta o dentro un camposanto non e' la stessa promessa.
-    const _cim = level <= (C.CIMITERO_FINO_A || 2);
-    const _p = _cim ? piantaCimitero(rng) : piantaCaverna(rng, level);
+    const _cim = level <= (C.CIMITERO_FINO_A || 0);
+    // v1.99 — le ondate dei boss (10 e 20) si giocano nella CALDERA. E un elenco, non un confronto:
+    // aggiungere o togliere un ondata e cambiare un numero in constants.
+    const _cal = !_cim && (C.CALDERA_ONDATE || []).indexOf(level) >= 0;
+    const _p = _cim ? piantaCimitero(rng) : _cal ? piantaCaldera(rng) : piantaCaverna(rng, level);
     const grid = _p.g; const camere = _p.camere; const archetipo = _p.archetipo;
     // il tipo di ogni tessera-muro (lapide, pietra squadrata, cinta, albero): lo legge SOLO il renderer.
     // La griglia resta binaria, quindi collisioni, linea di vista e campo di flusso non sanno niente di
@@ -499,6 +574,12 @@
       const nomi = { crypt: 'Il Vecchio Camposanto', forest: 'Il Cimitero Sommerso', ice: 'Il Campo di Gelo', arcane: 'Il Sepolcreto Arcano' };
       theme = Object.assign({}, t, { name: nomi[t.id] || 'Il Vecchio Camposanto' });
     }
+    // la caldera prende un nome suo, e non si gioca in mezzo agli alberi: via la foresta.
+    if (_cal) {
+      const adatti = THEMES.filter(t => t.id !== 'forest');
+      const t = adatti[Math.floor(rng() * adatti.length)];
+      theme = Object.assign({}, t, { name: level >= 20 ? 'La Faglia Aperta' : 'La Caldera' });
+    }
     let seen;   // la usa il blocco di sicurezza qui sotto (murare le sacche staccate)
     // v1.97 — QUESTE TRE FUNZIONI SONO SCRITTE PER LA CAVERNA, e sul cimitero fanno danno.
     // widenForBoss() allarga ogni corridoio stretto e togliStrozzature() toglie gli imbuti: una LAPIDE
@@ -507,10 +588,12 @@
     // vialetti fra i settori sono larghi 3-4 tessere e nessun settore tocca la cinta — quindi qui non
     // servono. Resta allargaPerBoss(), che non demolisce niente a caso: scava solo se il grafo delle
     // celle larghe e' spezzato, e sul cimitero non lo e' mai. Ed e' la rete di sicurezza che serve.
-    if (!_cim) { widenForBoss(grid); allargaPerBoss(grid); }
+    // la caldera sta con il cimitero: il passaggio e garantito per costruzione (i varchi della cresta
+    // sono larghi), e widenForBoss() le mangerebbe gli speroni, che sono le uniche coperture che ha.
+    if (!_cim && !_cal) { widenForBoss(grid); allargaPerBoss(grid); }
     else allargaPerBoss(grid);
     ({ seen } = floodReach(grid)); for (let i = 0; i < grid.length; i++) if (grid[i] !== C.T_WALL && !seen[i]) grid[i] = C.T_WALL;
-    if (!_cim) togliStrozzature(grid); // v1.76 — e questa e' l'ultima parola: zero imbuti, misurato dai test
+    if (!_cim && !_cal) togliStrozzature(grid); // v1.76 — e questa e' l'ultima parola: zero imbuti, misurato dai test
     const free = []; for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { const i = idx(x, y); if (grid[i] === C.T_FLOOR && seen[i]) free.push({ x, y, i, cd: 0 }); }
     const isW = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : grid[idx(x, y)] === C.T_WALL;
     const nearWall = (c) => isW(c.x - 1, c.y) || isW(c.x + 1, c.y) || isW(c.x, c.y - 1) || isW(c.x, c.y + 1);
@@ -573,6 +656,32 @@
         }
         return true;
       };
+      // v1.99 — LE CREPE DELLA CALDERA. Le pozze normali nascono a caso dove c'e' posto; queste no:
+      // partono dal centro della conca e si allontanano a raggiera, perche' la faglia si e' aperta LI'.
+      // Passano dalle stesse due regole di tutte le pozze — mai a contatto con un muro (openSpot), mai
+      // entro 7 tessere dalla partenza — che qui contano il doppio: e' l'ondata del boss, e una pozza
+      // che chiude un passaggio o che ti nasce sotto i piedi non e' una scelta, e' una beffa.
+      if (_cal) {
+        const cellaA = (x, y) => free.find(c => c.x === x && c.y === y) || null;
+        const cx0 = W / 2, cy0 = H / 2;
+        const base = rng() * 6.283, rami = rint(3, 4);
+        for (let k = 0; k < rami; k++) {
+          let a = base + k * (6.283 / rami) + (rng() - 0.5) * 0.5;
+          let fx = cx0 + Math.cos(a) * 1.5, fy = cy0 + Math.sin(a) * 1.5;
+          for (let i = 0, passi = rint(7, 12); i < passi; i++) {
+            a += (rng() - 0.5) * 0.44;
+            fx += Math.cos(a) * 2.4; fy += Math.sin(a) * 1.8;
+            for (const [ox, oy] of [[0, 0], [rng() < 0.55 ? (rng() < 0.5 ? 1 : -1) : 0, 0]]) {
+              const c = cellaA(Math.round(fx) + ox, Math.round(fy) + oy);
+              if (!c) continue;
+              if (grid[c.i] !== C.T_FLOOR || !openSpot(c)) continue;
+              if (Math.hypot(c.x - start.x, c.y - start.y) <= 7) continue;
+              grid[c.i] = C.T_HAZARD; hazCells.push(c.i);
+            }
+            if (Math.hypot((fx - cx0) / 28, (fy - cy0) / 19.5) > 0.55) break;   // restano dentro la conca
+          }
+        }
+      }
       const pools = Math.max(0, Math.round((1.6 + Math.min(2.4, level * 0.16)) * (theme.hazMul || 1)));
       let spots = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 7 && openSpot(c));
       for (let z = spots.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = spots[z]; spots[z] = spots[j]; spots[j] = t; }

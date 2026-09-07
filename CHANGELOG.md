@@ -2,6 +2,54 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.99.0] — 2026-09-07 · "La caldera dei boss, il menu torna nero, la prova torna nel menu"
+
+#### 🌋 La caldera — ondate 10 e 20
+Le due ondate dei boss non si giocano piu' in una caverna come tutte le altre. La **caldera** non e'
+costruita da nessuno: e' successa. Una conca larga col bordo irregolare, una **cresta** di roccia spezzata
+a meta' pendio che taglia la vista, **speroni** sparsi come coperture, e in mezzo la **faglia aperta**.
+
+Non e' costata **una riga di renderer**: gli speroni e la cresta sono roccia come quella della caverna (la
+cottura li disegna gia'), e le crepe sono `T_HAZARD` — le pozze di pericolo che il motore ha dalla v1.62,
+col loro danno, il loro disegno e la loro luce. Il pavimento fa male a chi ci cammina: al giocatore **e ai
+mostri, boss compreso**.
+
+Le ondate sono un **elenco** (`CALDERA_ONDATE: [10, 20]`), non un confronto: aggiungerne una costa una
+virgola, svuotarlo spegne la caldera. La zona si chiama *La Caldera* alla 10 e *La Faglia Aperta* alla 20.
+
+Misurato su cinque semi: **1208-1254 tessere calpestabili**, connettivita' **100%**, e — la cosa che conta
+per un'ondata di boss — **oltre 730 caselle larghe 3x3**, connesse al 98,5-100%: e' su quelle che si muove
+un boss di raggio 52. In partita vera il Colosso si e' spostato di 1328 px in 40 s, AZ'GAROTH di 577: si
+gira, non ci si incastra.
+
+**Le crepe rispettano le due regole delle pozze** (v1.62), e non e' stato gratis: al primo tentativo le
+scavavo dentro il generatore della pianta, e due test storici sono saltati subito — *nessuna pozza tocca un
+muro* (184 violazioni) e *nessuna pozza entro 7 tessere dalla partenza*. Sono regole giuste: una pozza
+attaccata a un muro chiude un passaggio invece di farti scegliere, e una che ti nasce sotto i piedi e' una
+beffa. Le crepe si aprono adesso dove quelle regole valgono — dopo che la partenza e' stata scelta.
+
+#### 🐞 E un ciclo infinito vecchio di settanta versioni
+La caldera ha fatto emergere un difetto che era li' dalla **v1.22**: in `_drawCritters` (gli animaletti che
+corrono per la mappa) c'era un `while (cr.length < 5)` che cercava a caso un punto non-muro **dentro
+l'inquadratura**, e riprovava all'infinito. Se la telecamera guarda un'area tutta roccia quel punto non
+esiste, e il gioco non rallenta: **si pianta**, dentro il primo fotogramma. Con la caverna non capitava
+quasi mai — riempie il rettangolo della mappa; con la caldera, che e' un ovale con gli angoli pieni,
+bastava guardare un angolo. Adesso i tentativi sono contati: niente posto, niente animaletti.
+
+#### 🖤 Il menu torna nero
+Via l'illustrazione di sfondo dal menu principale e dalla sala d'attesa (c'era dalla v1.86): restano il
+gradiente scuro di sempre e il pannello. I file rimangono in `assets/art/`, rimetterla e' questione di tre righe.
+
+#### 🧪 La modalita' di prova torna visibile
+Il pannello con le venti ondate e' di nuovo nel menu (era stato nascosto in v1.96.1). Le due scorciatoie
+di allora — `?test` nell'indirizzo e il tasto **T** — restano, e servirebbero se un giorno la si richiudesse.
+
+**File toccati**: `shared/mapgen.js` (`piantaCaldera` + le crepe), `shared/constants.js` (`CALDERA_ONDATE`),
+`public/js/renderer.js` (il ciclo di `_drawCritters`), `public/style.css`, `public/index.html`,
+`public/js/main.js`, `test/simulate.js` (test 66 nuovo), `test/client.js`, `package.json`.
+
+---
+
 ### [1.98.0] — 2026-09-07 · "Cimitero piu' stretto, piu' fitto, e solo alla prima ondata"
 
 Paolo: *"il cimitero mi sembra un filo troppo grande e spoglio, l'ideale sarebbe quello nell'immagine.

@@ -525,24 +525,23 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(rd.some(r => r.indexOf('this._dipingiCimitero(') >= 0 && r.indexOf('m.muri') >= 0), 'il cimitero si dipinge solo quando la mappa ha le sue tessere');
   }
 
-  // v1.96.1 — la modalita' di prova e' NASCOSTA: c'e' tutta, ma non si vede finche' non la si chiama.
+  // v1.99 — la modalita' di prova e' di nuovo VISIBILE nel menu: si sceglie l'ondata e si parte.
+  // Le due scorciatoie della v1.96.1 (?test e il tasto T) restano, e servirebbero se la si richiudesse.
   {
     const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
     const mn = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
-    ok(/<details class="help prova hidden" id="provaBox">/.test(html), 'il pannello di prova nasce nascosto');
-    ok(html.indexOf('id="provaGrid"') > 0, 'ma il pannello c e ancora, intero: nascosto non vuol dire tolto');
-    ok(/\[\?&#\]test/.test(mn), 'si apre con ?test nell indirizzo');
-    ok(mn.indexOf("e.key !== 't' && e.key !== 'T'") > 0, 'oppure col tasto T stando nel menu');
-    ok(mn.indexOf("a.tagName === 'INPUT'") > 0, 'e la T non scatta mentre scrivi il nome');
+    ok(/<details class="help prova" id="provaBox">/.test(html), 'il pannello di prova si vede nel menu');
+    ok(html.indexOf('id="provaGrid"') > 0, 'con la sua griglia di ondate');
+    ok(/\[\?&#\]test/.test(mn), 'e le scorciatoie restano: ?test nell indirizzo');
+    ok(mn.indexOf("e.key !== 't' && e.key !== 'T'") > 0, 'e il tasto T stando nel menu');
   }
 
-  // v1.86 — l'artwork del menu: il CSS lo carica, e il gradiente di prima resta come rete di sicurezza
+  // v1.99 — il menu NON ha piu' l'illustrazione di sfondo: e' tornato il fondo scuro di sempre.
   {
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
-    // v1.93.1 — l'artwork e' la key art nuova, portata a 1920x1080
-    ok(css.indexOf("url('/assets/art/menu_key_art_1080.jpg')") > 0, 'il menu carica l artwork da assets/art/menu_key_art_1080.jpg');
-    ok(css.indexOf('#menu::before') > 0, 'e ci mette sopra la velatura che tiene leggibile il pannello');
-    ok(css.indexOf('radial-gradient(1200px 800px at 50% -10%') > 0, 'il gradiente scuro resta: senza il file il menu non si rompe');
+    ok(css.indexOf('menu_key_art') < 0, 'nel menu non c e piu l artwork di sfondo');
+    ok(css.indexOf('#menu::before') < 0 && css.indexOf('#menu::after') < 0, 'ne i due strati che lo reggevano');
+    ok(css.indexOf('radial-gradient(1200px 800px at 50% -10%') > 0, 'e c e il fondo scuro: il gradiente radiale di sempre');
 
 
     // v1.93.5 — LA BARRA DELLE ABILITA NON DEVE ESSERE COPERTA. E centrata e larga 446 px con quattro

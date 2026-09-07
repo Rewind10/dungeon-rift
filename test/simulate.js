@@ -4385,6 +4385,79 @@ function testV197() {
   ok('cimitero verificato: connesso, giocabile, e solo per le prime due ondate');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================
+// TEST 66 — v1.99: la CALDERA delle ondate dei boss (10 e 20)
+// ============================================================================
+function testV199() {
+  console.log('\n[TEST 66] v1.99 — la caldera: le due ondate dei boss non sono piu una caverna');
+  const MG = require('../shared/mapgen.js');
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) dove si gioca ---
+  for (const lv of C.CALDERA_ONDATE) assert(MG.generate(300 + lv, lv).archetipo === 'caldera', 'ondata ' + lv + ' (boss): si gioca nella caldera');
+  for (const lv of [5, 9, 11, 15, 19]) assert(MG.generate(300 + lv, lv).archetipo !== 'caldera', 'ondata ' + lv + ': resta la caverna');
+  assert(C.CALDERA_ONDATE.length === 2 && C.CALDERA_ONDATE[0] === 10 && C.CALDERA_ONDATE[1] === 20, 'e l elenco dice 10 e 20');
+  for (const lv of C.CALDERA_ONDATE) assert(Waves.isBossWave(lv), 'ondata ' + lv + ' e davvero un ondata di boss');
+
+  // --- 2) la pianta regge, e il BOSS ci passa ---
+  // Non basta che sia connessa: un boss ha raggio 52 e per muoversi gli serve una casella 3x3 libera.
+  // Si misura il grafo delle CELLE LARGHE, che e' quello su cui si muove lui.
+  for (const seed of [7, 21, 99, 404, 808]) {
+    const m = MG.generate(seed, 10);
+    const W = m.w, H = m.h, gri = m.grid;
+    const passa = (v) => v !== C.T_WALL;
+    let liberi = 0, crepe = 0;
+    for (let i = 0; i < gri.length; i++) { if (passa(gri[i])) liberi++; if (gri[i] === C.T_HAZARD) crepe++; }
+    assert(liberi > 1000 && liberi < 1600, 'seme ' + seed + ': la conca e larga il giusto (' + liberi + ' tessere)');
+    assert(crepe >= 12, 'seme ' + seed + ': la faglia e aperta in mezzo (' + crepe + ' tessere di crepa)');
+    const grande = (mask) => {
+      const vis = new Uint8Array(W * H); let best = 0, tot = 0;
+      for (let i = 0; i < mask.length; i++) if (mask[i]) tot++;
+      for (let s0 = 0; s0 < mask.length; s0++) {
+        if (vis[s0] || !mask[s0]) continue;
+        const st = [s0]; vis[s0] = 1; let n = 1;
+        while (st.length) { const i = st.pop(), x = i % W, y = (i / W) | 0;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            const j = ny * W + nx; if (vis[j] || !mask[j]) continue; vis[j] = 1; n++; st.push(j); } }
+        if (n > best) best = n;
+      }
+      return { tot, best };
+    };
+    const camm = new Uint8Array(W * H); for (let i = 0; i < gri.length; i++) camm[i] = passa(gri[i]) ? 1 : 0;
+    const a = grande(camm);
+    assert(a.best === a.tot, 'seme ' + seed + ': tutta la conca e raggiungibile (' + a.best + '/' + a.tot + ')');
+    const largo = new Uint8Array(W * H);
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      let ok = true;
+      for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) if (!passa(gri[(y + dy) * W + x + dx])) { ok = false; break; }
+      if (ok) largo[y * W + x] = 1;
+    }
+    const b = grande(largo);
+    assert(b.tot > 500, 'seme ' + seed + ': c e spazio da boss (' + b.tot + ' caselle larghe 3x3)');
+    assert(b.best / b.tot > 0.95, 'seme ' + seed + ': e il boss puo girare in tutta la caldera (' + (100 * b.best / b.tot).toFixed(1) + '% delle caselle larghe in un pezzo solo)');
+  }
+
+  // --- 3) SI GIOCA: quaranta secondi delle due ondate vere ---
+  for (const onda of C.CALDERA_ONDATE) {
+    const room = new Room('v199_' + onda); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
+    room.startGame(onda);
+    assert(room.map.archetipo === 'caldera', 'ondata ' + onda + ': la partita vera parte nella caldera');
+    let boss = null, part = null;
+    for (let i = 0; i < C.TICK_RATE * 40; i++) {
+      p.hp = room.effMaxHp(p); p.down = false; p.dead = false;
+      room.setInput('a', { mx: 0, my: 0, aim: 0 });
+      room.update(dt);
+      if (!boss) { boss = room.monsters.find(x => x.boss && !x.dead) || null; if (boss) part = { x: boss.x, y: boss.y }; }
+    }
+    assert(!!boss, 'ondata ' + onda + ': il boss e in campo');
+    assert(MU.dist(boss.x, boss.y, part.x, part.y) > 120, 'ondata ' + onda + ': e si muove davvero (' + MU.dist(boss.x, boss.y, part.x, part.y).toFixed(0) + ' px), non resta incastrato fra gli speroni');
+    for (const mo of room.monsters) if (!mo.dead) assert(!room.isWallAt(mo.x, mo.y), 'ondata ' + onda + ': nessun nemico dentro una roccia');
+  }
+  ok('caldera verificata: connessa, il boss ci gira, e la faglia e aperta in mezzo');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

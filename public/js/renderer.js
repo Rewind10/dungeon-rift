@@ -2260,7 +2260,13 @@
     // v1.22 — ANIMALETTI: ratti/ragni/scarafaggi che sfrecciano a scatti sul pavimento (cosmetici, evitano i muri)
     _drawCritters(ctx, camX, camY, dt) {
       if (!this.map) return; const N = 5, cr = this.critters, m = this.map, M = 60;
-      while (cr.length < N) { const wx = camX + Math.random() * this.w, wy = camY + Math.random() * this.h; if (this._isWallW(wx, wy)) continue; cr.push({ x: wx, y: wy, a: Math.random() * 6.28, vx: 0, vy: 0, type: (Math.random() * 3) | 0, st: 0, t: MU.rand(0.2, 1.0), sp: MU.rand(56, 118), ph: Math.random() * 7 }); }
+      // v1.99 — IL CICLO CHE NON FINIVA. Qui c'era un `while (cr.length < N)`: cercava a caso un punto
+      // non-muro dentro l'inquadratura, e riprovava all'infinito. Se la telecamera guarda un'area TUTTA
+      // roccia il punto non esiste, e il gioco si pianta — non rallenta: si pianta, dentro il primo
+      // fotogramma. Con la caverna non capitava quasi mai (riempie il rettangolo della mappa); con la
+      // caldera, che e' un ovale con gli angoli pieni, bastava guardare un angolo. Adesso i tentativi
+      // sono contati: se non c'e' posto per gli animaletti, semplicemente non ci sono animaletti.
+      for (let _t = 0; cr.length < N && _t < 24; _t++) { const wx = camX + Math.random() * this.w, wy = camY + Math.random() * this.h; if (this._isWallW(wx, wy)) continue; cr.push({ x: wx, y: wy, a: Math.random() * 6.28, vx: 0, vy: 0, type: (Math.random() * 3) | 0, st: 0, t: MU.rand(0.2, 1.0), sp: MU.rand(56, 118), ph: Math.random() * 7 }); }
       ctx.save();
       for (let i = cr.length - 1; i >= 0; i--) { const p = cr[i]; p.t -= dt; p.ph += dt;
         if (p.t <= 0) { if (p.st === 0) { p.st = 1; p.t = MU.rand(0.25, 0.7); p.a += MU.rand(-1.4, 1.4); p.vx = Math.cos(p.a) * p.sp; p.vy = Math.sin(p.a) * p.sp; } else { p.st = 0; p.t = MU.rand(0.4, 1.6); p.vx = 0; p.vy = 0; } }

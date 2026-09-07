@@ -17,9 +17,8 @@
       G.provaOnda = n;
       entra('prova' + n + '-' + Math.floor(Math.random() * 9000 + 1000));
     });
-    // v1.96.1 — ...e resta NASCOSTA. E' uno strumento di sviluppo, non una voce del menu: chi apre il
-    // gioco vede "Entra in partita" e basta. Il pannello pero' c'e' tutto, e per tirarlo fuori bastano
-    // due strade, nessuna delle quali chiede di toccare il codice:
+    // v1.99 — la modalita' di prova e' di nuovo VISIBILE nel menu (in v1.96.1 era nascosta). Le due
+    // scorciatoie che la aprivano restano, e servono ancora se un giorno la si richiude:
     //   · ?test (o #test) nell'indirizzo  —  http://localhost:8080/?test
     //   · il tasto T mentre si e' fermi nel menu
     const prova = $('provaBox');

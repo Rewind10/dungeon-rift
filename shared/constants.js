@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '1.98.0',
+    VERSION: '1.99.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -97,6 +97,9 @@
     // v1.97 — FINO A CHE ONDATA SI GIOCA NEL CIMITERO. Dalla successiva torna la caverna. E un solo
     // numero apposta: se domani il cimitero convince, si alza; se stanca, si abbassa a zero e sparisce.
     CIMITERO_FINO_A: 1,
+    // v1.99 — LE ONDATE CHE SI GIOCANO NELLA CALDERA: quelle dei due boss. E un elenco apposta —
+    // aggiungerne una costa una virgola, e svuotarlo spegne la caldera senza toccare altro.
+    CALDERA_ONDATE: [10, 20],
     MAX_ALIVE: 40,
     // v1.96 — DALL'ONDATA 9 IN POI SE NE VEDONO 22 ALLA VOLTA. Il tetto unico di quaranta era giusto
     // finche' le ondate erano piccole, ma dalla nona in avanti la mappa si riempiva: alla 19 erano
