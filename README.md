@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.99.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.99.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,9 +24,25 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novita v1.99.1 (l'arena sgombra, il Colosso che ti viene addosso)
+- **🌋 La caldera si apre.** Via la **cresta** e i **10-14 speroni** in mezzo alla conca: erano coperture per
+  te, ma per un boss di raggio 38-52 erano trappole in cui incastrarsi. Restano **6-10 massi appoggiati al
+  bordo**. Misurato su cinque semi: **1404-1427 tessere** calpestabili (erano 1208-1254), **0 rocce isolate**
+  nell'arena, **1202-1224 caselle larghe 3x3 connesse al 100,0%** (erano ~730 al 98,5-100%).
+- **🧍 Il Colosso non e' piu' un bersaglio fermo.** Cammina piu' svelto (`speed 74 → 92`), il **pugno anticipa
+  il tuo movimento** (strafare in linea retta adesso ti porta dentro il colpo), e da oltre 200 px **ti carica
+  addosso**: telegrafo 0,45 s, poi 3x velocita' per 0,9 s con danno al 120%. Se sbatte contro un muro resta
+  scoperto 0,7 s. Onde d'urto ogni 5,6 s invece di 7,0.
+- **📊 Misurato girandogli attorno sparando**: a 300 px lo scontro passa da **43 s a 31 s** e incassi
+  **175 → 255 PV** su ~325 (**+46%**); a 450 px da 197 a 253. Nessun PV del boss e' stato toccato: cambia
+  *come ti raggiunge*, non quanto e' duro.
+- **🧪 Test 66 esteso**: nessuna roccia isolata nell'arena su cinque semi, e la carica del Colosso esiste e
+  parte davvero a piu' del doppio della velocita' a piedi. **1920 test, 0 falliti.**
+
 ## 🆕 Novita v1.99 (la caldera dei boss, menu nero, prova visibile)
 - **🌋 Le ondate 10 e 20 si giocano nella CALDERA.** Non e' costruita da nessuno: e' successa. Conca larga,
-  **cresta** di roccia spezzata a meta' pendio, **speroni** come coperture, e in mezzo la **faglia aperta** —
+  **cresta** di roccia spezzata a meta' pendio, **speroni** come coperture *(rimossi in v1.99.1)*, e in
+  mezzo la **faglia aperta** —
   crepe che fanno male a chi ci cammina, **giocatore e mostri, boss compreso**.
 - **🧱 Zero righe di renderer**: speroni e cresta sono roccia (la cottura li disegna gia'), le crepe sono le
   pozze di pericolo che il motore ha dalla v1.62. L'elenco delle ondate e' in `constants.js`

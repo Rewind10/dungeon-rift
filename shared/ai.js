@@ -361,6 +361,24 @@
       }
       const d = MU.dist(m.x, m.y, p.x, p.y);
 
+      // v1.99.1 — LA CARICA. Il Colosso era lento e non riusciva a raggiungerti: bastava restare a
+      // distanza e sparare, e i suoi attacchi non arrivavano mai. Adesso, quando sei lontano e ti vede,
+      // pianta i piedi per mezzo secondo e poi SI LANCIA in linea retta. Non insegue: va dritto dove
+      // eri quando e' partito, quindi si schiva — ma bisogna muoversi, e chi sta fermo a sparare la prende.
+      if (m.carica) {
+        m.carica.t -= ctx.dt;
+        m.mx = m.carica.dx * m.speed * (m.def.caricaSpeed || 3.0);
+        m.my = m.carica.dy * m.speed * (m.def.caricaSpeed || 3.0);
+        m.facing = Math.atan2(m.carica.dy, m.carica.dx);
+        if (d <= (m.def.atkRange || 104) + p.radius) {   // ti prende in pieno: danno e spinta forte
+          ctx.melee(m, p, m.dmg * (m.def.caricaDanno || 1.2), 2.2);
+          ctx.emit({ t: 'colosso_pugno', x: m.x, y: m.y, r: (m.def.slamRadius || 132) * 0.55 });
+          m.carica = null; m.atkT = Math.max(m.atkT, 0.9);
+          return;
+        }
+        if (m.carica.t <= 0 || (m._stuckT || 0) > 0.2) { m.carica = null; m.atkT = Math.max(m.atkT, 0.7); }
+        return;
+      }
       // il pugno: telegrafo, poi l'area. Mentre carica il colpo sta fermo — si vede arrivare e si esce.
       if (m.wind > 0) {
         m.wind -= ctx.dt; m.mx = m.my = 0;
@@ -370,11 +388,37 @@
         }
         return;
       }
+      if (m.cwind > 0) {                                  // il telegrafo della carica: fermo, girato verso di te
+        m.cwind -= ctx.dt; m.mx = m.my = 0;
+        m.facing = Math.atan2(p.y - m.y, p.x - m.x);
+        if (m.cwind <= 0) {
+          const n = MU.norm(p.x - m.x, p.y - m.y);
+          m.carica = { t: m.def.caricaDur || 0.9, dx: n.x, dy: n.y };
+          ctx.emit({ t: 'colosso_carica', x: m.x, y: m.y, dx: n.x, dy: n.y, e: m.eid });
+        }
+        return;
+      }
       seek(m, ctx, fase === 3 ? (m.def.nucleoSpeed || 1.55) : 1);
       if (d <= (m.def.atkRange || 104) && m.atkT <= 0) {
         m.atkT = (m.def.atkCd || 2.4) * (fase === 2 ? 1.3 : 1);
-        m.wind = m.def.slamWind || 0.72; m.tx = p.x; m.ty = p.y;
-        ctx.emit({ t: 'colosso_wind', x: m.x, y: m.y, tx: p.x, ty: p.y, r: m.def.slamRadius || 132, dur: m.wind, e: m.eid });
+        // v1.99.1 — IL PUGNO ANTICIPA. Mirava dove eri al momento del colpo: con 0,72 s di telegrafo
+        // bastava fare un passo. Adesso mira dove SARAI se continui cosi', e per schivarlo devi
+        // cambiare direzione — che e' una decisione, non un riflesso.
+        const vel = (p.speed || 200) * (m.def.slamPredizione || 0.55) * (m.def.slamWind || 0.72);
+        const ix = (p.input && p.input.mx) || 0, iy = (p.input && p.input.my) || 0;
+        const l = Math.hypot(ix, iy) || 1;
+        m.wind = m.def.slamWind || 0.72;
+        m.tx = p.x + (ix / l) * vel * (l > 0.01 ? 1 : 0);
+        m.ty = p.y + (iy / l) * vel * (l > 0.01 ? 1 : 0);
+        ctx.emit({ t: 'colosso_wind', x: m.x, y: m.y, tx: m.tx, ty: m.ty, r: m.def.slamRadius || 132, dur: m.wind, e: m.eid });
+        return;
+      }
+      // la carica scatta solo da lontano: da vicino ci sono il pugno e le onde
+      m.caricaT = (m.caricaT || (m.def.caricaCd || 6) * 0.5) - ctx.dt;
+      if (m.caricaT <= 0 && d > (m.def.caricaMin || 200) && ctx.losClear(m.x, m.y, p.x, p.y)) {
+        m.caricaT = (m.def.caricaCd || 6) * (fase === 3 ? 0.65 : fase === 2 ? 0.82 : 1);
+        m.cwind = m.def.caricaWind || 0.45;
+        ctx.emit({ t: 'colosso_wind', x: m.x, y: m.y, tx: p.x, ty: p.y, r: 60, dur: m.cwind, e: m.eid });
         return;
       }
       // ONDE D'URTO: tre anelli concentrici che partono da lui e si allargano. Non seguono nessuno —

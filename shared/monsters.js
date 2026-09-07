@@ -85,9 +85,13 @@
     // scopre il NUCLEO, che lo fa correre ma gli fa incassare meta' danni in piu'. Non lo si picchia
     // e basta: si aspetta che si apra, e nel frattempo si sopravvive.
     rift_colossus: { id: 'rift_colossus', name: 'Il Colosso della Faglia', tier: 5, boss: true, hp: 2600,
-      speed: 74, radius: 38, dmg: 38, atkRange: 104, atkCd: 2.4, ai: 'boss_colosso', atk: 'melee', xp: 300,
+      speed: 92, radius: 38, dmg: 38, atkRange: 104, atkCd: 2.4, ai: 'boss_colosso', atk: 'melee', xp: 300,
       weight: 0, color: '#4a4658', color2: '#23212e', eye: '#b061ff', shape: 'colosso',
-      slamRadius: 132, slamWind: 0.72, ondaCd: 7.0, fase2: 0.66, fase3: 0.33,
+      slamRadius: 132, slamWind: 0.72, ondaCd: 5.6, fase2: 0.66, fase3: 0.33,
+      // v1.99.1 — era lento e le sue botte si schivavano stando indietro: adesso il pugno ANTICIPA il
+      // tuo movimento (slamPredizione) e da lontano ti CARICA addosso.
+      slamPredizione: 0.55, caricaCd: 6.0, caricaWind: 0.45, caricaSpeed: 3.0, caricaDur: 0.9,
+      caricaDanno: 1.2, caricaMin: 200,
       macerieCd: 3.4, projSpeed: 250, projColor: '#c9a8ff', nucleoDanno: 1.5, nucleoSpeed: 1.55 },
     mega_dragon: { id: 'mega_dragon', name: 'AZ\'GAROTH, il Divoratore di Mondi', tier: 6, boss: true, mega: true, hp: 9000, speed: 104, radius: 52, dmg: 52, atkRange: 520, atkCd: 0.9, ai: 'boss_dragon', atk: 'special', xp: 800, weight: 0, color: '#5a0d2a', color2: '#2a0512', eye: '#ff2d55', shape: 'dragon', projSpeed: 340, projColor: '#ff2d55', enrageAtHp: 0.4 },
   };

@@ -2,6 +2,59 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.99.1] — 2026-09-07 · "L'arena sgombra e il Colosso che ti viene addosso"
+
+#### 🌋 La caldera si apre
+Nella v1.99 la conca aveva una **cresta** di roccia a meta' pendio e **dieci-quattordici speroni** sparsi
+in mezzo. Erano pensati come coperture per il giocatore, ma per un boss di raggio 38-52 erano trappole: nei
+varchi fra uno sperone e l'altro ci si **incastra**. Tolti tutti e due. Restano **6-10 massi appoggiati al
+bordo** (`d = raggio * 0.92 - 0.02..0.07`): danno profondita' alla parete, non stanno mai sulla strada.
+
+Misurato su cinque semi, prima e dopo:
+
+| | v1.99.0 | v1.99.1 |
+|---|---|---|
+| Tessere calpestabili | 1208-1254 | **1404-1427** |
+| Rocce isolate dentro l'arena | 10-14 | **0** |
+| Caselle larghe 3x3 | ~730 | **1202-1224** |
+| Loro connettivita' | 98,5-100% | **100,0%** |
+
+Le crepe della faglia restano: sono `T_HAZARD`, non muri — si attraversano, fanno male, non incastrano
+niente.
+
+#### 🧍 Il Colosso non e' piu' un bersaglio fermo
+Era lento e la sua unica botta si schivava **stando indietro e girandogli attorno**: bastava non entrare
+mai nei 104 px. Tre modifiche, tutte sul *come ti raggiunge*, nessuna sui PV:
+
+- **Cammina piu' svelto**: `speed 74 → 92`. Non ti prende comunque di corsa, ma non lo semini piu' a passo.
+- **Il pugno anticipa il tuo movimento** (`slamPredizione: 0.55`): il punto d'impatto non e' piu' dove sei
+  quando parte il colpo, ma dove *starai andando* nei 0,72 s di caricamento. Strafare in linea retta adesso
+  ti porta **dentro** il colpo; per schivarlo devi cambiare direzione dopo il telegrafo, che e' la
+  decisione che il boss non chiedeva mai.
+- **Da lontano ti CARICA addosso** (nuovo attacco): oltre i 200 px, in vista libera, ogni ~6 s si pianta
+  0,45 s (telegrafo `colosso_wind`) e poi parte a **3x la sua velocita'** per 0,9 s, con una botta al 120%.
+  Se sbatte contro un muro si ferma e resta scoperto 0,7 s. In fase 2 e 3 il tempo di ricarica scende a
+  0,82x e 0,65x.
+- Le onde d'urto arrivano piu' spesso: `ondaCd 7,0 → 5,6 s`.
+
+Misurato con una simulazione che gira attorno al boss sparando (il modo in cui lo si giocava davvero):
+
+| Distanza tenuta | v1.99.0 | v1.99.1 |
+|---|---|---|
+| 300 px | cade in 43 s, incassi **175 PV** | cade in 31 s, incassi **255 PV** |
+| 450 px | — | incassi **253 PV** (erano 197) |
+
+Su ~325 PV di un Campione: **+46% di danno subito** a parita' di gioco, e lo scontro dura *meno* perche'
+stare lontani non e' piu' gratis.
+
+#### 🧪 Test
+Il test 66 (la caldera) ora verifica anche che **dentro l'arena non ci sia nessuna roccia isolata** su
+cinque semi, e che la carica del Colosso **esista e parta davvero** a piu' del doppio della sua velocita' a
+piedi. Suite: **1920 test, 0 falliti**.
+
+**Verificato anche cio' che non ho toccato** (la regola nata con la v1.97.1): ondata 7 in partita vera, la
+caverna e' quella di sempre, nessun errore in console.
+
 ### [1.99.0] — 2026-09-07 · "La caldera dei boss, il menu torna nero, la prova torna nel menu"
 
 #### 🌋 La caldera — ondate 10 e 20

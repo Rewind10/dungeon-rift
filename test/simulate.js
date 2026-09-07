@@ -4455,6 +4455,69 @@ function testV199() {
     assert(MU.dist(boss.x, boss.y, part.x, part.y) > 120, 'ondata ' + onda + ': e si muove davvero (' + MU.dist(boss.x, boss.y, part.x, part.y).toFixed(0) + ' px), non resta incastrato fra gli speroni');
     for (const mo of room.monsters) if (!mo.dead) assert(!room.isWallAt(mo.x, mo.y), 'ondata ' + onda + ': nessun nemico dentro una roccia');
   }
+
+  // --- 4) v1.99.1 — L'ARENA E' SGOMBRA. Cresta e speroni in mezzo sono spariti: per un boss di raggio
+  //     38-52 erano trappole, e Paolo ci ha visto il Colosso incastrarsi. Qui si verifica che dentro la
+  //     conca non resti NESSUN ostacolo isolato: le uniche rocce ammesse sono attaccate al bordo.
+  for (const seed of [7, 21, 99, 404, 808]) {
+    const m = MG.generate(seed, 10);
+    const W = m.w, H = m.h, gri = m.grid;
+    const roccia = (i) => gri[i] === C.T_WALL;
+    // la roccia "di fuori" e' quella che si tocca partendo dal bordo della mappa
+    const vis = new Uint8Array(W * H); const st = [];
+    for (let x = 0; x < W; x++) { for (const i of [x, (H - 1) * W + x]) if (roccia(i) && !vis[i]) { vis[i] = 1; st.push(i); } }
+    for (let y = 0; y < H; y++) { for (const i of [y * W, y * W + W - 1]) if (roccia(i) && !vis[i]) { vis[i] = 1; st.push(i); } }
+    while (st.length) { const i = st.pop(), x = i % W, y = (i / W) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx; if (vis[j] || !roccia(j)) continue; vis[j] = 1; st.push(j); } }
+    let isolate = 0;
+    for (let i = 0; i < gri.length; i++) if (roccia(i) && !vis[i]) isolate++;
+    assert(isolate === 0, 'seme ' + seed + ': niente ostacoli in mezzo all arena (' + isolate + ' tessere isolate)');
+  }
+
+  // --- 5) v1.99.1 — IL COLOSSO NON E' PIU' UNA LUMACA ---
+  {
+    const Mon = require('../shared/monsters.js');
+    const d = Mon.BOSSES.rift_colossus;
+    assert(d.speed >= 90, 'il Colosso cammina (' + d.speed + ', era 74)');
+    assert(d.caricaCd > 0 && d.caricaDur > 0 && d.caricaMin > 0, 'ha una carica, con il suo tempo di ricarica');
+    assert(d.slamPredizione > 0, 'e il pugno anticipa il movimento invece di mirare dove sei');
+    // la carica parte davvero: boss lontano, giocatore in vista, e prima o poi si lancia
+    const room = new Room('v1991'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
+    room.startGame(10);
+    room.monsters = room.monsters.filter(x => x.boss); room.pending = 0; room.waveList = [];
+    const boss = room.monsters[0];
+    assert(!!boss, 'il Colosso e in campo');
+    let caricato = false, veloceMax = 0;
+    const dt2 = 1 / C.TICK_RATE;
+    for (let i = 0; i < C.TICK_RATE * 30 && !caricato; i++) {
+      p.hp = room.effMaxHp(p); p.down = false; p.dead = false;
+      // il giocatore tiene le distanze: e' la situazione in cui prima il Colosso non arrivava mai
+      const a = Math.atan2(p.y - boss.y, p.x - boss.x);
+      const dd = MU.dist(p.x, p.y, boss.x, boss.y);
+      const n = MU.norm(Math.cos(a) * (dd < 320 ? 1 : -0.2), Math.sin(a) * (dd < 320 ? 1 : -0.2));
+      room.setInput('a', { mx: n.x, my: n.y, aim: a + Math.PI });
+      room.update(dt2);
+      const v = Math.hypot(boss.mx || 0, boss.my || 0);
+      if (v > veloceMax) veloceMax = v;
+      // la carica comincia in questo tick ma il movimento arriva dal prossimo: si guardano altri 30 tick
+      if (boss.carica && !caricato) {
+        for (let k = 0; k < 30; k++) {
+          p.hp = room.effMaxHp(p); p.down = false; p.dead = false;
+          room.setInput('a', { mx: 0, my: 0, aim: 0 });
+          room.update(dt2);
+          const vv = Math.hypot(boss.mx || 0, boss.my || 0);
+          if (vv > veloceMax) veloceMax = vv;
+        }
+        caricato = true;
+      }
+    }
+    assert(caricato, 'e in trenta secondi ti carica addosso almeno una volta');
+    assert(veloceMax > boss.speed * 2, 'la carica e davvero uno scatto (' + veloceMax.toFixed(0) + ' px/s contro i ' + boss.speed + ' del passo)');
+    assert(!room.isWallAt(boss.x, boss.y), 'e non finisce dentro la roccia');
+  }
+
   ok('caldera verificata: connessa, il boss ci gira, e la faglia e aperta in mezzo');
 }
 

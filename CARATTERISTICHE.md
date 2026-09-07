@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.99.0`
+**Versione attuale:** `1.99.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -327,29 +327,49 @@ verra' aggiunta domani.
 
 ---
 
-## 🌋 LA CALDERA *(v1.99 — ondate 10 e 20, quelle dei boss)*
+## 🌋 LA CALDERA *(v1.99 · arena sgombrata in v1.99.1 — ondate 10 e 20, quelle dei boss)*
 
 Le due ondate dei boss non si giocano piu in una caverna come tutte le altre. La caldera non e costruita
 da nessuno: e successa.
 
 | Pezzo | Cosa fa, giocando |
 |---|---|
-| **La conca** | bordo irregolare su tre frequenze, ~1230 tessere calpestabili |
-| **La cresta** | anello di roccia spezzata a meta pendio, con 3-5 varchi larghi: taglia la vista senza chiudere |
-| **Gli speroni** | 10-14 massi distanti fra loro: le coperture vere, quelle dietro cui ci si mette mentre il boss carica |
+| **La conca** | bordo irregolare su tre frequenze, **1404-1427 tessere calpestabili** |
+| **I massi del bordo** | 6-10, appoggiati alla parete: danno profondita, non stanno mai sulla strada |
+| **L'arena** | **sgombra**. Nessun ostacolo isolato in mezzo: e li che si combatte il boss |
 | **La faglia** | crepe a raggiera dal centro: fanno male a chi ci cammina, **giocatore e mostri, boss compreso** |
 
-**Non e costata una riga di renderer**: speroni e cresta sono roccia come quella della caverna (la cottura
-li disegna gia), e le crepe sono `T_HAZARD`, le pozze di pericolo del motore dalla v1.62.
+**Perche sgombra** *(v1.99.1)*: fino alla v1.99.0 c'erano una **cresta** di roccia a meta pendio e 10-14
+**speroni** sparsi nella conca. Erano coperture per il giocatore, ma per un boss di raggio 38-52 erano
+trappole: fra uno sperone e l'altro ci si incastrava. Tolti. Misurato su cinque semi: **0 rocce isolate**
+nell'arena, **1202-1224 caselle larghe 3x3 connesse al 100,0%** (erano ~730 al 98,5-100%).
 
-**Il boss ci gira**: oltre 730 caselle larghe 3x3 connesse al 98,5-100% (un boss di raggio 52 si muove su
-quelle). In partita vera il Colosso si sposta di 1328 px in 40 s, AZ GAROTH di 577.
+**Non e costata una riga di renderer**: i massi sono roccia come quella della caverna (la cottura li
+disegna gia), e le crepe sono `T_HAZARD`, le pozze di pericolo del motore dalla v1.62.
 
 **Le crepe rispettano le due regole delle pozze** (v1.62): mai a contatto con un muro, mai entro 7 tessere
 dalla partenza. Per questo non si scavano nella pianta ma dopo, quando la partenza e stata scelta.
 
 Le ondate sono un elenco in constants (`CALDERA_ONDATE: [10, 20]`). La zona si chiama *La Caldera* alla 10
 e *La Faglia Aperta* alla 20.
+
+### 🧍 Il Colosso della Faglia — ritarato in v1.99.1
+
+Era lento e la sua unica botta si schivava stando indietro e girandogli attorno. Adesso il problema non e
+piu *entrare nella sua portata*, ma *dove sarai fra un secondo*.
+
+| | Prima | Adesso |
+|---|---|---|
+| Velocita | 74 | **92** |
+| Pugno | colpisce dove sei | **anticipa il tuo movimento** (`slamPredizione: 0.55`) |
+| Da lontano | niente | **carica addosso** oltre i 200 px: telegrafo 0,45 s, poi 3x velocita per 0,9 s, danno 120% |
+| Onda d'urto | ogni 7,0 s | ogni **5,6 s** |
+
+Se la carica sbatte contro un muro si ferma e il boss resta scoperto 0,7 s. In fase 2 e 3 la ricarica della
+carica scende a 0,82x e 0,65x.
+
+Misurato con una simulazione che gira attorno al boss sparando: a 300 px lo scontro passa da **43 s a 31 s**
+e il giocatore incassa **175 → 255 PV** (su ~325 di un Campione, **+46%**); a 450 px da 197 a 253 PV.
 
 ---
 

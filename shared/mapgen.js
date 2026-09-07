@@ -499,39 +499,29 @@
       if (Math.hypot(dx, dy) <= raggio(a) * 0.92) set(x, y, C.T_FLOOR);
     }
 
-    // (2) LA CRESTA: un anello di roccia spezzata a meta' pendio. Non chiude — ha tre o cinque varchi
-    //     larghi — ma spezza la vista, ed e' l'unica cosa che impedisce alla caldera di essere una padella.
+    // (2) L'ARENA E' SGOMBRA. v1.99.1: qui c'erano una CRESTA di roccia a meta' pendio e dieci-quattordici
+    //     SPERONI sparsi nella conca. Erano coperture per il giocatore, ma per un boss di raggio 38-52
+    //     erano trappole: ci si incastrava. In un'ondata di boss lo spazio libero vale piu' della
+    //     copertura — il combattimento e' fatto di distanza e di tempo, non di ripari.
+    //     Resta solo qualche masso ADDOSSATO al bordo, che frastaglia il perimetro senza mettere niente
+    //     in mezzo: nessun ostacolo isolato dentro l'arena, per costruzione.
     {
-      const buchi = [];
-      for (let b = 0, n = ri(3, 5); b < n; b++) buchi.push({ a: rr(0, 6.283), w: 0.30 + rr(0, 0.35) });
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-        if (at(x, y) !== C.T_FLOOR) continue;
-        const dx = (x - cx) / RX, dy = (y - cy) / RY;
-        const d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
-        const r = 0.62 + Math.sin(a * 4 + f2) * 0.05;
-        if (Math.abs(d - r) > 0.05) continue;
-        let salta = false;
-        for (const b of buchi) { const da = Math.abs(((a - b.a + Math.PI * 3) % 6.283) - Math.PI); if (da < b.w) { salta = true; break; } }
-        if (salta || rng() < 0.12) continue;
-        set(x, y, C.T_WALL);
+      const messi = [];
+      for (let k = 0, tent = 0; k < ri(6, 10) && tent < 300; tent++) {
+        const a = rr(0, 6.283);
+        const rBordo = raggio(a) * 0.92;
+        const d = rBordo - rr(0.02, 0.07);              // appena dentro il bordo, mai al centro
+        const x = cx + Math.cos(a) * RX * d, y = cy + Math.sin(a) * RY * d;
+        let male = false;
+        for (const m of messi) if (Math.hypot(x - m.x, y - m.y) < 6) { male = true; break; }
+        if (male) continue;
+        const rx = 1.2 + rr(0, 2.0), ry = 1.1 + rr(0, 1.5);
+        for (let py = Math.round(y - ry - 1); py <= y + ry + 1; py++) for (let px = Math.round(x - rx - 1); px <= x + rx + 1; px++) {
+          const dd = Math.hypot((px - x) / rx, (py - y) / ry) + rr(0, 0.25);
+          if (dd <= 1 && at(px, py) === C.T_FLOOR) set(px, py, C.T_WALL);
+        }
+        messi.push({ x, y }); k++;
       }
-    }
-
-    // (3) GLI SPERONI: massi grossi dentro la conca, distanti fra loro. Sono le coperture vere, quelle
-    //     dietro cui ci si mette mentre il boss carica il colpo.
-    const messi = [];
-    for (let k = 0, tent = 0; k < ri(10, 14) && tent < 400; tent++) {
-      const a = rr(0, 6.283), d = 0.20 + rr(0, 0.60);
-      const x = cx + Math.cos(a) * RX * d, y = cy + Math.sin(a) * RY * d;
-      let male = false;
-      for (const m of messi) if (Math.hypot(x - m.x, y - m.y) < 5.5) { male = true; break; }
-      if (male) continue;
-      const rx = 1.2 + rr(0, 2.6), ry = 1.1 + rr(0, 1.9);
-      for (let py = Math.round(y - ry - 1); py <= y + ry + 1; py++) for (let px = Math.round(x - rx - 1); px <= x + rx + 1; px++) {
-        const dd = Math.hypot((px - x) / rx, (py - y) / ry) + rr(0, 0.25);
-        if (dd <= 1 && at(px, py) === C.T_FLOOR) set(px, py, C.T_WALL);
-      }
-      messi.push({ x, y }); k++;
     }
 
     // (4) LE CREPE DELLA FAGLIA non si scavano qui. Le pozze di pericolo hanno due regole loro, dalla

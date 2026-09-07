@@ -247,7 +247,7 @@ Non entrano nel pool ondate; compaiono alle **ondate multiple di 5**.
 
 | Boss | id | PV | Comparsa | Note |
 |---|---|---:|---|---|
-| **Il Colosso della Faglia** | `rift_colossus` | 2600 | **ondata 10** | tre fasi: pugni ad area + onde d'urto concentriche → perde un braccio e lancia macerie → apre il nucleo (corre di piu', incassa +50%) |
+| **Il Colosso della Faglia** | `rift_colossus` | 2600 | **ondata 10** | tre fasi: pugni ad area (il pugno **anticipa il tuo movimento**, v1.99.1) + onde d'urto concentriche + **carica** da oltre 200 px → perde un braccio e lancia macerie → apre il nucleo (corre di piu', incassa +50%) |
 | AZ'GAROTH, il Divoratore di Mondi | `mega_dragon` | 9000 | **ondata 20** | mega-boss multi-fase (respiro, nova, meteore, enrage) |
 | ~~Signore della Guerra Orchesco~~ | `orc_warlord` | 1600 | *fuori rotazione (v1.89)* | la definizione resta nel file ma non entra piu' in nessuna ondata |
 | ~~Re Lich~~ | `lich_king` | 2200 | *fuori rotazione (v1.89)* | idem — erano gli ultimi due nemici disegnati DI LATO in un gioco visto dall'alto |
