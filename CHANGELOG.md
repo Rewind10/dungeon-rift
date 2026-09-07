@@ -2,6 +2,40 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.99.2] — 2026-09-07 · "Il centro della caldera si arreda"
+
+#### 🔥 Via le pozze, dentro sassi, bracieri e ossa
+In mezzo alla conca c'erano le **crepe della faglia**: pozze di pericolo a raggiera dal centro. Tecnicamente
+funzionavano, ma **l'effetto era brutto** — una macchia arancione larga mezza arena. Tolte, e con loro anche
+le pozze normali: nella caldera adesso ce ne sono **zero** (`pools = _cal ? 0 : ...`). Le altre ondate non
+cambiano di una virgola — misurato: ondata 5 → 11 pozze, 7 → 11, 15 → 18; ondate 10 e 20 → **0**.
+
+Al loro posto uno **strato di ornamenti**, sparso in campo aperto:
+
+| Ornamento | Cosa ci fa |
+|---|---|
+| **Sassi** (`rock`, `rockSmall`, `stalagmite`) | il pulviscolo della conca. Scala 0,5-0,85: devono leggersi come terreno, non come coperture — se sembrano ripari, il giocatore ci si nasconde dietro e scopre che non riparano |
+| **Bracieri** (3-4, oltre a quelli soliti) | una luce in mezzo al niente, con due sassi ai piedi: un fuoco a cui girare intorno mentre il boss carica |
+| **Ossa** (`corpse`, `skullpile`, `bones`, `skull`) | chi e' venuto qui prima di te |
+| **Macerie** (`rubble`) | il resto del crollo |
+
+**Non costano una tessera di spazio.** Sono `props`: li disegna il renderer, la griglia binaria non li
+conosce e collisioni, linea di vista e campo di flusso nemmeno. L'arena resta **sgombra** come l'ha voluta
+la v1.99.1 — 1398-1419 tessere calpestabili, zero ostacoli isolati — e il boss continua a girarci senza
+incastrarsi. Sgombra non vuol dire vuota.
+
+Sono anche cercati **al contrario di tutte le altre decorazioni**: quelle stanno in nicchia, contro un muro,
+perche' li' arredano; questi devono stare **lontani dai muri**, perche' il vuoto da riempire e' il centro.
+E restano fuori dalle 7 tessere attorno alla partenza, come ogni altra cosa che nasce sulla mappa.
+
+#### 🧪 Test
+Il test 66 adesso pretende **zero pozze** nella caldera (prima ne pretendeva almeno 12) e, su cinque semi,
+che il centro sia arredato davvero: almeno 10 sassi, 4 bracieri, 8 pezzi di ossa, e **almeno 25 ornamenti
+lontani da ogni muro**. Suite: **oltre 1930 test, 0 falliti**.
+
+**Verificato anche cio' che non ho toccato**: le pozze delle ondate normali sono al loro posto (contate
+sopra), e la partita vera dell'ondata 10 parte nella caldera senza errori.
+
 ### [1.99.1] — 2026-09-07 · "L'arena sgombra e il Colosso che ti viene addosso"
 
 #### 🌋 La caldera si apre

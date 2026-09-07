@@ -646,33 +646,14 @@
         }
         return true;
       };
-      // v1.99 — LE CREPE DELLA CALDERA. Le pozze normali nascono a caso dove c'e' posto; queste no:
-      // partono dal centro della conca e si allontanano a raggiera, perche' la faglia si e' aperta LI'.
-      // Passano dalle stesse due regole di tutte le pozze — mai a contatto con un muro (openSpot), mai
-      // entro 7 tessere dalla partenza — che qui contano il doppio: e' l'ondata del boss, e una pozza
-      // che chiude un passaggio o che ti nasce sotto i piedi non e' una scelta, e' una beffa.
-      if (_cal) {
-        const cellaA = (x, y) => free.find(c => c.x === x && c.y === y) || null;
-        const cx0 = W / 2, cy0 = H / 2;
-        const base = rng() * 6.283, rami = rint(3, 4);
-        for (let k = 0; k < rami; k++) {
-          let a = base + k * (6.283 / rami) + (rng() - 0.5) * 0.5;
-          let fx = cx0 + Math.cos(a) * 1.5, fy = cy0 + Math.sin(a) * 1.5;
-          for (let i = 0, passi = rint(7, 12); i < passi; i++) {
-            a += (rng() - 0.5) * 0.44;
-            fx += Math.cos(a) * 2.4; fy += Math.sin(a) * 1.8;
-            for (const [ox, oy] of [[0, 0], [rng() < 0.55 ? (rng() < 0.5 ? 1 : -1) : 0, 0]]) {
-              const c = cellaA(Math.round(fx) + ox, Math.round(fy) + oy);
-              if (!c) continue;
-              if (grid[c.i] !== C.T_FLOOR || !openSpot(c)) continue;
-              if (Math.hypot(c.x - start.x, c.y - start.y) <= 7) continue;
-              grid[c.i] = C.T_HAZARD; hazCells.push(c.i);
-            }
-            if (Math.hypot((fx - cx0) / 28, (fy - cy0) / 19.5) > 0.55) break;   // restano dentro la conca
-          }
-        }
-      }
-      const pools = Math.max(0, Math.round((1.6 + Math.min(2.4, level * 0.16)) * (theme.hazMul || 1)));
+      // v1.99.1 — QUI C'ERANO LE CREPE DELLA CALDERA: pozze di pericolo a raggiera dal centro.
+      // Tolte in v1.99.2. Non per un difetto tecnico — funzionavano — ma perche' in mezzo all'arena
+      // facevano un brutto effetto: una macchia arancione larga meta' conca. Al loro posto, piu' sotto,
+      // c'e' lo STRATO DI ORNAMENTI: sassi, bracieri, ossa. Sono decorazioni vere (le disegna il
+      // renderer, non toccano ne' la griglia ne' le collisioni), quindi l'arena resta sgombra come
+      // l'ha voluta la v1.99.1 e il boss continua a girarci senza incastrarsi.
+      // nella caldera NESSUNA pozza, nemmeno le normali: e' un'arena da boss, si legge sgombra.
+      const pools = _cal ? 0 : Math.max(0, Math.round((1.6 + Math.min(2.4, level * 0.16)) * (theme.hazMul || 1)));
       let spots = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 7 && openSpot(c));
       for (let z = spots.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = spots[z]; spots[z] = spots[j]; spots[j] = t; }
       const centers = [];
@@ -768,6 +749,50 @@
     const microAreas = used.slice(0, 6).map(c => ({ x: wcx(c), y: wcy(c) }));
     // BRACIERI sparsi (luce), in celle aperte: max CAP
     { let open = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 4 && !nearWall(c)); for (let z = open.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = open[z]; open[z] = open[j]; open[j] = t; } let bx = 0; for (const c of open) { if (bx >= 3 + rint(0, 1)) break; if (used.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 4)) { putC('brazier', c, 0, 0, 1.05); used.push(c); bx++; } } }
+    // v1.99.2 — GLI ORNAMENTI DELLA CALDERA. L'arena e' sgombra dalla v1.99.1 (il boss ci si incastrava),
+    // ma sgombra non vuol dire vuota: senza niente in mezzo la conca sembrava una padella. Prima ci
+    // stavano le crepe della faglia — pozze di pericolo — e facevano un effetto brutto; adesso ci stanno
+    // SASSI, BRACIERI e OSSA. Sono props, cioe' disegno puro: il renderer li disegna, la griglia non li
+    // conosce, le collisioni e il campo di flusso nemmeno. Quindi arredano senza togliere una tessera di
+    // spazio al boss — che era tutto il punto della v1.99.1.
+    // Vanno cercati LONTANO dai muri (il contrario di tutte le altre decorazioni, che stanno in nicchia):
+    // qui il vuoto da riempire e' il centro.
+    if (_cal) {
+      let apert = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 7 && !nearWall(c));
+      for (let z = apert.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = apert[z]; apert[z] = apert[j]; apert[j] = t; }
+      const orn = [];
+      const libero = (c, d) => used.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3) && orn.every(u => Math.hypot(u.x - c.x, u.y - c.y) > d);
+      const metti = (type, c, dx, dy, s) => props.push({ type, x: wcx(c) + dx, y: wcy(c) + dy, s, r: rng() });
+      const sassi = ['rock', 'rockSmall', 'rockSmall', 'stalagmite'];
+      let bracieri = 0, gruppi = 0;
+      const quanti = 16 + rint(0, 7), maxBracieri = 3 + rint(0, 1);
+      for (const c of apert) {
+        if (gruppi >= quanti) break;
+        if (!libero(c, 4)) continue;
+        const sorte = rng();
+        if (sorte < 0.20 && bracieri < maxBracieri) {
+          // il braciere: una luce in mezzo al niente, con due sassi ai piedi. E' quello che da' un
+          // fuoco a cui girare intorno mentre il boss carica.
+          metti('brazier', c, 0, 0, MU.rand(0.95, 1.1));
+          for (let j = 0, n = 1 + rint(0, 1); j < n; j++) { const a = rng() * 6.28; metti('rockSmall', c, Math.cos(a) * (26 + rng() * 12), Math.sin(a) * (22 + rng() * 10), MU.rand(0.6, 0.85)); }
+          bracieri++;
+        } else if (sorte < 0.42) {
+          // le OSSA: chi e' venuto qui prima di te. Un corpo o una pila di teschi, e intorno quello che resta.
+          metti(rng() < 0.5 ? 'corpse' : 'skullpile', c, MU.rand(-8, 8), MU.rand(-6, 6), MU.rand(0.8, 1.05));
+          for (let j = 0, n = 1 + rint(0, 2); j < n; j++) { const a = rng() * 6.28, dd = 18 + rng() * 26; metti(rng() < 0.5 ? 'bones' : 'skull', c, Math.cos(a) * dd, Math.sin(a) * dd, MU.rand(0.7, 1.0)); }
+        } else if (sorte < 0.60) {
+          metti('rubble', c, MU.rand(-6, 6), MU.rand(-6, 6), MU.rand(0.75, 1.0));
+          if (rng() < 0.6) metti('rockSmall', c, MU.rand(-30, 30), MU.rand(-24, 24), MU.rand(0.6, 0.85));
+        } else {
+          // i SASSI: il pulviscolo della conca. Piccoli — scala 0.5-0.85 — perche' devono leggersi come
+          // terreno, non come coperture: se sembrano ostacoli il giocatore ci si nasconde dietro e scopre
+          // che non riparano da niente.
+          for (let j = 0, n = 2 + rint(0, 2); j < n; j++) { const a = rng() * 6.28, dd = rng() * 34; metti(sassi[(rng() * sassi.length) | 0], c, Math.cos(a) * dd, Math.sin(a) * dd, MU.rand(0.5, 0.85)); }
+        }
+        orn.push(c); gruppi++;
+      }
+    }
+
     // TORCE appese ai muri, REGOLARI e numerose (unica eccezione al cap)
     for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { if (grid[idx(x, y)] !== C.T_FLOOR) continue; if (grid[idx(x, y - 1)] === C.T_WALL && rng() < 0.06) putW('torch', x * TILE + TILE / 2, y * TILE + 6, 1); }
 

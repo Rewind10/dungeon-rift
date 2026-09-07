@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.99.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.99.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,6 +24,19 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novita v1.99.2 (il centro della caldera si arreda)
+- **🔥 Via le pozze dalla caldera.** Le crepe della faglia in mezzo all'arena facevano un brutto effetto: una
+  macchia arancione larga mezza conca. Tolte, e con loro anche le pozze normali — nella caldera adesso ce ne
+  sono **zero**. Le altre ondate non cambiano: 5 → 11 pozze, 7 → 11, 15 → 18, come sempre.
+- **🪨 Al loro posto, ORNAMENTI**: sassi piccoli, **bracieri**, ossa e macerie, sparsi in campo aperto e
+  lontani dai muri (il contrario delle altre decorazioni, che stanno in nicchia: qui il vuoto da riempire e'
+  il centro). Restano fuori dalle 7 tessere attorno alla partenza.
+- **🧱 Non costano una tessera.** Sono props: li disegna il renderer, la griglia non li conosce e le
+  collisioni nemmeno. L'arena resta **sgombra** come nella v1.99.1 e il boss ci gira. Sgombra non vuol dire
+  vuota.
+- **🧪 Test 66**: pretende zero pozze nella caldera e, su cinque semi, almeno 10 sassi, 4 bracieri, 8 pezzi
+  di ossa e **25 ornamenti lontani da ogni muro**. **oltre 1930 test, 0 falliti.**
+
 ## 🆕 Novita v1.99.1 (l'arena sgombra, il Colosso che ti viene addosso)
 - **🌋 La caldera si apre.** Via la **cresta** e i **10-14 speroni** in mezzo alla conca: erano coperture per
   te, ma per un boss di raggio 38-52 erano trappole in cui incastrarsi. Restano **6-10 massi appoggiati al
@@ -43,7 +56,7 @@ Test: `npm test`
 - **🌋 Le ondate 10 e 20 si giocano nella CALDERA.** Non e' costruita da nessuno: e' successa. Conca larga,
   **cresta** di roccia spezzata a meta' pendio, **speroni** come coperture *(rimossi in v1.99.1)*, e in
   mezzo la **faglia aperta** —
-  crepe che fanno male a chi ci cammina, **giocatore e mostri, boss compreso**.
+  crepe che fanno male a chi ci cammina *(rimosse in v1.99.2: al loro posto ci sono gli ornamenti)*.
 - **🧱 Zero righe di renderer**: speroni e cresta sono roccia (la cottura li disegna gia'), le crepe sono le
   pozze di pericolo che il motore ha dalla v1.62. L'elenco delle ondate e' in `constants.js`
   (`CALDERA_ONDATE: [10, 20]`): una virgola per aggiungerne una, vuoto per spegnerla.

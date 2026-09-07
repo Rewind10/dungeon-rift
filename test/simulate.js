@@ -4410,7 +4410,10 @@ function testV199() {
     let liberi = 0, crepe = 0;
     for (let i = 0; i < gri.length; i++) { if (passa(gri[i])) liberi++; if (gri[i] === C.T_HAZARD) crepe++; }
     assert(liberi > 1000 && liberi < 1600, 'seme ' + seed + ': la conca e larga il giusto (' + liberi + ' tessere)');
-    assert(crepe >= 12, 'seme ' + seed + ': la faglia e aperta in mezzo (' + crepe + ' tessere di crepa)');
+    // v1.99.2 — NESSUNA POZZA nella caldera. Fino alla 1.99.1 la faglia si apriva a raggiera dal centro,
+    // ma in mezzo all'arena faceva un effetto brutto: adesso il centro si arreda con gli ORNAMENTI
+    // (sassi, bracieri, ossa), che sono disegno e basta e non tolgono spazio al boss.
+    assert(crepe === 0, 'seme ' + seed + ': nessuna pozza dentro la caldera (' + crepe + ')');
     const grande = (mask) => {
       const vis = new Uint8Array(W * H); let best = 0, tot = 0;
       for (let i = 0; i < mask.length; i++) if (mask[i]) tot++;
@@ -4437,6 +4440,27 @@ function testV199() {
     const b = grande(largo);
     assert(b.tot > 500, 'seme ' + seed + ': c e spazio da boss (' + b.tot + ' caselle larghe 3x3)');
     assert(b.best / b.tot > 0.95, 'seme ' + seed + ': e il boss puo girare in tutta la caldera (' + (100 * b.best / b.tot).toFixed(1) + '% delle caselle larghe in un pezzo solo)');
+  }
+
+  // --- 2b) v1.99.2 — IL CENTRO E' ARREDATO, NON VUOTO. Gli ornamenti sono props: li disegna il
+  //     renderer, la griglia non li conosce. Quindi qui si controlla che ci siano davvero, che siano
+  //     dei tipi giusti, e che stiano LONTANO DAI MURI — cioe' in mezzo, dove prima c'erano le crepe.
+  for (const seed of [7, 21, 99, 404, 808]) {
+    const m = MG.generate(seed, 10);
+    const W = m.w, H = m.h, gri = m.grid, T = C.TILE;
+    const muro = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : gri[y * W + x] === C.T_WALL;
+    const conta = (tipi) => m.props.filter(p => tipi.indexOf(p.type) >= 0).length;
+    assert(conta(['rock', 'rockSmall', 'stalagmite']) >= 10, 'seme ' + seed + ': sassi in mezzo alla conca (' + conta(['rock', 'rockSmall', 'stalagmite']) + ')');
+    assert(conta(['brazier']) >= 4, 'seme ' + seed + ': e dei bracieri (' + conta(['brazier']) + ')');
+    assert(conta(['bones', 'skull', 'skullpile', 'corpse']) >= 8, 'seme ' + seed + ': e le ossa di chi e venuto prima (' + conta(['bones', 'skull', 'skullpile', 'corpse']) + ')');
+    // quanti stanno in campo aperto: una decorazione appoggiata al muro non arreda il centro
+    let aperti = 0;
+    for (const p of m.props) {
+      if (p.type === 'torch') continue;
+      const tx = (p.x / T) | 0, ty = (p.y / T) | 0;
+      if (!muro(tx - 1, ty) && !muro(tx + 1, ty) && !muro(tx, ty - 1) && !muro(tx, ty + 1)) aperti++;
+    }
+    assert(aperti >= 25, 'seme ' + seed + ': il centro e arredato davvero (' + aperti + ' ornamenti lontani dai muri)');
   }
 
   // --- 3) SI GIOCA: quaranta secondi delle due ondate vere ---

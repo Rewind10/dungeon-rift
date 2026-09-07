@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.99.1`
+**Versione attuale:** `1.99.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -327,7 +327,7 @@ verra' aggiunta domani.
 
 ---
 
-## 🌋 LA CALDERA *(v1.99 · arena sgombrata in v1.99.1 — ondate 10 e 20, quelle dei boss)*
+## 🌋 LA CALDERA *(v1.99 · arena sgombrata in v1.99.1 · centro arredato in v1.99.2 — ondate 10 e 20, quelle dei boss)*
 
 Le due ondate dei boss non si giocano piu in una caverna come tutte le altre. La caldera non e costruita
 da nessuno: e successa.
@@ -337,18 +337,30 @@ da nessuno: e successa.
 | **La conca** | bordo irregolare su tre frequenze, **1404-1427 tessere calpestabili** |
 | **I massi del bordo** | 6-10, appoggiati alla parete: danno profondita, non stanno mai sulla strada |
 | **L'arena** | **sgombra**. Nessun ostacolo isolato in mezzo: e li che si combatte il boss |
-| **La faglia** | crepe a raggiera dal centro: fanno male a chi ci cammina, **giocatore e mostri, boss compreso** |
+| **Gli ornamenti** *(v1.99.2)* | sassi piccoli, **bracieri**, ossa e macerie sparsi in mezzo: arredano il centro senza togliere spazio |
 
 **Perche sgombra** *(v1.99.1)*: fino alla v1.99.0 c'erano una **cresta** di roccia a meta pendio e 10-14
 **speroni** sparsi nella conca. Erano coperture per il giocatore, ma per un boss di raggio 38-52 erano
 trappole: fra uno sperone e l'altro ci si incastrava. Tolti. Misurato su cinque semi: **0 rocce isolate**
 nell'arena, **1202-1224 caselle larghe 3x3 connesse al 100,0%** (erano ~730 al 98,5-100%).
 
-**Non e costata una riga di renderer**: i massi sono roccia come quella della caverna (la cottura li
-disegna gia), e le crepe sono `T_HAZARD`, le pozze di pericolo del motore dalla v1.62.
+**Niente pozze** *(v1.99.2)*: fino alla v1.99.1 dal centro si aprivano le **crepe della faglia**, pozze di
+pericolo a raggiera. Funzionavano, ma in mezzo all'arena facevano un brutto effetto — una macchia arancione
+larga mezza conca. Tolte, e con loro anche le pozze normali: nella caldera adesso ce ne sono **zero**. Nelle
+altre ondate le pozze sono al loro posto, invariate.
 
-**Le crepe rispettano le due regole delle pozze** (v1.62): mai a contatto con un muro, mai entro 7 tessere
-dalla partenza. Per questo non si scavano nella pianta ma dopo, quando la partenza e stata scelta.
+**Al loro posto gli ORNAMENTI**: sassi piccoli (scala 0,5-0,85: devono leggersi come terreno, non come
+coperture), **bracieri** con due sassi ai piedi, ossa di chi e venuto prima, macerie. Non costano **una
+tessera di spazio**: sono props, cioe disegno puro — la griglia binaria non li conosce, e nemmeno
+collisioni, linea di vista e campo di flusso. L'arena resta sgombra e il boss ci gira. *Sgombra non vuol
+dire vuota.*
+
+Sono cercati **al contrario di tutte le altre decorazioni**: quelle stanno in nicchia contro un muro, questi
+devono stare lontani dai muri, perche qui il vuoto da riempire e il centro. E restano fuori dalle 7 tessere
+attorno alla partenza, come ogni altra cosa che nasce sulla mappa.
+
+**Non e costata una riga di renderer**: i massi del bordo sono roccia come quella della caverna (la cottura
+li disegna gia), e gli ornamenti sono i props che il motore disegna dalla v1.23.
 
 Le ondate sono un elenco in constants (`CALDERA_ONDATE: [10, 20]`). La zona si chiama *La Caldera* alla 10
 e *La Faglia Aperta* alla 20.
