@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.97.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v1.98.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -26,8 +26,9 @@ Test: `npm test`
 
 ## 🆕 Novita v1.97 (il cimitero delle prime due ondate)
 - **🪦 La prima pianta che non e' una grotta.** Fino alla 1.96 ogni mappa di combattimento veniva dalla
-  stessa funzione — una caverna scavata. Le **ondate 1 e 2** adesso si giocano in un **cimitero**; dalla
-  terza torna la caverna di sempre. Il confine e' un numero solo: `CIMITERO_FINO_A` in `constants.js`.
+  stessa funzione — una caverna scavata. La **prima ondata** si gioca in un **cimitero** *(dalla v1.98:
+  prima erano le prime due)*; dalla seconda torna la caverna di sempre. Il confine e' un numero solo:
+  `CIMITERO_FINO_A` in `constants.js`.
 - **📐 Com'e' fatto**: settori separati da vialetti (3-4 tessere: ci passa anche il boss piu' grosso),
   dentro file regolari di **lapidi**, e poi **mausolei** in cui si entra, **muri crollati** da cui
   ripararsi, **fosse** che rompono la griglia. E' l'ordine — linee rette, ripetizioni — a farlo sembrare

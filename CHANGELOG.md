@@ -2,6 +2,43 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [1.98.0] — 2026-09-07 · "Cimitero piu' stretto, piu' fitto, e solo alla prima ondata"
+
+Paolo: *"il cimitero mi sembra un filo troppo grande e spoglio, l'ideale sarebbe quello nell'immagine.
+Inoltre lo implementerei solo nella prima ondata: dalla seconda fino alla 20 terrei le grotte."*
+
+#### Solo la prima ondata
+`CIMITERO_FINO_A` da **2** a **1**. Dalla seconda in poi si gioca nella caverna, e il test lo verifica
+ondata per ondata (1 cimitero; 2, 3, 7 e 20 no).
+
+#### Piu' stretto
+La v1.97 usava tutta la mappa: **2350 tessere calpestabili**, quasi il doppio di una caverna, ed e' da li'
+che veniva l'aria di piazza d'armi. Adesso una **fascia di bosco fitta e irregolare** stringe il cimitero
+da tutti i lati e lo spazio scende a **~1620 tessere**, cioe' la stessa misura della caverna. Il muro di
+cinta corre dentro al bosco, con tre o quattro brecce.
+
+#### Piu' fitto — quello che dice l'immagine di riferimento
+| Prima (v1.97) | Adesso (v1.98) |
+|---|---|
+| lapidi in file sparse su tutta la mappa | **campi fitti**: blocchi con passo 2 in tutte e due le direzioni, e terra battuta fra un campo e l'altro |
+| tanti mausolei uguali, piccoli | **tre o quattro cappelle GROSSE** (8-12 x 6-9), con camera, porta e a volte un tramezzo dentro |
+| muri crollati a pezzetti | **muretti bassi lunghi** (6-14 tessere) e un **recinto chiuso** con tre aperture e le sue tombe dentro |
+| alberi sparsi a uno a uno | alberi a **gruppetti** |
+
+Densita' delle lapidi: da 6,6% dell'area a **6,2% su un'area piu' piccola** — cioe' ~101 lapidi in 1620
+tessere invece di 155 in 2350, ma concentrate in blocchi invece che spalmate. E' la differenza fra un prato
+con dei sassi e un camposanto.
+
+Misurato su cinque semi: **1522-1692 tessere libere, connettivita' 100%** da ogni spawn, 81-113 lapidi.
+
+**Verificato anche cio' che non ho toccato**: la caverna della seconda ondata e' stata guardata in gioco,
+non solo generata.
+
+**File toccati**: `shared/mapgen.js` (`piantaCimitero` rifatta), `shared/constants.js`, `test/simulate.js`
+(test 65 aggiornato), `package.json`, e i .md.
+
+---
+
 ### [1.97.1] — 2026-09-06 · "La caverna cancellata: un else attaccato alla riga sbagliata"
 
 Paolo: *"nella prima mappa c'e' il cimitero, ma la grotta, con le varianti, dall'ondata 3 sono

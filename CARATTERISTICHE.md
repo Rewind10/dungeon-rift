@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.97.1`
+**Versione attuale:** `1.98.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -327,9 +327,9 @@ verra' aggiunta domani.
 
 ---
 
-## 🪦 IL CIMITERO *(v1.97 — ondate 1 e 2)*
+## 🪦 IL CIMITERO *(v1.97 · rifatto e ristretto in v1.98 — solo la PRIMA ondata)*
 
-Dalla v1.97 le piante sono **due**. Le prime due ondate si giocano in un **cimitero**, dalla terza torna
+Dalla v1.97 le piante sono **due**. La **prima ondata** si gioca in un **cimitero**, dalla seconda torna
 la **caverna** di sempre (`CIMITERO_FINO_A` in constants: alzalo, abbassalo, o mettilo a 0 e sparisce).
 
 Un cimitero non e roba sparsa: e **settori** separati da **vialetti**, e dentro ogni settore **file
@@ -352,8 +352,8 @@ di pathfinding.
 isolata come un imbuto e se ne mangiavano l 85% (da 155 a 19, misurato). Nel cimitero il passaggio e
 garantito per costruzione.
 
-**E piu APERTO della caverna**: ~2350 tessere libere contro ~1370. Ci si vede da lontano, quindi i nemici
-ti trovano prima — alle ondate 1-2, con pochi nemici in campo, e un buon inizio.
+**Quanto e grande** *(v1.98)*: ~1620 tessere libere, cioe' quanto una caverna. Nella v1.97 erano ~2350 e il
+posto sembrava una piazza d'armi: il bosco attorno lo ha stretto.
 
 **I temi scendono a quattro** (via la lava) e la zona prende un nome suo: *Il Vecchio Camposanto*,
 *Il Cimitero Sommerso*, *Il Campo di Gelo*, *Il Sepolcreto Arcano*.

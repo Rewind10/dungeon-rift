@@ -4315,9 +4315,10 @@ function testV197() {
   const dt = 1 / C.TICK_RATE;
 
   // --- 1) chi gioca dove ---
-  for (const lv of [1, 2]) assert(MG.generate(1000 + lv, lv).archetipo === 'cimitero', 'ondata ' + lv + ': si gioca nel cimitero');
-  for (const lv of [3, 7, 20]) assert(MG.generate(1000 + lv, lv).archetipo !== 'cimitero', 'ondata ' + lv + ': si torna nella caverna');
-  assert(C.CIMITERO_FINO_A === 2, 'e il confine e un numero solo, in constants (' + C.CIMITERO_FINO_A + ')');
+  // v1.98 — il cimitero vale per la PRIMA ondata soltanto: dalla seconda si torna nella caverna.
+  assert(MG.generate(1001, 1).archetipo === 'cimitero', 'ondata 1: si gioca nel cimitero');
+  for (const lv of [2, 3, 7, 20]) assert(MG.generate(1000 + lv, lv).archetipo !== 'cimitero', 'ondata ' + lv + ': si torna nella caverna');
+  assert(C.CIMITERO_FINO_A === 1, 'e il confine e un numero solo, in constants (' + C.CIMITERO_FINO_A + ')');
 
   // --- 2) la pianta regge: connessa, con le sue lapidi, e niente vulcano ---
   for (const seed of [11, 222, 3333, 44444, 555555]) {
@@ -4337,13 +4338,15 @@ function testV197() {
     let lap = 0, cinta = 0, pietra = 0;
     for (let i = 0; i < gri.length; i++) { if (gri[i] !== C.T_WALL || !m.muri) continue;
       const t = m.muri[i]; if (t === 1) lap++; else if (t === 3) cinta++; else if (t === 2) pietra++; }
-    assert(lap >= 40, 'seme ' + seed + ': le file di lapidi ci sono (' + lap + ')');
-    assert(cinta >= 200, 'seme ' + seed + ': e il muro di cinta gira tutto attorno (' + cinta + ')');
+    assert(lap >= 55, 'seme ' + seed + ': i campi di lapidi ci sono, e sono fitti (' + lap + ')');
+    assert(cinta >= 120, 'seme ' + seed + ': e il muro di cinta gira tutto attorno (' + cinta + ')');
     assert(pietra >= 10, 'seme ' + seed + ': con mausolei e muri crollati (' + pietra + ')');
     assert(m.theme.id !== 'lava', 'seme ' + seed + ': un cimitero dentro un vulcano no (' + m.theme.name + ')');
     assert(!!m.exit || m.enemySpawns.length > 0, 'seme ' + seed + ': la mappa e giocabile (uscita e caselle di comparsa)');
     // spazio: il cimitero e' APERTO, ed e' il suo carattere. Se scendesse sotto la caverna sarebbe un errore.
-    assert(liberi > 1800, 'seme ' + seed + ': resta uno spazio aperto (' + liberi + ' tessere libere)');
+    // v1.98 — il cimitero era largo quanto la mappa e sembrava vuoto: adesso il bosco lo stringe e lo
+    // spazio calpestabile sta nella stessa fascia della caverna. Ne' una piazza d'armi ne' un budello.
+    assert(liberi > 1250 && liberi < 2000, 'seme ' + seed + ': e raccolto quanto una caverna (' + liberi + ' tessere libere)');
   }
 
   // --- 3) i tipi delle tessere sono solo un'informazione per il renderer ---

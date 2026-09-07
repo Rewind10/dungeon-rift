@@ -340,109 +340,137 @@
     const pieno = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? true : g[idx(x, y)] === C.T_WALL;
     const rett = (x0, y0, w, h, tipo) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) set(x, y, tipo); };
     const vuota = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) libera(x, y); };
+    const cornice = (x0, y0, w, h, tipo) => { rett(x0, y0, w, 1, tipo); rett(x0, y0 + h - 1, w, 1, tipo); rett(x0, y0, 1, h, tipo); rett(x0 + w - 1, y0, 1, h, tipo); };
 
-    // (1) IL MURO DI CINTA. E' la prima cosa che dice "cimitero", prima delle lapidi: c'e' un dentro e
-    //     un fuori. Non e' chiuso — tre o quattro brecce lo rompono, se no e' una scatola.
-    rett(0, 0, W, 2, M_CINTA); rett(0, H - 2, W, 2, M_CINTA);
-    rett(0, 0, 2, H, M_CINTA); rett(W - 2, 0, 2, H, M_CINTA);
-    for (let b = 0, n = ri(3, 5); b < n; b++) {
-      const lato = ri(0, 3), lung = ri(5, 8);
-      if (lato === 0) vuota(ri(6, W - 14), 0, lung, 2);
-      else if (lato === 1) vuota(ri(6, W - 14), H - 2, lung, 2);
-      else if (lato === 2) vuota(0, ri(5, H - 13), 2, lung);
-      else vuota(W - 2, ri(5, H - 13), 2, lung);
+    // (1) IL BOSCO ATTORNO. v1.98: il cimitero era largo quanto tutta la mappa e per questo sembrava
+    //     grande e vuoto. Adesso e' RACCOLTO: una fascia di vegetazione fitta e irregolare lo stringe da
+    //     tutti i lati, e lo spazio calpestabile scende da ~2350 a ~1700 tessere, in linea con la caverna.
+    const bordo = (x, y) => {
+      const bx = Math.min(x, W - 1 - x), by = Math.min(y, H - 1 - y);
+      const ondaX = 2.6 + Math.sin(x * 0.31 + 1.7) * 1.4 + Math.sin(x * 0.11) * 1.1;
+      const ondaY = 2.6 + Math.cos(y * 0.27 + 0.9) * 1.4 + Math.sin(y * 0.13) * 1.1;
+      return bx < ondaX + (rng() < 0.25 ? 1 : 0) || by < ondaY + (rng() < 0.25 ? 1 : 0);
+    };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (bordo(x, y)) set(x, y, M_ALBERO);
+
+    // il rettangolo che resta dentro al bosco: e' il cimitero vero, ed e' su questo che si lavora
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!pieno(x, y)) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    x0 += 1; y0 += 1; x1 -= 1; y1 -= 1;
+    const CW = x1 - x0 + 1, CH = y1 - y0 + 1;
+
+    // (2) IL MURO DI CINTA, dentro il bosco. Tre-quattro brecce: e' un recinto, non una scatola.
+    cornice(x0, y0, CW, CH, M_CINTA);
+    for (let b = 0, n = ri(3, 4); b < n; b++) {
+      const lato = ri(0, 3), lung = ri(4, 7);
+      if (lato === 0) vuota(x0 + ri(4, Math.max(5, CW - 10)), y0, lung, 1);
+      else if (lato === 1) vuota(x0 + ri(4, Math.max(5, CW - 10)), y1, lung, 1);
+      else if (lato === 2) vuota(x0, y0 + ri(4, Math.max(5, CH - 10)), 1, lung);
+      else vuota(x1, y0 + ri(4, Math.max(5, CH - 10)), 1, lung);
     }
 
-    // (2) I SETTORI. Si taglia l'area interna in blocchi, e fra un blocco e l'altro resta un VIALETTO di
-    //     3-4 tessere — largo abbastanza da farci passare anche il boss piu' grosso (raggio 52).
-    //     I vialetti non si disegnano: sono lo spazio che i settori non occupano. E' per questo che si
-    //     leggono come strade invece che come corridoi scavati.
-    const settori = [];
-    (function taglia(x, y, w, h, prof) {
-      const minimo = 8;
-      if (prof >= 4 || (w < minimo * 2 && h < minimo * 2) || (prof >= 3 && rng() < 0.3)) { settori.push({ x, y, w, h }); return; }
-      const viale = ri(3, 4);
-      const orizz = h > w ? true : (w > h ? false : rng() < 0.5);
-      if (orizz && h >= minimo * 2 + viale) {
-        const t = ri(minimo, h - minimo - viale);
-        taglia(x, y, w, t, prof + 1); taglia(x, y + t + viale, w, h - t - viale, prof + 1);
-      } else if (!orizz && w >= minimo * 2 + viale) {
-        const t = ri(minimo, w - minimo - viale);
-        taglia(x, y, t, h, prof + 1); taglia(x + t + viale, y, w - t - viale, h, prof + 1);
-      } else settori.push({ x, y, w, h });
-    })(3, 3, W - 6, H - 6, 0);
-
-    // (3) OGNI SETTORE HA IL SUO MESTIERE. Tre, e sono tre modi diversi di combattere:
-    //     il MAUSOLEO e' una stanza vera (ci entri, e dentro puo' esserci qualcosa);
-    //     le ROVINE sono muri crollati, cioe' COPERTURA da cui ripararsi;
-    //     le FILE DI LAPIDI bloccano il tiro ma non il passo — ci giri intorno in un passo solo, ed e'
-    //     l'esatto contrario della roccia della caverna.
-    const passoY = ri(3, 4);   // la distanza fra le file: uguale in tutto il cimitero, come nella realta'
-    for (const s of settori) {
-      const sorte = rng();
-      if (sorte < 0.24 && s.w >= 6 && s.h >= 5) {
-        const w = Math.min(s.w, ri(6, 9)), h = Math.min(s.h, ri(5, 7));
-        const x = s.x + ((s.w - w) / 2 | 0), y = s.y + ((s.h - h) / 2 | 0);
-        rett(x, y, w, h, M_PIETRA); vuota(x + 1, y + 1, w - 2, h - 2);
-        const lato = ri(0, 3);   // la porta, larga 2: ci passa un giocatore, non un boss
-        if (lato === 0) vuota(x + (w / 2 | 0) - 1, y, 2, 1);
-        else if (lato === 1) vuota(x + (w / 2 | 0) - 1, y + h - 1, 2, 1);
-        else if (lato === 2) vuota(x, y + (h / 2 | 0) - 1, 1, 2);
-        else vuota(x + w - 1, y + (h / 2 | 0) - 1, 1, 2);
-        continue;
-      }
-      if (sorte < 0.32) {
-        const verso = rng() < 0.5;
-        for (let k = 0, n = ri(3, 6); k < n; k++) {
-          const lung = ri(3, 6);
-          const x = s.x + ri(1, Math.max(1, s.w - 2)), y = s.y + ri(1, Math.max(1, s.h - 2));
-          for (let i = 0; i < lung; i++) {
-            if (rng() < 0.22) continue;                       // il muro e' crollato: ha dei buchi
-            const xx = verso ? x + i : x, yy = verso ? y : y + i;
-            if (xx < s.x || yy < s.y || xx >= s.x + s.w || yy >= s.y + s.h) break;
-            if (!pieno(xx, yy)) set(xx, yy, M_PIETRA);
-          }
-        }
-        for (let k = 0, n = ri(1, 3); k < n; k++) {
-          const x = s.x + ri(1, Math.max(1, s.w - 2)), y = s.y + ri(1, Math.max(1, s.h - 2));
-          if (!pieno(x, y)) set(x, y, M_ALBERO);
-        }
-        continue;
-      }
-      const vecchio = rng() < 0.33;                            // un settore su tre e' abbandonato
-      const cappella = rng() < 0.28 && s.w >= 7 && s.h >= 6;
-      let cx = -9, cy = -9, cw = 0, ch = 0;
-      if (cappella) { cw = ri(3, 4); ch = ri(3, 4); cx = s.x + ((s.w - cw) / 2 | 0); cy = s.y + ((s.h - ch) / 2 | 0); }
-      for (let y = s.y + 1; y < s.y + s.h - 1; y += passoY) {
-        for (let x = s.x + 1; x < s.x + s.w - 1; x += 2) {
-          if (cappella && x >= cx - 1 && x <= cx + cw && y >= cy - 1 && y <= cy + ch) continue;
-          if (vecchio && rng() < 0.28) continue;               // buchi: nessuna fila e' intera
-          const jy = vecchio && rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0;   // e nessuna e' dritta
-          if (pieno(x, y + jy)) continue;
-          set(x, y + jy, M_LAPIDE);
-        }
-      }
-      if (cappella) {
-        rett(cx, cy, cw, ch, M_PIETRA); vuota(cx + 1, cy + 1, cw - 2, ch - 2);
-        if (cw > 2 && ch > 2) libera(cx + (cw / 2 | 0), cy + ch - 1);
-      }
+    // (3) LE CAPPELLE. Nel riferimento sono POCHE e GROSSE — tre o quattro edifici che si vedono da
+    //     lontano — non tanti mausolei uguali. Ognuna ha la sua camera, la sua porta, e a volte un
+    //     tramezzo dentro: cosi' entrarci vuol dire qualcosa.
+    const occupato = [];
+    const liberoPer = (x, y, w, h, pad) => {
+      if (x < x0 + 1 || y < y0 + 1 || x + w > x1 || y + h > y1) return false;
+      for (const o of occupato) if (x < o.x + o.w + pad && x + w + pad > o.x && y < o.y + o.h + pad && y + h + pad > o.y) return false;
+      return true;
+    };
+    const cappelle = [];
+    for (let k = 0, tent = 0; k < ri(3, 4) && tent < 200; tent++) {
+      const w = ri(8, 12), h = ri(6, 9);
+      const x = x0 + 1 + ri(0, Math.max(0, CW - w - 3)), y = y0 + 1 + ri(0, Math.max(0, CH - h - 3));
+      if (!liberoPer(x, y, w, h, 4)) continue;
+      cornice(x, y, w, h, M_PIETRA);
+      vuota(x + 1, y + 1, w - 2, h - 2);
+      const lato = ri(0, 3);
+      if (lato === 0) vuota(x + (w / 2 | 0) - 1, y, 2, 1);
+      else if (lato === 1) vuota(x + (w / 2 | 0) - 1, y + h - 1, 2, 1);
+      else if (lato === 2) vuota(x, y + (h / 2 | 0) - 1, 1, 2);
+      else vuota(x + w - 1, y + (h / 2 | 0) - 1, 1, 2);
+      if (w >= 10 && rng() < 0.55) { const mx = x + (w / 2 | 0); rett(mx, y + 1, 1, h - 2, M_PIETRA); libera(mx, y + ri(1, h - 2)); }
+      occupato.push({ x, y, w, h }); cappelle.push({ x, y, w, h }); k++;
     }
 
-    // (4) LE FOSSE. Una o due chiazze tonde che cancellano le file e rompono la griglia: senza, il posto
-    //     ha l'aria di un foglio a quadretti invece che di un cimitero.
-    for (let k = 0, n = ri(1, 3); k < n; k++) {
-      const cx = ri(8, W - 9), cy = ri(8, H - 9), r = ri(3, 5);
+    // (4) I CAMPI DI LAPIDI. Nel riferimento le lapidi non sono sparse su tutto: stanno in BLOCCHI FITTI,
+    //     e fra un blocco e l'altro c'e' terra battuta. Un blocco e' una griglia serrata (passo 2 in tutte
+    //     e due le direzioni): dentro ci si infila, ma il tiro lungo non passa. E' li' che si combatte.
+    let lapidi = 0;
+    for (let k = 0, tent = 0; k < ri(9, 13) && tent < 1200; tent++) {
+      // i campi si rimpiccioliscono man mano che lo spazio si riempie: meglio quattro campi piccoli
+      // che nessun campo grande. Sotto le 3 colonne non e' piu' un campo, e si smette.
+      const stretto = tent > 300, cols = stretto ? ri(3, 4) : ri(4, 7), righe = stretto ? ri(2, 3) : ri(3, 5);
+      const w = cols * 2 + 1, h = righe * 2 + 1;
+      const x = x0 + 1 + ri(0, Math.max(0, CW - w - 3)), y = y0 + 1 + ri(0, Math.max(0, CH - h - 3));
+      if (!liberoPer(x, y, w, h, 1)) continue;   // fra un campo e l'altro basta un passo: e' un cimitero, non un parco
+      const vecchio = rng() < 0.35;                       // un campo su tre e' abbandonato: file storte e sdentate
+      for (let r = 0; r < righe; r++) for (let c = 0; c < cols; c++) {
+        if (vecchio && rng() < 0.3) continue;
+        const jx = vecchio && rng() < 0.35 ? (rng() < 0.5 ? -1 : 0) : 0;
+        const px = x + 1 + c * 2 + jx, py = y + 1 + r * 2;
+        if (pieno(px, py)) continue;
+        set(px, py, M_LAPIDE); lapidi++;
+      }
+      occupato.push({ x, y, w, h }); k++;
+    }
+
+    // (5) I MURETTI BASSI. Nel riferimento delimitano aree dentro il cimitero — un recinto qui, un
+    //     tratto di muro caduto la'. Servono al gioco piu' delle lapidi: sono COPERTURA lunga, quella
+    //     dietro cui ci si mette davvero.
+    for (let k = 0, n = ri(5, 8); k < n; k++) {
+      const orizz = rng() < 0.5, lung = ri(6, 14);
+      const x = x0 + 2 + ri(0, Math.max(0, CW - 5)), y = y0 + 2 + ri(0, Math.max(0, CH - 5));
+      for (let i = 0; i < lung; i++) {
+        const xx = orizz ? x + i : x, yy = orizz ? y : y + i;
+        if (xx >= x1 || yy >= y1) break;
+        if (rng() < 0.18) continue;                        // il muretto e' crollato a tratti
+        if (!pieno(xx, yy)) set(xx, yy, M_PIETRA);
+      }
+    }
+    // e un recinto chiuso, come quello che nel riferimento circonda le tombe di riguardo
+    for (let tent = 0; tent < 60; tent++) {
+      const w = ri(9, 14), h = ri(7, 10);
+      const x = x0 + 2 + ri(0, Math.max(0, CW - w - 4)), y = y0 + 2 + ri(0, Math.max(0, CH - h - 4));
+      if (!liberoPer(x, y, w, h, 1)) continue;   // fra un campo e l'altro basta un passo: e' un cimitero, non un parco
+      cornice(x, y, w, h, M_PIETRA);
+      for (let b = 0; b < 3; b++) {                        // tre aperture: e' un recinto, si entra
+        const lato = ri(0, 3);
+        if (lato === 0) vuota(x + ri(1, w - 3), y, 2, 1);
+        else if (lato === 1) vuota(x + ri(1, w - 3), y + h - 1, 2, 1);
+        else if (lato === 2) vuota(x, y + ri(1, h - 3), 1, 2);
+        else vuota(x + w - 1, y + ri(1, h - 3), 1, 2);
+      }
+      for (let r = y + 2; r < y + h - 2; r += 2) for (let c = x + 2; c < x + w - 2; c += 2)
+        if (!pieno(c, r) && rng() < 0.75) { set(c, r, M_LAPIDE); lapidi++; }
+      occupato.push({ x, y, w, h });
+      break;
+    }
+
+    // (6) ALBERI SECCHI a gruppetti, e qualche fossa scavata che rompe l'ordine.
+    for (let k = 0, n = ri(6, 10); k < n; k++) {
+      const cx = x0 + 2 + ri(0, Math.max(0, CW - 5)), cy = y0 + 2 + ri(0, Math.max(0, CH - 5));
+      for (let j = 0, m = ri(1, 3); j < m; j++) {
+        const x = cx + ri(-2, 2), y = cy + ri(-2, 2);
+        if (x <= x0 || y <= y0 || x >= x1 || y >= y1) continue;
+        if (!pieno(x, y)) set(x, y, M_ALBERO);
+      }
+    }
+    for (let k = 0, n = ri(2, 3); k < n; k++) {
+      const cx = x0 + 4 + ri(0, Math.max(0, CW - 9)), cy = y0 + 4 + ri(0, Math.max(0, CH - 9)), r = ri(2, 4);
       for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
         const d = Math.hypot(x - cx, y - cy) + rng() * 0.9;
         if (d <= r && pieno(x, y) && (muri[idx(x, y)] === M_LAPIDE || muri[idx(x, y)] === M_ALBERO)) libera(x, y);
       }
     }
 
-    // le "camere" servono al resto di generate() per sapere dove mettere le cose: qui sono i centri dei
-    // settori, che e' esattamente cio' che le camere sono nella caverna.
-    const camere = settori.map(s => ({ x: s.x + s.w / 2, y: s.y + s.h / 2 }));
-    return { g, camere, archetipo: 'cimitero', muri, settori };
+    const camere = cappelle.length ? cappelle.map(c => ({ x: c.x + c.w / 2, y: c.y + c.h / 2 }))
+      : [{ x: (x0 + x1) / 2, y: (y0 + y1) / 2 }];
+    camere.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2 });
+    return { g, camere, archetipo: 'cimitero', muri, lapidi };
   }
+
 
   function generate(seed, level) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
