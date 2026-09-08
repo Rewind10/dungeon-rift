@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `1.99.2`
+**Versione attuale:** `2.0.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -324,6 +324,78 @@ verra' aggiunta domani.
 | ❤️ **Pozione di Salute** a terra | va raccolta |
 | 🔥 **Combo di 40** | +25% PV: va costruita una catena di quaranta uccisioni |
 | ⏳ **Ultima Occasione** (carta divina) | non cura: invece di cadere, risorgi a meta' vita. Due volte |
+
+---
+
+## 🏘️ IL VILLAGGIO SOTTERRANEO *(v2.0 — la sosta fra un'ondata e l'altra)*
+
+Fino alla v1.99 la sosta era una **Sala dei Mercanti**: 34x26 tessere, cinque stanze attorno a una piazza.
+Funzionava, ma non era un posto: era un menu con dei muri. Adesso e' un **villaggio di nani scavato nella
+roccia**, 56x40 — il doppio abbondante — e la differenza non e' la dimensione: e' che qui **ci vive
+qualcuno**.
+
+| Pezzo | Cosa c'e' |
+|---|---|
+| **La piazza** | 13x11 al centro, col **pozzo** e il falo'. Nel suo centro esatto: **il portale** |
+| **Le tre botteghe grandi** | osteria, fucina, erboristeria — 12x9 ciascuna, edifici separati |
+| **Le due piccole** | l'antro della cartomante e la gilda del capitano |
+| **Sette case abitate** | porta aperta, focolare acceso in mezzo, letto, tavolo, madia, e la gente dentro |
+| **Le strade** | la via alta sotto le botteghe, la via bassa davanti alle case, la **via maestra** che taglia tutto da nord a sud passando per la piazza |
+| **Oltre** | roccia, e poi il nero: non c'e' un bordo mappa, c'e' la montagna |
+
+**Le tre regole della pianta**, da rispettare se un giorno la si allarga:
+1. **Il portale sta al centro.** Non e' una porta in fondo a un corridoio: e' la prima cosa che vedi
+   arrivando e l'ultima che tocchi andando via.
+2. **Ogni porta e' larga due tessere.** Il personaggio e' largo 35 px su tessere da 48: con una sola tessera
+   ci si passa sfregando lo stipite (imparato nella v1.75.1).
+3. **Fra una stanza e la sua strada resta una riga di roccia.** E' li' che si apre la porta. Senza, il lato
+   della casa e' tutto aperto e non e' piu' una casa.
+
+**Le strade non sono corridoi da una porta all'altra**: attraversano il paese da parte a parte, e le botteghe
+e le case si aprono su quelle. E' la differenza fra un villaggio e un corridoio con delle stanze.
+
+**Misurato**: 1213 tessere calpestabili, connesse al 100%, e — la misura che conta, perche' dalla v1.75.2 i
+mobili hanno un corpo — **il 99,9% raggiungibile coi mobili al loro posto**. Ogni bottega, ogni casa, ogni
+mercante e il portale si raggiungono a piedi.
+
+### 🔥 Le case
+
+Sette, e tutte arredate dalla **stessa funzione**. Una casa di nani ha sempre le stesse quattro cose — il
+focolare in mezzo (e' la ragione per cui la stanza esiste), il letto contro la parete lontana dalla porta, il
+tavolo dall'altra parte, la madia contro un muro — e a cambiare e' solo il verso. Piazzarle a mano sette volte
+avrebbe prodotto sette errori diversi; cosi' l'errore, se c'e', e' uno solo e si corregge una volta.
+
+**L'unica regola dura: la colonna della porta resta sgombra.** Un tavolo sulla soglia e' una casa in cui non
+si entra.
+
+Ma sette case uguali sarebbero sette volte la stessa casa, quindi **a decidere e' l'indice della casa**, non
+il caso (nel villaggio il seme non cambia niente, e la pianta dev'essere sempre quella): il verso si
+specchia, **una su tre ha due letti** — e' una famiglia — una su quattro la rastrelliera degli attrezzi,
+un'altra lo scaffale, una su cinque un tappeto davanti al fuoco. Risultato: **cinque arredamenti diversi su
+sette**.
+
+Il **focolare e' una sorgente di luce viva**, come il falo': la pietra e le braci si cuociono nella mappa, la
+fiamma no. E' quella luce che esce dalla porta aperta a dire, da fuori, che la casa e' abitata.
+
+### 🧍 Gli abitanti
+
+Ventidue, e **fanno qualcosa**: chi si scalda al fuoco e dondola, chi **martella**, chi **rimesta** la
+pentola, chi si guarda attorno, chi va e viene per la strada. Il movimento e' **piccolo apposta** — deve
+leggersi con la coda dell'occhio mentre compri, non rubare la scena — e il loro **corpo resta fermo** dov'e',
+se no ci si passerebbe attraverso mentre ondeggiano. Stanno tutti **in piedi**: dall'alto una figura seduta
+non si legge (regola della v1.75).
+
+### 🌀 Il portale, e niente timer
+
+L'uscita non e' piu' un quadrato verde in fondo alla piazza: e' **la faglia**, la stessa che si apre quando
+hai ripulito un'ondata *(vedi LA FAGLIA D'USCITA)*, piantata nel mezzo del villaggio. Stesso disegno, stesso
+gesto, stesso raggio, e la si vede da qualunque strada. Attraversarla riporta al **menu di fine ondata**.
+Nella griglia **non c'e' piu' nessuna tessera EXIT**: la pianta dichiara solo il posto, il portale lo apre il
+server entrando in sosta e lo chiude uscendo.
+
+E **il timer non c'e' piu'**. In multiplayer la sosta si chiudeva da sola dopo 120 secondi: adesso si riparte
+solo quando qualcuno entra nel portale. Il villaggio e' un posto in cui si sta, non una schermata da
+sbrigare. In cambio, se uno resta fermo la partita aspetta — e' il prezzo, ed e' voluto.
 
 ---
 
@@ -675,7 +747,7 @@ Cento regole del foglio di stile e quindici scritte disegnate sul canvas. Invari
   mappa — non dai bordi del rettangolo e non dai massi interni. Dietro un masso al centro si sta al
   riparo; contro la parete della caverna no. Fascia profonda due tessere, copertura 34%.
 
-## 🏘️ IL VILLAGGIO A MICRO-STANZE *(novita v1.75)*
+## 🏘️ IL VILLAGGIO A MICRO-STANZE *(novita v1.75 — la pianta e stata rifatta in v2.0, le persone e i mobili no)*
 
 ### La pianta
 - Una **piazza centrale** col falo': ci si atterra, e li' sta il portale per l'ondata successiva.
@@ -939,7 +1011,7 @@ rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il re
 - Entrambi i nemici nuovi sono disegnati **senza sprite e senza cicli di camminata**: uno sta fermo,
   l'altro rotola. Il vincolo tecnico e' diventato il criterio con cui sono stati scelti.
 
-## ⛏️ Il mercato e' una SALA SCAVATA *(novita v1.57)*
+## ⛏️ Il mercato e' una SALA SCAVATA *(novita v1.57 — SUPERATA dalla v2.0: vedi IL VILLAGGIO SOTTERRANEO)*
 - Siamo **sottoterra**, e ora si vede: niente case, alberi o staccionate. Il mercato e' una **camera scavata
   nella roccia**, con pareti quasi nere. Fuori dalla sala non c'e' mappa: c'e' pietra piena.
 - **Un solo varco**, a sud, largo tre tile, su un corridoio corto con il **portale EXIT** in fondo.
@@ -952,7 +1024,7 @@ rettangolo di pavimento per stanza, che il renderer disegna prima di tutto il re
   accesi, l'attrezzo del mestiere), e stanno **dietro** al proprio banco.
 - Nel menu di pausa il pulsante e' **"VAI AL VILLAGGIO"**, affiancato a quello dell'ondata successiva.
 
-## 🏘️ Il mercato e' un VILLAGGIO *(novita v1.56)*
+## 🏘️ Il mercato e' un VILLAGGIO *(novita v1.56 — SUPERATA dalla v1.57 e poi dalla v2.0)*
 - La sosta ha una **mappa sua**, disegnata a mano: **32x24 tile** contro le 46x34 del combattimento (circa la
   **meta'**), **senza muri interni**. Gli unici ostacoli sono i cinque edifici, che sono blocchi solidi.
 - **Cinque costruzioni** attorno a una piazza col pozzo: **Fucina, Locanda, Magazzino, Cappella e Torre della

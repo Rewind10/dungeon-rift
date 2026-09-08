@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v1.99.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.0.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,30 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.0 (il villaggio sotterraneo)
+- **🏘️ La sosta e' un VILLAGGIO DI NANI.** Non piu' cinque stanze attorno a una piazza (34x26) ma un paese
+  scavato nella roccia, **56x40**: la piazza al centro col **pozzo**, cinque **botteghe in edifici separati**
+  (osteria, fucina ed erboristeria grandi; l'antro della cartomante e la gilda del capitano piu' piccole) e
+  **sette case abitate**, con la porta aperta. Le strade attraversano il paese da parte a parte, non vanno da
+  una porta all'altra: e' la differenza fra un villaggio e un corridoio con delle stanze.
+- **🔥 Nelle case ci si entra.** Focolare acceso in mezzo, letto, tavolo, madia — e la gente dentro. Il
+  focolare e' una **luce viva**: e' quella che esce dalla porta e dice, da fuori, che la casa e' abitata.
+  Le sette case sono arredate dalla stessa funzione ma **si specchiano e variano**: una su tre ha due letti
+  (una famiglia), chi ha la rastrelliera degli attrezzi, chi lo scaffale, chi un tappeto davanti al fuoco.
+  Sono venuti fuori **cinque arredamenti diversi su sette**.
+- **🧍 Ventidue abitanti, e fanno qualcosa**: chi si scalda al fuoco e dondola, chi martella, chi rimesta la
+  pentola, chi va e viene per la strada. Movimento piccolo apposta — si legge con la coda dell'occhio mentre
+  compri — e il loro corpo resta fermo dov'e', se no ci si passerebbe attraverso.
+- **🌀 Il portale e' al centro della piazza**, ed e' **la stessa faglia** che si apre a fine ondata: stesso
+  disegno, stesso gesto. Attraversarla riporta al menu di fine ondata. Nella griglia non c'e' piu' nessuna
+  tessera EXIT.
+- **⏳ Via il timer.** In multiplayer la sosta si chiudeva da sola dopo 120 s: adesso si riparte **solo**
+  quando qualcuno entra nel portale. Il villaggio e' un posto in cui si sta, non una schermata da sbrigare.
+- **🪑 Tre mobili nuovi** nello stile di tutti gli altri: pozzo, focolare e letto.
+- **📐 Misurato**: 1213 tessere calpestabili, connesse al 100%, e **il 99,9% raggiungibile coi mobili al loro
+  posto** — ogni bottega, ogni casa, ogni mercante e il portale si raggiungono a piedi.
+- **🧪 Nuovo test 67** su tutto quanto sopra, camminata compresa. **2098 test, 0 falliti.**
 
 ## 🆕 Novita v1.99.2 (il centro della caldera si arreda)
 - **🔥 Via le pozze dalla caldera.** Le crepe della faglia in mezzo all'arena facevano un brutto effetto: una

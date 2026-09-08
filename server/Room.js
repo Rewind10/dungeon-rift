@@ -525,19 +525,26 @@ class Room {
     }
   }
   enterMarket() {
-    this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
+    // v2.0 — il timer anti-AFK da 120 s non c'e' piu': si esce solo dal portale (vedi update()).
+    this.phase = C.PHASE_MARKET;
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
+    // v2.0 — IL PORTALE AL CENTRO. Nel villaggio l'uscita non e' piu' un quadrato verde in fondo alla
+    // piazza: e' LA FAGLIA, la stessa che si apre quando hai ripulito un'ondata, piantata nel centro
+    // esatto. Stesso disegno, stesso gesto, e la si vede da qualunque strada — che era il punto.
+    { const T = C.TILE, pt = (this.map && this.map.portale) || null;
+      this.faglia = pt ? { x: Math.round(pt.x * T + T / 2), y: Math.round(pt.y * T + T / 2) } : null; }
     for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); this.offerInn(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
   _checkMarketExit() {
-    if (!this.map || !this.map.exit) return;
-    const T = C.TILE, ex = this.map.exit.x * T + T / 2, ey = this.map.exit.y * T + T / 2;
+    if (!this.faglia) return;
+    const ex = this.faglia.x, ey = this.faglia.y;
     for (const p of this.alivePlayers) {
-      if (MU.dist(p.x, p.y, ex, ey) > C.MARKET_EXIT_RADIUS) continue;
-      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null;
+      // stesso raggio della faglia di fine ondata: e' lo stesso portale, si attraversa allo stesso modo
+      if (MU.dist(p.x, p.y, ex, ey) > (C.FAGLIA_RAGGIO || 46) + p.radius) continue;
+      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null; this.faglia = null;
       for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true; this.riapriMenu(); return;
@@ -2124,11 +2131,10 @@ class Room {
       }
       this.exitT -= dt; if (this.exitT <= 0) this._waveDone();
     }
-    if (this.phase === C.PHASE_MARKET) {
-      this._checkMarketExit();
-      if (this.phase === C.PHASE_MARKET) { this.marketTimer -= dt; let conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) conn++;
-        if (conn > 1 && this.marketTimer <= 0) { this.gearMerchant = null; this._forceNewMap = true; this.nextWave(); } }
-    }
+    // v2.0 — NIENTE TIMER NEL VILLAGGIO. Fino alla v1.99 in multiplayer la sosta si chiudeva da sola dopo
+    // 120 s. Adesso il villaggio e' un posto in cui si sta, non una schermata da sbrigare: si riparte solo
+    // quando qualcuno entra nel portale. In cambio, se uno resta fermo la partita aspetta: e' il prezzo.
+    if (this.phase === C.PHASE_MARKET) this._checkMarketExit();
     if (this.phase === C.PHASE_SHOP) { this.shopTimer -= dt; let all = true, conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) { conn++; if (!p.ready) all = false; }
       // v1.9 — pausa: in singolo si attende il click su "Continua" (nessun timeout forzato); in multiplayer resta un timeout anti-AFK.
       const timedOut = conn > 1 && this.shopTimer <= 0;
@@ -2634,7 +2640,8 @@ class Room {
       lib: this.recinto.liberato ? 1 : 0, pr: this.recinto.prigionieri } : null;
     const chv = (this.chiave && !this.chiave.presa && this.chiave.suEid === null) ? { x: this.chiave.x, y: this.chiave.y } : null;
     const chIn = this.chiave ? (this.chiave.presa ? 2 : (this.chiave.suEid !== null ? 1 : 0)) : 0;   // 0 a terra · 1 su un elite · 2 in tasca
-    const fg = (this.phase === C.PHASE_CLEARED && this.faglia) ? this.faglia : null;
+    // v2.0 — il portale si vede sia a fine ondata sia nel villaggio: e' lo stesso oggetto
+    const fg = ((this.phase === C.PHASE_CLEARED || this.phase === C.PHASE_MARKET) && this.faglia) ? this.faglia : null;
     const tele = []; for (const w of this.ragnatele) tele.push({ x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2), c: w.col });
     const crates = []; for (const c of this.crates) crates.push({ e: c.eid, x: Math.round(c.x), y: Math.round(c.y) });
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });

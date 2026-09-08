@@ -2,6 +2,81 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.0.0] — 2026-09-08 · "Il villaggio sotterraneo"
+
+La sosta fra un'ondata e l'altra non e' piu' una **Sala dei Mercanti** — cinque stanze attorno a una piazza,
+34x26 tessere — ma un **VILLAGGIO DI NANI scavato nella roccia**: 56x40, il doppio abbondante. La differenza
+non e' la dimensione: e' che qui **ci vive qualcuno**.
+
+#### 🏘️ La pianta
+Al centro **la piazza**, e nel suo centro esatto **il portale**. Attorno, cinque **botteghe in edifici
+separati** — osteria, fucina ed erboristeria grandi (12x9), l'antro della cartomante e la gilda del capitano
+piu' piccole — e **sette case abitate**, con la porta aperta.
+
+Le strade non sono corridoi da una porta all'altra: sono **vie che attraversano il paese da parte a parte** —
+la via alta sotto le botteghe del nord, la via bassa davanti alle case, e la **via maestra** che taglia tutto
+da nord a sud passando per la piazza. Le botteghe e le case si aprono su quelle. E' la differenza fra un
+paese e un corridoio con delle stanze.
+
+Tre regole tengono in piedi la pianta: **il portale sta al centro** (e' la prima cosa che vedi arrivando),
+**ogni porta e' larga due tessere** (il personaggio e' largo 35 px su tessere da 48 — lezione della v1.75.1),
+e **fuori dal villaggio c'e' roccia, e poi il nero**: non c'e' un bordo mappa, c'e' la montagna.
+
+Misurato: **1213 tessere calpestabili**, connesse al 100%, e — la misura che conta davvero, perche' i mobili
+hanno un corpo dalla v1.75.2 — **il 99,9% raggiungibile coi mobili al loro posto**. Ogni bottega, ogni casa,
+ogni mercante e il portale si raggiungono a piedi.
+
+#### 🔥 Le case
+Sette, e tutte arredate dalla **stessa funzione**. Non e' pigrizia: una casa di nani ha sempre le stesse
+quattro cose — il **focolare in mezzo** (e' la ragione per cui la stanza esiste), il **letto** contro la
+parete lontana dalla porta, il **tavolo** dall'altra parte, la **madia** contro un muro — e a cambiare e'
+solo il verso. Piazzarle a mano sette volte avrebbe prodotto sette errori diversi; cosi' l'errore, se c'e',
+e' uno solo.
+
+Ma sette case uguali sarebbero sette volte la stessa casa, quindi **a decidere e' l'indice della casa**: il
+verso si specchia, una su tre ha **due letti** (e' una famiglia), una su quattro ha la rastrelliera degli
+attrezzi, un'altra lo scaffale, una su cinque un tappeto davanti al fuoco. Sono venuti fuori **cinque
+arredamenti diversi su sette**, e la pianta resta identica a ogni partita.
+
+Il **focolare e' una sorgente di luce viva** come il falo': la pietra e le braci si cuociono nella mappa, la
+fiamma no. E' quella luce che esce dalla porta aperta a dire, da fuori, che la casa e' abitata.
+
+**Tre mobili nuovi** disegnati nello stile di tutti gli altri — ombra a terra, base scura, sfumatura,
+contorno nero sottile: il **pozzo** della piazza (anello di conci, il buco nero, la trave e il secchio), il
+**focolare** e il **letto**.
+
+#### 🧍 Gli abitanti
+Ventidue, e **fanno qualcosa**: chi si scalda al fuoco e dondola, chi **martella**, chi **rimesta** la
+pentola, chi si guarda attorno, chi va e viene per la strada. Il movimento e' **piccolo apposta** — deve
+leggersi con la coda dell'occhio mentre compri, non rubare la scena — e il loro **corpo resta fermo** dove
+sta, se no ci si passerebbe attraverso mentre ondeggiano. Restano tutti **in piedi**: dall'alto una figura
+seduta non si legge (regola della v1.75).
+
+#### 🌀 Il portale al centro, e via il timer
+L'uscita non e' piu' un quadrato verde in fondo alla piazza: e' **LA FAGLIA**, la stessa che si apre quando
+hai ripulito un'ondata, piantata nel mezzo. Stesso disegno, stesso gesto, stesso raggio — e la si vede da
+qualunque strada. Attraversarla riporta al **menu di fine ondata**, come faceva l'EXIT.
+
+Nella griglia **non c'e' piu' nessuna tessera EXIT**: la pianta dichiara solo il posto, il portale lo apre il
+server entrando in sosta e lo chiude uscendo.
+
+E **il timer non c'e' piu'**. Fino alla v1.99 in multiplayer la sosta si chiudeva da sola dopo 120 secondi.
+Adesso il villaggio e' un posto in cui si sta, non una schermata da sbrigare: si riparte **solo quando
+qualcuno entra nel portale**. In cambio, se uno resta fermo la partita aspetta — e' il prezzo, ed e' voluto.
+
+#### 🧪 Test
+Nuovo **test 67**, che pretende: la pianta 56x40 con cinque botteghe e sette case che non si sovrappongono;
+il portale nel centro esatto della piazza, su pavimento, senza tessere EXIT, e una partenza abbastanza
+lontana da non uscire appena arrivati ma abbastanza vicina da vederlo; in **ogni casa** un focolare (uno
+solo, in mezzo), un letto, un tavolo e almeno un abitante; almeno quattro arredamenti diversi; nessuno e
+niente dentro la roccia; e — la prova vera — che **ogni mercante, ogni stanza e il portale si raggiungano a
+piedi coi corpi solidi al loro posto**, camminando su una griglia da mezza tessera. Poi la partita vera:
+si entra in sosta, dopo **due minuti e mezzo si e' ancora li'** (nessun timer), e attraversando la faglia si
+torna al menu. Suite: **2098 test, 0 falliti**.
+
+**Verificato anche cio' che non ho toccato**: l'ondata 7 in partita vera e' la caverna di sempre, con le sue
+pozze, le sue torce e il mercante.
+
 ### [1.99.2] — 2026-09-07 · "Il centro della caldera si arreda"
 
 #### 🔥 Via le pozze, dentro sassi, bracieri e ossa

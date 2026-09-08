@@ -182,8 +182,10 @@
       case 'melee': R.hitAttack(ev.e, 0.32); break; // v1.26 — swing d'attacco
       case 'cast': R.hitAttack(ev.e, 0.5); break; // v1.26 — negromante evoca (orbe divampa)
       case 'acid': if (ev.e != null) R.hitAttack(ev.e, 0.55); R.burst(ev.x, ev.y - 6, '#a6ff3a', 14, 150, 0.5); R.ring(ev.x, ev.y, '#a6ff3a', 4, 26, 0.3); break; // v1.45 — la Melma salta e sputa acido
-      case 'market': HUD.modeBanner('\uD83C\uDFEA MERCATO', '#ffcf4a', 'Nessun nemico \u00b7 potenzia l\'equipaggiamento e prosegui dal portale EXIT'); HUD.killfeed('\uD83C\uDFEA <b style="color:#ffcf4a">MERCATO</b> \u2014 il portale <b>EXIT</b> porta all\'ondata ' + ev.next); break;
-      case 'market_exit': HUD.killfeed('\uD83D\uDEAA <b>' + esc(ev.name || 'Qualcuno') + '</b> ha varcato il portale EXIT'); break;
+      // v2.0 — non e' piu' un "mercato" con un portale EXIT in fondo: e' un VILLAGGIO, e la faglia sta
+      // nel mezzo della piazza. Il testo lo dice, se no si continua a cercare una porta sul bordo.
+      case 'market': HUD.modeBanner('\uD83C\uDFD8\uFE0F VILLAGGIO', '#ffcf4a', 'Nessun nemico \u00b7 le botteghe sono aperte, la faglia in mezzo alla piazza riporta al menu'); HUD.killfeed('\uD83C\uDFD8\uFE0F <b style="color:#ffcf4a">VILLAGGIO</b> \u2014 la <b>faglia</b> in piazza porta all\'ondata ' + ev.next); break;
+      case 'market_exit': HUD.killfeed('\uD83C\uDF00 <b>' + esc(ev.name || 'Qualcuno') + '</b> ha attraversato la faglia'); break;
       case 'gear_leave': G._gearOpen = false; HUD.hideGear(); break;
       case 'herb_leave': G._herbOpen = false; HUD.hidePotions(); break;
       case 'bnd_leave': G._bndOpen = false; HUD.hideBandit(); break;

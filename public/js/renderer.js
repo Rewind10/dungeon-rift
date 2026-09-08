@@ -689,6 +689,9 @@
         if (p.type === 'bonfire') { this.campfires.push({ x: p.x, y: p.y - 4 }); this.bigLight = { x: p.x, y: p.y - 4, r: 430 }; this._bakeBonfire(g, p); continue; }  // v1.57 — falo': unica sorgente della sala
         if (p.type === 'torch') { this.torches.push(p); continue; }
         if (p.type === 'camp') { this.campfires.push(p); this._bakeCamp(g, p); continue; }
+        // v2.0 — il focolare di casa: la pietra e le braci si cuociono, la fiamma no. E' viva, e con lei
+        // la luce che esce dalla porta aperta: e' l'unica cosa che dice da fuori che la casa e' abitata.
+        if (p.type === 'focolare') { this._bakeProp(g, p); this.campfires.push({ x: p.x, y: p.y - 3, fs: 0.85 }); continue; }
         if (p.type === 'brazier') { this._bakeProp(g, p); this.torches.push({ x: p.x, y: p.y - 6 }); continue; }
         if (p.type === 'candelabra') { this._bakeProp(g, p); const V = window.GAME.Constants.VIS_SCALE || 1; for (const ox of [-10, 0, 10]) this.torches.push({ x: p.x + ox * V, y: p.y - 22 * V }); continue; }
         // v1.75 — prop INVISIBILE: porta solo una luce. Serve a staccare il mercante dalla roccia col
@@ -893,6 +896,57 @@
           const pg = g.createRadialGradient(-2, -2, 1, 0, 0, 7.5); pg.addColorStop(0, '#8a6238'); pg.addColorStop(1, '#4a331b');
           g.fillStyle = pg; g.strokeStyle = '#241708'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, 0, 7, 0, 7); g.fill(); g.stroke();
           g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-5, 0); g.lineTo(5, 0); g.stroke(); break; }
+        // ===== v2.0 — I TRE MOBILI DEL VILLAGGIO =====
+        // Disegnati come tutto il resto: ombra a terra, base scura, sfumatura sopra, contorno nero
+        // sottile. Il contorno non e' un vezzo — e' quello che li stacca dalla roccia quando la luce del
+        // focolare li prende di taglio.
+        case 'pozzo': {    // IL POZZO della piazza: anello di conci, il buco nero in mezzo, la trave e il secchio
+          g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(1, 7, 27, 12, 0, 0, 7); g.fill();
+          g.fillStyle = '#23262e'; g.beginPath(); g.arc(0, 0, 25, 0, 7); g.fill();          // il bordo scuro spesso
+          const pw = g.createRadialGradient(-7, -8, 3, 0, 0, 24); pw.addColorStop(0, '#8b8f9a'); pw.addColorStop(1, '#4a4e58');
+          g.fillStyle = pw; g.strokeStyle = '#15181e'; g.lineWidth = 2.2; g.beginPath(); g.arc(0, 0, 23, 0, 7); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.4;                              // i conci, uno per uno
+          for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + 0.2;
+            g.beginPath(); g.moveTo(Math.cos(a) * 14, Math.sin(a) * 14); g.lineTo(Math.cos(a) * 23, Math.sin(a) * 23); g.stroke(); }
+          g.fillStyle = '#0a0c10'; g.beginPath(); g.arc(0, 1, 13.5, 0, 7); g.fill();         // il buco: nero, e' profondo
+          const ac = g.createRadialGradient(-3, -3, 1, 0, 1, 13); ac.addColorStop(0, 'rgba(90,130,150,.32)'); ac.addColorStop(1, 'rgba(20,40,60,0)');
+          g.fillStyle = ac; g.beginPath(); g.arc(0, 1, 13, 0, 7); g.fill();                  // il barlume dell'acqua, in fondo
+          g.fillStyle = '#5a3f22'; g.strokeStyle = '#241708'; g.lineWidth = 1.8;             // la trave sopra
+          this._rr(g, -26, -5, 52, 7, 2); g.fill(); g.stroke();
+          g.strokeStyle = '#c9b98a'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(4, -1); g.lineTo(4, 9); g.stroke();
+          g.fillStyle = '#6b4a28'; g.strokeStyle = '#241708'; g.lineWidth = 1.4;             // e il secchio appeso
+          g.beginPath(); g.arc(4, 12, 5, 0, 7); g.fill(); g.stroke();
+          g.fillStyle = 'rgba(255,255,255,.10)'; this._rr(g, -24, -4, 48, 2, 1); g.fill(); break; }
+        case 'focolare': { // IL FOCOLARE di casa: anello di pietre e braci. La fiamma la disegna _flame, viva
+          g.fillStyle = 'rgba(0,0,0,.42)'; g.beginPath(); g.ellipse(1, 5, 22, 10, 0, 0, 7); g.fill();
+          g.fillStyle = '#1a1c22'; g.beginPath(); g.arc(0, 0, 19, 0, 7); g.fill();
+          for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.35;
+            const sx = Math.cos(a) * 16, sy = Math.sin(a) * 13;
+            const sg = g.createRadialGradient(sx - 1.5, sy - 2, 0.5, sx, sy, 6); sg.addColorStop(0, '#8b8f9a'); sg.addColorStop(1, '#3f434c');
+            g.fillStyle = sg; g.strokeStyle = '#14171c'; g.lineWidth = 1.5;
+            g.beginPath(); g.ellipse(sx, sy, 5.4, 4.4, a, 0, 7); g.fill(); g.stroke(); }
+          g.fillStyle = '#241a12'; g.beginPath(); g.ellipse(0, 0, 12, 9, 0, 0, 7); g.fill();   // il letto di cenere
+          for (let i = 0; i < 7; i++) { const a = i * 1.7, dd = 3 + (i % 3) * 3;
+            g.fillStyle = i % 2 ? 'rgba(255,150,50,.75)' : 'rgba(255,90,30,.55)';
+            g.beginPath(); g.arc(Math.cos(a) * dd, Math.sin(a) * dd * 0.8, 1.9, 0, 7); g.fill(); }
+          g.strokeStyle = '#3a2a18'; g.lineWidth = 2.6; g.lineCap = 'round';                  // due ciocchi incrociati
+          g.beginPath(); g.moveTo(-7, 3); g.lineTo(6, -3); g.moveTo(-5, -4); g.lineTo(7, 2); g.stroke(); g.lineCap = 'butt'; break; }
+        case 'letto': {    // IL LETTO: telaio di legno, pagliericcio, coperta e cuscino. Dice "qui si dorme"
+          g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
+          g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, -29, -13, 60, 30, 3); g.fill();
+          g.fillStyle = '#4a3319'; g.strokeStyle = '#1e1408'; g.lineWidth = 2.2;              // il telaio
+          this._rr(g, -31, -16, 62, 32, 3); g.fill(); g.stroke();
+          g.fillStyle = '#c9bb95'; g.strokeStyle = '#6b5f3f'; g.lineWidth = 1.2;              // il pagliericcio
+          this._rr(g, -27, -12, 54, 24, 2); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(0,0,0,.16)'; g.lineWidth = 1;
+          for (let dx = -20; dx <= 20; dx += 8) { g.beginPath(); g.moveTo(dx, -11); g.lineTo(dx, 11); g.stroke(); }
+          const cg2 = g.createLinearGradient(0, -12, 0, 12); cg2.addColorStop(0, '#7d4a3c'); cg2.addColorStop(1, '#4a2820');
+          g.fillStyle = cg2; g.strokeStyle = '#241008'; g.lineWidth = 1.6;                    // la coperta, tirata su
+          this._rr(g, -6, -12, 33, 24, 2); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1.6;
+          g.beginPath(); g.moveTo(-4, -10); g.lineTo(-4, 10); g.stroke();
+          g.fillStyle = '#e8e0cc'; g.strokeStyle = '#8b8067'; g.lineWidth = 1.4;              // il cuscino
+          this._rr(g, -25, -8, 16, 16, 3); g.fill(); g.stroke(); break; }
         case 'bancone': {  // bancone: piano lungo, bordo chiaro e la fascia scura del davanti
           g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
           g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, -30, -8, 60, 22, 3); g.fill();
@@ -1227,7 +1281,10 @@
       this._drawEdgeTendrils(ctx, world);   // v1.64 — i tentacoli escono dalla roccia vicino a te
       for (const tc of this.torches) this._flame(ctx, tc.x, tc.y, 0.8);
       for (const cf of this.campfires) this._flame(ctx, cf.fx || cf.x, cf.fy || cf.y, 1.5);
-      if (this.map.exit) {
+      // v2.0 — nel VILLAGGIO questo cerchio verde non si disegna piu': al centro della piazza c'e' la
+      // faglia vera (world.fg), disegnata da _drawFaglia come a fine ondata. Due portali sovrapposti
+      // sarebbero stati due modi diversi di dire la stessa cosa nello stesso punto.
+      if (this.map.exit && !(world.phase === 'market' && world.fg)) {
         const ex = this.map.exit.x * this.map.tile + this.map.tile / 2, ey = this.map.exit.y * this.map.tile + this.map.tile / 2;
         // v1.52 — nel MERCATO il portale e' l'unica via d'uscita: piu' grande, verde, con etichetta EXIT.
         const market = world.phase === 'market';
@@ -1728,7 +1785,17 @@
       const bob = Math.sin(t * 1.1 + x * 0.03) * 0.9;
       ctx.save(); ctx.translate(x, y + bob);
       this._shadow(ctx, 0, 0, r * (n.seated ? 0.8 : 1));
-      ctx.rotate(n.face != null ? n.face : 0);
+      // v2.0 — GLI ABITANTI FANNO QUALCOSA. Un villaggio di statue non e' abitato: e' un presepe. Ognuno
+      // ha un mestiere in corso (`act`) e lo esegue sul posto, senza spostarsi davvero — il suo CORPO
+      // resta dov'e', se no ci si passerebbe attraverso mentre ondeggia. Il movimento e' piccolo apposta:
+      // deve leggersi con la coda dell'occhio mentre compri, non rubare la scena.
+      let faccia = n.face != null ? n.face : 0;
+      if (n.act === 'guarda') faccia += Math.sin(t * 0.5 + x * 0.01) * 0.55;          // si guarda attorno
+      if (n.act === 'cammina') ctx.translate(Math.sin(t * 0.55 + x * 0.02) * 13, 0);  // va e viene per la strada
+      if (n.act === 'rimesta') ctx.translate(Math.cos(t * 1.9 + x * 0.02) * 2.2, Math.sin(t * 1.9 + x * 0.02) * 1.6);
+      ctx.rotate(faccia);
+      if (n.act === 'martella') ctx.rotate(Math.sin(t * 4.4 + x * 0.02) * 0.17);      // il colpo di martello
+      if (n.act === 'fuoco') ctx.rotate(Math.sin(t * 0.9 + x * 0.01) * 0.08);         // si scalda, e dondola
       if (n.seated) this._vendorSeduto(ctx, n.kind, r, t);
       else { this._hero(ctx, base, r, t + (x * 0.013), false, 0, { pal, civile: 1 }); this._vendorTool(ctx, n.kind, r); }
       ctx.restore();

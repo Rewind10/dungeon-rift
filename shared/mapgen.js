@@ -865,51 +865,94 @@
   //
   // COME SI AGGIUNGE UNA STANZA: una riga in ROOMS (rettangolo, pavimento, colore) e una in LINKS (il
   // corridoio che la attacca alla piazza). L'arredo sta in arreda(), una funzione per stanza.
+  // ===================== IL VILLAGGIO SOTTERRANEO (v2.0) =====================
+  // Fino alla v1.99 la sosta era una "Sala dei Mercanti": 34x26, cinque stanze attorno a una piazza e
+  // niente altro. Funzionava, ma non era un posto: era un men— con dei muri. Adesso e' un VILLAGGIO DI
+  // NANI scavato nella roccia — 56x40, il doppio abbondante — e la differenza non e' la dimensione: e'
+  // che qui ci vive qualcuno. Le botteghe sono edifici separati, e attorno ci sono le CASE, con la porta
+  // aperta, il focolare acceso in mezzo, il letto, e la gente dentro.
+  //
+  // Tre regole che tengono in piedi la pianta, e che vanno rispettate se un giorno la si allarga:
+  //  1) IL PORTALE E' AL CENTRO. Non e' una porta in fondo a un corridoio: e' il primo che vedi quando
+  //     arrivi, e ci torni quando hai finito. Tutto il resto gli sta attorno.
+  //  2) OGNI PORTA E' LARGA DUE TESSERE. Il personaggio e' largo 35 px su tessere da 48: con una sola
+  //     tessera ci si passa sfregando lo stipite (imparato nella v1.75.1).
+  //  3) FUORI DAL VILLAGGIO C'E' ROCCIA, E POI IL NERO. Non c'e' un "bordo mappa": c'e' la montagna.
   const VILLAGE = {
-    w: 34, h: 26,
-    piazza: { x0: 13, y0: 10, x1: 20, y1: 16 },
-    fire: { x: 16, y: 13 },
-    spawn: { x: 16, y: 15 },
-    exit: { x: 16, y: 20 },
-    // le stanze: rettangolo INTERNO (la roccia attorno e' il muro)
+    w: 56, h: 40,
+    // la piazza: il cuore. Il portale sta nel suo centro esatto, il pozzo e il falo' ai due lati.
+    piazza: { x0: 21, y0: 14, x1: 33, y1: 24 },
+    portale: { x: 27, y: 19 },
+    pozzo: { x: 24, y: 21 },
+    fire: { x: 30, y: 17 },
+    spawn: { x: 27, y: 23 },       // si arriva dal basso, col portale davanti agli occhi
+    exit: { x: 27, y: 19 },        // resta per compatibilita': e' il portale
+    // le stanze: rettangolo INTERNO (la roccia attorno e' il muro).
+    //   kind 'bottega' = ci lavora un mercante · kind 'casa' = ci abita qualcuno
     rooms: [
-      { id: 'taverna',  x0: 3,  y0: 3,  x1: 11, y1: 11, pav: 'legno',  col: 'rgba(92,62,32,.62)' },
-      { id: 'antro',    x0: 14, y0: 2,  x1: 20, y1: 7,  pav: 'lastre', col: 'rgba(58,42,84,.42)' },
-      { id: 'erbe',     x0: 23, y0: 4,  x1: 30, y1: 11, pav: 'terra',  col: 'rgba(46,58,36,.44)' },
-      { id: 'fucina',   x0: 3,  y0: 13, x1: 10, y1: 19, pav: 'lastre', col: 'rgba(72,38,24,.48)' },
-      { id: 'retro',    x0: 23, y0: 13, x1: 30, y1: 19, pav: 'lastre', col: 'rgba(70,40,38,.42)' },
+      // --- le tre botteghe grandi ---
+      { id: 'taverna', kind: 'bottega', x0: 5,  y0: 3,  x1: 16, y1: 11, pav: 'legno',  col: 'rgba(92,62,32,.62)' },
+      { id: 'erbe',    kind: 'bottega', x0: 31, y0: 3,  x1: 42, y1: 11, pav: 'terra',  col: 'rgba(46,58,36,.44)' },
+      { id: 'fucina',  kind: 'bottega', x0: 4,  y0: 17, x1: 15, y1: 25, pav: 'lastre', col: 'rgba(72,38,24,.48)' },
+      // --- le due piccole ---
+      { id: 'antro',   kind: 'bottega', x0: 20, y0: 3,  x1: 27, y1: 9,  pav: 'lastre', col: 'rgba(58,42,84,.42)' },
+      { id: 'retro',   kind: 'bottega', x0: 39, y0: 16, x1: 46, y1: 22, pav: 'lastre', col: 'rgba(70,40,38,.42)' },
+      // --- le case: la fila a sud, piu' due defilate ---
+      { id: 'casa_a',  kind: 'casa', x0: 5,  y0: 31, x1: 11, y1: 36, pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_b',  kind: 'casa', x0: 15, y0: 31, x1: 21, y1: 36, pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_c',  kind: 'casa', x0: 25, y0: 31, x1: 31, y1: 36, pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_d',  kind: 'casa', x0: 35, y0: 31, x1: 41, y1: 36, pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_e',  kind: 'casa', x0: 45, y0: 31, x1: 51, y1: 36, pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_f',  kind: 'casa', x0: 46, y0: 3,  x1: 51, y1: 8,  pav: 'legno', col: 'rgba(84,58,34,.50)' },
+      { id: 'casa_g',  kind: 'casa', x0: 48, y0: 16, x1: 53, y1: 21, pav: 'legno', col: 'rgba(84,58,34,.50)' },
     ],
-    // i corridoi verso la piazza: una lista di rettangoli da scavare, porta compresa
-    // v1.75.1 — le porte erano larghe UNA tile (48 px) contro un personaggio largo 35: ci si passava a
-    // pelo, sfregando lo stipite. Adesso ogni porta e' larga DUE tile, e il varco del portale TRE: e' la
-    // strada principale del villaggio, e cosi' resta centrata sull'uscita.
+    // LE STRADE. Non sono corridoi da una porta all'altra: sono due vie che attraversano il villaggio da
+    // parte a parte, e le botteghe e le case si aprono su quelle. E' la differenza fra un paese e un
+    // corridoio con delle stanze.
+    // LE STRADE. Non sono corridoi da una porta all'altra: sono vie che attraversano il villaggio da
+    // parte a parte, e le botteghe e le case si aprono su quelle. E' la differenza fra un paese e un
+    // corridoio con delle stanze. Fra una stanza e la sua strada resta sempre una riga di roccia: e' li'
+    // che si apre la porta.
+    strade: [
+      [4,  13, 52, 15],   // la via alta: corre sotto le botteghe del nord, da un capo all'altro
+      [4,  27, 52, 29],   // la via bassa: davanti alle case
+      [25, 13, 28, 29],   // la via maestra: taglia il villaggio da nord a sud e passa per la piazza
+      [17, 18, 20, 21],   // il vicolo della fucina
+      [34, 18, 37, 21],   // il vicolo della gilda
+      [48, 9,  49, 13],   // la scaletta di casa_f, giu' fino alla via alta
+      [50, 22, 51, 28],   // e il vicoletto di casa_g, giu' fino alla via bassa
+    ],
+    // LE PORTE: due tessere ciascuna, aperte nella riga di roccia fra la stanza e la sua strada
     links: [
-      [12, 10, 12, 11],   // taverna  -> piazza
-      [16, 8,  17, 9],    // antro    -> piazza
-      [21, 10, 22, 11],   // erbe     -> piazza
-      [11, 15, 12, 16],   // fucina   -> piazza
-      [21, 15, 22, 16],   // retro    -> piazza
-      [15, 17, 17, 20],   // piazza   -> portale (il varco grande)
+      [10, 12, 11, 12],   // taverna -> via alta
+      [36, 12, 37, 12],   // erbe    -> via alta
+      [22, 10, 23, 12],   // antro   -> via alta (scende dritto)
+      [16, 19, 16, 20],   // fucina  -> vicolo
+      [38, 19, 38, 20],   // gilda   -> vicolo
+      [48, 22, 49, 22],   // casa_g  -> vicoletto
+      [48, 9,  49, 9],    // casa_f  -> scaletta
+      [7,  30, 8,  30],   // casa_a  -> via bassa
+      [17, 30, 18, 30],   // casa_b  -> via bassa
+      [27, 30, 28, 30],   // casa_c  -> via bassa
+      [37, 30, 38, 30],   // casa_d  -> via bassa
+      [47, 30, 48, 30],   // casa_e  -> via bassa
     ],
     // dove sta ogni mercante, e il colore della sua luce
     stalls: [
-      { x: 15.1, y: 4.4, kind: 'seer',      name: 'Cartomante', crd: 1, sub: 'carte',
+      { x: 23.5, y: 5.4, kind: 'seer',      name: 'Cartomante', crd: 1, sub: 'carte',
         col: '#c9a0ff', room: 'antro' },
-      // v1.75 — il Banditore era il meno riuscito: un tizio col cartello. Ora e' il CAPITANO della Gilda
-      // dei Contratti — un ufficiale che appende le taglie e ricompra l'attrezzatura dei caduti. La chiave
-      // interna resta `crier`/`bnd` (la usano server, test e messaggi): cambia il personaggio, non l'impianto.
-      { x: 27, y: 14, kind: 'crier',     name: 'Capitano',   bnd: 1, sub: 'taglie e usato',
+      { x: 42.5, y: 19,  kind: 'crier',     name: 'Capitano',   bnd: 1, sub: 'taglie e usato',
         col: '#ff9a8a', room: 'retro' },
-      { x: 6.5, y: 4,  kind: 'innkeeper', name: 'Ostessa',    inn: 1, sub: 'riposo',
+      { x: 10.5, y: 4.4, kind: 'innkeeper', name: 'Ostessa',    inn: 1, sub: 'riposo',
         col: '#ffd97a', room: 'taverna' },
-      { x: 5,  y: 14, kind: 'smith',     name: 'Fabbro',     shop: 1,
+      { x: 6,    y: 19,  kind: 'smith',     name: 'Fabbro',     shop: 1,
         col: '#ffb14a', room: 'fucina' },
-      { x: 27, y: 5.2, kind: 'herbalist', name: 'Erborista',  pot: 1, sub: 'pozioni',
+      { x: 36.5, y: 4.6, kind: 'herbalist', name: 'Erborista',  pot: 1, sub: 'pozioni',
         col: '#9fe06a', room: 'erbe' },
     ],
   };
   const VILLAGE_THEME = {
-    id: 'village', name: 'Sala dei Mercanti',
+    id: 'village', name: 'Il Villaggio',
     floorA: '#1c1813', floorB: '#221d17', wall: '#050607', wallTop: '#0d1013',
     hazard: '#ffb020', accent: '#ffb14a', blobMul: 0, hazMul: 0, propMix: [], tint: 'rgba(60,40,20,.10)',
   };
@@ -929,11 +972,14 @@
     tavolo: { c: 20 }, incudine: { c: 15 }, alambicco: { c: 11 }, crystal_cluster: { c: 13 },
     barrel: { c: 10 }, sack: { c: 10 }, brazier: { c: 12 }, candelabra: { c: 8 },
     signpost: { c: 8 }, mortaio: { c: 9 }, bonfire: { c: 26 },
+    // v2.0 — i tre mobili del villaggio. Il pozzo e il focolare sono tondi e ci si gira attorno; il letto
+    // e' un rettangolo lungo appoggiato al muro. La panca resta attraversabile: e' bassa.
+    pozzo: { c: 25 }, focolare: { c: 20 }, letto: { r: [31, 16] },
     bancone: { r: [32, 11] }, credenza: { r: [27, 12] }, scaffale: { r: [25, 13] },
     rastrelliera: { r: [23, 8] }, aiuola: { r: [23, 19] }, cratebox: { r: [12, 12] },
   };
   // questi quattro il renderer li gira di 90 gradi quando il prop ha r > 0.5: l'ingombro deve girare con loro
-  const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1 };
+  const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1, letto: 1 };
   // il corpo di una persona: piu' stretto della sagoma disegnata, cosi' ci si passa accanto senza incastri
   const CORPO = 14;
 
@@ -961,8 +1007,11 @@
     const PZ = VILLAGE.piazza;
     scava(PZ.x0, PZ.y0, PZ.x1, PZ.y1);
     for (const r of VILLAGE.rooms) scava(r.x0, r.y0, r.x1, r.y1);
+    for (const S of VILLAGE.strade) scava(S[0], S[1], S[2], S[3]);
     for (const L of VILLAGE.links) scava(L[0], L[1], L[2], L[3]);
-    g[at(VILLAGE.exit.x, VILLAGE.exit.y)] = C.T_EXIT;
+    // v2.0 — NIENTE TESSERA T_EXIT. L'uscita non e' piu' un quadrato verde in fondo alla piazza: e' il
+    // PORTALE, lo stesso che si apre quando hai ripulito un'ondata, piantato nel centro esatto del
+    // villaggio. Lo mette il server (Room.enterMarket) e lo disegna _drawFaglia come sempre.
 
     // il pavimento di ogni stanza (la piazza compresa): lo disegna il renderer da questa lista
     const floors = [{ x0: PZ.x0, y0: PZ.y0, x1: PZ.x1, y1: PZ.y1, kind: 'lastre', col: 'rgba(60,52,40,.34)' }];
@@ -971,70 +1020,115 @@
     const props = [];
     const P = (type, tx, ty, s, extra) => props.push(Object.assign({ type, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, s: s || 1, r: ((tx * 31 + ty * 17) % 100) / 100 }, extra || {}));
 
-    // --- LA PIAZZA: il falo' e il suo anello di pietre ---
-    P('bonfire', VILLAGE.fire.x, VILLAGE.fire.y, 1.45);
+    // --- LA PIAZZA: il portale al centro, il pozzo e il falo' ai due lati ---
+    // Il portale NON e' un prop: e' la faglia, la mette il server. Qui gli si lascia lo spazio attorno,
+    // che e' l'unica regola della piazza: dal centro si deve vedere tutto e non ci si deve inciampare.
+    P('pozzo', VILLAGE.pozzo.x, VILLAGE.pozzo.y, 1.25);
+    P('bonfire', VILLAGE.fire.x, VILLAGE.fire.y, 1.35);
     for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2;
       P('rock', VILLAGE.fire.x + Math.cos(a) * 1.4, VILLAGE.fire.y + Math.sin(a) * 1.0, 0.5); }
-    P('signpost', 16, 17.6, 1);
-    // v1.75.3 — qui c'erano due casse: stavano esattamente sulla soglia dell'osteria e della gilda, e da
-    // quando i mobili hanno un corpo (v1.75.2) erano un ostacolo piantato in mezzo alla porta. Via.
+    P('signpost', 22.4, 15.4, 1);
+    P('barrel', 32.2, 15.2, 0.95);   // e basta: nella piazza non ci vanno casse (v1.75.3)
+    P('panca', 22.6, 23.4, 1, { r: 0 });
 
-    // --- LA TAVERNA: l'ostessa DIETRO il bancone, la credenza alle sue spalle, gli avventori ai tavoli ---
-    P('credenza', 6.5, 3.2, 1, { r: 0 });                       // contro il muro nord, dietro di lei
-    P('bancone', 6.5, 5.0, 1, { r: 0 });                        // il bancone la separa dalla sala
-    P('hanging_lantern', 3.8, 3.4, 1.05); P('hanging_lantern', 10.4, 3.4, 1.05);
-    for (const [x, y] of [[3.6, 6.4], [3.6, 7.6], [3.6, 8.8]]) P('barrel', x, y, 0.95);   // le botti in fila
-    for (const [tx, ty] of [[6.5, 7.4], [10, 7.4], [6.5, 9.6], [10, 9.6]]) {              // due file di tavoli
-      P('tavolo', tx, ty, 1);
-      P('panca', tx - 1.2, ty, 0.95); P('panca', tx + 1.2, ty, 0.95);
+    // --- LA TAVERNA: l'ostessa DIETRO il bancone, la credenza alle spalle, gli avventori ai tavoli ---
+    P('credenza', 10.5, 3.4, 1, { r: 0 });
+    P('bancone', 10.5, 5.2, 1, { r: 0 });
+    P('hanging_lantern', 7, 3.6, 1.05); P('hanging_lantern', 14, 3.6, 1.05);
+    for (const [x, y] of [[6, 6.6], [6, 7.8], [6, 9]]) P('barrel', x, y, 0.95);
+    for (const [tx, ty] of [[9, 7.6], [13.4, 7.6], [9, 9.8], [13.4, 9.8]]) {
+      P('tavolo', tx, ty, 1); P('panca', tx - 1.3, ty, 0.95); P('panca', tx + 1.3, ty, 0.95);
     }
-    P('brazier', 10.6, 3.6, 1.05);
+    P('brazier', 15, 4, 1.05);
 
     // --- L'ANTRO: lei SEDUTA al tavolo, sul tappeto, con le sue cose attorno ---
-    P('tappeto', 16.4, 4.4, 1.2, { col: '#5a2f6b' });
-    P('tavolo', 16.4, 4.4, 0.9);
-    P('candelabra', 14.4, 2.8, 1); P('candelabra', 18.6, 2.8, 1);
-    P('scaffale', 19.4, 4.4, 1, { r: 1, col: '#c9a0ff' });      // libri e mazzi, contro il muro est
-    P('crystal_cluster', 14.4, 6.6, 0.85, { col: '#c9a0ff', gr: 58, ga: 0.26 });
-    P('crystal_cluster', 19.4, 6.6, 0.85, { col: '#c9a0ff', gr: 58, ga: 0.26 });
-    P('skull', 15.4, 2.6, 0.9); P('web', 20.4, 2.4, 0.85);
+    P('tappeto', 23.5, 5.4, 1.2, { col: '#5a2f6b' });
+    P('tavolo', 23.5, 5.4, 0.9);
+    P('candelabra', 21, 4, 1); P('candelabra', 26.2, 4, 1);
+    P('scaffale', 26.4, 6.4, 1, { r: 1, col: '#c9a0ff' });
+    P('crystal_cluster', 20.8, 7.6, 0.85, { col: '#c9a0ff', gr: 58, ga: 0.26 });
+    P('crystal_cluster', 26.4, 8.2, 0.85, { col: '#c9a0ff', gr: 58, ga: 0.26 });
+    P('skull', 21.4, 3.4, 0.9); P('web', 26.6, 3.4, 0.85);
 
     // --- L'ERBORISTERIA: bancone davanti a lei, gli strumenti, e le PIANTAGIONI in fila ---
-    P('bancone', 27, 6.4, 1, { r: 0 });
-    P('scaffale', 25, 4.2, 1, { r: 0 }); P('scaffale', 29, 4.2, 1, { r: 0 });
-    P('alambicco', 25.4, 5.4, 1.05, { col: '#9fe06a' });
-    P('mortaio', 28.6, 5.4, 1.1, { col: '#9fe06a' });
-    for (const [x, y] of [[24.6, 9], [27, 9], [29.4, 9]])       // tre aiuole allineate
+    P('bancone', 36.5, 6.2, 1, { r: 0 });
+    P('scaffale', 33, 3.8, 1, { r: 0 }); P('scaffale', 40, 3.8, 1, { r: 0 });
+    P('alambicco', 33.6, 5.2, 1.05, { col: '#9fe06a' });
+    P('mortaio', 39.4, 5.2, 1.1, { col: '#9fe06a' });
+    for (const [x, y] of [[33.5, 9.2], [36.5, 9.2], [39.5, 9.2]])
       P('aiuola', x, y, 1, { col: '#9fe06a', glow: 1 });
-    P('barrel', 23.6, 6.6, 0.95); P('sack', 30.4, 6.6, 0.9);
+    P('barrel', 31.6, 7, 0.95); P('sack', 41.4, 7, 0.9);
 
     // --- LA FUCINA: lui dietro il bancone, la colata in fondo, le armi appese in fila ---
-    P('bancone', 5, 15.2, 1, { r: 0 });                          // il banco fra lui e chi compra
-    P('rastrelliera', 4.4, 13.2, 1, { r: 0 });                   // le armi alle sue spalle
-    P('rastrelliera', 7.4, 13.2, 1, { r: 0 });
-    P('rastrelliera', 9.6, 17.4, 1, { r: 1 });                   // e una sulla parete est, in basso
-    // v1.75.3 — la seconda rastrelliera est stava a 9.6,15.4: proprio davanti all'ingresso della fucina.
-    P('incudine', 7.6, 16.6, 1.15);
-    for (const [x, y, sc] of [[4.4, 18.4, 1.5], [5.7, 18.6, 1.35], [4.7, 17.6, 1.2]]) P('lavapool', x, y, sc);
-    P('brazier', 7.4, 18.6, 1);
-    for (const [x, y] of [[9.6, 19.4], [8.6, 19.4]]) P('cratebox', x, y, 0.95);
-    P('barrel', 3.6, 16.6, 0.95);
+    P('bancone', 6, 20.6, 1, { r: 0 });
+    P('rastrelliera', 5.4, 17.8, 1, { r: 0 }); P('rastrelliera', 8.6, 17.8, 1, { r: 0 });
+    P('rastrelliera', 11.6, 17.8, 1, { r: 0 }); P('rastrelliera', 14.4, 22.6, 1, { r: 1 });
+    P('incudine', 9.6, 21.6, 1.15);
+    for (const [x, y, sc] of [[5.4, 24.2, 1.5], [6.8, 24.4, 1.35], [5.8, 23.4, 1.2]]) P('lavapool', x, y, sc);
+    P('brazier', 8.6, 24.2, 1);
+    for (const [x, y] of [[13.4, 24.4], [14.4, 24.4]]) P('cratebox', x, y, 0.95);
+    P('barrel', 4.6, 22.4, 0.95);
 
     // --- LA GILDA: la bacheca delle taglie, il banco del capitano, l'usato in ordine sugli scaffali ---
-    P('signpost', 27, 12.6, 1.05, { txt: 'TAGLIE' });            // la bacheca, sul muro nord
-    P('bancone', 27, 15.2, 1, { r: 0 });
-    P('flag', 24, 13.4, 1.25, { col: '#ff9a8a' });
-    P('flag', 30, 13.4, 1.25, { col: '#ff9a8a' });
-    P('scaffale', 24.4, 18.6, 1, { r: 0 }); P('scaffale', 29.6, 18.6, 1, { r: 0 });
-    P('rastrelliera', 23.6, 16.6, 1, { r: 1 });
-    for (const [x, y] of [[27, 18.4], [28, 18.4], [26, 18.4]]) P('cratebox', x, y, 0.95);
-    P('barrel', 30.4, 16.6, 0.95);
+    P('signpost', 42.5, 16.6, 1.05, { txt: 'TAGLIE' });
+    P('bancone', 42.5, 20.4, 1, { r: 0 });
+    P('flag', 40, 17.2, 1.25, { col: '#ff9a8a' });
+    P('flag', 45.2, 17.2, 1.25, { col: '#ff9a8a' });
+    P('scaffale', 40.4, 21.6, 1, { r: 0 }); P('scaffale', 44.8, 21.6, 1, { r: 0 });
+    for (const [x, y] of [[42, 21.6], [43, 21.6]]) P('cratebox', x, y, 0.95);
+    P('barrel', 45.6, 19.6, 0.95);
+
+    // ===================== LE CASE =====================
+    // Sette case, e tutte arredate dalla STESSA funzione. Non e' pigrizia: e' che una casa di nani ha
+    // sempre le stesse quattro cose — il focolare in mezzo (e' la ragione per cui la stanza esiste), il
+    // letto contro la parete piu' lontana dalla porta, il tavolo dall'altra parte, la madia contro un
+    // muro — e a cambiare e' solo il verso. Piazzarle a mano sette volte avrebbe prodotto sette errori
+    // diversi; cosi' l'errore, se c'e', e' uno solo e si corregge una volta.
+    //
+    // L'UNICA REGOLA DURA: la colonna della porta resta sgombra. I mobili hanno un corpo (v1.75.2), e un
+    // tavolo sulla soglia e' una casa in cui non si entra.
+    const abitanti = [];
+    const arredaCasa = (r, k) => {
+      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+      const dw = VILLAGE.links.find(L => L[0] >= r.x0 - 1 && L[2] <= r.x1 + 1 && (L[1] === r.y0 - 1 || L[1] === r.y1 + 1 || L[3] === r.y0 - 1));
+      const portaX = dw ? (dw[0] + dw[2]) / 2 : cx;          // la colonna da tenere libera
+      const sopra = dw ? (dw[1] < r.y0) : true;              // la porta e' a nord? allora il letto va a sud
+      const sgombro = (x, y) => Math.abs(x - portaX) > 1.4 || Math.abs(y - (sopra ? r.y0 : r.y1)) > 1.2;
+      const M = (t, x, y, s, e) => { if (sgombro(x, y)) P(t, x, y, s, e); };
+
+      // il FOCOLARE: sta in mezzo, e' il motivo per cui la stanza e' una casa
+      P('focolare', cx, cy, 1.15);
+      // SETTE CASE UGUALI SAREBBERO SETTE VOLTE LA STESSA CASA. La variazione non e' casuale: e' l'indice
+      // della casa a decidere, cosi' la pianta resta la stessa a ogni partita (nel villaggio il seme non
+      // cambia niente) ma da una porta all'altra si vede gente diversa che vive diversamente.
+      const spec = k % 2 ? -1 : 1;                            // il verso: letto a sinistra o a destra
+      const bx = spec > 0 ? r.x0 + 1.4 : r.x1 - 1.4;          // il letto
+      const tx = spec > 0 ? r.x1 - 1.5 : r.x0 + 1.5;          // il tavolo, sempre dall'altra parte
+      const ly = sopra ? r.y1 - 0.7 : r.y0 + 0.7;             // contro la parete lontana dalla porta
+      M('letto', bx, ly, 1, { r: 0 });
+      if (k % 3 === 0) M('letto', bx + spec * 1.9, ly, 0.85, { r: 0 });   // una casa su tre ha due letti: e' una famiglia
+      M('tavolo', tx, ly, 0.9);
+      M('panca', tx, ly + (sopra ? -1.15 : 1.15), 0.9);
+      if (k % 2 === 0) M('panca', tx + spec * 1.2, ly, 0.85);
+      // la MADIA, e poi quello che distingue una casa dall'altra: chi conserva, chi cucina, chi tiene
+      // gli attrezzi appesi
+      M('credenza', tx, sopra ? r.y0 + 0.7 : r.y1 - 0.7, 0.95, { r: 0 });
+      const roba = [['sack', 0.85], ['barrel', 0.9], ['cratebox', 0.85]][k % 3];
+      M(roba[0], bx, sopra ? r.y0 + 0.8 : r.y1 - 0.8, roba[1]);
+      if (k % 4 === 1) M('rastrelliera', cx + spec * 2.2, sopra ? r.y0 + 0.6 : r.y1 - 0.6, 0.8, { r: 0 });
+      if (k % 4 === 2) M('scaffale', cx - spec * 2.2, sopra ? r.y0 + 0.6 : r.y1 - 0.6, 0.8, { r: 0 });
+      if (k % 5 === 3) P('tappeto', cx - spec * 1.6, cy + (sopra ? 1.3 : -1.3), 1, { col: '#6b4630' });
+      // e la gente attorno al fuoco: uno sempre, un secondo nelle case piu' larghe
+      abitanti.push({ x: cx + spec * 1.4, y: cy + 0.15, kind: 'patron', face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
+      if ((r.x1 - r.x0) >= 6) abitanti.push({ x: tx, y: cy + (k % 2 ? 0.85 : -0.85), kind: 'patron', face: spec > 0 ? Math.PI : 0, act: k % 3 === 0 ? 'martella' : 'rimesta' });
+    };
+    { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
 
     // --- l'alone del colore di ogni mercante: lo stacca dalla roccia e dice chi e' da lontano ---
     for (const s of VILLAGE.stalls) P('glowspot', s.x, s.y, 1, { col: s.col, gr: 100, ga: 0.34 });
 
     // --- ragnatele e catene negli angoli: siamo pur sempre sottoterra ---
-    for (const [x, y] of [[3.4, 3.4], [30.4, 4.4], [3.4, 19.4], [30.4, 19.4]]) P('web', x, y, 0.9);
+    for (const [x, y] of [[5.6, 3.4], [41.4, 10.4], [14.4, 17.4], [45.4, 16.6]]) P('web', x, y, 0.9);
 
     const village = (() => {
         // v1.75 — senza banchetto il mercante sta AL SUO POSTO, non piu' 2.1 tile piu' indietro: quello
@@ -1047,16 +1141,21 @@
         const npcs = VILLAGE.stalls.map(mk);
         // v1.75 — LA GENTE DEL VILLAGGIO: avventori seduti ai tavoli e qualche passante. Non parlano e
         // non vendono, ma senza di loro il posto sembra abbandonato invece che abitato.
+        // v2.0 — LA GENTE. Gli avventori della taverna e i passanti stanno qui a mano; gli abitanti
+        // delle case li ha gia' messi arredaCasa(), uno per focolare. Non parlano e non vendono: si
+        // muovono un poco sul posto, ed e' quello che distingue un villaggio da un plastico.
         const extras = [
-          { x: 5.4, y: 7.4, kind: 'patron', face: 0 },
-          { x: 7.6, y: 7.4, kind: 'patron', face: Math.PI },
-          { x: 8.9, y: 9.6, kind: 'patron', face: 0 },
-          { x: 11.1, y: 9.6, kind: 'patron', face: Math.PI },
-          { x: 10, y: 6.2, kind: 'patron', face: 1.9 },
-          { x: 14.2, y: 12.2, kind: 'patron', face: 0.5 },
-          { x: 19, y: 14.4, kind: 'patron', face: 3.4 },
-          { x: 25.4, y: 17.2, kind: 'patron', face: 4.6 },
-        ].map(e => ({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2, kind: e.kind, seated: e.seated || 0, face: e.face || 0, name: '', sub: '' }));
+          { x: 8, y: 7.6, kind: 'patron', face: 0 },
+          { x: 10.3, y: 7.6, kind: 'patron', face: Math.PI },
+          { x: 12.4, y: 9.8, kind: 'patron', face: 0 },
+          { x: 14.7, y: 9.8, kind: 'patron', face: Math.PI },
+          { x: 13.4, y: 6.3, kind: 'patron', face: 1.9 },
+          { x: 24.6, y: 16.4, kind: 'patron', face: 0.6, act: 'guarda' },
+          { x: 30.6, y: 22.4, kind: 'patron', face: 3.4 },
+          { x: 19.4, y: 28, kind: 'patron', face: 0, act: 'cammina' },
+          { x: 43.6, y: 28, kind: 'patron', face: Math.PI, act: 'cammina' },
+          { x: 35.4, y: 14.2, kind: 'patron', face: 1.4 },
+        ].concat(abitanti).map(e => ({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2, kind: e.kind, seated: e.seated || 0, face: e.face || 0, act: e.act || '', name: '', sub: '' }));
         const sm = npcs.find(n => n.shop) || npcs[0];
       return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
     })();
@@ -1066,6 +1165,9 @@
       grid: Array.from(g), floors,
       spawn: { x: VILLAGE.spawn.x * TILE + TILE / 2, y: VILLAGE.spawn.y * TILE + TILE / 2 },
       exit: { x: VILLAGE.exit.x, y: VILLAGE.exit.y },
+      // v2.0 — dove pianta il portale il server. `exit` resta perche' la minimappa e l'alone lo segnano
+      // ancora li', ed e' lo stesso punto: il centro della piazza.
+      portale: { x: VILLAGE.portale.x, y: VILLAGE.portale.y },
       enemySpawns: [], crateSpawns: [], props, microAreas: [],
       village, solids: ingombri(props, village),
     };
