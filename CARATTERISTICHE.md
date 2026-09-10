@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.0.0`
+**Versione attuale:** `2.0.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -384,6 +384,37 @@ pentola, chi si guarda attorno, chi va e viene per la strada. Il movimento e' **
 leggersi con la coda dell'occhio mentre compri, non rubare la scena — e il loro **corpo resta fermo** dov'e',
 se no ci si passerebbe attraverso mentre ondeggiano. Stanno tutti **in piedi**: dall'alto una figura seduta
 non si legge (regola della v1.75).
+
+### 💡 La luce *(v2.0.2 — l'unica mappa illuminata del gioco)*
+
+Il villaggio nasceva al buio come tutto il resto: il falo' della piazza, i sette focolari e gli aloni dei
+mercanti, e attorno il nero. Bastava a 34x26; su 56x40 non vedevi dove fossero le botteghe.
+
+**La causa non erano le poche torce.** Su ogni mappa il gioco stende un velo scuro attorno al giocatore
+(`_drawLighting`), e su una mappa larga quel velo lascia nere le strade. Nelle ondate quel velo *e'* il
+gioco — non sai cosa c'e' dietro l'angolo. In una sosta non serve a niente.
+
+Quindi nel villaggio il velo **non si stende**. La pianta dichiara `lit: 1`, e:
+
+| | |
+|---|---|
+| **Chi lo dichiara** | solo `generateMarket`. Nessuna mappa di combattimento ha `lit` |
+| **Chi lo legge** | il renderer, da quella bandiera — non dal tipo di mappa |
+| **Cosa cambia** | il velo scuro diventa quasi trasparente; gli aloni di luce (focolari, falo', mercanti, portale) restano |
+| **Il tasto L** | il cono torcia non rimette al buio il villaggio |
+
+*Se un giorno si aggiunge un'altra mappa illuminata, si aggiunge `lit` a quella pianta e basta. Ma le ondate
+non devono averlo: meta' della loro tensione e' il velo.*
+
+Tolto il velo sono servite altre due cose. La **tavolozza** del villaggio era tarata per essere guardata
+attraverso il velo (pavimento `#1c1813`, roccia `#050607`): senza, era una macchia marrone quasi nera —
+adesso sono i colori di una sala scavata e illuminata a fuoco, con la roccia comunque molto piu' scura del
+pavimento, se no il muro non si legge piu' come muro. E **fuori dai bordi della mappa** si vedeva il fondo
+viola della pagina, che prima il buio copriva: adesso si riempie di roccia, perche' fuori dal paese c'e' la
+montagna, non il vuoto.
+
+*(Nella v2.0.1 avevo provato la strada opposta — 57 torce a muro, bracieri e lanterne — e non funzionava:
+erano una tappezzeria di fiammelle messa li' a combattere un velo che bastava togliere. Rimosse.)*
 
 ### 🌀 Il portale, e niente timer
 

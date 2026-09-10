@@ -953,7 +953,11 @@
   };
   const VILLAGE_THEME = {
     id: 'village', name: 'Il Villaggio',
-    floorA: '#1c1813', floorB: '#221d17', wall: '#050607', wallTop: '#0d1013',
+    // v2.0.2 — SCHIARITA. Questi colori erano tarati per essere guardati ATTRAVERSO il velo scuro: tolto
+    // quello, il pavimento era una macchia marrone quasi nera. Adesso sono i colori veri di una sala
+    // scavata e illuminata a fuoco — pietra calda, non fuliggine — e la roccia resta comunque molto piu'
+    // scura del pavimento, se no il muro non si legge piu' come muro.
+    floorA: '#4a3f31', floorB: '#57493a', wall: '#15171c', wallTop: '#262b33',
     hazard: '#ffb020', accent: '#ffb14a', blobMul: 0, hazMul: 0, propMix: [], tint: 'rgba(60,40,20,.10)',
   };
   // ===================== v1.75.2 — GLI OSTACOLI FISICI =====================
@@ -1124,6 +1128,14 @@
     };
     { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
 
+
+    // v2.0.2 — QUI C'ERANO LE TORCE. Nella v2.0.1 ne avevo messe 57 a muro piu' bracieri e lanterne per
+    // schiarire il villaggio. Sbagliato due volte: erano un tappezzeria di fiammelle, e soprattutto
+    // risolvevano il problema al contrario. Il villaggio non era buio perche' mancavano le torce: era
+    // buio perche' su OGNI mappa il gioco stende un velo scuro attorno al giocatore. Nelle ondate quel
+    // velo e' il gioco — non sai cosa c'e' dietro l'angolo. In una sosta non serve a niente: qui vuoi
+    // vedere dove sono le botteghe. Quindi il velo, nel villaggio, si toglie (vedi `lit` piu' sotto).
+
     // --- l'alone del colore di ogni mercante: lo stacca dalla roccia e dice chi e' da lontano ---
     for (const s of VILLAGE.stalls) P('glowspot', s.x, s.y, 1, { col: s.col, gr: 100, ga: 0.34 });
 
@@ -1162,6 +1174,11 @@
 
     return {
       w, h, tile: TILE, seed, level: 0, theme: VILLAGE_THEME, market: 1,
+      // v2.0.2 — IL VILLAGGIO E' ILLUMINATO. `lit` vale SOLO qui: nessun'altra mappa lo dichiara, e il
+      // renderer lo legge da questa bandiera, non dal tipo di mappa. Le ondate restano buie come sempre —
+      // il velo che si stringe attorno a te e' meta' della loro tensione. In una sosta e' solo un
+      // fastidio: qui devi vedere dove sono le botteghe, non scoprirle.
+      lit: 1,
       grid: Array.from(g), floors,
       spawn: { x: VILLAGE.spawn.x * TILE + TILE / 2, y: VILLAGE.spawn.y * TILE + TILE / 2 },
       exit: { x: VILLAGE.exit.x, y: VILLAGE.exit.y },

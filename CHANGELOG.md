@@ -2,6 +2,76 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.0.2] — 2026-09-10 · "Nel villaggio si vede"
+
+#### 💡 Via il buio, e via le torce della 2.0.1
+La v2.0.1 aveva risolto il problema al contrario. Il villaggio non era buio perche' mancavano le torce: era
+buio perche' su **ogni** mappa il gioco stende un velo scuro attorno al giocatore, e quel velo, su 56x40,
+lasciava le strade nere. Cinquantasette torce a muro erano una tappezzeria di fiammelle messa li' a
+combattere un velo che bastava togliere.
+
+Quindi: **le 57 torce, i bracieri e le lanterne della 2.0.1 sono state rimosse** — il villaggio torna alle
+sue luci di sempre (il falo', i sette focolari, gli aloni dei mercanti) — e al loro posto **il velo scuro,
+nel villaggio, non si stende piu'**.
+
+**Vale per UNA mappa sola.** La pianta della sosta dichiara `lit: 1`; nessun'altra mappa lo fa, e il
+renderer legge quella bandiera, non il tipo di mappa. Le ondate restano buie esattamente come prima — il
+velo che si stringe attorno a te e' meta' della loro tensione — e la riga che lo toglie porta scritto sopra
+di non allargarla ad altre mappe senza rendersene conto. Il test lo pretende: `lit` acceso nel villaggio,
+spento alle ondate 1, 5, 10 e 20.
+
+Tolto il velo, sono servite altre due cose:
+- **La tavolozza del villaggio era tarata per essere guardata ATTRAVERSO il velo**: pavimento `#1c1813`,
+  roccia `#050607`. Senza, era una macchia marrone quasi nera. Adesso sono i colori veri di una sala
+  scavata e illuminata a fuoco — pietra calda, non fuliggine — e la roccia resta comunque molto piu' scura
+  del pavimento, se no il muro non si legge piu' come muro.
+- **Fuori dai bordi della mappa** si vedeva il fondo viola della pagina, che prima il buio copriva. Adesso,
+  sulla mappa illuminata, si riempie di roccia: fuori dal paese c'e' la montagna, non il vuoto.
+
+Il tasto **L** (cono torcia) non rimette al buio il villaggio.
+
+#### ⚡ Resta il ritaglio delle fiamme
+L'unica cosa della v2.0.1 che rimane, perche' e' un guadagno a prescindere: **le fiamme si disegnano solo se
+inquadrate**. Prima ogni torcia della mappa veniva disegnata a ogni fotogramma, fuori schermo compresa, e
+ognuna semina scintille. Vale per tutte le mappe.
+
+#### 🧪 Test
+**2102 test, 0 falliti.** **Verificato anche cio' che non ho toccato**: l'ondata 7 in partita vera e' buia
+come sempre, col cono di luce attorno al giocatore e le torce che accendono le nicchie.
+
+### [2.0.1] — 2026-09-10 · "Il villaggio si accende"
+
+#### 🔦 Molte piu' torce
+Il villaggio nasceva con **tre** sorgenti di luce: il falo' della piazza, i sette focolari delle case e gli
+aloni dei mercanti. Bastavano quando la sosta era 34x26; su **56x40** le strade restavano al buio e il paese
+sembrava disabitato appena uscivi da una porta.
+
+Adesso ci sono **57 torce, 6 bracieri e 14 lanterne** — da 3 sorgenti a 84.
+
+| Dove | Come |
+|---|---|
+| **Ogni parete rivolta a sud** | una torcia ogni quattro tessere. E' la parete che si vede dall'alto, quindi e' li' che la fiamma si legge |
+| **Le altre tre pareti** | una ogni otto: danno un contorno alle stanze grandi, dove la parete sud da sola lascia il fondo nero |
+| **Gli angoli della piazza** | quattro bracieri. La piazza e' 13x11 e le torce a muro non ci arrivano in mezzo — e il centro e' del portale |
+| **Sopra ogni porta** | una lanterna appesa: da fuori dice dov'e' l'ingresso, da dentro illumina la soglia. Sta sul soffitto, non ingombra il passaggio |
+| **Dentro le case** | nessuna. Hanno gia' il focolare acceso in mezzo e la lanterna sulla porta |
+
+Le torce si mettono **in modo regolare**, non a caso come nelle caverne: li' il 6% per tessera fa il
+pulviscolo di un posto abbandonato, qui e' un paese che qualcuno illumina apposta.
+
+**Al primo tentativo erano il doppio** — una ogni tre sulle pareti sud, una ogni cinque sulle altre, e anche
+dentro le case: 115 torce. Facevano **sciame**. Cento fiammelle sparse non sono illuminazione, sono
+confusione: la luce deve dire dove sono i muri, non coprirli. Dimezzate, e tolte da dentro le case.
+
+#### ⚡ E le fiamme adesso si ritagliano sul riquadro
+Un difetto che c'era da sempre e che solo il villaggio illuminato ha reso visibile: **ogni torcia della
+mappa veniva disegnata a ogni fotogramma**, anche quelle fuori dallo schermo — e ogni fiamma semina
+scintille. Con le 11 torce di una caverna non si notava; con 57 sarebbero state 57 fiamme e ~14 particelle
+nuove per fotogramma buttate via. Adesso si disegnano solo quelle inquadrate, falo' e focolari compresi.
+La *luce* (`_drawLighting`) si ritagliava gia' cosi': era il disegno a non farlo.
+
+Vale per tutte le mappe, non solo per il villaggio.
+
 ### [2.0.0] — 2026-09-08 · "Il villaggio sotterraneo"
 
 La sosta fra un'ondata e l'altra non e' piu' una **Sala dei Mercanti** — cinque stanze attorno a una piazza,

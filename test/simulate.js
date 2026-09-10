@@ -939,7 +939,11 @@ function testV157() {
   assert(!m.props.some(inWall), 'nessun arredo dentro la roccia');
 
   // --- il villaggio e BUIO: la luce la fanno il falo e gli aloni dei mercanti ---
-  assert(!m.lit, 'il villaggio non e illuminato a giorno: resta al buio');
+  // v2.0.2 — SI E' ROVESCIATA. Dalla v1.57 il villaggio restava al buio come le ondate, illuminato solo
+  // dal falo'. Su 56x40 non funzionava piu': non vedevi dov'erano le botteghe. Adesso e' l'UNICA mappa
+  // che dichiara `lit`, e il velo scuro li' non si stende.
+  assert(m.lit === 1, 'il villaggio e illuminato: e la sosta, non un\'ondata');
+  for (const lv of [1, 5, 10, 20]) assert(!MapGen.generate(77, lv).lit, 'ma l ondata ' + lv + ' resta buia');
   assert(m.props.filter(p => p.type === 'glowspot').length === 5, "un alone di luce per mercante");
   assert(m.market === 1, 'la mappa si dichiara mercato');
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
@@ -2392,6 +2396,7 @@ function testV175() {
   const disegnati = new Set();
   for (const mm of src.matchAll(/case '([a-z_]+)'/g)) disegnati.add(mm[1]);
   disegnati.add('glowspot'); disegnati.add('bonfire');   // non sono case: diventano luci, gestite prima dello switch
+  disegnati.add('torch'); disegnati.add('focolare');     // v2.0.1 — anche queste: la fiamma la disegna _flame, viva
   const usati = [...new Set(m.props.map(p => p.type))];
   const orfani = usati.filter(t => !disegnati.has(t));
   assert(orfani.length === 0, 'il renderer sa disegnare tutti i ' + usati.length + ' tipi di arredo (orfani: ' + orfani.join(', ') + ')');
@@ -2417,10 +2422,13 @@ function testV175() {
   let sparsi = 0, inCorridoio = 0;
   for (const p of m.props) {
     const tx = (p.x / T) | 0, ty = (p.y / T) | 0;
+    if (['torch', 'hanging_lantern', 'glowspot'].indexOf(p.type) >= 0) continue;   // v2.0.1 — luce, non mobili
     if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
     if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
   }
   assert(sparsi === 0, 'ogni mobile sta in una stanza, nella piazza o lungo un corridoio (' + sparsi + ' fuori posto)');
+  // v2.0.1 — le TORCE e le LANTERNE stanno per le strade apposta: sono la luce del villaggio, e non
+  // ingombrano niente (la torcia e' a muro, la lanterna sul soffitto). Sopra si contano solo i MOBILI.
   assert(inCorridoio <= 2, 'e per le strade si passa: niente mobili in mezzo (' + inCorridoio + ')');
 
   // --- le persone: il mercante e' un EROE ricolorato e disarmato, non piu' un ritratto frontale ---

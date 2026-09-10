@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.0.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.0.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,33 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.0.2 (nel villaggio si vede)
+- **💡 Il villaggio non e' piu' al buio.** Su ogni mappa il gioco stende un velo scuro attorno al giocatore:
+  nelle ondate e' meta' del gioco, in una sosta e' solo un fastidio. Nel villaggio **quel velo non si stende
+  piu'**, e la mappa si vede tutta.
+- **🎯 Vale per UNA mappa sola.** La pianta della sosta dichiara `lit: 1`; nessun'altra lo fa, e il renderer
+  legge quella bandiera, non il tipo di mappa. Le ondate restano buie come prima — il test lo pretende,
+  ondata per ondata.
+- **🔦 Rimosse le 57 torce della v2.0.1.** Risolvevano il problema al contrario: erano una tappezzeria di
+  fiammelle messa li' a combattere un velo che bastava togliere. Il villaggio torna alle sue luci di sempre
+  (il falo', i sette focolari, gli aloni dei mercanti).
+- **🎨 Schiarita la tavolozza del villaggio**, che era tarata per essere guardata *attraverso* il velo: senza,
+  il pavimento era una macchia quasi nera. E fuori dai bordi della mappa adesso c'e' roccia, non il fondo
+  viola della pagina.
+- **⚡ Resta il ritaglio delle fiamme** della v2.0.1: si disegnano solo quelle inquadrate, su tutte le mappe.
+
+## 🆕 Novita v2.0.1 (il villaggio si accende)
+- **🔦 Molte piu' torce.** Il villaggio aveva **tre** sorgenti di luce (il falo', i sette focolari e gli aloni
+  dei mercanti): su 56x40 le strade restavano al buio. Adesso sono **84**: 57 torce a muro, 4 bracieri agli
+  angoli della piazza, una **lanterna appesa sopra ogni porta**, piu' quelle di prima.
+- **📏 Messe in modo regolare, non a caso**: una ogni quattro tessere sulle pareti rivolte a sud (quelle che
+  si vedono dall'alto), una ogni otto sulle altre tre. Nelle caverne il 6% per tessera fa il pulviscolo di un
+  posto abbandonato; qui e' un paese che qualcuno illumina apposta.
+- **🏠 Dentro le case nessuna torcia**: hanno gia' il focolare acceso in mezzo e la lanterna sulla soglia.
+- **⚡ E le fiamme adesso si ritagliano sul riquadro.** Un difetto che c'era da sempre: ogni torcia della
+  mappa veniva disegnata a ogni fotogramma, anche fuori schermo, e ogni fiamma semina scintille. Con le 11
+  torce di una caverna non si notava; col villaggio illuminato si sarebbe visto. Vale per **tutte** le mappe.
 
 ## 🆕 Novita v2.0 (il villaggio sotterraneo)
 - **🏘️ La sosta e' un VILLAGGIO DI NANI.** Non piu' cinque stanze attorno a una piazza (34x26) ma un paese
