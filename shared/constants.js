@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.1.0',
+    VERSION: '2.1.1',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -47,9 +47,12 @@
     // La forma e' una goccia: il raggio dipende dall'angolo rispetto a dove guardi.
     //   R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
     // davanti (a=0) arriva a AVANTI, di fianco (a=90') a circa un terzo, alle spalle (a=180') a DIETRO.
-    FOV_AVANTI: 690,     // quanto lontano si vede nella direzione in cui si guarda
+    // v2.1.1 — il fascio davanti era corto: adesso arriva oltre il bordo dello schermo, come una torcia
+    // vera. Alzando la portata cresce anche quella laterale, quindi FORMA e' salita insieme: il fascio si
+    // allunga senza allargarsi.
+    FOV_AVANTI: 1060,    // quanto lontano si vede nella direzione in cui si guarda
     FOV_DIETRO: 118,     // e quanto alle spalle: poco, ma non zero (non si e' ciechi dietro la nuca)
-    FOV_FORMA: 1.7,      // quanto e' stretta la goccia: piu' alto = piu' concentrata in avanti
+    FOV_FORMA: 2.1,      // quanto e' stretta la goccia: piu' alto = piu' concentrata in avanti
     FOV_RAGGI: 256,      // raggi su tutto il giro
     FOV_BUIO: 0.93,      // quanto e scuro cio che non vedi (1 = nero pieno)
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.1.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.1.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.1.1 (fascio piu' lungo, ombra solo dai muri)
+- **🔦 Il fascio arriva piu' lontano**: `FOV_AVANTI` da 690 a **1060 px** — davanti si vede oltre il bordo
+  dello schermo. `FOV_FORMA` e' salita con lui (1,7 → 2,1) cosi' il fascio si allunga **senza allargarsi**:
+  di fianco resta 338 px, alle spalle 118. Rapporto davanti/dietro: **9x**.
+- **🪦 L'ombra la fanno solo i muri.** La griglia e' binaria e per lei una lapide e un masso sono uguali:
+  ogni lapide proiettava il suo cono d'ombra, e un campo di lapidi diventava una grattugia. Adesso la luce
+  legge il tipo vero della tessera (`m.muri`, l'array della v1.97): **la lapide non fa ombra**, roccia,
+  pietra delle cappelle, cinta e alberi secchi si.
+- **⚠️ Vale solo per la luce**: per le collisioni e per l'IA una lapide resta un muro, e deve restarlo.
 
 ## 🆕 Novita v2.1 (la torcia: si vede quello che si puo' vedere)
 - **🔦 Il buio delle grotte non e' piu' un cerchio.** Prima vedevi un'area tonda attorno a te — davanti, di

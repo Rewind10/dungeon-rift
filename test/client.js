@@ -680,8 +680,9 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   const C2 = window.GAME.Constants, T2 = C2.TILE;
   const mp = src2.match(/_fovPortata\(dc\) \{[\s\S]*?\n    \},/);
   const mu = src2.match(/_fovPunte\(px, py, aim, out, off, n\) \{[\s\S]*?\n    \},/);
-  ok(!!mp && !!mu, 'le due funzioni del campo visivo esistono ancora');
-  if (!mp || !mu) return;
+  const mb = src2.match(/_fovBlocca\(m, i\) \{[\s\S]*?\n    \},/);
+  ok(!!mp && !!mu && !!mb, 'le tre funzioni del campo visivo esistono ancora');
+  if (!mp || !mu || !mb) return;
   // mappa finta: una stanza con un pilastro di roccia a destra del giocatore
   const W2 = 26, H2 = 15, grid = new Uint8Array(W2 * H2).fill(C2.T_FLOOR);
   for (let y = 0; y < H2; y++) { grid[y * W2] = C2.T_WALL; grid[y * W2 + W2 - 1] = C2.T_WALL; }
@@ -690,6 +691,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   const mappa = { w: W2, h: H2, tile: T2, grid };
   const R2 = new Function('C', 'map', 'return { map: map, ' +
     mp[0].replace('_fovPortata(', '_fovPortata: function(') + ' ' +
+    mb[0].replace('_fovBlocca(', '_fovBlocca: function(') + ' ' +
     mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, mappa);
 
   // --- 1) LA FORMA A TORCIA: davanti molto piu' lontano che dietro ---
@@ -724,6 +726,41 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
       const tx = ((px2 + buf[o] * d) / T2) | 0, ty = ((py2 + buf[o + 1] * d) / T2) | 0;
       if (grid[ty * W2 + tx] === C2.T_WALL) { bucati++; break; } } }
   ok(bucati === 0, 'nessuno dei ' + N2 + ' raggi attraversa la roccia (' + bucati + ' bucati)');
+
+  // --- 3b) v2.1.1 — L'OMBRA LA FANNO SOLO I MURI. Nel cimitero la griglia e' binaria: una lapide e un
+  //     masso sono la stessa tessera. Ma una lapide e' bassa: ci si vede sopra, e non deve proiettare
+  //     un cono d'ombra (un campo di lapidi diventava una grattugia).
+  {
+    const W3 = 20, H3 = 11, g3 = new Uint8Array(W3 * H3).fill(C2.T_FLOOR), mu3 = new Uint8Array(W3 * H3);
+    for (let y = 0; y < H3; y++) { g3[y * W3] = C2.T_WALL; g3[y * W3 + W3 - 1] = C2.T_WALL; }
+    for (let x = 0; x < W3; x++) { g3[x] = C2.T_WALL; g3[(H3 - 1) * W3 + x] = C2.T_WALL; }
+    const colonna = (x, tipo) => { for (let y = 3; y <= 7; y++) { g3[y * W3 + x] = C2.T_WALL; mu3[y * W3 + x] = tipo; } };
+    colonna(8, 1);    // una fila di LAPIDI
+    colonna(14, 3);   // e piu' in la' la CINTA del cimitero, che e' un muro vero
+    const cim = { w: W3, h: H3, tile: T2, grid: g3, muri: mu3 };
+    const R3 = new Function('C', 'map', 'return { map: map, ' +
+      mp[0].replace('_fovPortata(', '_fovPortata: function(') + ' ' +
+      mb[0].replace('_fovBlocca(', '_fovBlocca: function(') + ' ' +
+      mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, cim);
+    ok(!R3._fovBlocca(cim, 5 * W3 + 8), 'una lapide non ferma la luce: e alta un ginocchio');
+    ok(R3._fovBlocca(cim, 5 * W3 + 14), 'la cinta si');
+    ok(R3._fovBlocca(cim, 0), 'e la roccia del bordo pure');
+    // gli alberi secchi (4) sono ALTI, e fanno da bordo alla mappa: devono fermare la luce, se no si
+    // vedrebbe fuori dal cimitero
+    const iAlb = 2 * W3 + 5; g3[iAlb] = C2.T_WALL; mu3[iAlb] = 4;
+    ok(R3._fovBlocca(cim, iAlb), 'e un albero secco pure: e alto, e fa da bordo alla mappa');
+    const iPie = 2 * W3 + 6; g3[iPie] = C2.T_WALL; mu3[iPie] = 2;
+    ok(R3._fovBlocca(cim, iPie), 'e la pietra squadrata delle cappelle');
+    const N3 = 256, b3 = new Float32Array(N3 * 4);
+    R3._fovPunte(3.5 * T2, 5.5 * T2, 0, b3, 0, N3);      // in fila con lapidi e cinta, guarda a destra
+    let oltreLapide = 0, oltreCinta = 0;
+    for (let i = 0; i < N3; i++) { const o = i * 4; if (b3[o] < 0.98) continue;
+      const arriva = 3.5 + b3[o + 2] / T2;
+      if (arriva > 9.5) oltreLapide++;                    // ha superato la fila di lapidi
+      if (arriva > 14.5) oltreCinta++; }                  // avrebbe superato la cinta
+    ok(oltreLapide > 0, 'e infatti lo sguardo passa SOPRA le lapidi (' + oltreLapide + ' raggi)');
+    ok(oltreCinta === 0, 'ma si ferma alla cinta (' + oltreCinta + ' raggi passati)');
+  }
 
   // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
   const MG2 = window.GAME.MapGen;

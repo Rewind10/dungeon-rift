@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.1.0`
+**Versione attuale:** `2.1.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -445,11 +445,14 @@ A cambiare non e' *quali* raggi esistono ma **quanto lontano arrivano**:
 
 | Dove guardi | Portata |
 |---|---|
-| davanti | **690 px** |
-| 45 gradi | 555 px |
-| di fianco | 294 px |
-| 135 gradi | 140 px |
+| davanti | **1060 px** *(v2.1.1: era 690)* |
+| 45 gradi | 794 px |
+| di fianco | 338 px |
+| 135 gradi | 135 px |
 | alle spalle | **118 px** — poco, ma non zero |
+
+Nove volte piu lontano davanti che dietro. Alzando la portata frontale cresce anche quella laterale, quindi
+`FOV_FORMA` va alzata insieme: cosi il fascio si **allunga senza allargarsi**.
 
 Tre numeri in constants (`FOV_AVANTI`, `FOV_DIETRO`, `FOV_FORMA`) e la forma cambia.
 
@@ -467,6 +470,29 @@ stessa macchia che dietro si accorcia.
 **E la sfumatura non e' un gradiente radiale**: un gradiente e' un cerchio, e questa forma non lo e'. Sono
 quattordici contorni annidati, dal piu largo al piu stretto, ognuno cancella un altro po di velo — cosi la
 luce cala seguendo la goccia, e accanto ai muri si ferma dove si ferma la vista.
+
+### L'ombra la fanno solo i muri *(v2.1.1)*
+
+La griglia del gioco e **binaria**: per lei una lapide del cimitero e un masso sono la stessa tessera. Il
+campo visivo se ne accorgeva, e ogni lapide proiettava il suo cono d'ombra — un campo di lapidi diventava
+una **grattugia di ombre**.
+
+Il tipo vero della tessera c'era gia: e `m.muri`, l'array che dalla v1.97 dice al renderer *cosa* disegnare.
+Adesso lo legge anche la luce.
+
+| Tessera | Ferma la luce? |
+|---|---|
+| **lapide** (1) | **no** — e alta un ginocchio, ci si vede sopra |
+| roccia (0) | si |
+| pietra squadrata delle cappelle (2) | si |
+| cinta (3) | si |
+| **albero secco** (4) | si — e alto, e fa da bordo alla mappa: se passasse la luce si vedrebbe fuori dal cimitero |
+
+Se un giorno servisse far passare anche i muretti bassi, si aggiunge un numero in `_fovBlocca` e basta: e
+l'unico punto del gioco in cui questa distinzione esiste.
+
+**Vale solo per la LUCE.** Per le collisioni e per l'IA una lapide resta un muro, e deve restarlo — se no i
+mostri ci passerebbero attraverso.
 
 ### Le regole che ne discendono
 

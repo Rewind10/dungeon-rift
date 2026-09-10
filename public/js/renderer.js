@@ -2290,8 +2290,26 @@
     // per ogni raggio salva quattro numeri: la direzione (nx, ny), dove ha sbattuto (d) e quanto lontano
     // sarebbe potuto arrivare (rt). Servono tutti e quattro: gli strati della sfumatura si accorciano
     // sulla PORTATA, ma restano fermi al MURO — se no accanto a una parete si aprirebbe un anello scuro.
+    // v2.1.1 — L'OMBRA LA FANNO SOLO I MURI. La griglia e' binaria: per lei una LAPIDE del cimitero e un
+    // masso sono la stessa cosa, e infatti ogni lapide proiettava il suo cono d'ombra — un campo di lapidi
+    // diventava una grattugia di ombre. Il tipo vero della tessera sta in `m.muri` (lo stesso array che
+    // dice al renderer cosa disegnare, v1.97).
+    //
+    // Passa la luce SOLO la lapide (1): e' roba che arriva al ginocchio, ci si vede sopra. Tutto il resto
+    // ferma lo sguardo — roccia (0), pietra squadrata delle cappelle (2), cinta (3) e ALBERI SECCHI (4),
+    // che sono alti e per giunta fanno da bordo alla mappa: se lasciassero passare la luce si vedrebbe
+    // fuori dal cimitero. (Se un giorno servisse far passare anche i muretti bassi, si aggiunge il 2 qui
+    // e basta: e' l'unico punto in cui questa distinzione esiste.)
+    //
+    // Attenzione: qui si parla solo di LUCE. Per le collisioni e per l'IA una lapide resta un muro — e
+    // dev'essere cosi', se no i mostri ci passerebbero attraverso.
+    _fovBlocca(m, i) {
+      if (m.grid[i] !== C.T_WALL) return false;
+      const mu = m.muri; if (!mu) return true;
+      return mu[i] !== 1;
+    },
     _fovPunte(px, py, aim, out, off, n) {
-      const m = this.map, T = m.tile, W = m.w, H = m.h, gr = m.grid;
+      const m = this.map, T = m.tile, W = m.w, H = m.h;
       const passo = T * 0.34;                       // un terzo di tessera: piu' fine non si nota
       const ca = Math.cos(aim), sa = Math.sin(aim);
       for (let i = 0; i < n; i++) {
@@ -2301,7 +2319,7 @@
         let d = passo;
         while (d < R) {
           const tx = ((px + nx * d) / T) | 0, ty = ((py + ny * d) / T) | 0;
-          if (tx < 0 || ty < 0 || tx >= W || ty >= H || gr[ty * W + tx] === C.T_WALL) break;
+          if (tx < 0 || ty < 0 || tx >= W || ty >= H || this._fovBlocca(m, ty * W + tx)) break;
           d += passo;
         }
         if (d > R) d = R;
@@ -2328,7 +2346,9 @@
       for (let i = 0; i < L; i++) {
         const fr = 1 - i / L;
         const t = 1 - (i + 1) / L;
-        const v = Math.min(1, Math.pow(Math.max(0, (1 - t) / 0.88), 1.5));   // quanta luce vogliamo a quel raggio
+        const v = Math.min(1, Math.pow(Math.max(0, (1 - t) / 0.90), 1.25));  // quanta luce vogliamo a quel raggio
+        // v2.1.1 — la curva e' piu' dolce (era 1,5): col fascio allungato a 1060 px, con la vecchia la punta
+        // spariva prima di arrivarci e la portata in piu' non si vedeva.
         const a = prec >= 1 ? 1 : (v - prec) / (1 - prec);
         out.push([fr, Math.max(0, Math.min(1, a))]);
         prec = v;

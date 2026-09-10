@@ -2,6 +2,49 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.1.1] — 2026-09-10 · "Il fascio piu' lungo, e l'ombra solo dai muri"
+
+#### 🔦 Il fascio arriva piu' lontano
+`FOV_AVANTI` da **690 a 1060 px**: davanti si vede oltre il bordo dello schermo, come una torcia vera.
+Alzando la portata frontale cresce anche quella laterale, quindi `FOV_FORMA` e' salita con lei (1,7 → 2,1):
+il fascio si **allunga senza allargarsi**.
+
+| Dove guardi | Prima | Adesso |
+|---|---|---|
+| davanti | 690 | **1060** |
+| 45 gradi | 555 | 794 |
+| di fianco | 294 | 338 |
+| alle spalle | 118 | 118 |
+
+Il rapporto davanti/dietro passa da 5,8x a **9,0x**. E la curva della sfumatura e' piu' dolce (esponente
+1,5 → 1,25): con la vecchia, la punta del fascio si spegneva prima di arrivarci e la portata in piu' non si
+sarebbe vista.
+
+#### 🪦 L'ombra la fanno solo i muri
+La griglia del gioco e' **binaria**: per lei una lapide del cimitero e un masso sono la stessa tessera. Il
+campo visivo se ne accorgeva, e ogni lapide proiettava il suo cono d'ombra — un campo di lapidi diventava
+una **grattugia di ombre**.
+
+Il tipo vero della tessera c'e' gia': e' `m.muri`, l'array che dalla v1.97 dice al renderer *cosa*
+disegnare. Adesso lo legge anche la luce:
+
+| Tessera | Ombra |
+|---|---|
+| **lapide** (1) | **no** — e' alta un ginocchio, ci si vede sopra |
+| roccia (0) · pietra squadrata delle cappelle (2) · cinta (3) | si |
+| **albero secco** (4) | si — e' alto, e per giunta fa da bordo alla mappa: se lasciasse passare la luce si vedrebbe fuori dal cimitero |
+
+Se un giorno servisse far passare anche i muretti bassi, si aggiunge un numero in `_fovBlocca` e basta:
+e' l'unico punto del gioco in cui questa distinzione esiste.
+
+**Vale solo per la LUCE.** Per le collisioni e per l'IA una lapide resta un muro, e deve restarlo — se no i
+mostri ci passerebbero attraverso.
+
+#### 🧪 Test
+Il blocco del campo visivo ora prova anche questo, su una mappa finta con una fila di lapidi e una di
+cinta: la lapide non ferma la luce, la cinta si, l'albero secco si, la pietra squadrata si, e i raggi
+passano **sopra** le lapidi ma si fermano alla cinta. **2102 test, 0 falliti** e client tutto verde.
+
 ### [2.1.0] — 2026-09-10 · "La torcia: si vede quello che si puo' vedere"
 
 Fino alla v2.0 il buio delle mappe di combattimento era un velo **tondo** attorno al giocatore: vedevi un
