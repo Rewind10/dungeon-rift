@@ -2,6 +2,26 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.1.4] — 2026-09-10 · "La torcia parte accesa"
+
+Lo strato del **tasto L** c'e' dalla v1.16: una seconda mano di buio bucata da aloni tondi — uno grande
+attorno all'eroe, e uno piccolo per ogni torcia, braciere e pozza. Da solo era una modalita' alternativa;
+insieme al campo visivo della v2.1 e' **l'illuminazione giusta**: il campo visivo da' la forma e le ombre
+dei muri, questo strato scava i tondi di luce attorno alle sorgenti e ammorbidisce il resto.
+
+Il suo valore predefinito era **gia' "acceso"**. Il problema era un altro: chi l'aveva spento anche una
+volta sola si ritrovava uno `0` salvato nel browser, e da li' in poi il gioco partiva sempre senza — con
+l'illuminazione a meta'.
+
+Il vecchio `0` non deve piu' comandare, ma la scelta di chi lo spegne d'ora in poi si', quindi la chiave ha
+**cambiato nome**: `dr_torch` → `dr_torcia`. Chi aveva spento riparte acceso, **una volta sola**; il tasto L
+continua a spegnere e accendere, e continua a ricordarselo. Cambiare nome alla chiave e' il modo pulito di
+dare un valore predefinito nuovo senza buttare via la memoria della scelta.
+
+Il test lo pretende su tutti e quattro i pezzi: nasce accesa, legge la chiave nuova, **non legge piu' la
+vecchia**, e continua a salvare. E nel villaggio lo strato non si applica comunque (`lit`, v2.0.2): la L
+non puo' rimettere al buio la sosta.
+
 ### [2.1.3] — 2026-09-10 · "La penombra"
 
 Il bordo dell'ombra proiettata da un muro era un **taglio netto**. Geometricamente e' giusto — un raggio o

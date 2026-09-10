@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.1.3`
+**Versione attuale:** `2.1.4`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -538,6 +538,21 @@ insieme i bordi delle ombre e la coda delle due luci. Con `FOV_SFUMA: 0` si torn
 bordo dello schermo si vedrebbe una cornice chiara tutt'attorno al gioco. Per questo la tela del velo e piu
 grande dello schermo di **26 px per lato** (`_veloM`) e la si appoggia partendo da `-M`. **I due numeri
 vanno insieme**: il margine dev'essere piu largo del doppio della sfocatura, e il test lo pretende.
+
+### Il secondo strato: il tasto L *(acceso di suo dalla v2.1.4)*
+
+Oltre al campo visivo c'e' un **secondo velo**, che esiste dalla v1.16: una mano di buio bucata da **aloni
+tondi** — uno grande attorno all'eroe, e uno piccolo per ogni torcia, braciere e pozza di pericolo. Da solo
+era una modalita alternativa; insieme al campo visivo e **l'illuminazione giusta**: il campo visivo da la
+forma e le ombre dei muri, questo scava i tondi di luce attorno alle sorgenti e ammorbidisce il resto.
+
+Si accende e si spegne col tasto **L**, e nasce **acceso**. Il valore predefinito era gia quello, ma chi
+l'aveva spento anche una volta sola si ritrovava uno `0` salvato nel browser che comandava per sempre:
+percio nella v2.1.4 la chiave ha cambiato nome (`dr_torch` -> `dr_torcia`). Chi aveva spento riparte acceso
+una volta sola; da li in poi la L continua a ricordarsi la scelta. *Cambiare nome alla chiave e il modo
+pulito di dare un valore predefinito nuovo senza buttare via la memoria della scelta.*
+
+Nel villaggio questo strato non si applica: la L non puo rimettere al buio la sosta.
 
 ### Le regole che ne discendono
 

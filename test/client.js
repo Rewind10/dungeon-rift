@@ -790,6 +790,16 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(mM && +mM[1] > (C2.FOV_SFUMA || 0) * 2, 'e il margine (' + (mM ? mM[1] : '?') + ' px) e piu largo del doppio della sfocatura: il bordo sfumato cade fuori dallo schermo');
   ok(/drawImage\(this\._veloCv, -M, -M/.test(src2), 'infatti il velo si appoggia partendo da -M, non da zero');
 
+  // --- 3d) v2.1.4 — LA TORCIA PARTE ACCESA. Lo strato del tasto L completa il campo visivo, quindi e'
+  //     acceso di suo. Chi l'aveva spento in passato aveva uno '0' salvato nel browser che comandava per
+  //     sempre: la chiave ha cambiato nome, cosi' il vecchio valore non conta piu' e la scelta nuova
+  //     resta comunque ricordata.
+  ok(/torch: true/.test(src2), 'la torcia nasce accesa');
+  ok(/localStorage\.getItem\('dr_torcia'\) !== '0'/.test(src2), 'e si spegne solo se e stata spenta DOPO questa versione (chiave nuova)');
+  ok(!/'dr_torch'/.test(src2), 'la vecchia chiave non si legge piu: chi aveva spento riparte acceso, una volta');
+  ok(/setItem\('dr_torcia'/.test(src2), 'ma il tasto L continua a ricordarsi la scelta');
+  ok(/if \(this\.map\.lit\) return;/.test(src2), 'e nel villaggio lo strato non si applica comunque');
+
   // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
   const MG2 = window.GAME.MapGen;
   ok(!!MG2.generateMarket(1).lit, 'il villaggio e illuminato (lit)');

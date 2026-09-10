@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.1.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.1.4 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.1.4 (la torcia parte accesa)
+- **🔦 Lo strato del tasto L e' acceso all'avvio.** Insieme al campo visivo della v2.1 e' l'illuminazione
+  giusta: il campo visivo da' la forma e le ombre dei muri, questo scava i tondi di luce attorno alle
+  sorgenti. Il valore predefinito era gia' "acceso", ma chi l'aveva spento anche una volta si ritrovava uno
+  `0` salvato nel browser che comandava per sempre.
+- **🔑 Percio' la chiave ha cambiato nome** (`dr_torch` → `dr_torcia`): chi aveva spento riparte acceso **una
+  volta sola**, e da li' in poi la L continua a spegnere, accendere e ricordarsi la scelta.
 
 ## 🆕 Novita v2.1.3 (la penombra)
 - **🌒 Il bordo delle ombre non e' piu' un taglio netto.** Geometricamente era giusto — un raggio o passa o
