@@ -1385,7 +1385,9 @@
       ctx.restore(); this._drawLighting(ctx, world, camX, camY);
       this._drawDarkness(world, camX, camY); // v1.16 — cono torcia + mappa scura (tasto L)
       if (world.bt) { ctx.fillStyle = 'rgba(0,240,200,0.06)'; ctx.fillRect(0, 0, this.w, this.h); ctx.strokeStyle = 'rgba(0,240,200,0.15)'; ctx.lineWidth = 8; ctx.strokeRect(4, 4, this.w - 8, this.h - 8); }
-      this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
+      // v2.1 — nel villaggio no: la fascia viola della faglia e' il segno di un pericolo che li' non
+      // esiste, e su una mappa illuminata si vedeva eccome (prima la copriva il buio).
+      if (!this.map.lit) this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
       this._drawMinimap(ctx, world);
     },
     _flame(ctx, x, y, sc) { const t = this.time; const f = 1 + Math.sin(t * 12 + x) * 0.14 + Math.sin(t * 7.3 + y) * 0.1; const s = sc * f; let gr = ctx.createRadialGradient(x, y, 0, x, y, 26 * s); gr.addColorStop(0, 'rgba(255,150,40,.5)'); gr.addColorStop(1, 'rgba(255,80,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26 * s, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,120,30,.9)'; ctx.beginPath(); ctx.moveTo(x - 6 * s, y + 4 * s); ctx.quadraticCurveTo(x - 7 * s, y - 8 * s, x, y - 16 * s); ctx.quadraticCurveTo(x + 7 * s, y - 8 * s, x + 6 * s, y + 4 * s); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,225,120,.95)'; ctx.beginPath(); ctx.moveTo(x - 3 * s, y + 2 * s); ctx.quadraticCurveTo(x - 3.5 * s, y - 5 * s, x, y - 11 * s); ctx.quadraticCurveTo(x + 3.5 * s, y - 5 * s, x + 3 * s, y + 2 * s); ctx.closePath(); ctx.fill(); if (Math.random() < 0.25 * sc) this.particles.push({ x: x + MU.rand(-3, 3), y: y - 6 * s, vx: MU.rand(-8, 8), vy: -MU.rand(20, 50), life: MU.rand(0.4, 0.9), t: 0, fire: true, r: MU.rand(1.5, 3) * sc, over: true }); },
@@ -2267,11 +2269,142 @@
     // v1.64 — la funzione light() prende il gradiente dalla CACHE: prima ne allocava uno per OGNI sorgente
     // a ogni frame (torce, proiettili, monete, oggetti, giocatori, boss...). ATTENZIONE: questo metodo e' una
     // sola istruzione lunghissima, i commenti vanno sopra la riga, mai in coda.
+    // ===================== v2.1 — IL CAMPO VISIVO =====================
+    // Prima il buio era un velo TONDO attorno al giocatore: vedevi un cerchio, e una stanza dietro una
+    // roccia si vedeva uguale a una stanza aperta. Adesso si vede quello che si PUO' vedere, e si vede
+    // come lo vedrebbe uno con una TORCIA IN MANO.
+    //
+    // UNA SOLA FORMA. Al primo tentativo avevo fatto un cono davanti piu' un cerchietto attorno ai piedi:
+    // due forme diverse cucite insieme, e la cucitura si vedeva — un cerchio netto con un triangolo
+    // attaccato. Adesso e' una goccia sola: si tirano raggi su TUTTO il giro, e a cambiare non e' quali
+    // raggi esistono ma QUANTO LONTANO arrivano (`_fovPortata`). Davanti lontano, di fianco meno, dietro
+    // pochissimo. Nessun bordo, perche' non c'e' nessun bordo da disegnare.
+    //
+    // Ogni raggio cammina a passetti finche' non sbatte in un muro. Dietro il muro il raggio non arriva,
+    // quindi la luce non ci arriva: l'occlusione non e' un calcolo a parte, e' la stessa cosa.
+    _fovBuf: null,
+    _fovPortata(dc) {   // dc = coseno dell'angolo fra "dove guardo" e il raggio
+      const A = C.FOV_AVANTI || 690, D = C.FOV_DIETRO || 118;
+      return D + (A - D) * Math.pow((1 + dc) * 0.5, C.FOV_FORMA || 1.7);
+    },
+    // per ogni raggio salva quattro numeri: la direzione (nx, ny), dove ha sbattuto (d) e quanto lontano
+    // sarebbe potuto arrivare (rt). Servono tutti e quattro: gli strati della sfumatura si accorciano
+    // sulla PORTATA, ma restano fermi al MURO — se no accanto a una parete si aprirebbe un anello scuro.
+    _fovPunte(px, py, aim, out, off, n) {
+      const m = this.map, T = m.tile, W = m.w, H = m.h, gr = m.grid;
+      const passo = T * 0.34;                       // un terzo di tessera: piu' fine non si nota
+      const ca = Math.cos(aim), sa = Math.sin(aim);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * 6.283185307;
+        const nx = Math.cos(a), ny = Math.sin(a);
+        const R = this._fovPortata(nx * ca + ny * sa);
+        let d = passo;
+        while (d < R) {
+          const tx = ((px + nx * d) / T) | 0, ty = ((py + ny * d) / T) | 0;
+          if (tx < 0 || ty < 0 || tx >= W || ty >= H || gr[ty * W + tx] === C.T_WALL) break;
+          d += passo;
+        }
+        if (d > R) d = R;
+        const o = off + i * 4;
+        out[o] = nx; out[o + 1] = ny; out[o + 2] = d; out[o + 3] = R;
+      }
+    },
+    // il contorno della macchia a una certa FRAZIONE della portata (1 = il bordo esterno)
+    _fovContorno(g, buf, off, n, ox, oy, fr) {
+      for (let i = 0; i < n; i++) {
+        const o = off + i * 4;
+        let r = buf[o + 3] * fr; const d = buf[o + 2]; if (r > d) r = d;
+        const x = ox + buf[o] * r, y = oy + buf[o + 1] * r;
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.closePath();
+    },
+    // LA SFUMATURA. Non un gradiente radiale — un gradiente e' un cerchio, e questa forma non lo e'.
+    // Sono contorni annidati, dal piu' largo al piu' stretto, ognuno cancella un altro po' di velo: la
+    // luce cala seguendo la goccia invece che un cerchio, e vicino ai muri si ferma dove si ferma la vista.
+    // La tabella si calcola una volta: per ogni strato, quale frazione della portata e quanto cancella.
+    _fovStrati: (function () {
+      const L = 14, out = []; let prec = 0;
+      for (let i = 0; i < L; i++) {
+        const fr = 1 - i / L;
+        const t = 1 - (i + 1) / L;
+        const v = Math.min(1, Math.pow(Math.max(0, (1 - t) / 0.88), 1.5));   // quanta luce vogliamo a quel raggio
+        const a = prec >= 1 ? 1 : (v - prec) / (1 - prec);
+        out.push([fr, Math.max(0, Math.min(1, a))]);
+        prec = v;
+      }
+      return out;
+    })(),
+    // Calcola le macchie di TUTTI i giocatori vivi una volta per fotogramma. In cooperativa la visuale e'
+    // condivisa: quello che vede un compagno lo vedi anche tu, se no in due si gioca peggio che da soli.
+    _fovSagome(world) {
+      const N = C.FOV_RAGGI || 256, per = N * 4;
+      const vivi = [];
+      for (const p of world.players) if (!p.d) vivi.push(p);
+      if (!vivi.length) return null;
+      if (!this._fovBuf || this._fovBuf.length < vivi.length * per) this._fovBuf = new Float32Array(Math.max(6, vivi.length) * per);
+      const out = this._fovOut || (this._fovOut = []);
+      out.length = 0;
+      for (let k = 0; k < vivi.length; k++) {
+        const p = vivi[k], base = k * per;
+        this._fovPunte(p.x, p.y, p.a || 0, this._fovBuf, base, N);
+        out.push({ x: p.x, y: p.y, off: base, n: N });
+      }
+      return out;
+    },
     // v2.0.2 — IL VELO SI TOGLIE SOLO DOVE LA MAPPA LO DICE. `map.lit` lo dichiara UNA mappa sola, il
     // villaggio: la' vuoi vedere dove sono le botteghe, non scoprirle. Ovunque altro il velo resta quello
     // di sempre — nelle ondate non sapere cosa c'e' dietro l'angolo e' meta' del gioco, e questa riga non
     // va allargata ad altre mappe senza rendersene conto.
-    _drawLighting(ctx, world, camX, camY) { ctx.save(); const g = ctx; const _lit = !!(this.map && this.map.lit); const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68); if (_lit) { grA.addColorStop(0, 'rgba(6,8,14,0.0)'); grA.addColorStop(0.7, 'rgba(5,7,12,0.06)'); grA.addColorStop(1, 'rgba(3,5,10,0.20)'); } else { grA.addColorStop(0, 'rgba(4,6,12,0.0)'); grA.addColorStop(0.7, 'rgba(3,4,9,0.55)'); grA.addColorStop(1, 'rgba(1,2,6,0.94)'); } g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h); g.globalCompositeOperation = 'lighter'; const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore(); },
+    // v2.1 — IL VELO E' UNA TELA A PARTE, e non poteva essere altrimenti. Al primo tentativo ritagliavo
+    // il campo visivo direttamente sulla tela del gioco con 'destination-out': quello non cancella il
+    // velo, cancella i PIXEL — mondo compreso — e il cono diventava un buco trasparente sul nero della
+    // pagina. Il velo si costruisce quindi su una sua tela (a meta' risoluzione: il bordo sfumato non
+    // chiede di piu', e costa un quarto), ci si ritaglia dentro la sagoma, e poi la si appoggia sopra.
+    _veloTela() {
+      if (!this._veloCv) { this._veloCv = document.createElement('canvas'); this._veloCtx = this._veloCv.getContext('2d'); }
+      const s = 0.5, w = Math.max(1, Math.round(this.w * s)), h = Math.max(1, Math.round(this.h * s));
+      if (this._veloCv.width !== w || this._veloCv.height !== h) { this._veloCv.width = w; this._veloCv.height = h; }
+      return s;
+    },
+    _drawLighting(ctx, world, camX, camY) {
+      ctx.save(); const g = ctx;
+      const _lit = !!(this.map && this.map.lit);
+      const _fov = _lit ? null : this._fovSagome(world);
+      if (_fov) {
+        // --- IL BUIO, e dentro il buio la sagoma di cio' che si vede ---
+        const s = this._veloTela(), vg = this._veloCtx, B = C.FOV_BUIO || 0.93;
+        vg.setTransform(s, 0, 0, s, 0, 0);
+        vg.globalCompositeOperation = 'source-over';
+        vg.clearRect(0, 0, this.w, this.h);
+        vg.fillStyle = 'rgba(2,3,9,' + B.toFixed(3) + ')'; vg.fillRect(0, 0, this.w, this.h);
+        vg.globalCompositeOperation = 'destination-out';
+        vg.fillStyle = '#000';
+        for (const f of _fov) {
+          const sx = f.x - camX, sy = f.y - camY;
+          for (let i = 0; i < this._fovStrati.length; i++) {
+            const st = this._fovStrati[i];
+            vg.globalAlpha = st[1];
+            vg.beginPath(); this._fovContorno(vg, this._fovBuf, f.off, f.n, sx, sy, st[0]); vg.fill();
+          }
+        }
+        vg.globalAlpha = 1;
+        vg.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = 'source-over';
+        g.drawImage(this._veloCv, 0, 0, this.w, this.h);
+      } else {
+        // il villaggio (v2.0.2): nessun velo che conti, solo un'ombreggiatura ai bordi
+        const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68);
+        grA.addColorStop(0, 'rgba(6,8,14,0.0)'); grA.addColorStop(0.7, 'rgba(5,7,12,0.06)'); grA.addColorStop(1, 'rgba(3,5,10,0.20)');
+        g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h);
+      }
+      g.globalCompositeOperation = 'lighter';
+      // LE LUCI VIVONO SOLO DENTRO LA VISUALE: una torcia dietro una roccia non deve illuminare la roccia
+      if (_fov) { g.save(); g.beginPath(); for (const f of _fov) this._fovContorno(g, this._fovBuf, f.off, f.n, f.x - camX, f.y - camY, 1); g.clip(); }
+      const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) g.restore();
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();
+    },
     // v1.16 — MODALITÀ TORCIA: mappa quasi nera "bucata" da un cono di luce + aloni (tasto L)
     _drawDarkness(world, camX, camY) {
       if (!this.torch || !this.darkCv || !this.map) return;

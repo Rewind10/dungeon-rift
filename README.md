@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.0.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.1.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,21 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.1 (la torcia: si vede quello che si puo' vedere)
+- **🔦 Il buio delle grotte non e' piu' un cerchio.** Prima vedevi un'area tonda attorno a te — davanti, di
+  fianco, dietro, uguale — e una stanza dietro una roccia si vedeva come una stanza aperta. Adesso e' una
+  **torcia in mano**: una sola macchia di luce, **lunga davanti e corta dietro**, tagliata dai muri.
+- **📏 La forma**: 690 px davanti, 294 di fianco, **118 alle spalle** — 5,8 volte piu' lontano davanti che
+  dietro. Tre numeri in `constants.js` (`FOV_AVANTI`, `FOV_DIETRO`, `FOV_FORMA`) e la si ritara.
+- **🪨 I muri fanno ombra davvero.** Si tirano raggi su tutto il giro: ognuno si ferma dove sbatte, e le
+  punte disegnano la macchia. Dietro il muro il raggio non arriva, quindi la luce non arriva. L'occlusione
+  non e' un calcolo a parte: e' la stessa cosa.
+- **💡 Anche le luci seguono la regola**: una torcia dietro una roccia non illumina piu' la roccia.
+- **👥 In cooperativa la visuale e' condivisa**: quello che vede un compagno lo vedi anche tu.
+- **🏘️ Il villaggio no**: la sosta e' illuminata (`lit`, v2.0.2) e resta com'e'. Il test lo pretende ondata
+  per ondata.
+- **⚠️ Conseguenza voluta**: i nemici alle spalle non si vedono piu'. Restano sulla minimappa.
 
 ## 🆕 Novita v2.0.2 (nel villaggio si vede)
 - **💡 Il villaggio non e' piu' al buio.** Su ogni mappa il gioco stende un velo scuro attorno al giocatore:

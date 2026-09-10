@@ -2,6 +2,73 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.1.0] — 2026-09-10 · "La torcia: si vede quello che si puo' vedere"
+
+Fino alla v2.0 il buio delle mappe di combattimento era un velo **tondo** attorno al giocatore: vedevi un
+cerchio: davanti, di fianco, dietro, uguale. E una stanza dietro una roccia si vedeva come una stanza
+aperta, perche' il velo non sapeva niente dei muri. Adesso si vede **quello che si puo' vedere**, e si vede
+come lo vedrebbe uno con una **torcia in mano**.
+
+#### 🔦 Come funziona
+Si tirano dei **raggi** dal giocatore su tutto il giro. Ognuno cammina a passetti di un terzo di tessera
+finche' non sbatte in un muro o finisce la portata; le punte dei raggi disegnano una **macchia**, e quella
+macchia e' il buco che si ritaglia nel buio. **Dietro un muro il raggio non arriva, quindi la luce non
+arriva, quindi resta buio**: l'occlusione non e' un calcolo a parte, e' la stessa cosa.
+
+A cambiare non e' *quali* raggi esistono ma **quanto lontano arrivano**:
+
+```
+R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
+```
+
+| Dove guardi | Portata |
+|---|---|
+| davanti | **690 px** |
+| 45 gradi | 555 px |
+| di fianco | 294 px |
+| 135 gradi | 140 px |
+| alle spalle | **118 px** — poco, ma non zero: nessuno e' cieco dietro la nuca |
+
+**5,8 volte piu' lontano davanti che dietro**, e tutto e' in `constants.js`: tre numeri, `FOV_AVANTI`,
+`FOV_DIETRO`, `FOV_FORMA`.
+
+#### ❌ Due tentativi buttati, e perche'
+**Il primo**: ritagliavo la macchia direttamente sulla tela del gioco con `destination-out`. Quello non
+cancella il velo, cancella i **pixel** — mondo compreso — e la zona illuminata diventava un buco
+trasparente sul nero della pagina. Il velo si costruisce ora su una **tela sua** (a meta' risoluzione: il
+bordo sfumato non chiede di piu' e costa un quarto), ci si ritaglia dentro la macchia, e poi la si appoggia
+sopra.
+
+**Il secondo**, e questo l'ha visto Paolo: avevo fatto un **cono** davanti piu' un **cerchietto** attorno ai
+piedi. Due forme diverse cucite insieme, e la cucitura si vedeva — un cerchio netto con un triangolo
+attaccato. Adesso e' **una forma sola**: il cerchietto non esiste piu', e' la stessa macchia che dietro si
+accorcia.
+
+E la sfumatura non e' un gradiente radiale — **un gradiente e' un cerchio, e questa forma non lo e'**. Sono
+**quattordici contorni annidati**, dal piu' largo al piu' stretto, ognuno cancella un altro po' di velo: la
+luce cala seguendo la goccia invece che un cerchio, e accanto ai muri si ferma dove si ferma la vista
+(scalare tutti gli strati avrebbe aperto un anello scuro contro ogni parete).
+
+#### 💡 E le luci seguono la stessa regola
+Torce, bracieri, casse, nemici in fiamme: gli aloni di luce sono **ritagliati sulla macchia**. Una torcia
+dietro una roccia non illumina piu' la roccia.
+
+#### 👥 In cooperativa la visuale e' condivisa
+Quello che vede un compagno lo vedi anche tu. Se no in due si giocherebbe peggio che da soli.
+
+#### 🏘️ Il villaggio no
+La sosta dichiara `lit` dalla v2.0.2 e resta illuminata: niente torcia, niente ombre. Il renderer decide da
+quella bandiera, non dal tipo di mappa, e il test lo pretende ondata per ondata.
+
+#### 🧪 Test
+Nuovo blocco nei test del client, che prova la **funzione vera** estratta dal file (se qualcuno la riscrive
+male, casca li'): la portata cala girandosi ed e' almeno 4x davanti; dietro un pilastro di roccia **zero**
+tessere illuminate; davanti al pilastro venti; **nessuno dei 512 raggi attraversa la roccia**; e il campo
+visivo si calcola solo dove la mappa non e' illuminata. Suite: **2102 test, 0 falliti.**
+
+**Una conseguenza da sapere, ed e' voluta**: i nemici alle spalle non si vedono piu'. Restano sulla
+minimappa, che e' l'altro modo di sapere dove sono.
+
 ### [2.0.2] — 2026-09-10 · "Nel villaggio si vede"
 
 #### 💡 Via il buio, e via le torce della 2.0.1

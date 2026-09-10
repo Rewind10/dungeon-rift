@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.0.2',
+    VERSION: '2.1.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -38,6 +38,20 @@
     // v1.84 — LA FAGLIA D'USCITA. Al posto del pulsante EXIT in mezzo allo schermo: si apre uno squarcio
     // sulla mappa e ci si passa dentro. Il gesto e' lo stesso (uscire), ma succede nel gioco e non nell'UI.
     FAGLIA_RAGGIO: 46,
+    // ===== v2.1 — IL CAMPO VISIVO =====
+    // Fino alla v2.0 il buio era un velo TONDO attorno a te: vedevi un cerchio, muri compresi, e dietro
+    // una roccia si vedeva lo stesso. Adesso si vede quello che si PUO' vedere, e si vede come lo vedrebbe
+    // uno con una TORCIA IN MANO: una sola macchia di luce, lunga davanti e corta dietro, tagliata dai
+    // muri. Non un cono piu' un cerchio — quelli erano due forme cucite insieme e si vedeva la cucitura.
+    //
+    // La forma e' una goccia: il raggio dipende dall'angolo rispetto a dove guardi.
+    //   R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
+    // davanti (a=0) arriva a AVANTI, di fianco (a=90') a circa un terzo, alle spalle (a=180') a DIETRO.
+    FOV_AVANTI: 690,     // quanto lontano si vede nella direzione in cui si guarda
+    FOV_DIETRO: 118,     // e quanto alle spalle: poco, ma non zero (non si e' ciechi dietro la nuca)
+    FOV_FORMA: 1.7,      // quanto e' stretta la goccia: piu' alto = piu' concentrata in avanti
+    FOV_RAGGI: 256,      // raggi su tutto il giro
+    FOV_BUIO: 0.93,      // quanto e scuro cio che non vedi (1 = nero pieno)
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.0.2`
+**Versione attuale:** `2.1.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -427,6 +427,56 @@ server entrando in sosta e lo chiude uscendo.
 E **il timer non c'e' piu'**. In multiplayer la sosta si chiudeva da sola dopo 120 secondi: adesso si riparte
 solo quando qualcuno entra nel portale. Il villaggio e' un posto in cui si sta, non una schermata da
 sbrigare. In cambio, se uno resta fermo la partita aspetta — e' il prezzo, ed e' voluto.
+
+---
+
+## 🔦 LA TORCIA — il campo visivo *(v2.1, solo nelle mappe di combattimento)*
+
+Fino alla v2.0 il buio era un velo **tondo** attorno al giocatore: vedevi un cerchio — davanti, di fianco,
+dietro, uguale — e una stanza dietro una roccia si vedeva come una stanza aperta, perche' il velo non sapeva
+niente dei muri. Adesso si vede **quello che si puo' vedere**.
+
+**Come funziona.** Si tirano raggi dal giocatore su tutto il giro. Ognuno cammina a passetti di un terzo di
+tessera finche' non sbatte in un muro o finisce la portata; le punte disegnano una **macchia**, e quella
+macchia e' il buco ritagliato nel buio. Dietro un muro il raggio non arriva, quindi la luce non arriva:
+**l'occlusione non e' un calcolo a parte, e' la stessa cosa**.
+
+A cambiare non e' *quali* raggi esistono ma **quanto lontano arrivano**:
+
+| Dove guardi | Portata |
+|---|---|
+| davanti | **690 px** |
+| 45 gradi | 555 px |
+| di fianco | 294 px |
+| 135 gradi | 140 px |
+| alle spalle | **118 px** — poco, ma non zero |
+
+Tre numeri in constants (`FOV_AVANTI`, `FOV_DIETRO`, `FOV_FORMA`) e la forma cambia.
+
+### Le due strade sbagliate, e perche
+
+**Ritagliare sulla tela del gioco.** Con `destination-out` non si cancella il velo: si cancellano i PIXEL,
+mondo compreso, e la zona illuminata diventa un buco trasparente sul nero della pagina. Il velo si
+costruisce su una **tela sua** (meta risoluzione), ci si ritaglia dentro la macchia, e poi la si appoggia.
+
+**Un cono piu un cerchietto.** Era il primo disegno: un cono davanti per la vista lunga, un cerchietto
+attorno ai piedi per non essere ciechi da vicino. Due forme cucite insieme, e **la cucitura si vedeva** — un
+cerchio netto con un triangolo attaccato. Adesso e' **una forma sola**: il cerchietto non esiste, e' la
+stessa macchia che dietro si accorcia.
+
+**E la sfumatura non e' un gradiente radiale**: un gradiente e' un cerchio, e questa forma non lo e'. Sono
+quattordici contorni annidati, dal piu largo al piu stretto, ognuno cancella un altro po di velo — cosi la
+luce cala seguendo la goccia, e accanto ai muri si ferma dove si ferma la vista.
+
+### Le regole che ne discendono
+
+- **Gli aloni di luce sono ritagliati sulla macchia**: una torcia dietro una roccia non illumina la roccia.
+- **In cooperativa la visuale e condivisa**: quello che vede un compagno lo vedi anche tu, se no in due si
+  gioca peggio che da soli.
+- **Il villaggio e escluso**: dichiara `lit` (v2.0.2) e resta illuminato. Il renderer decide da quella
+  bandiera, non dal tipo di mappa.
+- **I nemici alle spalle non si vedono.** E' voluto. Restano sulla minimappa, che e l'altro modo di sapere
+  dove sono.
 
 ---
 

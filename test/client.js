@@ -670,6 +670,69 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(inv.indexOf('slot 2 vuoto') > 0, 'gli slot vuoti si vedono');
 })();
 
+// ============================================================================
+// CLIENT — v2.1: IL CAMPO VISIVO (la torcia)
+// Si prova la funzione VERA del renderer, estratta dal file: se qualcuno la riscrive male, qui casca.
+// ============================================================================
+(function () {
+  console.log('\n[CLIENT] Campo visivo v2.1 — la torcia: davanti lontano, dietro poco, e i muri fanno ombra');
+  const src2 = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+  const C2 = window.GAME.Constants, T2 = C2.TILE;
+  const mp = src2.match(/_fovPortata\(dc\) \{[\s\S]*?\n    \},/);
+  const mu = src2.match(/_fovPunte\(px, py, aim, out, off, n\) \{[\s\S]*?\n    \},/);
+  ok(!!mp && !!mu, 'le due funzioni del campo visivo esistono ancora');
+  if (!mp || !mu) return;
+  // mappa finta: una stanza con un pilastro di roccia a destra del giocatore
+  const W2 = 26, H2 = 15, grid = new Uint8Array(W2 * H2).fill(C2.T_FLOOR);
+  for (let y = 0; y < H2; y++) { grid[y * W2] = C2.T_WALL; grid[y * W2 + W2 - 1] = C2.T_WALL; }
+  for (let x = 0; x < W2; x++) { grid[x] = C2.T_WALL; grid[(H2 - 1) * W2 + x] = C2.T_WALL; }
+  for (let y = 5; y <= 9; y++) grid[y * W2 + 9] = C2.T_WALL;
+  const mappa = { w: W2, h: H2, tile: T2, grid };
+  const R2 = new Function('C', 'map', 'return { map: map, ' +
+    mp[0].replace('_fovPortata(', '_fovPortata: function(') + ' ' +
+    mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, mappa);
+
+  // --- 1) LA FORMA A TORCIA: davanti molto piu' lontano che dietro ---
+  const av = R2._fovPortata(1), lat = R2._fovPortata(0), di = R2._fovPortata(-1);
+  ok(av > lat && lat > di, 'la portata cala girandosi: davanti ' + av.toFixed(0) + ' · di fianco ' + lat.toFixed(0) + ' · dietro ' + di.toFixed(0));
+  ok(av / di >= 4, 'e davanti si vede almeno quattro volte piu' + "'" + ' lontano che dietro (' + (av / di).toFixed(1) + 'x)');
+  ok(di > 60, 'ma dietro non si e ciechi del tutto (' + di.toFixed(0) + ' px)');
+
+  // --- 2) L'OCCLUSIONE: dietro il pilastro non si vede niente ---
+  const N2 = 512, buf = new Float32Array(N2 * 4);
+  const px2 = 4.5 * T2, py2 = 7.5 * T2;
+  R2._fovPunte(px2, py2, 0, buf, 0, N2);          // guarda a destra, verso il pilastro
+  const poly = []; for (let i = 0; i < N2; i++) { const o = i * 4; poly.push([px2 + buf[o] * buf[o + 2], py2 + buf[o + 1] * buf[o + 2]]); }
+  const dentro = (x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    if (((poly[i][1] > y) !== (poly[j][1] > y)) && (x < (poly[j][0] - poly[i][0]) * (y - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) c = !c; } return c; };
+  let coperte = 0; for (let y = 6; y <= 8; y++) for (let x = 10; x <= 24; x++) if (dentro(x * T2 + T2 / 2, y * T2 + T2 / 2)) coperte++;
+  ok(coperte === 0, 'dietro il pilastro resta buio: la roccia fa ombra (' + coperte + ' tessere passate)');
+  let viste = 0; for (let y = 5; y <= 9; y++) for (let x = 5; x <= 8; x++) if (dentro(x * T2 + T2 / 2, y * T2 + T2 / 2)) viste++;
+  ok(viste >= 15, 'ma davanti, prima del pilastro, si vede (' + viste + ' tessere)');
+  // alle spalle la portata e' ~2,5 tessere: la colonna subito dietro si vede, quella dopo no. E' la
+  // differenza fra "non si e' ciechi dietro la nuca" e "si vede anche di la'".
+  let vicinoDietro = 0, lontanoDietro = 0;
+  for (let y = 6; y <= 8; y++) { if (dentro(2 * T2 + T2 / 2, y * T2 + T2 / 2)) vicinoDietro++; if (dentro(1 * T2 + T2 / 2, y * T2 + T2 / 2)) lontanoDietro++; }
+  ok(vicinoDietro >= 1, 'subito dietro le spalle si vede ancora (' + vicinoDietro + '/3)');
+  ok(lontanoDietro === 0, 'ma due passi piu in la no: alle spalle il buio arriva subito (' + lontanoDietro + '/3)');
+
+  // --- 3) NESSUN RAGGIO ATTRAVERSA UN MURO ---
+  let bucati = 0;
+  for (let i = 0; i < N2; i++) { const o = i * 4;
+    const passi = Math.floor(buf[o + 2] / (T2 * 0.34));
+    for (let k = 1; k < passi; k++) { const d = k * T2 * 0.34;
+      const tx = ((px2 + buf[o] * d) / T2) | 0, ty = ((py2 + buf[o + 1] * d) / T2) | 0;
+      if (grid[ty * W2 + tx] === C2.T_WALL) { bucati++; break; } } }
+  ok(bucati === 0, 'nessuno dei ' + N2 + ' raggi attraversa la roccia (' + bucati + ' bucati)');
+
+  // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
+  const MG2 = window.GAME.MapGen;
+  ok(!!MG2.generateMarket(1).lit, 'il villaggio e illuminato (lit)');
+  for (const lv of [1, 5, 10, 20]) ok(!MG2.generate(31, lv).lit, 'l ondata ' + lv + ' no: li c e la torcia');
+  ok(/if \(_lit \? null : this\._fovSagome/.test(src2) || /_lit \? null : this\._fovSagome/.test(src2),
+    'e il renderer calcola il campo visivo SOLO quando la mappa non e illuminata');
+})();
+
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');
 
 
