@@ -681,46 +681,66 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   const mp = src2.match(/_fovPortata\(dc\) \{[\s\S]*?\n    \},/);
   const mu = src2.match(/_fovPunte\(px, py, aim, out, off, n\) \{[\s\S]*?\n    \},/);
   const mb = src2.match(/_fovBlocca\(m, i\) \{[\s\S]*?\n    \},/);
-  ok(!!mp && !!mu && !!mb, 'le tre funzioni del campo visivo esistono ancora');
-  if (!mp || !mu || !mb) return;
+  const mc = src2.match(/_fovPortataCono\(dc\) \{[\s\S]*?\n    \},/);
+  ok(!!mp && !!mu && !!mb && !!mc, 'le quattro funzioni del campo visivo esistono ancora');
+  if (!mp || !mu || !mb || !mc) return;
   // mappa finta: una stanza con un pilastro di roccia a destra del giocatore
   const W2 = 26, H2 = 15, grid = new Uint8Array(W2 * H2).fill(C2.T_FLOOR);
   for (let y = 0; y < H2; y++) { grid[y * W2] = C2.T_WALL; grid[y * W2 + W2 - 1] = C2.T_WALL; }
   for (let x = 0; x < W2; x++) { grid[x] = C2.T_WALL; grid[(H2 - 1) * W2 + x] = C2.T_WALL; }
   for (let y = 5; y <= 9; y++) grid[y * W2 + 9] = C2.T_WALL;
   const mappa = { w: W2, h: H2, tile: T2, grid };
-  const R2 = new Function('C', 'map', 'return { map: map, ' +
+  const mk = (mappa2) => new Function('C', 'map', 'return { map: map, ' +
     mp[0].replace('_fovPortata(', '_fovPortata: function(') + ' ' +
+    mc[0].replace('_fovPortataCono(', '_fovPortataCono: function(') + ' ' +
     mb[0].replace('_fovBlocca(', '_fovBlocca: function(') + ' ' +
-    mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, mappa);
+    mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, mappa2);
+  const R2 = mk(mappa);
 
   // --- 1) LA FORMA A TORCIA: davanti molto piu' lontano che dietro ---
   const av = R2._fovPortata(1), lat = R2._fovPortata(0), di = R2._fovPortata(-1);
-  ok(av > lat && lat > di, 'la portata cala girandosi: davanti ' + av.toFixed(0) + ' · di fianco ' + lat.toFixed(0) + ' · dietro ' + di.toFixed(0));
-  ok(av / di >= 4, 'e davanti si vede almeno quattro volte piu' + "'" + ' lontano che dietro (' + (av / di).toFixed(1) + 'x)');
-  ok(di > 60, 'ma dietro non si e ciechi del tutto (' + di.toFixed(0) + ' px)');
+  ok(av > lat && lat > di, 'l alone cala girandosi: davanti ' + av.toFixed(0) + ' · di fianco ' + lat.toFixed(0) + ' · dietro ' + di.toFixed(0));
+  ok(di > 60, 'e dietro non si e ciechi del tutto (' + di.toFixed(0) + ' px)');
+  // v2.1.2 — il FASCIO: molto piu' lungo davanti e praticamente finito di fianco. E' la sua portata a
+  // spegnersi da sola, non un ritaglio: e' per questo che non ha bordi da cucire con l'alone.
+  const cAv = R2._fovPortataCono(1), c45 = R2._fovPortataCono(Math.SQRT1_2), cLat = R2._fovPortataCono(0), cDi = R2._fovPortataCono(-1);
+  ok(cAv > av * 1.8, 'il fascio va molto piu lontano dell alone (' + cAv.toFixed(0) + ' contro ' + av.toFixed(0) + ')');
+  ok(cAv > c45 && c45 > cLat, 'e si stringe girandosi: 0 gradi ' + cAv.toFixed(0) + ' · 45 ' + c45.toFixed(0) + ' · 90 ' + cLat.toFixed(0));
+  ok(cLat < lat, 'di fianco comanda l alone: il fascio e gia sceso sotto (' + cLat.toFixed(0) + ' contro ' + lat.toFixed(0) + ')');
+  ok(cLat < cAv * 0.15, 'e li il fascio ha perso almeno l 85% della sua portata (' + (100 * cLat / cAv).toFixed(0) + '%)');
+  ok(cDi === 0 || cDi < 1, 'alle spalle il fascio non c e proprio (' + cDi.toFixed(1) + ')');
+  // la continuita': la portata totale non fa salti: fra un grado e l'altro non cambia mai di piu' del 6%
+  let salto = 0;
+  for (let g = 0; g < 180; g++) {
+    const t0 = Math.max(R2._fovPortata(Math.cos(g * Math.PI / 180)), R2._fovPortataCono(Math.cos(g * Math.PI / 180)));
+    const t1 = Math.max(R2._fovPortata(Math.cos((g + 1) * Math.PI / 180)), R2._fovPortataCono(Math.cos((g + 1) * Math.PI / 180)));
+    salto = Math.max(salto, Math.abs(t1 - t0) / t0);
+  }
+  ok(salto < 0.06, 'e le due luci si fondono senza gradini: il salto massimo di grado in grado e ' + (salto * 100).toFixed(1) + '%');
 
   // --- 2) L'OCCLUSIONE: dietro il pilastro non si vede niente ---
   const N2 = 512, buf = new Float32Array(N2 * 4);
   const px2 = 4.5 * T2, py2 = 7.5 * T2;
   R2._fovPunte(px2, py2, 0, buf, 0, N2);          // guarda a destra, verso il pilastro
-  const poly = []; for (let i = 0; i < N2; i++) { const o = i * 4; poly.push([px2 + buf[o] * buf[o + 2], py2 + buf[o + 1] * buf[o + 2]]); }
+  const poly = []; for (let i = 0; i < N2; i++) { const o = i * 5; poly.push([px2 + buf[o] * buf[o + 2], py2 + buf[o + 1] * buf[o + 2]]); }
   const dentro = (x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
     if (((poly[i][1] > y) !== (poly[j][1] > y)) && (x < (poly[j][0] - poly[i][0]) * (y - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) c = !c; } return c; };
   let coperte = 0; for (let y = 6; y <= 8; y++) for (let x = 10; x <= 24; x++) if (dentro(x * T2 + T2 / 2, y * T2 + T2 / 2)) coperte++;
   ok(coperte === 0, 'dietro il pilastro resta buio: la roccia fa ombra (' + coperte + ' tessere passate)');
   let viste = 0; for (let y = 5; y <= 9; y++) for (let x = 5; x <= 8; x++) if (dentro(x * T2 + T2 / 2, y * T2 + T2 / 2)) viste++;
-  ok(viste >= 15, 'ma davanti, prima del pilastro, si vede (' + viste + ' tessere)');
+  ok(viste >= 10, 'ma davanti, prima del pilastro, si vede (' + viste + ' tessere su 20)');
+  let corridoio = 0; for (let x = 5; x <= 8; x++) if (dentro(x * T2 + T2 / 2, 7 * T2 + T2 / 2)) corridoio++;
+  ok(corridoio === 4, 'e dritto davanti si vede fino al pilastro, tessera per tessera (' + corridoio + '/4)');
   // alle spalle la portata e' ~2,5 tessere: la colonna subito dietro si vede, quella dopo no. E' la
   // differenza fra "non si e' ciechi dietro la nuca" e "si vede anche di la'".
-  let vicinoDietro = 0, lontanoDietro = 0;
-  for (let y = 6; y <= 8; y++) { if (dentro(2 * T2 + T2 / 2, y * T2 + T2 / 2)) vicinoDietro++; if (dentro(1 * T2 + T2 / 2, y * T2 + T2 / 2)) lontanoDietro++; }
-  ok(vicinoDietro >= 1, 'subito dietro le spalle si vede ancora (' + vicinoDietro + '/3)');
-  ok(lontanoDietro === 0, 'ma due passi piu in la no: alle spalle il buio arriva subito (' + lontanoDietro + '/3)');
+  // sulla riga del giocatore: la tessera subito dietro si vede, quella dopo no. E' la differenza fra
+  // "non si e' ciechi dietro la nuca" e "si vede anche di la'".
+  ok(dentro(2 * T2 + T2 / 2, 7 * T2 + T2 / 2), 'subito dietro le spalle si vede ancora');
+  ok(!dentro(1 * T2 + T2 / 2, 7 * T2 + T2 / 2), 'ma due passi piu in la no: alle spalle il buio arriva subito');
 
   // --- 3) NESSUN RAGGIO ATTRAVERSA UN MURO ---
   let bucati = 0;
-  for (let i = 0; i < N2; i++) { const o = i * 4;
+  for (let i = 0; i < N2; i++) { const o = i * 5;
     const passi = Math.floor(buf[o + 2] / (T2 * 0.34));
     for (let k = 1; k < passi; k++) { const d = k * T2 * 0.34;
       const tx = ((px2 + buf[o] * d) / T2) | 0, ty = ((py2 + buf[o + 1] * d) / T2) | 0;
@@ -738,10 +758,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     colonna(8, 1);    // una fila di LAPIDI
     colonna(14, 3);   // e piu' in la' la CINTA del cimitero, che e' un muro vero
     const cim = { w: W3, h: H3, tile: T2, grid: g3, muri: mu3 };
-    const R3 = new Function('C', 'map', 'return { map: map, ' +
-      mp[0].replace('_fovPortata(', '_fovPortata: function(') + ' ' +
-      mb[0].replace('_fovBlocca(', '_fovBlocca: function(') + ' ' +
-      mu[0].replace('_fovPunte(', '_fovPunte: function(').replace(/\n    \},$/, '\n    }') + ' };')(C2, cim);
+    const R3 = mk(cim);
     ok(!R3._fovBlocca(cim, 5 * W3 + 8), 'una lapide non ferma la luce: e alta un ginocchio');
     ok(R3._fovBlocca(cim, 5 * W3 + 14), 'la cinta si');
     ok(R3._fovBlocca(cim, 0), 'e la roccia del bordo pure');
@@ -754,7 +771,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const N3 = 256, b3 = new Float32Array(N3 * 4);
     R3._fovPunte(3.5 * T2, 5.5 * T2, 0, b3, 0, N3);      // in fila con lapidi e cinta, guarda a destra
     let oltreLapide = 0, oltreCinta = 0;
-    for (let i = 0; i < N3; i++) { const o = i * 4; if (b3[o] < 0.98) continue;
+    for (let i = 0; i < N3; i++) { const o = i * 5; if (b3[o] < 0.98) continue;
       const arriva = 3.5 + b3[o + 2] / T2;
       if (arriva > 9.5) oltreLapide++;                    // ha superato la fila di lapidi
       if (arriva > 14.5) oltreCinta++; }                  // avrebbe superato la cinta

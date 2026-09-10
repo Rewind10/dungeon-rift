@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.1.1',
+    VERSION: '2.1.2',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -47,12 +47,19 @@
     // La forma e' una goccia: il raggio dipende dall'angolo rispetto a dove guardi.
     //   R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
     // davanti (a=0) arriva a AVANTI, di fianco (a=90') a circa un terzo, alle spalle (a=180') a DIETRO.
-    // v2.1.1 — il fascio davanti era corto: adesso arriva oltre il bordo dello schermo, come una torcia
-    // vera. Alzando la portata cresce anche quella laterale, quindi FORMA e' salita insieme: il fascio si
-    // allunga senza allargarsi.
-    FOV_AVANTI: 1060,    // quanto lontano si vede nella direzione in cui si guarda
+    // v2.1.2 — DUE LUCI, NON UNA. Una torcia vera fa due cose insieme: un ALONE largo che ti illumina
+    // attorno, e un FASCIO stretto che va lontano dove la punti. Fino alla 2.1.1 c'era una goccia sola e
+    // doveva fare entrambe: o era corta e non illuminava lontano, o era lunga e si allargava troppo.
+    //
+    // Adesso sono due, e la seconda non ha bordi da cucire con la prima perche' e' LA STESSA FORMULA con
+    // numeri diversi: stessa goccia, molto piu' concentrata. Due curve continue che si sommano non fanno
+    // nessuna giuntura — e' per questo che il cono si integra invece di stare appiccicato sopra.
+    //   R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
+    FOV_AVANTI: 470,     // L'ALONE: quanto si vede davanti a se
     FOV_DIETRO: 118,     // e quanto alle spalle: poco, ma non zero (non si e' ciechi dietro la nuca)
-    FOV_FORMA: 2.1,      // quanto e' stretta la goccia: piu' alto = piu' concentrata in avanti
+    FOV_FORMA: 1.4,      // quanto e' schiacciato l'alone all'indietro
+    FOV_CONO: 1150,      // IL FASCIO: quanto lontano arriva dove punti
+    FOV_CONO_FORMA: 3.0, // quanto e' stretto: a 3,0 e' un cuneo che si LEGGE, non una lama invisibile
     FOV_RAGGI: 256,      // raggi su tutto il giro
     FOV_BUIO: 0.93,      // quanto e scuro cio che non vedi (1 = nero pieno)
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,

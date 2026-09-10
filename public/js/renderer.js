@@ -2283,9 +2283,16 @@
     // Ogni raggio cammina a passetti finche' non sbatte in un muro. Dietro il muro il raggio non arriva,
     // quindi la luce non ci arriva: l'occlusione non e' un calcolo a parte, e' la stessa cosa.
     _fovBuf: null,
-    _fovPortata(dc) {   // dc = coseno dell'angolo fra "dove guardo" e il raggio
-      const A = C.FOV_AVANTI || 690, D = C.FOV_DIETRO || 118;
-      return D + (A - D) * Math.pow((1 + dc) * 0.5, C.FOV_FORMA || 1.7);
+    // dc = coseno dell'angolo fra "dove guardo" e il raggio. Due luci, stessa formula:
+    //   l'ALONE — largo, corto, ti illumina attorno
+    //   il FASCIO — stretto, lungo, va dove punti
+    // Sono due curve continue: sommandole non nasce nessuna giuntura, ed e' tutto il trucco.
+    _fovPortata(dc) {
+      const A = C.FOV_AVANTI || 540, D = C.FOV_DIETRO || 118;
+      return D + (A - D) * Math.pow((1 + dc) * 0.5, C.FOV_FORMA || 1.5);
+    },
+    _fovPortataCono(dc) {
+      return (C.FOV_CONO || 1150) * Math.pow((1 + dc) * 0.5, C.FOV_CONO_FORMA || 5.5);
     },
     // per ogni raggio salva quattro numeri: la direzione (nx, ny), dove ha sbattuto (d) e quanto lontano
     // sarebbe potuto arrivare (rt). Servono tutti e quattro: gli strati della sfumatura si accorciano
@@ -2308,6 +2315,9 @@
       const mu = m.muri; if (!mu) return true;
       return mu[i] !== 1;
     },
+    // Un raggio solo per entrambe le luci: si marcia fino alla PIU' LUNGA delle due portate e si segna
+    // dove si e' sbattuto. Poi ogni luce si ferma alla sua portata o al muro, quello che viene prima.
+    // Cinque numeri per raggio: direzione (nx, ny), dove ha sbattuto (d), e le due portate (alone, fascio).
     _fovPunte(px, py, aim, out, off, n) {
       const m = this.map, T = m.tile, W = m.w, H = m.h;
       const passo = T * 0.34;                       // un terzo di tessera: piu' fine non si nota
@@ -2315,7 +2325,9 @@
       for (let i = 0; i < n; i++) {
         const a = (i / n) * 6.283185307;
         const nx = Math.cos(a), ny = Math.sin(a);
-        const R = this._fovPortata(nx * ca + ny * sa);
+        const dc = nx * ca + ny * sa;
+        const Ra = this._fovPortata(dc), Rc = this._fovPortataCono(dc);
+        const R = Ra > Rc ? Ra : Rc;
         let d = passo;
         while (d < R) {
           const tx = ((px + nx * d) / T) | 0, ty = ((py + ny * d) / T) | 0;
@@ -2323,15 +2335,17 @@
           d += passo;
         }
         if (d > R) d = R;
-        const o = off + i * 4;
-        out[o] = nx; out[o + 1] = ny; out[o + 2] = d; out[o + 3] = R;
+        const o = off + i * 5;
+        out[o] = nx; out[o + 1] = ny; out[o + 2] = d; out[o + 3] = Ra; out[o + 4] = Rc;
       }
     },
     // il contorno della macchia a una certa FRAZIONE della portata (1 = il bordo esterno)
-    _fovContorno(g, buf, off, n, ox, oy, fr) {
+    // `q` sceglie la luce: 3 = l'alone, 4 = il fascio
+    _fovContorno(g, buf, off, n, ox, oy, fr, q) {
+      const k = q || 3;
       for (let i = 0; i < n; i++) {
-        const o = off + i * 4;
-        let r = buf[o + 3] * fr; const d = buf[o + 2]; if (r > d) r = d;
+        const o = off + i * 5;
+        let r = buf[o + k] * fr; const d = buf[o + 2]; if (r > d) r = d;
         const x = ox + buf[o] * r, y = oy + buf[o + 1] * r;
         if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
       }
@@ -2341,24 +2355,35 @@
     // Sono contorni annidati, dal piu' largo al piu' stretto, ognuno cancella un altro po' di velo: la
     // luce cala seguendo la goccia invece che un cerchio, e vicino ai muri si ferma dove si ferma la vista.
     // La tabella si calcola una volta: per ogni strato, quale frazione della portata e quanto cancella.
-    _fovStrati: (function () {
-      const L = 14, out = []; let prec = 0;
+    // La tabella si costruisce da una CURVA DI LUCE: `v(t)` dice quanta luce vogliamo a quel raggio, e da
+    // li' si ricava quanto deve cancellare ogni strato perche' il risultato cumulato sia proprio quello.
+    // Due curve, una per luce, ed e' qui che si regola l'integrazione fra le due:
+    //   l'ALONE cala presto e dolce — e' luce diffusa, non deve avere un bordo;
+    //   il FASCIO tiene piu' a lungo e sfuma lunghissimo — e' un fascio, la punta deve arrivare.
+    // `piena` = fino a che frazione della portata la luce resta PIENA prima di cominciare a calare.
+    // E' il numero che decide se una luce si LEGGE o se sfuma via subito: su un pavimento di grotta, gia'
+    // scuro di suo, sotto il 60% di luce non si distingue piu' niente. Un fascio che cala da subito e'
+    // un fascio che sembra corto, per quanto lontano arrivi la sua portata.
+    _fovTabella: function (L, piena, esp) {
+      const out = []; let prec = 0;
       for (let i = 0; i < L; i++) {
         const fr = 1 - i / L;
         const t = 1 - (i + 1) / L;
-        const v = Math.min(1, Math.pow(Math.max(0, (1 - t) / 0.90), 1.25));  // quanta luce vogliamo a quel raggio
-        // v2.1.1 — la curva e' piu' dolce (era 1,5): col fascio allungato a 1060 px, con la vecchia la punta
-        // spariva prima di arrivarci e la portata in piu' non si vedeva.
+        const v = t <= piena ? 1 : Math.min(1, Math.pow(Math.max(0, (1 - t) / (1 - piena)), esp));
         const a = prec >= 1 ? 1 : (v - prec) / (1 - prec);
         out.push([fr, Math.max(0, Math.min(1, a))]);
         prec = v;
       }
       return out;
-    })(),
+    },
     // Calcola le macchie di TUTTI i giocatori vivi una volta per fotogramma. In cooperativa la visuale e'
     // condivisa: quello che vede un compagno lo vedi anche tu, se no in due si gioca peggio che da soli.
     _fovSagome(world) {
-      const N = C.FOV_RAGGI || 256, per = N * 4;
+      if (!this._fovStratiAlone) {
+        this._fovStratiAlone = this._fovTabella(14, 0.22, 1.00);   // alone: pieno vicino, poi sfuma tutto
+        this._fovStratiCono  = this._fovTabella(20, 0.34, 0.70);   // fascio: pieno per un terzo, poi cala piano
+      }
+      const N = C.FOV_RAGGI || 256, per = N * 5;
       const vivi = [];
       for (const p of world.players) if (!p.d) vivi.push(p);
       if (!vivi.length) return null;
@@ -2368,7 +2393,7 @@
       for (let k = 0; k < vivi.length; k++) {
         const p = vivi[k], base = k * per;
         this._fovPunte(p.x, p.y, p.a || 0, this._fovBuf, base, N);
-        out.push({ x: p.x, y: p.y, off: base, n: N });
+        out.push({ x: p.x, y: p.y, a: p.a || 0, off: base, n: N });
       }
       return out;
     },
@@ -2402,10 +2427,20 @@
         vg.fillStyle = '#000';
         for (const f of _fov) {
           const sx = f.x - camX, sy = f.y - camY;
-          for (let i = 0; i < this._fovStrati.length; i++) {
-            const st = this._fovStrati[i];
+          // v2.1.2 — DUE PASSATE, non due forme incollate. Cancellare e' moltiplicativo: dove l'alone ha
+          // gia' tolto meta' velo, il fascio toglie meta' di quel che resta. Il risultato e' che nel cuore
+          // (davanti e vicino) le due luci si SOMMANO senza gradino, e ai lati il fascio si spegne da solo
+          // perche' la sua portata li' e' quasi zero. Nessun bordo, nessuna giuntura: la fusione la fanno
+          // le sfumature, non un ritaglio.
+          for (let i = 0; i < this._fovStratiAlone.length; i++) {
+            const st = this._fovStratiAlone[i];
             vg.globalAlpha = st[1];
-            vg.beginPath(); this._fovContorno(vg, this._fovBuf, f.off, f.n, sx, sy, st[0]); vg.fill();
+            vg.beginPath(); this._fovContorno(vg, this._fovBuf, f.off, f.n, sx, sy, st[0], 3); vg.fill();
+          }
+          for (let i = 0; i < this._fovStratiCono.length; i++) {
+            const st = this._fovStratiCono[i];
+            vg.globalAlpha = st[1];
+            vg.beginPath(); this._fovContorno(vg, this._fovBuf, f.off, f.n, sx, sy, st[0], 4); vg.fill();
           }
         }
         vg.globalAlpha = 1;
@@ -2420,8 +2455,8 @@
       }
       g.globalCompositeOperation = 'lighter';
       // LE LUCI VIVONO SOLO DENTRO LA VISUALE: una torcia dietro una roccia non deve illuminare la roccia
-      if (_fov) { g.save(); g.beginPath(); for (const f of _fov) this._fovContorno(g, this._fovBuf, f.off, f.n, f.x - camX, f.y - camY, 1); g.clip(); }
-      const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) { g.save(); g.beginPath(); for (const f of _fov) { const sx = f.x - camX, sy = f.y - camY; this._fovContorno(g, this._fovBuf, f.off, f.n, sx, sy, 1, 3); this._fovContorno(g, this._fovBuf, f.off, f.n, sx, sy, 1, 4); } g.clip(); }
+      const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();
     },

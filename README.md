@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.1.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.1.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.1.2 (due luci: l'alone e il fascio)
+- **🔦 Una torcia fa due cose insieme**: un **alone** largo che illumina attorno (470 px davanti, 251 di
+  fianco, 118 dietro) e un **fascio** stretto che va lontano dove punti (**1150 px**). Prima era una goccia
+  sola e doveva fare entrambe.
+- **🔗 E si integrano perche' il cono non e' una forma nuova**: e' *la stessa formula* dell'alone con numeri
+  diversi. Due curve continue, il fascio si spegne da solo girandosi, e verso i 60 gradi il comando passa
+  dall'uno all'altra senza che si veda dove. Il test lo pretende come numero: **salto massimo 3,8%** da un
+  grado al successivo.
+- **🌗 Le sfumature sono il punto.** Ogni luce ha la sua curva, e il numero che decide tutto e' *fino a dove
+  resta piena*: l'alone per il 22% della portata, il fascio per il 34% (100% fino a 400 px, 64% a 750, 51%
+  a 900). Al primo tentativo il fascio calava da subito e **sembrava corto** per quanto lontano arrivasse.
+- **🔥 Tre lampade calde in fila** lungo la direzione in cui guardi: senza, il fascio si leggeva come *meno
+  buio* invece che come luce. Sono dentro il ritaglio: un muro le ferma.
 
 ## 🆕 Novita v2.1.1 (fascio piu' lungo, ombra solo dai muri)
 - **🔦 Il fascio arriva piu' lontano**: `FOV_AVANTI` da 690 a **1060 px** — davanti si vede oltre il bordo

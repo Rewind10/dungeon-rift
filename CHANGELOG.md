@@ -2,6 +2,60 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.1.2] — 2026-09-10 · "Due luci: l'alone e il fascio"
+
+Una torcia vera fa **due cose insieme**: un **alone** largo che ti illumina attorno, e un **fascio** stretto
+che va lontano dove la punti. Fino alla 2.1.1 c'era una goccia sola e doveva fare entrambe — o era corta e
+non illuminava lontano, o era lunga e si allargava troppo. Adesso sono due.
+
+#### 🔗 Perche' si integrano invece di stare appiccicate
+Il cono **non e' una forma nuova**: e' *la stessa formula* dell'alone con numeri diversi.
+
+```
+R(a) = DIETRO + (AVANTI - DIETRO) * ((1 + cos a) / 2) ^ FORMA
+```
+
+| Angolo | Alone | Fascio |
+|---|---|---|
+| davanti | 470 | **1150** |
+| 20 gradi | 455 | 1049 |
+| 40 gradi | 414 | 792 |
+| 60 gradi | 353 | 485 |
+| 90 gradi | 251 | 144 |
+| alle spalle | 118 | **0** |
+
+Due curve continue, e il fascio si spegne da solo girandosi: **non c'e' nessun bordo da cucire**. Verso i 60
+gradi il comando passa dall'uno all'altra senza che si veda dove. Il test lo pretende come numero: **il
+salto massimo di portata da un grado al successivo e' il 3,8%** — sotto la soglia del 6% oltre la quale
+l'occhio vedrebbe uno spigolo.
+
+E si sommano invece di sovrapporsi: cancellare il velo e' **moltiplicativo**, quindi dove l'alone ha gia'
+tolto meta' velo il fascio toglie meta' di quel che resta. Nel cuore le due luci si sommano senza gradino.
+
+#### 🌗 Le sfumature, che sono il punto
+Ogni luce ha la sua **curva**, e la curva ha un numero che decide tutto: `piena`, cioe' **fino a che
+frazione della portata la luce resta piena** prima di cominciare a calare.
+
+- l'**alone** e' pieno per il 22% e poi sfuma tutto: e' luce diffusa, non deve avere un bordo.
+- il **fascio** e' pieno per il **34%** e poi cala piano: 100% fino a 400 px, 82% a 600, 64% a 750, 51% a 900.
+
+Al primo tentativo il fascio calava da subito e **sembrava corto per quanto lontano arrivasse la sua
+portata**: su un pavimento di grotta, gia' scuro di suo, sotto il 60% di luce non si distingue piu' niente.
+Il fascio era li', semplicemente non si vedeva.
+
+#### 🔥 E la luce calda del fascio
+Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva
+come *meno buio* invece che come **luce**. Tre lampade calde in fila lungo la direzione in cui guardi (a
+14%, 36% e 60% della portata) sono cio' che lo rende una torcia. Sono dentro il ritaglio del campo visivo
+come tutte le altre luci: **un muro le ferma**.
+
+#### 🧪 Test
+Il blocco del campo visivo prova ora anche le due luci separatamente e la loro fusione: il fascio va oltre
+il doppio dell'alone, si stringe girandosi, di fianco ha perso l'87% della portata, alle spalle non esiste,
+e le due curve si fondono senza gradini. **2102 test, 0 falliti**, client verde.
+
+Il villaggio resta fuori da tutto questo (`lit`, v2.0.2).
+
 ### [2.1.1] — 2026-09-10 · "Il fascio piu' lungo, e l'ombra solo dai muri"
 
 #### 🔦 Il fascio arriva piu' lontano

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.1.1`
+**Versione attuale:** `2.1.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -443,16 +443,47 @@ macchia e' il buco ritagliato nel buio. Dietro un muro il raggio non arriva, qui
 
 A cambiare non e' *quali* raggi esistono ma **quanto lontano arrivano**:
 
-| Dove guardi | Portata |
-|---|---|
-| davanti | **1060 px** *(v2.1.1: era 690)* |
-| 45 gradi | 794 px |
-| di fianco | 338 px |
-| 135 gradi | 135 px |
-| alle spalle | **118 px** — poco, ma non zero |
+### Due luci, non una *(v2.1.2)*
 
-Nove volte piu lontano davanti che dietro. Alzando la portata frontale cresce anche quella laterale, quindi
-`FOV_FORMA` va alzata insieme: cosi il fascio si **allunga senza allargarsi**.
+Una torcia vera fa due cose insieme: un **alone** largo che ti illumina attorno, e un **fascio** stretto che
+va lontano dove la punti. Fino alla 2.1.1 c'era una goccia sola e doveva fare entrambe — o era corta e non
+illuminava lontano, o era lunga e si allargava troppo.
+
+| Angolo | Alone | Fascio |
+|---|---|---|
+| davanti | 470 | **1150** |
+| 20 gradi | 455 | 1049 |
+| 40 gradi | 414 | 792 |
+| 60 gradi | 353 | 485 |
+| 90 gradi | 251 | 144 |
+| alle spalle | 118 | **0** |
+
+**E si integrano perche il cono non e una forma nuova: e la stessa formula con numeri diversi.** Due curve
+continue, il fascio si spegne da solo girandosi, e verso i 60 gradi il comando passa dall'uno all'altra
+senza che si veda dove. Il test lo pretende come numero: il salto massimo di portata da un grado al
+successivo e il **3,8%** — sotto il 6% oltre cui l'occhio vedrebbe uno spigolo.
+
+E si **sommano** invece di sovrapporsi: cancellare il velo e moltiplicativo, quindi dove l'alone ha gia
+tolto meta velo il fascio toglie meta di quel che resta. Nel cuore le due luci si sommano senza gradino.
+
+### Le sfumature, che sono il punto
+
+Ogni luce ha la sua curva, e la curva ha un numero che decide tutto: **fino a che frazione della portata la
+luce resta piena** prima di calare.
+
+| | resta piena fino a | poi |
+|---|---|---|
+| **alone** | 22% | sfuma tutto: e luce diffusa, non deve avere un bordo |
+| **fascio** | 34% | cala piano: 100% fino a 400 px, 82% a 600, 64% a 750, 51% a 900 |
+
+Al primo tentativo il fascio calava da subito e **sembrava corto per quanto lontano arrivasse la sua
+portata**: su un pavimento di grotta, gia scuro di suo, sotto il 60% di luce non si distingue piu niente.
+Il fascio era li, semplicemente non si vedeva.
+
+**E la luce calda.** Togliere il velo non basta: senza velo il pavimento di una grotta e comunque scuro, e
+il fascio si leggeva come *meno buio* invece che come luce. Tre lampade calde in fila lungo la direzione in
+cui guardi (a 14%, 36% e 60% della portata) sono cio che lo rende una torcia. Sono dentro il ritaglio del
+campo visivo come tutte le altre luci: un muro le ferma.
 
 Tre numeri in constants (`FOV_AVANTI`, `FOV_DIETRO`, `FOV_FORMA`) e la forma cambia.
 
