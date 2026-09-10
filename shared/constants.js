@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.1.2',
+    VERSION: '2.1.3',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -62,6 +62,10 @@
     FOV_CONO_FORMA: 3.0, // quanto e' stretto: a 3,0 e' un cuneo che si LEGGE, non una lama invisibile
     FOV_RAGGI: 256,      // raggi su tutto il giro
     FOV_BUIO: 0.93,      // quanto e scuro cio che non vedi (1 = nero pieno)
+    // v2.1.3 — LA PENOMBRA. Il bordo dell'ombra proiettata da un muro era un taglio netto: geometricamente
+    // giusto (il raggio o passa o non passa) ma sbagliato all'occhio, perche' nessuna luce vera fa un
+    // bordo cosi'. Questi sono i pixel di sfocatura stesi sul velo: 0 = taglio netto, 6-8 = morbido.
+    FOV_SFUMA: 6,
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

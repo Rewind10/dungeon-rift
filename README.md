@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.1.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.1.3 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,15 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.1.3 (la penombra)
+- **🌒 Il bordo delle ombre non e' piu' un taglio netto.** Geometricamente era giusto — un raggio o passa o
+  non passa — ma nessuna luce vera fa un bordo cosi'. Adesso il velo si **sfoca** quando lo si appoggia
+  (`FOV_SFUMA: 6` px): una sola operazione per fotogramma, e ammorbidisce insieme i bordi delle ombre e la
+  coda delle due luci. Con `0` si torna al taglio netto.
+- **📐 E la tela del velo e' 26 px piu' grande dello schermo per lato**, se no il bordo sfumato cadrebbe sul
+  bordo dello schermo e si vedrebbe una cornice chiara attorno al gioco. I due numeri vanno insieme, e il
+  test lo pretende.
 
 ## 🆕 Novita v2.1.2 (due luci: l'alone e il fascio)
 - **🔦 Una torcia fa due cose insieme**: un **alone** largo che illumina attorno (470 px davanti, 251 di

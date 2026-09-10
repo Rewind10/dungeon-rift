@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.1.2`
+**Versione attuale:** `2.1.3`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -524,6 +524,20 @@ l'unico punto del gioco in cui questa distinzione esiste.
 
 **Vale solo per la LUCE.** Per le collisioni e per l'IA una lapide resta un muro, e deve restarlo — se no i
 mostri ci passerebbero attraverso.
+
+### La penombra *(v2.1.3)*
+
+Il bordo dell'ombra proiettata da un muro era un **taglio netto**: giusto in geometria (un raggio o passa o
+non passa), sbagliato all'occhio — nessuna luce vera fa un bordo cosi.
+
+Il velo si **sfoca** quando lo si appoggia sopra la scena (`FOV_SFUMA`, 6 px). Si sfoca il velo **intero,
+una volta sola**: costa un'operazione per fotogramma invece di una per ogni contorno, e ammorbidisce
+insieme i bordi delle ombre e la coda delle due luci. Con `FOV_SFUMA: 0` si torna al taglio netto.
+
+**Il margine.** Sfocando un rettangolo il suo bordo diventa semitrasparente: se quel bordo coincidesse col
+bordo dello schermo si vedrebbe una cornice chiara tutt'attorno al gioco. Per questo la tela del velo e piu
+grande dello schermo di **26 px per lato** (`_veloM`) e la si appoggia partendo da `-M`. **I due numeri
+vanno insieme**: il margine dev'essere piu largo del doppio della sfocatura, e il test lo pretende.
 
 ### Le regole che ne discendono
 

@@ -2,6 +2,28 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.1.3] — 2026-09-10 · "La penombra"
+
+Il bordo dell'ombra proiettata da un muro era un **taglio netto**. Geometricamente e' giusto — un raggio o
+passa o non passa — ma all'occhio e' sbagliato: nessuna luce vera fa un bordo cosi'.
+
+Adesso il velo si **sfoca** quando lo si appoggia sopra la scena: `FOV_SFUMA: 6` pixel. E' una sola
+operazione per fotogramma — si sfoca il velo **intero, una volta**, invece di ammorbidire ogni contorno uno
+per uno — e ammorbidisce insieme due cose: i bordi delle ombre e la coda delle due luci.
+
+**E ha portato con se' un dettaglio che non e' un dettaglio.** Sfocando un rettangolo il suo bordo diventa
+semitrasparente: se quel bordo coincidesse col bordo dello schermo si vedrebbe una **cornice chiara**
+tutt'attorno al gioco. Per questo la tela del velo e' piu' grande dello schermo di **26 px** per lato e la
+si appoggia partendo da `-M`: il bordo sfumato cade fuori. I due numeri vanno insieme, e il test lo
+pretende — il margine dev'essere piu' largo del doppio della sfocatura.
+
+`FOV_SFUMA: 0` riporta il taglio netto di prima.
+
+Il villaggio resta fuori: la sfocatura sta dentro il ramo che si esegue solo quando la mappa non e'
+illuminata (`lit`, v2.0.2).
+
+**2102 test, 0 falliti**, client verde.
+
 ### [2.1.2] — 2026-09-10 · "Due luci: l'alone e il fascio"
 
 Una torcia vera fa **due cose insieme**: un **alone** largo che ti illumina attorno, e un **fascio** stretto

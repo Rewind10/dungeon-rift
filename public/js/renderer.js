@@ -2406,9 +2406,14 @@
     // velo, cancella i PIXEL — mondo compreso — e il cono diventava un buco trasparente sul nero della
     // pagina. Il velo si costruisce quindi su una sua tela (a meta' risoluzione: il bordo sfumato non
     // chiede di piu', e costa un quarto), ci si ritaglia dentro la sagoma, e poi la si appoggia sopra.
+    // v2.1.3 — la tela del velo e' piu' GRANDE dello schermo di un margine. Serve alla sfocatura: sfocando
+    // un rettangolo, il suo bordo diventa semitrasparente, e se quel bordo coincidesse col bordo dello
+    // schermo si vedrebbe una cornice chiara tutt'attorno. Col margine il bordo sfumato cade fuori.
+    _veloM: 26,
     _veloTela() {
       if (!this._veloCv) { this._veloCv = document.createElement('canvas'); this._veloCtx = this._veloCv.getContext('2d'); }
-      const s = 0.5, w = Math.max(1, Math.round(this.w * s)), h = Math.max(1, Math.round(this.h * s));
+      const s = 0.5, M = this._veloM;
+      const w = Math.max(1, Math.round((this.w + M * 2) * s)), h = Math.max(1, Math.round((this.h + M * 2) * s));
       if (this._veloCv.width !== w || this._veloCv.height !== h) { this._veloCv.width = w; this._veloCv.height = h; }
       return s;
     },
@@ -2418,11 +2423,11 @@
       const _fov = _lit ? null : this._fovSagome(world);
       if (_fov) {
         // --- IL BUIO, e dentro il buio la sagoma di cio' che si vede ---
-        const s = this._veloTela(), vg = this._veloCtx, B = C.FOV_BUIO || 0.93;
-        vg.setTransform(s, 0, 0, s, 0, 0);
+        const s = this._veloTela(), vg = this._veloCtx, B = C.FOV_BUIO || 0.93, M = this._veloM;
+        vg.setTransform(s, 0, 0, s, M * s, M * s);
         vg.globalCompositeOperation = 'source-over';
-        vg.clearRect(0, 0, this.w, this.h);
-        vg.fillStyle = 'rgba(2,3,9,' + B.toFixed(3) + ')'; vg.fillRect(0, 0, this.w, this.h);
+        vg.clearRect(-M, -M, this.w + M * 2, this.h + M * 2);
+        vg.fillStyle = 'rgba(2,3,9,' + B.toFixed(3) + ')'; vg.fillRect(-M, -M, this.w + M * 2, this.h + M * 2);
         vg.globalCompositeOperation = 'destination-out';
         vg.fillStyle = '#000';
         for (const f of _fov) {
@@ -2446,7 +2451,14 @@
         vg.globalAlpha = 1;
         vg.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = 'source-over';
-        g.drawImage(this._veloCv, 0, 0, this.w, this.h);
+        // LA PENOMBRA. Il bordo dell'ombra di un muro era un taglio netto — giusto in geometria (il raggio
+        // o passa o non passa), sbagliato all'occhio: nessuna luce vera fa un bordo cosi'. Si sfoca il velo
+        // INTERO, una volta sola, quando lo si appoggia: costa un'operazione per fotogramma invece di una
+        // per ogni contorno, e ammorbidisce insieme i bordi delle ombre e la coda delle due luci.
+        const _sf = C.FOV_SFUMA || 0;
+        if (_sf > 0) g.filter = 'blur(' + _sf + 'px)';
+        g.drawImage(this._veloCv, -M, -M, this.w + M * 2, this.h + M * 2);
+        if (_sf > 0) g.filter = 'none';
       } else {
         // il villaggio (v2.0.2): nessun velo che conti, solo un'ombreggiatura ai bordi
         const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68);

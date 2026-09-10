@@ -779,6 +779,17 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(oltreCinta === 0, 'ma si ferma alla cinta (' + oltreCinta + ' raggi passati)');
   }
 
+  // --- 3c) v2.1.3 — LA PENOMBRA. Il velo si sfoca quando lo si appoggia, cosi' il bordo dell'ombra di un
+  //     muro non e' un taglio netto. Due cose vanno insieme e si rompono insieme: la sfocatura, e il
+  //     MARGINE della tela del velo — senza margine il bordo sfumato cadrebbe sul bordo dello schermo e
+  //     si vedrebbe una cornice chiara tutt'attorno.
+  ok((C2.FOV_SFUMA || 0) > 0, 'la sfumatura delle ombre e accesa (' + C2.FOV_SFUMA + ' px)');
+  ok(/g\.filter = 'blur\('/.test(src2), 'e il renderer la applica sfocando il velo');
+  ok(/_veloM: \d+/.test(src2), 'la tela del velo ha un margine oltre lo schermo');
+  const mM = src2.match(/_veloM: (\d+)/);
+  ok(mM && +mM[1] > (C2.FOV_SFUMA || 0) * 2, 'e il margine (' + (mM ? mM[1] : '?') + ' px) e piu largo del doppio della sfocatura: il bordo sfumato cade fuori dallo schermo');
+  ok(/drawImage\(this\._veloCv, -M, -M/.test(src2), 'infatti il velo si appoggia partendo da -M, non da zero');
+
   // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
   const MG2 = window.GAME.MapGen;
   ok(!!MG2.generateMarket(1).lit, 'il villaggio e illuminato (lit)');
