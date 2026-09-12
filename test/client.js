@@ -536,6 +536,32 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(mn.indexOf("e.key !== 't' && e.key !== 'T'") > 0, 'e il tasto T stando nel menu');
   }
 
+  // v2.2 — LA SCHERMATA PRINCIPALE A DUE COLONNE. Il titolo fuori dal pannello, e la guida aperta di
+  // fianco invece che chiusa in un accordion che nessuno apre. Tre cose vanno insieme, e si rompono
+  // insieme: il titolo fuori, le due colonne, e il fatto che i tasti siano scritti DAVVERO tutti.
+  {
+    const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+    const men = html.slice(html.indexOf('<div id="menu">'), html.indexOf('<div id="lobby"'));
+    ok(/<div id="titolone">[\s\S]*?<h1>/.test(men), 'il titolo sta fuori dal pannello, sullo sfondo');
+    const card = men.slice(men.indexOf('<div class="menu-card">'), men.indexOf('</aside>'));
+    ok(card.indexOf('<h1>') < 0, 'e dentro il pannello di sinistra non c e piu');
+    ok(men.indexOf('id="menuColonne"') > 0 && men.indexOf('class="info-card"') > 0, 'e le due colonne ci sono: si entra a sinistra, si legge a destra');
+    ok(/#menuColonne\{display:flex/.test(css), 'affiancate per davvero (flex)');
+    ok(/@media \(max-width:1080px\)[\s\S]{0,220}#menuColonne\{flex-direction:column/.test(css), 'e sotto i 1080 px si impilano invece di schiacciarsi');
+    // il pannello a destra non deve essere un accordion: in una schermata di avvio un accordion e' un
+    // modo elegante di non far leggere niente a nessuno
+    const info = men.slice(men.indexOf('<aside class="info-card"'), men.indexOf('</aside>'));
+    ok(info.indexOf('<details') < 0, 'la guida e aperta, non chiusa in un accordion');
+    // OGNI tasto che il gioco ascolta dev'essere scritto li'. Se un domani se ne aggiunge uno e ci si
+    // dimentica di scriverlo, e' qui che ce lo si ricorda.
+    for (const [k, chi] of [['W A S D', 'movimento'], ['Mouse', 'mira'], ['Spazio', 'sparo'], ['Shift', 'scatto'],
+                            ['1 2 3', 'pozioni'], ['>Q<', 'abilita Q'], ['>E<', 'abilita E'], ['>L<', 'luce'],
+                            ['>M<', 'musica'], ['Invio', 'chat'], ['>T<', 'prova']])
+      ok(info.indexOf(k.replace(/[<>]/g, m => m === '>' ? '>' : '<')) > 0 || info.indexOf(k) > 0, 'nei comandi c e il tasto per ' + chi);
+    ok(/accende e spegne la torcia/.test(info), 'e del tasto L si dice cosa fa');
+  }
+
   // v1.99 — il menu NON ha piu' l'illustrazione di sfondo: e' tornato il fondo scuro di sempre.
   {
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');

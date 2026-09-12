@@ -2,6 +2,51 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.2.0] — 2026-09-12 · "La schermata principale, e il villaggio un po' piu' sottoterra"
+
+#### 🏠 Il titolo esce dal pannello, e la guida si apre
+Prima la schermata di avvio era un pannello solo, alto e stretto: dentro ci stavano il titolo, il nome, gli
+eroi, il pulsante e — **chiusa in un accordion che nessuno apre mai** — tutta la guida del gioco. Chi
+arrivava nuovo non sapeva niente, e chi ci tornava dopo un mese doveva ricordarsi da solo cosa fa il tasto E.
+
+Adesso:
+
+- **Il titolo sta fuori**, sullo sfondo, grande. E' l'insegna del gioco, non una riga di un modulo.
+- **Sotto, due colonne**: a sinistra si entra in partita (nome, stanza, eroe, prova), a destra c'e' la
+  guida — **aperta, senza niente da cliccare**. In una schermata di avvio un accordion e' un modo elegante
+  di non far leggere niente a nessuno.
+- Ogni colonna **scorre per conto suo**: il titolo resta sempre in cima, e su uno schermo basso non si
+  perde ne' il pulsante di sinistra ne' la guida di destra. Sotto i **1080 px** si impilano invece di
+  schiacciarsi.
+
+Vale **solo per la schermata principale**: la sala d'attesa e il menu di fine ondata restano com'erano.
+
+#### ⌨️ E finalmente c'e' scritto cosa fanno i tasti
+Tutti, compreso il **tasto L**, che dalla v2.1.4 e' acceso all'avvio e che nessuno sapeva esistesse:
+movimento, mira, sparo, **scatto**, le tre **pozioni** (1 2 3), le due **abilita' attive** (Q ed E, coi
+livelli a cui si sbloccano), **L** (luce), **M** (musica), **Invio** (chat) e **T** (modalita' di prova).
+Il test li pretende uno per uno: se un domani se ne aggiunge uno e ci si dimentica di scriverlo, e' li' che
+ce lo si ricorda.
+
+Sotto, **le cinque cose che contano davvero** in una run: venti ondate e due boss col tempo obiettivo; le
+due vite; i **quattro modi separati di crescere** (XP → statistiche, livelli 3·6·9·12 → carte, 8·14 →
+abilita' attive, monete → equipaggiamento) e la specializzazione al 15; l'evoluzione delle armi; e il
+villaggio fra un'ondata e l'altra. Piu' una nota su come funziona la torcia nelle grotte.
+
+Niente immagini: testo e icone. Una guida fatta di schermate invecchia alla prima modifica alla grafica,
+questa no.
+
+#### 🕯️ Il villaggio e' un po' piu' sottoterra
+Dalla v2.0.2 la sosta e' illuminata piena — nessun velo — e **senza niente sopra sembrava una stanza a
+giorno**. Adesso c'e' una velatura leggera, uguale dappertutto e un po' piu' carica ai bordi
+(`VILL_OMBRA: 0.26` → 16% al centro, 56% agli angoli).
+
+Resta **tutto leggibile**, che e' il motivo per cui questa mappa e' illuminata e non va perso: si vede
+ancora dove sono le botteghe senza doverle cercare. Con `VILL_OMBRA: 0` si torna alla luce piena della
+v2.0.2, alzandolo si scende verso il buio.
+
+**2102 test, 0 falliti.**
+
 ### [2.1.4] — 2026-09-10 · "La torcia parte accesa"
 
 Lo strato del **tasto L** c'e' dalla v1.16: una seconda mano di buio bucata da aloni tondi — uno grande

@@ -2932,8 +2932,10 @@ function testV178() {
     // ogni esadecimale dev essere lungo 3, 4, 6 o 8 cifre: "#12<qualcosa>7040" si spezza e si vede subito
     for (const h of grezzo.match(/#[0-9a-zA-Z]*/g) || [])
       if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(h)) rotti.push(prop + ':' + grezzo);
-    // e un colore e' UN valore solo: "#ffc martedi" sono due parole, quindi e un errore di battitura
-    if (/color$/.test(prop)) {
+    // e un colore e' UN valore solo: "#ffc martedi" sono due parole, quindi e un errore di battitura.
+    // v2.2 — `scrollbar-color` fa eccezione per disegno: vuole DUE colori (pollice e binario), e non e'
+    // un refuso. E' l'unica proprieta' che finisce per "color" e ne vuole piu' di uno.
+    if (/color$/.test(prop) && prop !== 'scrollbar-color') {
       let senzaFunzioni = grezzo;   // le funzioni si annidano (var dentro var): si sbucciano finche restano
       for (let g = 0; g < 6; g++) { const q = senzaFunzioni.replace(/[a-z-]*\([^()]*\)/gi, 'F'); if (q === senzaFunzioni) break; senzaFunzioni = q; }
       if (/\s/.test(senzaFunzioni) || !/^(#[0-9a-fA-F]{3,8}|F|[a-zA-Z]+)$/.test(senzaFunzioni)) rotti.push(prop + ':' + grezzo);

@@ -55,38 +55,76 @@
   <div id="killfeed"></div>
   <div id="centerFeed"></div>
 </div>
+<!-- ===== v2.2 — LA SCHERMATA PRINCIPALE A DUE COLONNE ==============================================
+     Prima era un pannello solo, alto e stretto: dentro ci stavano il titolo, il nome, gli eroi, il
+     pulsante e — chiusa in un accordion che nessuno apre mai — tutta la guida del gioco. Chi arrivava
+     nuovo non sapeva niente, e chi ci tornava dopo un mese doveva ricordarsi da solo cosa fa il tasto E.
+     Adesso: il TITOLO sta fuori, sullo sfondo; sotto, due colonne — a sinistra si entra in partita, a
+     destra c'e' tutto quello che serve sapere, aperto, senza niente da cliccare.
+     Vale SOLO qui: la sala d'attesa e il menu di fine ondata restano com'erano. -->
 <div id="menu">
-  <div class="menu-card">
-    <h1>DUNGEON <span>RIFT</span> <small id="verBadge" class="ver">v1.70.0</small></h1>
-    <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori</p>
-    <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
-    <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
-    <h2>Scegli il tuo eroe</h2>
-    <div id="heroSelect"></div>
-    <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
-    <div id="menuMsg"></div>
-    <!-- v1.99 — la modalita' di prova torna VISIBILE nel menu. Era stata nascosta in v1.96.1 (si apriva
-         con ?test o col tasto T): quelle due scorciatoie restano e non danno fastidio, ma il pannello
-         adesso c'e' e basta. -->
-    <details class="help prova" id="provaBox">
-      <summary>🧪 Modalità di prova — parti da un'ondata</summary>
-      <p class="tag" style="margin:8px 0 6px;font-size:13px">Entri da solo con il personaggio che avresti a
-        quel punto: livello, punti spesi, equipaggiamento e abilità. Serve a guardare prestazioni e
-        giocabilità senza rigiocare tutto quello che viene prima.</p>
-      <div id="provaGrid"></div>
-    </details>
-    <details class="help">
-      <summary>Comandi & guida</summary>
-      <ul>
-        <li><b>WASD / frecce</b> — movimento · <b>Mouse</b> — mira · <b>Click sx / Spazio</b> — spara</li>
-        <li><b>Tasto destro / Shift</b> — scatto (attraversa i nemici)</li>
-        <li><b>M</b> — musica · <b>Q</b> ed <b>E</b> — le abilità attive (si sbloccano ai livelli 8 e 14)</li>
-        <li>Hai <b>2 vite</b>. I nemici lasciano <b>XP</b> ✦ (condivisa con la squadra) e <b>monete</b> 🪙.</li>
-        <li>Ai livelli <b>3, 6, 9 e 12</b> scegli <b>1 abilità passiva su 4</b> 🎴; all'<b>8</b> e al <b>14</b> un'<b>abilità attiva su 2</b> ⚡ (tasti Q ed E). Al <b>15</b> la specializzazione.</li>
-        <li>Porta un'arma a <b>Lv.3</b> con la statistica giusta per <b>evolverla</b>! ✦</li>
-        <li><b>20 livelli</b> → MEGA BOSS. Ogni ondata ha un <b>tempo obiettivo</b> ⏱: restaci sotto e prendi XP e monete extra.</li>
-      </ul>
-    </details>
+  <div id="titolone">
+    <h1>DUNGEON <span>RIFT</span></h1>
+    <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori <small id="verBadge" class="ver">v2.2.0</small></p>
+  </div>
+  <div id="menuColonne">
+    <div class="menu-card">
+      <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
+      <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
+      <h2>Scegli il tuo eroe</h2>
+      <div id="heroSelect"></div>
+      <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
+      <div id="menuMsg"></div>
+      <!-- v1.99 — la modalita' di prova torna VISIBILE nel menu. Era stata nascosta in v1.96.1 (si apriva
+           con ?test o col tasto T): quelle due scorciatoie restano e non danno fastidio, ma il pannello
+           adesso c'e' e basta. -->
+      <details class="help prova" id="provaBox">
+        <summary>🧪 Modalità di prova — parti da un'ondata</summary>
+        <p class="tag" style="margin:8px 0 6px;font-size:13px">Entri da solo con il personaggio che avresti a
+          quel punto: livello, punti spesi, equipaggiamento e abilità. Serve a guardare prestazioni e
+          giocabilità senza rigiocare tutto quello che viene prima.</p>
+        <div id="provaGrid"></div>
+      </details>
+    </div>
+
+    <!-- La colonna delle info: UNA PAGINA SOLA, tutta aperta. Niente accordion — un accordion in una
+         schermata di avvio e' un modo elegante di non far leggere niente a nessuno. -->
+    <aside class="info-card" id="infoCard">
+      <h2 class="info-h">⌨️ Comandi</h2>
+      <div class="tasti">
+        <div class="tasto"><span class="kb">W A S D</span><span class="kb alt">↑ ↓ ← →</span><b>Muoversi</b></div>
+        <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
+        <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
+        <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
+        <div class="tasto"><span class="kb">1 2 3</span><b>Pozioni</b><i>le tre della cintura</i></div>
+        <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Abilità attive</b><i>si sbloccano al livello 8 e al 14</i></div>
+        <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: è l'illuminazione giusta</i></div>
+        <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
+        <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
+        <div class="tasto"><span class="kb">T</span><b>Modalità di prova</b><i>da questa schermata</i></div>
+      </div>
+
+      <h2 class="info-h">🎯 Come funziona una run</h2>
+      <ol class="info-lista">
+        <li><b>Venti ondate, due boss.</b> Il Colosso della Faglia alla <b>10ª</b>, AZ'GAROTH alla <b>20ª</b>.
+          Ogni ondata ha un <b>tempo obiettivo</b> ⏱: restaci sotto e prendi XP e monete extra.</li>
+        <li><b>Hai due vite.</b> Quando cadi ne perdi una e riparti; finite quelle, la run è chiusa.
+          In cooperativa un compagno può rialzarti.</li>
+        <li><b>Cresci in quattro modi diversi</b>, e sono scelte separate:<br>
+          <span class="via">✦ <b>XP</b> → statistiche</span>
+          <span class="via">🎴 <b>Livelli 3·6·9·12</b> → una carta su quattro</span>
+          <span class="via">⚡ <b>Livelli 8·14</b> → un'abilità attiva su due</span>
+          <span class="via">🪙 <b>Monete</b> → equipaggiamento dal fabbro</span><br>
+          Al <b>15</b> arriva la specializzazione: il bivio che decide che eroe sei diventato.</li>
+        <li><b>Le armi evolvono.</b> Portane una al <b>Lv.3</b> con la statistica giusta e diventa un'altra arma.</li>
+        <li><b>Fra un'ondata e l'altra c'è il villaggio.</b> Osteria, fucina, erborista, cartomante e gilda
+          delle taglie: si compra, si riposa, e si riparte dalla <b>faglia in mezzo alla piazza</b>.
+          Nessun timer: ci si sta quanto si vuole.</li>
+      </ol>
+
+      <p class="info-nota">Nelle grotte vedi solo dove arriva la <b>torcia</b>: davanti lontano, alle spalle
+        quasi niente, e i muri fanno ombra. Quello che non vedi resta comunque sulla <b>minimappa</b>.</p>
+    </aside>
   </div>
   <div class="credits">Motore custom · netcode autoritativo · audio procedurale · nessuna dipendenza</div>
 </div>

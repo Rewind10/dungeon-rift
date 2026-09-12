@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.1.4',
+    VERSION: '2.2.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -66,6 +66,11 @@
     // giusto (il raggio o passa o non passa) ma sbagliato all'occhio, perche' nessuna luce vera fa un
     // bordo cosi'. Questi sono i pixel di sfocatura stesi sul velo: 0 = taglio netto, 6-8 = morbido.
     FOV_SFUMA: 6,
+    // v2.2 — L'OMBRA DEL VILLAGGIO. La sosta non ha campo visivo (v2.0.2: dichiara `lit` e il velo non si
+    // stende), ma senza NIENTE sopra sembrava una stanza a giorno. Questa e' una velatura leggera, uguale
+    // dappertutto e un po' piu' carica ai bordi: il villaggio resta tutto leggibile — e' il suo scopo —
+    // ma torna a essere un posto sottoterra. 0 = illuminato a giorno come nella v2.0.2.
+    VILL_OMBRA: 0.26,
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

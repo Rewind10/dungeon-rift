@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.1.4`
+**Versione attuale:** `2.2.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -400,11 +400,15 @@ Quindi nel villaggio il velo **non si stende**. La pianta dichiara `lit: 1`, e:
 |---|---|
 | **Chi lo dichiara** | solo `generateMarket`. Nessuna mappa di combattimento ha `lit` |
 | **Chi lo legge** | il renderer, da quella bandiera — non dal tipo di mappa |
-| **Cosa cambia** | il velo scuro diventa quasi trasparente; gli aloni di luce (focolari, falo', mercanti, portale) restano |
+| **Cosa cambia** | il velo scuro diventa una **velatura leggera** (`VILL_OMBRA`, v2.2: 16% al centro, 56% agli angoli) invece del buio; gli aloni di luce (focolari, falo', mercanti, portale) restano |
 | **Il tasto L** | il cono torcia non rimette al buio il villaggio |
 
 *Se un giorno si aggiunge un'altra mappa illuminata, si aggiunge `lit` a quella pianta e basta. Ma le ondate
 non devono averlo: meta' della loro tensione e' il velo.*
+
+*v2.2 — la luce piena della v2.0.2 faceva sembrare il villaggio una stanza a giorno: adesso c'e' sopra una
+velatura leggera (`VILL_OMBRA: 0.26`). Resta tutto leggibile, che e il motivo per cui questa mappa e
+illuminata e non va perso. Con `0` si torna alla luce piena.*
 
 Tolto il velo sono servite altre due cose. La **tavolozza** del villaggio era tarata per essere guardata
 attraverso il velo (pavimento `#1c1813`, roccia `#050607`): senza, era una macchia marrone quasi nera —
@@ -427,6 +431,48 @@ server entrando in sosta e lo chiude uscendo.
 E **il timer non c'e' piu'**. In multiplayer la sosta si chiudeva da sola dopo 120 secondi: adesso si riparte
 solo quando qualcuno entra nel portale. Il villaggio e' un posto in cui si sta, non una schermata da
 sbrigare. In cambio, se uno resta fermo la partita aspetta — e' il prezzo, ed e' voluto.
+
+---
+
+## 🏠 LA SCHERMATA PRINCIPALE *(rifatta in v2.2)*
+
+Prima era un pannello solo, alto e stretto: dentro ci stavano il titolo, il nome, gli eroi, il pulsante e —
+**chiusa in un accordion che nessuno apre mai** — tutta la guida del gioco. Chi arrivava nuovo non sapeva
+niente, e chi ci tornava dopo un mese doveva ricordarsi da solo cosa fa il tasto E.
+
+| Pezzo | Dove sta adesso |
+|---|---|
+| **Il titolo** | fuori dal pannello, sullo **sfondo**, grande. E l'insegna del gioco, non una riga di un modulo |
+| **Colonna sinistra** | nome, stanza, scelta dell'eroe, ENTRA IN PARTITA, modalita di prova |
+| **Colonna destra** | la guida, **aperta**: comandi e le cinque cose che contano in una run |
+
+**Perche aperta e non in un accordion.** In una schermata di avvio un accordion e un modo elegante di non
+far leggere niente a nessuno: il pannello c'era gia da versioni, e chiuso non l'ha aperto mai nessuno.
+
+Ogni colonna **scorre per conto suo** (`max-height` + `overflow:auto`): il titolo resta sempre in cima, e su
+uno schermo basso non si perde ne il pulsante di sinistra ne la guida di destra. Sotto i **1080 px** le due
+colonne si **impilano** — e impilate tornano alte quanto il loro contenuto, se no il `flex:1 1 0` le
+schiaccerebbe a un centinaio di pixel.
+
+Vale **solo per la schermata principale**: la sala d'attesa e il menu di fine ondata restano com'erano.
+
+### I comandi, tutti
+
+Movimento, mira, sparo, **scatto**, le tre **pozioni** (1 2 3), le due **abilita attive** (Q ed E, coi
+livelli a cui si sbloccano), **L** (luce — che dalla v2.1.4 e acceso all'avvio e che nessuno sapeva
+esistesse), **M** (musica), **Invio** (chat), **T** (modalita di prova).
+
+*Il test li pretende uno per uno: se un domani si aggiunge un tasto e ci si dimentica di scriverlo qui, e li
+che ce lo si ricorda.*
+
+### Le cinque cose che contano
+
+Venti ondate e due boss col tempo obiettivo · le due vite · i **quattro modi separati di crescere** (XP →
+statistiche, livelli 3·6·9·12 → carte, 8·14 → abilita attive, monete → equipaggiamento) e la
+specializzazione al 15 · l'evoluzione delle armi · il villaggio fra un'ondata e l'altra.
+
+**Niente immagini**, testo e icone: una guida fatta di schermate invecchia alla prima modifica alla grafica,
+questa no.
 
 ---
 

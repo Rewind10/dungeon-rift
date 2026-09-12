@@ -2467,9 +2467,15 @@
         g.drawImage(this._veloCv, -M, -M, this.w + M * 2, this.h + M * 2);
         if (_sf > 0) g.filter = 'none';
       } else {
-        // il villaggio (v2.0.2): nessun velo che conti, solo un'ombreggiatura ai bordi
+        // IL VILLAGGIO. Niente campo visivo (v2.0.2: la mappa dichiara `lit`), ma nemmeno la luce piena:
+        // v2.2 — senza niente sopra sembrava una stanza a giorno, e il villaggio e' pur sempre scavato
+        // nella roccia. Una velatura leggera, uguale dappertutto e un po' piu' carica ai bordi. Resta
+        // tutto leggibile: e' il motivo per cui questa mappa e' illuminata, e non va perso.
+        const V = C.VILL_OMBRA == null ? 0.18 : C.VILL_OMBRA;
         const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68);
-        grA.addColorStop(0, 'rgba(6,8,14,0.0)'); grA.addColorStop(0.7, 'rgba(5,7,12,0.06)'); grA.addColorStop(1, 'rgba(3,5,10,0.20)');
+        grA.addColorStop(0, 'rgba(6,8,14,' + (V * 0.62).toFixed(3) + ')');
+        grA.addColorStop(0.7, 'rgba(5,7,12,' + (V * 1.10).toFixed(3) + ')');
+        grA.addColorStop(1, 'rgba(3,5,10,' + Math.min(1, V * 2.15).toFixed(3) + ')');
         g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h);
       }
       g.globalCompositeOperation = 'lighter';

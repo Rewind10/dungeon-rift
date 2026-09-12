@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.1.4 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.2.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.2 (la schermata principale, e il villaggio un po' piu' sottoterra)
+- **🏠 Il titolo esce dal pannello** e va sullo sfondo; sotto, **due colonne**: a sinistra si entra in
+  partita, a destra c'e' la guida **aperta**, senza accordion. Ogni colonna scorre per conto suo; sotto i
+  1080 px si impilano. Vale solo per la schermata principale.
+- **⌨️ E finalmente c'e' scritto cosa fanno i tasti** — tutti, **tasto L compreso**. Il test li pretende uno
+  per uno: se un domani se ne aggiunge uno e non lo si scrive, casca li'.
+- **🎯 Sotto, le cinque cose che contano** in una run: ondate e boss, le due vite, i quattro modi separati
+  di crescere, l'evoluzione delle armi, il villaggio. Niente immagini: una guida fatta di schermate
+  invecchia alla prima modifica alla grafica.
+- **🕯️ Il villaggio e' un po' piu' sottoterra**: una velatura leggera (`VILL_OMBRA: 0.26`) al posto della
+  luce piena della v2.0.2. Resta tutto leggibile — e' il motivo per cui quella mappa e' illuminata.
 
 ## 🆕 Novita v2.1.4 (la torcia parte accesa)
 - **🔦 Lo strato del tasto L e' acceso all'avvio.** Insieme al campo visivo della v2.1 e' l'illuminazione
