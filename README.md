@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.2.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.3.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.3 (il villaggio di notte, e la gente che ci cammina)
+- **🌑 Parecchio piu' scuro**: `VILL_OMBRA` da 0,26 a **0,55**. Non e' "meno visibile", e' un altro posto —
+  un paese sottoterra di notte, dove a far vedere sono i fuochi: i focolari delle case, il falo' della
+  piazza, gli aloni dei mercanti. Le botteghe si trovano seguendo la luce.
+- **🚶 Dieci girovaghi camminano per le strade**: due corsie per verso sulla via alta e sulla via bassa,
+  una sulla via maestra, due che **girano attorno al portale**, un paio che vanno e vengono dai vicoli.
+  Si fermano al capolinea, si guardano attorno, tornano indietro.
+- **🧮 Non si muovono: sono una funzione del tempo della partita.** Il server non manda niente, tutti li
+  vedono nello stesso punto, e chi entra a meta' sosta li trova dove devono essere. Zero banda, zero
+  sincronizzazione. Non hanno corpo solido: ci si passa attraverso, ed e' voluto.
+- **🏮 Ognuno si porta una lanterna**: col villaggio buio erano sagome nere. E' anche il motivo per cui le
+  strade si leggono — le percorre della gente con la luce in mano.
 
 ## 🆕 Novita v2.2 (la schermata principale, e il villaggio un po' piu' sottoterra)
 - **🏠 Il titolo esce dal pannello** e va sullo sfondo; sotto, **due colonne**: a sinistra si entra in

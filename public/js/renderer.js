@@ -1285,6 +1285,10 @@
       // Prima non si notava perche' il velo scuro copriva tutto; adesso che il villaggio e' illuminato
       // quell'angolo di viola stonava. Si riempie di roccia: fuori dal paese c'e' la montagna, non il vuoto.
       if (this.map.lit) { ctx.fillStyle = (this.theme && this.theme.wall) || '#15171c'; ctx.fillRect(0, 0, this.w, this.h); }
+      // v2.3 — le lanterne dei girovaghi si azzerano QUI, a ogni fotogramma, non quando si disegnano.
+      // Se si azzerassero solo la' dentro, uscendo dal villaggio l'elenco resterebbe pieno e in mezzo
+      // alla grotta si accenderebbero delle lanterne senza nessuno che le porta. Era gia' successo.
+      if (this._giroLuci) this._giroLuci.length = 0;
       const me = world.me; if (me) { this.cam.x += (me.x - this.cam.x) * Math.min(1, dt * 8); this.cam.y += (me.y - this.cam.y) * Math.min(1, dt * 8); }
       let sx = 0, sy = 0; if (this.shake > 0.1) { sx = MU.rand(-this.shake, this.shake); sy = MU.rand(-this.shake, this.shake); this.shake *= 0.86; }
       const camX = this.cam.x - this.w / 2 + sx, camY = this.cam.y - this.h / 2 + sy; ctx.save(); ctx.translate(-camX, -camY);
@@ -1336,7 +1340,21 @@
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
       if (this.map && this.map.village) { for (const n of this.map.village.npcs) { if (!n.shop) this._drawVendor(ctx, n); }
-        for (const e of (this.map.village.extras || [])) this._drawVendor(ctx, e, { noLabel: 1 }); }   // v1.75 — gente del villaggio  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
+        for (const e of (this.map.village.extras || [])) this._drawVendor(ctx, e, { noLabel: 1 });   // v1.75 — gente del villaggio  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
+        // v2.3 — e quelli che camminano. Il tempo e' quello della PARTITA, non quello del client: cosi'
+        // in cooperativa tutti li vedono nello stesso punto senza che il server mandi una riga.
+        { const gir = this.map.village.girovaghi || [], tt = (world.tick != null ? world.tick : this.time);
+          const luci = this._giroLuci || (this._giroLuci = []);
+          const P = this._giroP || (this._giroP = { x: 0, y: 0, face: 0, fermo: false, kind: 'patron', act: '' });
+          for (const g of gir) { this._rottaPunto(g, tt, P);
+            if (P.x < camX - 90 || P.y < camY - 90 || P.x > camX + this.w + 90 || P.y > camY + this.h + 90) continue;
+            P.act = P.fermo ? 'guarda' : '';
+            this._drawVendor(ctx, P, { noLabel: 1 });
+            // v2.3 — LA LANTERNA. Col villaggio buio (VILL_OMBRA a 0,55) chi cammina diventava una sagoma
+            // nera: la vita c'era e non si vedeva. Ognuno se la porta dietro, e la luce la fa la passata
+            // degli aloni piu' sotto — qui si segna solo dove sta. E' anche il motivo per cui adesso le
+            // strade si leggono: le percorre della gente con la luce in mano.
+            luci.push(P.x, P.y); } } }
       if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
       // v1.81 — LE RAGNATELE. Sono pavimento, non un effetto: si disegnano sotto a tutto, con i fili
@@ -1794,6 +1812,55 @@
       ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText('attraversa la faglia', f.x, f.y - R * 1.35 - 10);
       ctx.fillStyle = '#e2d0ff'; ctx.fillText('attraversa la faglia', f.x, f.y - R * 1.35 - 10);
       ctx.textAlign = 'left'; ctx.restore();
+    },
+    // ===================== v2.3 — I GIROVAGHI DEL VILLAGGIO =====================
+    // Camminano per le strade, e la loro posizione non e' uno stato che qualcuno aggiorna: e' una
+    // FUNZIONE del tempo della partita (`world.tick`, che arriva da server ed e' uguale per tutti).
+    // Quindi niente banda, niente codice di movimento sul server, e tutti li vedono nello stesso punto.
+    //
+    // Le rotte sono polilinee che seguono le strade (le fa la pianta, vedi mapgen): chi le cambia deve
+    // restare sulle strade, perche' qui non c'e' nessun controllo sui muri — non serve, se la rotta e'
+    // fatta bene, e costerebbe a ogni fotogramma.
+    _ROTTA_PAUSA: 1.6,   // secondi fermi a ogni capolinea, prima di tornare indietro
+    _rottaMisura(g) {
+      if (g._seg) return;
+      const p = g.pts, n = p.length, chiusa = !!g.anello;
+      const seg = [], fin = chiusa ? n : n - 1;
+      let tot = 0;
+      for (let i = 0; i < fin; i++) {
+        const a = p[i], b = p[(i + 1) % n];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        seg.push({ a, b, L, da: tot }); tot += L;
+      }
+      g._seg = seg; g._tot = tot || 1;
+    },
+    // dove sta il girovago `g` al tempo `t`, e verso dove guarda
+    _rottaPunto(g, t, out) {
+      this._rottaMisura(g);
+      const L = g._tot, v = g.vel || 60;
+      let d;
+      if (g.anello) {
+        d = (((t * v) / L + (g.fase || 0)) % 1) * L;              // anello: gira e basta
+      } else {
+        const T1 = L / v, P = this._ROTTA_PAUSA, ciclo = 2 * T1 + 2 * P;
+        let u = ((t / ciclo) + (g.fase || 0)) % 1; if (u < 0) u += 1;
+        const s = u * ciclo;
+        if (s < T1) d = s * v;                                     // andata
+        else if (s < T1 + P) d = L;                                // fermo al capolinea
+        else if (s < 2 * T1 + P) d = L - (s - T1 - P) * v;         // ritorno
+        else d = 0;                                                // fermo all'altro capo
+      }
+      if (d < 0) d = 0; else if (d > L) d = L;
+      const seg = g._seg;
+      let i = 0; while (i < seg.length - 1 && d > seg[i].da + seg[i].L) i++;
+      const S = seg[i], k = S.L > 0 ? (d - S.da) / S.L : 0;
+      out.x = S.a[0] + (S.b[0] - S.a[0]) * k;
+      out.y = S.a[1] + (S.b[1] - S.a[1]) * k;
+      out.face = Math.atan2(S.b[1] - S.a[1], S.b[0] - S.a[0]);
+      // fermo al capolinea: si guarda attorno invece di restare impalato verso il muro
+      out.fermo = !g.anello && (d <= 0.5 || d >= L - 0.5);
+      if (out.fermo) out.face += Math.sin(t * 0.7 + (g.fase || 0) * 9) * 0.8;
+      return out;
     },
     _drawVendor(ctx, n, opts) {
       const o = opts || {}, t = this.time, x = n.x, y = n.y;
@@ -2473,15 +2540,18 @@
         // tutto leggibile: e' il motivo per cui questa mappa e' illuminata, e non va perso.
         const V = C.VILL_OMBRA == null ? 0.18 : C.VILL_OMBRA;
         const grA = g.createRadialGradient(this.w / 2, this.h / 2, 80, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.68);
-        grA.addColorStop(0, 'rgba(6,8,14,' + (V * 0.62).toFixed(3) + ')');
-        grA.addColorStop(0.7, 'rgba(5,7,12,' + (V * 1.10).toFixed(3) + ')');
-        grA.addColorStop(1, 'rgba(3,5,10,' + Math.min(1, V * 2.15).toFixed(3) + ')');
+        // v2.3 — la velatura e' salita parecchio (0,26 -> 0,55) e la scala e' cambiata con lei: col vecchio
+        // rapporto (2,15x ai bordi) a questi valori gli angoli andavano a nero pieno e il villaggio si
+        // chiudeva. Adesso il centro vale V e i bordi al massimo 0,96: buio, ma mai cieco.
+        grA.addColorStop(0, 'rgba(6,8,14,' + V.toFixed(3) + ')');
+        grA.addColorStop(0.7, 'rgba(5,7,12,' + Math.min(0.97, V * 1.14).toFixed(3) + ')');
+        grA.addColorStop(1, 'rgba(3,5,10,' + Math.min(0.96, V * 1.55).toFixed(3) + ')');
         g.fillStyle = grA; g.fillRect(0, 0, this.w, this.h);
       }
       g.globalCompositeOperation = 'lighter';
       // LE LUCI VIVONO SOLO DENTRO LA VISUALE: una torcia dietro una roccia non deve illuminare la roccia
       if (_fov) { g.save(); g.beginPath(); for (const f of _fov) { const sx = f.x - camX, sy = f.y - camY; this._fovContorno(g, this._fovBuf, f.off, f.n, sx, sy, 1, 3); this._fovContorno(g, this._fovBuf, f.off, f.n, sx, sy, 1, 4); } g.clip(); }
-      const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      const light = (wx, wy, rad, color, a) => { const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();
     },

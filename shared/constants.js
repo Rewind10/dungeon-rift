@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.2.0',
+    VERSION: '2.3.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -70,7 +70,7 @@
     // stende), ma senza NIENTE sopra sembrava una stanza a giorno. Questa e' una velatura leggera, uguale
     // dappertutto e un po' piu' carica ai bordi: il villaggio resta tutto leggibile — e' il suo scopo —
     // ma torna a essere un posto sottoterra. 0 = illuminato a giorno come nella v2.0.2.
-    VILL_OMBRA: 0.26,
+    VILL_OMBRA: 0.55,
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

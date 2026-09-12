@@ -826,6 +826,16 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(/setItem\('dr_torcia'/.test(src2), 'ma il tasto L continua a ricordarsi la scelta');
   ok(/if \(this\.map\.lit\) return;/.test(src2), 'e nel villaggio lo strato non si applica comunque');
 
+  // --- 3e) v2.3 — LE LANTERNE DEI GIROVAGHI SI SPENGONO USCENDO DAL VILLAGGIO. L'elenco delle loro
+  //     posizioni si azzera a OGNI fotogramma, non quando si disegnano: se si azzerasse solo la' dentro,
+  //     in mezzo alla grotta resterebbero accese delle lanterne senza nessuno che le porta.
+  ok(/if \(this\._giroLuci\) this\._giroLuci\.length = 0;/.test(src2), 'le lanterne dei girovaghi si azzerano a ogni fotogramma');
+  {
+    const i1 = src2.indexOf('if (this._giroLuci) this._giroLuci.length = 0;');
+    const i2 = src2.indexOf('village.girovaghi');
+    ok(i1 > 0 && i2 > 0 && i1 < i2, 'e si azzerano PRIMA di ridisegnarli, non dopo');
+  }
+
   // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
   const MG2 = window.GAME.MapGen;
   ok(!!MG2.generateMarket(1).lit, 'il villaggio e illuminato (lit)');

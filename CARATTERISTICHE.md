@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.2.0`
+**Versione attuale:** `2.3.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -400,15 +400,18 @@ Quindi nel villaggio il velo **non si stende**. La pianta dichiara `lit: 1`, e:
 |---|---|
 | **Chi lo dichiara** | solo `generateMarket`. Nessuna mappa di combattimento ha `lit` |
 | **Chi lo legge** | il renderer, da quella bandiera — non dal tipo di mappa |
-| **Cosa cambia** | il velo scuro diventa una **velatura leggera** (`VILL_OMBRA`, v2.2: 16% al centro, 56% agli angoli) invece del buio; gli aloni di luce (focolari, falo', mercanti, portale) restano |
+| **Cosa cambia** | niente campo visivo ne ombre dai muri. Sopra resta una **velatura** (`VILL_OMBRA`, v2.3: **55%** al centro, 85% ai bordi) e gli aloni di luce — focolari, falo, mercanti, portale, lanterne dei girovaghi — la bucano |
 | **Il tasto L** | il cono torcia non rimette al buio il villaggio |
 
 *Se un giorno si aggiunge un'altra mappa illuminata, si aggiunge `lit` a quella pianta e basta. Ma le ondate
 non devono averlo: meta' della loro tensione e' il velo.*
 
-*v2.2 — la luce piena della v2.0.2 faceva sembrare il villaggio una stanza a giorno: adesso c'e' sopra una
-velatura leggera (`VILL_OMBRA: 0.26`). Resta tutto leggibile, che e il motivo per cui questa mappa e
-illuminata e non va perso. Con `0` si torna alla luce piena.*
+*v2.3 — la velatura e salita a **0,55**. Il villaggio non e piu una sala illuminata: e un paese sottoterra
+di notte, e a farlo vedere sono i fuochi. Le botteghe si trovano seguendo la luce, che e come si trovano le
+botteghe di notte. Con `VILL_OMBRA: 0` si torna alla luce piena della v2.0.2.*
+
+*Attenzione alla scala: col rapporto della v2.2 (2,15x ai bordi) a 0,55 gli angoli sarebbero andati a nero
+pieno. Adesso il centro vale `V` e i bordi si fermano a 0,96 — buio, ma mai cieco.*
 
 Tolto il velo sono servite altre due cose. La **tavolozza** del villaggio era tarata per essere guardata
 attraverso il velo (pavimento `#1c1813`, roccia `#050607`): senza, era una macchia marrone quasi nera —
@@ -419,6 +422,42 @@ montagna, non il vuoto.
 
 *(Nella v2.0.1 avevo provato la strada opposta — 57 torce a muro, bracieri e lanterne — e non funzionava:
 erano una tappezzeria di fiammelle messa li' a combattere un velo che bastava togliere. Rimosse.)*
+
+### 🚶 I girovaghi *(v2.3)*
+
+Gli abitanti della v2.0 stanno **fermi**, ognuno al suo posto con un mestiere in corso: davano vita alle
+stanze ma non alle strade, e un paese in cui nessuno cammina non e un paese. Adesso ci sono **dieci
+girovaghi** che percorrono le vie.
+
+| Dove | Chi |
+|---|---|
+| **Via alta** | due corsie in versi opposti, piu uno che fa un tratto corto |
+| **Via bassa** | due corsie, davanti alle case |
+| **Via maestra** | una sola corsia, quella di ponente |
+| **Piazza** | due che **girano in tondo attorno al portale** |
+| **I vicoli** | due che vanno e vengono dalla fucina e dalla gilda |
+
+**Non si muovono: sono una funzione del tempo.** Ognuno ha una rotta (una polilinea che segue le strade) e
+la sua posizione si calcola dal `tick` della partita. Tre conseguenze, tutte volute:
+
+- il **server non manda niente**: zero banda, zero codice di movimento;
+- **tutti i giocatori li vedono nello stesso punto**, perche il tempo della partita e lo stesso;
+- chi entra a meta sosta li trova dove devono essere, **senza nessuna sincronizzazione**.
+
+Camminano, si fermano al capolinea, si guardano attorno e tornano indietro; quelli dell'anello girano e
+basta.
+
+**Non hanno un corpo solido, e non e una dimenticanza.** Il corpo lo calcola il server dalle posizioni, e
+qui le posizioni non esistono — esiste una formula. Un corpo fermo sotto una persona che cammina sarebbe
+peggio di nessun corpo: ci sbatteresti contro il vuoto. Sono scenografia, e ci si passa attraverso; i
+mercanti e la gente ferma il corpo ce l'hanno.
+
+**La lanterna.** Col villaggio buio (v2.3) chi cammina diventava una sagoma nera: la vita c'era e non si
+vedeva. Ognuno se la porta dietro, ed e anche il motivo per cui le strade si leggono.
+
+*Se un domani si aggiunge una rotta: deve stare sulle strade. Li dentro non c'e nessun controllo sui muri —
+non serve, se la rotta e fatta bene, e costerebbe a ogni fotogramma. Il test lo verifica campionando ogni
+12 px.*
 
 ### 🌀 Il portale, e niente timer
 

@@ -1168,8 +1168,45 @@
           { x: 43.6, y: 28, kind: 'patron', face: Math.PI, act: 'cammina' },
           { x: 35.4, y: 14.2, kind: 'patron', face: 1.4 },
         ].concat(abitanti).map(e => ({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2, kind: e.kind, seated: e.seated || 0, face: e.face || 0, act: e.act || '', name: '', sub: '' }));
+      // ===================== v2.3 — I GIROVAGHI =====================
+      // Gli `extras` di sopra sono gente FERMA: ognuno al suo posto, con un mestiere in corso. Dava vita
+      // alle stanze ma non alle strade, e un paese in cui nessuno cammina non e' un paese.
+      //
+      // Questi camminano. Ognuno ha una ROTTA — una polilinea che segue le strade, quindi per costruzione
+      // non attraversa mai un muro — e la sua posizione e' una FUNZIONE DEL TEMPO DELLA PARTITA, non uno
+      // stato che qualcuno aggiorna. Tre conseguenze, tutte volute:
+      //   · il server non manda niente: zero banda, zero codice di movimento;
+      //   · tutti i giocatori li vedono nello stesso punto, perche' il tempo della partita e' lo stesso;
+      //   · se uno entra a meta' sosta li trova dove devono essere, senza sincronizzazioni.
+      //
+      // NON hanno un corpo solido, e non e' una dimenticanza: il corpo lo calcola il server dalle
+      // posizioni, che qui non esistono: esiste una formula. Un corpo fermo sotto una persona che cammina
+      // sarebbe peggio di nessun corpo — ci sbatteresti contro il vuoto. Sono scenografia, e ci si passa
+      // attraverso; i mercanti e la gente ferma il corpo ce l'hanno, come prima.
+      const R = (pts, vel, fase, act, anello) => ({
+        pts: pts.map(p => [p[0] * TILE + TILE / 2, p[1] * TILE + TILE / 2]),
+        vel: vel * TILE, fase, kind: 'patron', act: act || '', anello: anello ? 1 : 0,
+      });
+      const girovaghi = [
+        // la VIA ALTA, due corsie in versi opposti: e' la strada delle botteghe, la piu' battuta
+        R([[6, 13.6], [50, 13.6]], 1.15, 0.00, 'cammina'),
+        R([[50, 14.4], [6, 14.4]], 0.95, 0.35, 'cammina'),
+        R([[14, 14.4], [38, 14.4]], 1.30, 0.62, 'cammina'),
+        // la VIA BASSA, davanti alle case
+        R([[7, 27.6], [49, 27.6]], 1.05, 0.18, 'cammina'),
+        R([[49, 28.4], [7, 28.4]], 1.22, 0.74, 'cammina'),
+        // la VIA MAESTRA: solo la corsia di ponente. Quella di levante passerebbe dentro il portale,
+        // e uno che entra nella faglia e ne esce come se niente fosse rovina il posto.
+        R([[25.6, 14], [25.6, 28]], 1.00, 0.50, 'cammina'),
+        // e il giro della PIAZZA, attorno al portale: un anello, non un avanti e indietro
+        R([[23, 16], [31, 16], [31, 23], [23, 23]], 0.85, 0.00, 'cammina', 1),
+        R([[31, 23], [23, 23], [23, 16], [31, 16]], 0.70, 0.30, 'cammina', 1),
+        // due che vanno e vengono dalle botteghe: il vicolo della fucina e quello della gilda
+        R([[18.5, 19.5], [20.5, 19.5]], 0.55, 0.10, 'cammina'),
+        R([[34.5, 19.5], [36.5, 19.5]], 0.50, 0.66, 'cammina'),
+      ];
         const sm = npcs.find(n => n.shop) || npcs[0];
-      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
+      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, girovaghi, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
     })();
 
     return {

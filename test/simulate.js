@@ -4632,6 +4632,41 @@ function testV200() {
     impronte.add(m.props.filter(p => dentro(p, r)).map(p => p.type).sort().join(','));
   assert(impronte.size >= 4, 'le case non sono tutte uguali (' + impronte.size + ' arredamenti diversi su ' + V.rooms.filter(q => q.kind === 'casa').length + ')');
 
+  // --- 3b) v2.3 — I GIROVAGHI: gente che CAMMINA per le strade. La loro posizione non e' uno stato ma
+  //     una funzione del tempo della partita, quindi non c'e' niente da sincronizzare — ma le rotte
+  //     devono stare sulle strade, perche' nessuno controlla i muri a ogni fotogramma.
+  {
+    const gir = m.village.girovaghi || [];
+    assert(gir.length >= 8, 'per le strade cammina della gente (' + gir.length + ' girovaghi)');
+    assert(gir.some(g => g.anello), 'e qualcuno gira in tondo invece di fare avanti e indietro');
+    let fuori = 0, corti = 0;
+    for (const g of gir) {
+      const p = g.pts, n = p.length, fin = g.anello ? n : n - 1;
+      if (g.vel <= 0) corti++;
+      for (let i = 0; i < fin; i++) {
+        const a = p[i], b = p[(i + 1) % n];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (L < T) corti++;
+        const passi = Math.ceil(L / 12);
+        for (let k = 0; k <= passi; k++) {
+          const x = a[0] + (b[0] - a[0]) * k / passi, y = a[1] + (b[1] - a[1]) * k / passi;
+          if (m.grid[((y / T) | 0) * m.w + ((x / T) | 0)] === C.T_WALL) { fuori++; break; }
+        }
+      }
+    }
+    assert(fuori === 0, 'e nessuna rotta attraversa un muro (' + fuori + ' tratti dentro la roccia)');
+    assert(corti === 0, 'e nessuna rotta e degenere: tutti i tratti sono lunghi almeno una tessera');
+    // niente corpo solido: il corpo lo calcola il server dalle posizioni, e qui le posizioni non
+    // esistono — esiste una formula. Un corpo fermo sotto chi cammina sarebbe peggio di nessun corpo.
+    assert(m.solids.filter(s2 => s2.chi).length === m.village.npcs.length + m.village.extras.length,
+      'i girovaghi non hanno un corpo: ci si passa attraverso, ed e voluto');
+    // e la rotta di ponente della via maestra non passa dentro il portale
+    const pw = { x: m.portale.x * T + T / 2, y: m.portale.y * T + T / 2 };
+    let addosso = 0;
+    for (const g of gir) for (const q of g.pts) if (MU.dist(q[0], q[1], pw.x, pw.y) < (C.FAGLIA_RAGGIO || 46) + 30) addosso++;
+    assert(addosso === 0, 'e nessuno passa dentro il portale (' + addosso + '): uno che entra nella faglia e ne esce rovina il posto');
+  }
+
   // --- 4) LA GENTE FA QUALCOSA, e nessuno sta dentro la roccia ---
   const inWall = (o) => m.grid[((o.y / T) | 0) * m.w + ((o.x / T) | 0)] === C.T_WALL;
   assert(!m.village.extras.some(inWall) && !m.village.npcs.some(inWall) && !m.props.some(inWall), 'nessuno e niente dentro la roccia');

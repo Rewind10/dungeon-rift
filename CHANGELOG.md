@@ -2,6 +2,62 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.3.0] — 2026-09-12 · "Il villaggio di notte, e la gente che ci cammina"
+
+#### 🌑 Parecchio piu' scuro
+`VILL_OMBRA` da **0,26 a 0,55**: il centro dello schermo e' velato al 55%, i bordi all'85%. E la scala e'
+cambiata con lui — col vecchio rapporto (2,15x ai bordi) a questi valori gli angoli andavano a **nero
+pieno** e il villaggio si chiudeva; adesso il centro vale `V` e i bordi si fermano a 0,96: buio, ma mai
+cieco.
+
+Il risultato non e' "meno visibile": e' **un altro posto**. Il villaggio non e' piu' una sala illuminata,
+e' un paese sottoterra di notte, e a farlo vedere sono i fuochi — i sette focolari delle case, il falo'
+della piazza, gli aloni dei mercanti. Le botteghe si trovano seguendo la luce, che e' come si trovano le
+botteghe di notte.
+
+#### 🚶 E adesso ci cammina della gente
+Gli abitanti della v2.0 stavano **fermi**, ognuno al suo posto con un mestiere in corso: davano vita alle
+stanze ma non alle strade, e un paese in cui nessuno cammina non e' un paese. Adesso ci sono **dieci
+girovaghi** che percorrono le vie: due corsie in versi opposti sulla via alta, due sulla via bassa, una
+sulla via maestra, due che **girano in tondo attorno al portale**, e un paio che vanno e vengono dai vicoli
+delle botteghe.
+
+**Non si muovono: sono una funzione del tempo.** Ognuno ha una rotta — una polilinea che segue le strade —
+e la sua posizione si calcola dal `tick` della partita. Tre conseguenze, tutte volute:
+
+- il **server non manda niente**: zero banda, zero codice di movimento;
+- **tutti i giocatori li vedono nello stesso punto**, perche' il tempo della partita e' lo stesso per tutti;
+- chi entra a meta' sosta li trova dove devono essere, **senza nessuna sincronizzazione**.
+
+Camminano, si fermano al capolinea, si guardano attorno e tornano indietro. Quelli dell'anello girano e
+basta.
+
+**Non hanno un corpo solido, e non e' una dimenticanza**: il corpo lo calcola il server dalle posizioni, e
+qui le posizioni non esistono — esiste una formula. Un corpo fermo sotto una persona che cammina sarebbe
+peggio di nessun corpo: ci sbatteresti contro il vuoto. Sono scenografia, e ci si passa attraverso; i
+mercanti e la gente ferma il corpo ce l'hanno come prima.
+
+#### 🏮 La lanterna
+Col villaggio a 0,55 chi camminava diventava una **sagoma nera**: la vita c'era e non si vedeva. Ognuno
+adesso si porta dietro una lanterna, ed e' anche il motivo per cui le strade si leggono — le percorre della
+gente con la luce in mano. Guardare il paese dall'alto e vedere le lucine muoversi per le vie e' meta' del
+perche' questa versione esiste.
+
+#### 🐞 E un difetto introdotto e chiuso subito
+Le posizioni delle lanterne si azzeravano **quando si disegnavano i girovaghi**, cioe' solo nel villaggio:
+uscendo, l'elenco restava pieno e in mezzo alla grotta si accendevano **lanterne senza nessuno che le
+porta**. Adesso si azzerano a ogni fotogramma, prima di ridisegnarle — e il test del client pretende
+proprio quest'ordine, non solo che la riga esista.
+
+#### 🧪 Test
+Le rotte dei girovaghi sono verificate: **nessuna attraversa un muro** (si campiona ogni 12 px lungo ogni
+tratto), nessuna e' degenere, nessuno passa **dentro il portale** (uno che entra nella faglia e ne esce come
+se niente fosse rovina il posto), e i girovaghi **non compaiono fra i corpi solidi**. **2107 test, 0
+falliti.**
+
+**Verificato anche cio' che non ho toccato**: l'ondata 7 in partita vera ha la sua torcia, le sue ombre e
+nessuna lanterna fantasma.
+
 ### [2.2.0] — 2026-09-12 · "La schermata principale, e il villaggio un po' piu' sottoterra"
 
 #### 🏠 Il titolo esce dal pannello, e la guida si apre
