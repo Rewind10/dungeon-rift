@@ -24,6 +24,7 @@
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
     exitWave() { this.send({ t: C.MSG.EXIT_WAVE }); },   // v1.78 — pulsante EXIT sulla mappa ripulita
     goVillage() { this.send({ t: C.MSG.GO_VILLAGE }); },  // v1.79 — sezione Villaggio del menu di fine ondata
+    storiaAvanti(salta) { this.send({ t: C.MSG.STORIA_AVANTI, salta: salta ? 1 : 0 }); },  // v2.7 — la riga dopo, o via tutto
     setHero(h) { this.send({ t: 'sethero', hero: h }); },
     chat(text) { this.send({ t: C.MSG.CHAT, text }); },
     // v1.68 — SNAPSHOT MAGRO: il server manda la parte immutabile di mostri e giocatori (tipo, PV massimi,

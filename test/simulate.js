@@ -1,6 +1,22 @@
 /* simulate.js — test automatici headless (v1.13: ridimensionamento leggero (visivo 1.45x / collisione 1.08x), fix mercante nero sostitutivo; + storico) */
 'use strict';
 const { Room } = require('../server/Room.js');
+// ============================================================================================
+// v2.7 — LE PROVE PARTONO DALL'ONDATA 1, NON DAL RISVEGLIO
+// ============================================================================================
+// Dalla v2.7 una partita vera comincia col prologo: ci si sveglia in una cella, si attraversa una
+// faglia, si arriva al villaggio e si parla con lo sciamano. Giusto per il gioco, inutile per queste
+// prove: qui si fanno partire una cinquantina di partite per misurare ondate, bilanciamento,
+// collisioni e NaN, e farle passare tutte dal prologo vorrebbe dire provare cinquanta volte il
+// prologo e zero volte quello che si voleva provare.
+//
+// Quindi startGame() qui dentro salta la storia. Sta in UN posto solo, e' dichiarato, e non tocca il
+// gioco: il gioco chiama startGame() senza il secondo argomento e il prologo c'e'. La storia ha i suoi
+// test (TEST 68), e quelli usano `avviaConStoria` qui sotto, che e' la funzione vera.
+const _startGame = Room.prototype.startGame;
+Room.prototype.startGame = function (da) { return _startGame.call(this, da, true); };
+const avviaConStoria = (room, da) => _startGame.call(room, da);
+
 const C = require('../shared/constants.js');
 const MU = require('../shared/mathutils.js');
 const Heroes = require('../shared/heroes.js');
@@ -4814,6 +4830,138 @@ function testV200() {
   ok('novita v2.0 verificate');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// TEST 68 — v2.7: LA STORIA (il risveglio, il villaggio, lo sciamano)
+// ============================================================================================
+// Questo e' l'unico test che fa partire una partita VERA, col prologo. Tutti gli altri lo saltano
+// (vedi la nota in cima al file), quindi se il giro della storia si rompe casca solo qui: e' per
+// questo che qui si prova la CATENA INTERA, non i pezzi.
+function testStoria() {
+  console.log('\n[TEST 68] v2.7 — la storia: ci si sveglia, si attraversa, si parla, si scende');
+  const Storia = require('../shared/storia.js');
+  const MapGen = require('../shared/mapgen.js');
+  const T = C.TILE, conn = { send() {} };
+
+  // --- 1) LA CELLA. Piccola, senza nemici, senza casse: c'e' una faglia e basta ---
+  const pm = MapGen.generatePrologo(7);
+  assert(pm.w <= 26 && pm.h <= 20, 'la cella e piccola (' + pm.w + 'x' + pm.h + ')');
+  assert(pm.prologo === 1 && pm.lit === 1, 'si dichiara prologo, e il buio lo fanno le sorgenti');
+  assert(pm.enemySpawns.length === 0 && pm.crateSpawns.length === 0, 'niente nemici e niente casse: non c e altro da fare');
+  assert(!!pm.portale && !!pm.muri, 'ha la faglia e il tipo dei suoi muri');
+  assert(Array.from(pm.muri).every(t => t === 0), 'e i muri sono tutti roccia di grotta: non e un edificio');
+  // ci si cammina: dalla partenza si raggiunge la faglia
+  {
+    const isFloor = (x, y) => pm.grid[y * pm.w + x] !== C.T_WALL;
+    const seen = new Set(), q = [[(pm.spawn.x / T) | 0, (pm.spawn.y / T) | 0]];
+    while (q.length) { const [x, y] = q.pop(), k = y * pm.w + x;
+      if (seen.has(k) || x < 0 || y < 0 || x >= pm.w || y >= pm.h || !isFloor(x, y)) continue;
+      seen.add(k); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+    assert(seen.has(Math.floor(pm.portale.y) * pm.w + Math.floor(pm.portale.x)), 'dal giaciglio si arriva alla faglia a piedi');
+    assert(seen.size > 100, 'e c e spazio per girarci attorno (' + seen.size + ' tessere)');
+  }
+
+  // --- 2) IL GIRO INTERO: risveglio -> villaggio -> sciamano -> ondata 1 ---
+  const r = new Room('sto1'); const p = r.addPlayer('a', conn, 'A', 'guerriero');
+  avviaConStoria(r);
+  assert(r.phase === C.PHASE_PROLOGO, 'la partita comincia col risveglio, non con un ondata');
+  assert(r.wave === 0, 'e il risveglio non consuma un numero d ondata');
+  assert(!!r.faglia, 'la faglia e aperta');
+  assert(r.storia && r.storia.scena === 'prologo' && r.storia.riga === 0, 'e la voce ha cominciato a parlare');
+  assert(r.missione === 'faglia', 'la missione dice cosa fare');
+  assert(r.monsters.length === 0 && r.crates.length === 0, 'nella cella non c e niente da combattere ne da aprire');
+  // si scorre il dialogo
+  const nP = Storia.prologo.righe.length;
+  for (let i = 0; i < nP; i++) r.avanzaStoria('a', false);
+  assert(r.storia === null, 'finite le righe, la voce tace');
+  // si attraversa
+  p.x = r.faglia.x; p.y = r.faglia.y; r.update(1 / C.TICK_RATE);
+  assert(r.phase === C.PHASE_MARKET, 'attraversando si arriva al villaggio');
+  assert(r.wave === 0, 'che e ancora l ondata zero: non si e combattuto niente');
+  assert(r.missione === 'sciamano', 'e la missione cambia: trova lo sciamano');
+  assert(r.storia && r.storia.scena === 'arrivo', 'con due righe di benvenuto');
+  for (let i = 0; i < Storia.arrivo.righe.length; i++) r.avanzaStoria('a', false);
+
+  // --- 3) LO SCIAMANO: parla avvicinandosi, e una volta sola ---
+  const sh = r.map.village.npcs.find(n => n.kind === 'sciamano');
+  assert(!!sh, 'nel villaggio c e lo sciamano');
+  p.x = sh.x + 40; p.y = sh.y; r.update(1 / C.TICK_RATE);
+  assert(r.storia && r.storia.scena === 'sciamano', 'avvicinandosi parte il discorso');
+  assert(r.storia.n === Storia.sciamano.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
+  // il discorso nomina il boss e dice quante ondate: e' il suo mestiere
+  const tutto = Storia.sciamano.righe.join(' ');
+  assert(tutto.indexOf('AZ') >= 0, 'e nomina il boss');
+  assert(/[Vv]enti/.test(tutto), 'e dice quante volte si scende');
+  // il numero di righe si prende PRIMA del giro: all'ultima `storia` diventa null, e una condizione
+  // che rilegge r.storia.n a ogni giro esplode sull'ultima iterazione.
+  { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
+  assert(r.storia === null, 'finito il discorso');
+  assert(r.missione === 'discesa', 'e la missione diventa la discesa');
+  // tornandoci non ricomincia da capo
+  p._nearShm = false; p.x = sh.x + 400; r.update(1 / C.TICK_RATE);
+  p.x = sh.x + 40; r.update(1 / C.TICK_RATE);
+  assert(r.storia === null, 'e tornandoci non lo ripete: una storia detta due volte non e una storia');
+
+  // --- 4) DAL VILLAGGIO D'APERTURA SI SCENDE, non si torna a un menu che non c'e' ---
+  p.x = r.faglia.x; p.y = r.faglia.y; r.update(1 / C.TICK_RATE);
+  assert(r.phase === C.PHASE_COMBAT || r.phase === C.PHASE_BOSS, 'dalla faglia del villaggio si va in campo');
+  assert(r.wave === 1, 'all ondata 1 (' + r.wave + ')');
+  assert(r.pending > 0, 'e i nemici stanno arrivando (' + r.pending + ')');
+
+  // --- 5) SALTARE SALTA LA SCENA, NON LA PARTITA ---
+  // E' l'errore facile: "salta" che salta anche quello che doveva succedere dopo, e ci si ritrova
+  // senza missione o senza villaggio. Qui si rifa' il giro premendo sempre Esc.
+  const r2 = new Room('sto2'); const p2 = r2.addPlayer('a', conn, 'A', 'ladro');
+  avviaConStoria(r2);
+  r2.avanzaStoria('a', true);
+  assert(r2.storia === null && r2.phase === C.PHASE_PROLOGO, 'saltando, la voce tace ma si resta nella cella');
+  assert(r2.missione === 'faglia', 'e la missione resta');
+  p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
+  assert(r2.phase === C.PHASE_MARKET && r2.missione === 'sciamano', 'si arriva al villaggio lo stesso');
+  r2.avanzaStoria('a', true);
+  const sh2 = r2.map.village.npcs.find(n => n.kind === 'sciamano');
+  p2.x = sh2.x + 40; p2.y = sh2.y; r2.update(1 / C.TICK_RATE);
+  r2.avanzaStoria('a', true);
+  assert(r2.missione === 'discesa', 'e saltando il discorso la missione cambia lo stesso');
+  p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
+  assert(r2.wave === 1, 'e si scende lo stesso all ondata 1');
+
+  // --- 6) IN DUE: il dialogo lo fa scorrere CHI COMANDA ---
+  const r3 = new Room('sto3'); r3.addPlayer('a', conn, 'A', 'guerriero'); r3.addPlayer('b', conn, 'B', 'mago');
+  avviaConStoria(r3);
+  assert(r3.capo && r3.capo.id === 'a', 'comanda chi e arrivato per primo');
+  const riga0 = r3.storia.riga;
+  r3.avanzaStoria('b', false);
+  assert(r3.storia.riga === riga0, 'il secondo preme e non succede niente: sta leggendo');
+  r3.avanzaStoria('a', false);
+  assert(r3.storia.riga === riga0 + 1, 'il capo preme e la riga scorre');
+  // e se il capo se ne va, comanda il successivo
+  r3.players.get('a').connected = false;
+  assert(r3.capo && r3.capo.id === 'b', 'se il capo si disconnette comanda il successivo');
+
+  // --- 7) LA RIGA INVECCHIA DA SOLA: chi non preme niente non resta bloccato ---
+  const r4 = new Room('sto4'); r4.addPlayer('a', conn, 'A', 'ladro');
+  avviaConStoria(r4);
+  const r0 = r4.storia.riga;
+  for (let i = 0; i < Math.ceil((C.STORIA_RIGA + 0.5) * C.TICK_RATE); i++) r4.update(1 / C.TICK_RATE);
+  assert(!r4.storia || r4.storia.riga > r0, 'senza premere niente la riga passa da sola');
+
+  // --- 8) LE PROVE non passano dal prologo: chi sceglie un ondata dal pannello vuole quell ondata ---
+  const r5 = new Room('sto5'); r5.addPlayer('a', conn, 'A', 'mago');
+  avviaConStoria(r5, 7);
+  assert(r5.phase !== C.PHASE_PROLOGO && r5.wave === 7, 'la prova parte dall ondata scelta (' + r5.wave + ')');
+
+  // --- 9) IL TESTO: non e' codice, ma ha comunque delle regole ---
+  assert(Storia.prologo.chi === '', 'la voce del risveglio non ha un nome: e il punto della scena');
+  assert(Storia.sciamano.chi === 'Sciamano', 'lo sciamano invece si presenta');
+  for (const sc of ['prologo', 'arrivo', 'sciamano', 'finale'])
+    assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
+  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.sciamano.righe).filter(t => t.length > 110);
+  assert(lunghe.length === 0, 'e nessuna riga e un paragrafo: si leggono a schermo, non su carta (' + lunghe.length + ' troppo lunghe)');
+  for (const k in Storia.missioni) { const m = Storia.missioni[k];
+    assert(m.t && m.t.length <= 34, 'la missione ' + k + ' sta nel riquadro (' + m.t.length + ' caratteri)'); }
+  ok('la storia v2.7 verificata');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

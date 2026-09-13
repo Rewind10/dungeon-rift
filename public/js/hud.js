@@ -98,7 +98,15 @@
       }
     },
     updateTop(snap, me) {
-      $('waveNum').textContent = snap.wave + '/' + window.GAME.Constants.FINAL_WAVE; $('ecNum').textContent = snap.mcount + (snap.pend > 0 ? '+' : '');
+      // v2.7 — NELLA CELLA NON C'E' NESSUNA ONDATA. "ONDATA 0/20 · NEMICI 0" in cima al risveglio era
+      // la cosa piu' stonata della scena: dice al giocatore che sta giocando a un gioco a ondate prima
+      // ancora che il gioco gli abbia detto dov'e'. Li' la barra sparisce e basta.
+      const tb = $('topbar');
+      if (tb) { if (snap.phase === 'prologo') { tb.classList.add('hidden'); return; } tb.classList.remove('hidden'); }
+      // v2.7 — "ONDATA 0/20" non vuol dire niente: l'ondata 0 e' il villaggio d'apertura, quello in cui
+      // si arriva dalla cella e non si e' ancora combattuto. Un trattino dice la stessa cosa senza mentire.
+      $('waveNum').textContent = snap.wave > 0 ? (snap.wave + '/' + window.GAME.Constants.FINAL_WAVE) : '\u2014';
+      $('ecNum').textContent = snap.mcount + (snap.pend > 0 ? '+' : '');
       const ph = { combat: 'COMBATTIMENTO', boss: '⚠ BOSS', shop: 'POTENZIAMENTI', lobby: 'LOBBY', gameover: 'SCONFITTA', victory: 'VITTORIA', cleared: '✔ MAPPA RIPULITA' };
       let phase = ph[snap.phase] || '';
       $('phaseInfo').textContent = phase;
@@ -813,6 +821,66 @@
       $('endStats').innerHTML = html; scr.classList.remove('hidden');
     },
     hideEnd() { $('endScreen').classList.add('hidden'); },
+
+    // ===== v2.7 — LA STORIA: sottotitoli e missione ==============================================
+    // Il testo compare UNA LETTERA ALLA VOLTA. Non e' un vezzo: una riga che appare tutta insieme si
+    // legge in un colpo d'occhio e si preme subito, e la voce non ha il tempo di essere una voce. Le
+    // lettere che arrivano danno il ritmo del parlato, ed e' quello che fa la differenza fra un
+    // dialogo e una didascalia.
+    //
+    // Chi ha gia' letto non aspetta: il primo Spazio FINISCE la riga invece di passare alla
+    // successiva. E' la convenzione di tutti i giochi che hanno dialoghi, e chi la conosce la usa
+    // senza pensarci.
+    VEL: 34,                                    // millisecondi per lettera
+    _dial: null,
+    // riga: l'indice che comanda il server · testo: quello che c'e' da scrivere
+    mostraDialogo(chi, testo, conSuggerimento) {
+      const box = $('dial'); if (!box) return;
+      $('dialChi').textContent = chi || '';
+      const h = $('dialHint'); if (h) h.style.display = conSuggerimento === false ? 'none' : '';
+      box.classList.remove('hidden');
+      this._dial = { testo: testo || '', i: 0, t0: performance.now(), finita: false };
+      this._dialDisegna();
+      if (!this._dialRaf) this._dialRaf = requestAnimationFrame(() => this._dialTick());
+    },
+    _dialTick() {
+      this._dialRaf = 0;
+      const d = this._dial; if (!d) return;
+      if (!d.finita) {
+        const quante = Math.floor((performance.now() - d.t0) / this.VEL);
+        if (quante !== d.i) { d.i = Math.min(quante, d.testo.length); this._dialDisegna(); }
+        if (d.i >= d.testo.length) d.finita = true;
+      }
+      if (!d.finita) this._dialRaf = requestAnimationFrame(() => this._dialTick());
+    },
+    _dialDisegna() {
+      const d = this._dial, e = $('dialTxt'); if (!d || !e) return;
+      const visto = d.testo.slice(0, d.i);
+      // il testo si scrive dentro textContent, non innerHTML: la storia e' testo e basta, e passarla
+      // per innerHTML vorrebbe dire che un domani una riga con una parentesi angolata sparisce.
+      e.textContent = visto;
+      if (d.i < d.testo.length) { const c = document.createElement('span'); c.className = 'cur'; c.textContent = '\u258c'; e.appendChild(c); }
+    },
+    // il primo Spazio finisce la riga, il secondo passa oltre. Torna true se ha solo finito la riga.
+    dialogoFretta() {
+      const d = this._dial; if (!d) return false;
+      if (d.finita) return false;
+      d.i = d.testo.length; d.finita = true; this._dialDisegna(); return true;
+    },
+    nascondiDialogo() { const b = $('dial'); if (b) b.classList.add('hidden'); this._dial = null;
+      if (this._dialRaf) { cancelAnimationFrame(this._dialRaf); this._dialRaf = 0; } },
+
+    // la MISSIONE. `null` la nasconde: non c'e' uno stato "nessuna missione" da disegnare.
+    missione(m) {
+      const b = $('quest'); if (!b) return;
+      if (!m) { b.classList.add('hidden'); this._quest = null; return; }
+      if (this._quest === m.t) { b.classList.remove('hidden'); return; }
+      this._quest = m.t;
+      $('questT').textContent = m.t; $('questD').textContent = m.d || '';
+      b.classList.remove('hidden');
+      // si rianima solo quando CAMBIA: una missione che pulsa a ogni fotogramma e' un fastidio
+      b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+    },
   };
   window.HUD = HUD;
 })();

@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.6.0`
+**Versione attuale:** `2.7.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -324,6 +324,102 @@ verra' aggiunta domani.
 | ❤️ **Pozione di Salute** a terra | va raccolta |
 | 🔥 **Combo di 40** | +25% PV: va costruita una catena di quaranta uccisioni |
 | ⏳ **Ultima Occasione** (carta divina) | non cura: invece di cadere, risorgi a meta' vita. Due volte |
+
+---
+
+## 📖 LA STORIA *(v2.7)*
+
+Fino alla v2.6 la partita cominciava con l'ondata 1: apparivi in una grotta e ti venivano addosso. Il boss
+dell'ondata 20 — AZ'GAROTH — esisteva da sempre e **non lo nominava nessuno**. Quello era il buco.
+
+Adesso la partita comincia con uno che **si sveglia**.
+
+### 🕯️ La cella del risveglio
+
+Fase nuova (`PHASE_PROLOGO`), mappa nuova (`generatePrologo`): **22x16**, una sala sola, quasi nera, con
+una **faglia viola** in mezzo e un braciere mezzo spento accanto al giaciglio.
+
+**Piccola e senza svolte, apposta.** Se ci fosse un corridoio uno lo esplorerebbe, e il primo minuto di
+gioco diventerebbe una caccia al tesoro al buio. Niente nemici, niente casse, niente mercanti: c'e' una
+faglia, e non c'e' nient'altro da fare che andarci.
+
+Dichiara `lit` come il villaggio — che non vuol dire "illuminata" ma *il buio lo fanno le **sorgenti**
+invece del campo visivo*. Di sorgenti ce ne sono due: il braciere e la faglia. E la barra in cima sparisce:
+"ONDATA 0/20 · NEMICI 0" sopra il risveglio dice al giocatore che sta giocando a un gioco a ondate prima
+ancora che il gioco gli abbia detto dov'e'.
+
+### 🗣️ Il registro: secco
+
+Frasi corte, nessuna spiegazione. Chi parla sa piu' di quello che dice e non ha nessuna intenzione di dirlo
+tutto. Niente *«o valoroso eroe»*, niente profezie recitate, niente aggettivi in fila.
+
+> *«Sei sveglio.»* · *«Non chiedere dove. Non te lo direi.»* · *«Sei sceso da solo. Nessuno scende da
+> solo.»* · *«In mezzo alla sala c'e' una faglia. La vedi.»* · *«Attraversala.»* · *«Quelli prima di te
+> sono rimasti a guardarla.»*
+
+**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' lo sciamano, e il
+giocatore lo scopre solo quando gli parla — *«Ti ho parlato mentre dormivi. Non lo ricordi: e' normale.»*
+
+Se uno gira invece di entrare, la voce insiste **una volta sola** e poi tace: insistere la trasformerebbe
+in un tutorial.
+
+### 🧿 Lo sciamano
+
+Si arriva al villaggio all'**ondata 0** con la missione in evidenza. Avvicinandosi allo sciamano parte il
+discorso — ed e' li' che il gioco dice di cosa parla: sotto c'e' una cosa che non dorme, si chiama
+**AZ'GAROTH**, **venti volte** la roccia si aprira' e ogni volta si scende piu' in fondo. *«Noi ci abbiamo
+provato. Siamo ancora qui, quindi hai capito com'e' andata.»*
+
+Dopo, la missione diventa **"Scendi fino ad AZ'GAROTH"**, e dal villaggio d'apertura la faglia porta
+**all'ondata 1** invece che al menu di fine ondata: all'ondata 0 non c'e' nessun menu a cui tornare.
+
+All'inizio dell'ondata 20 una riga sola chiude il cerchio: *«E' sotto di te. Non ti sta aspettando: non sa
+che esisti.»*
+
+### 💬 I sottotitoli si scrivono
+
+Una striscia in basso, le lettere **una alla volta** (34 ms l'una). **Non e' un vezzo**: una riga che
+appare tutta insieme si legge in un colpo d'occhio e si preme subito, e la voce non ha il tempo di essere
+una voce. Le lettere che arrivano danno il ritmo del parlato, ed e' quello che fa la differenza fra un
+dialogo e una didascalia.
+
+**Il gioco non si ferma mai**: si continua a vedere il personaggio e la mappa. E' una voce fuori campo, non
+un filmato.
+
+| Tasto | Cosa fa |
+|---|---|
+| **Spazio** | continua — ma il **primo** Spazio *finisce la riga* invece di passarla: chi ha gia' letto non aspetta |
+| **Esc** | salta la scena |
+| *(niente)* | dopo 5,5 s la riga passa da sola: chi legge piano non deve premere niente |
+
+**Saltare salta la SCENA, non la partita.** Si arriva al villaggio lo stesso, la missione cambia lo stesso,
+si scende lo stesso. E' l'errore facile — "salta il filmato" che diventa "salta il gioco" — ed e' coperto
+da un test suo.
+
+**In due o piu' il dialogo lo fa scorrere chi ha aperto la stanza**, gli altri leggono. Se dovessero premere
+tutti, ogni riga diventerebbe l'attesa dell'ultimo distratto. A chi non comanda il suggerimento dei tasti
+non si mostra nemmeno: dirgli "premi Spazio" sarebbe una bugia, e le bugie dell'interfaccia si pagano in
+fiducia.
+
+### 📜 Dove sta il testo, e perche' li'
+
+Tutto in **`shared/storia.js`**, UMD come il resto. Il testo si riscrive dieci volte prima di suonare
+giusto, e riscriverlo dentro il codice del server vuol dire rileggere la logica ogni volta per trovare la
+riga. Il nome del boss e il numero delle ondate stanno li' dentro pure: la storia li pronuncia, e se un
+domani cambiano devono cambiare in un posto solo.
+
+### 🔌 Le tre scelte tecniche che valgono una riga
+
+1. **La riga corrente sta sul SERVER** e viaggia nello snapshot (due campi). Poteva stare sul client e
+   costare zero banda: ma in due schermi diversi le due voci andrebbero per conto loro, e chi entra a meta'
+   scena non vedrebbe niente.
+2. **Il client rincorre lo snapshot**, non reagisce a un evento. Un evento si perde (scheda in secondo
+   piano, ingresso a meta'); lo snapshot no. E se la riga e' gia' quella giusta non fa niente — se no la
+   riscriverebbe venti volte al secondo.
+3. **`startGame(da, senzaStoria)`**: la suite fa partire una cinquantina di partite per misurare ondate,
+   bilanciamento e collisioni. Farle passare tutte dal risveglio vorrebbe dire provare cinquanta volte il
+   prologo e zero volte quello che si voleva provare. L'uscita e' dichiarata **in un posto solo**, in cima
+   a `test/simulate.js`; il gioco chiama `startGame()` e il prologo c'e'.
 
 ---
 

@@ -2,6 +2,101 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.7.0] — 2026-09-13 · "La storia: ci si sveglia, si attraversa, si parla, si scende"
+
+#### 🕯️ La partita comincia con uno che si sveglia
+Non con un'ondata. **Fase nuova** (`PHASE_PROLOGO`) e **mappa nuova** (`generatePrologo`): una cella di
+22x16, quasi nera, con una faglia viola in mezzo e un braciere mezzo spento accanto al giaciglio da cui ti
+sei svegliato.
+
+La cella e' **piccola e senza svolte** apposta: se ci fosse un corridoio uno lo esplorerebbe, e il primo
+minuto di gioco diventerebbe una caccia al tesoro al buio. Non ci sono nemici, non ci sono casse, non c'e'
+un mercante. C'e' una faglia.
+
+Dichiara `lit` come il villaggio — che non vuol dire "illuminata" ma "il buio lo fanno le **sorgenti**
+invece del campo visivo". Di sorgenti ce ne sono due: il braciere e la faglia. Tutto il resto e' nero.
+
+E la barra in cima **sparisce**: "ONDATA 0/20 · NEMICI 0" sopra il risveglio era la cosa piu' stonata della
+scena — dice al giocatore che sta giocando a un gioco a ondate prima ancora che il gioco gli abbia detto
+dov'e'.
+
+#### 🗣️ Il registro: secco
+Frasi corte, nessuna spiegazione, chi parla sa piu' di quello che dice e non ha nessuna intenzione di dirlo
+tutto:
+
+> *«Sei sveglio.»*
+> *«Non chiedere dove. Non te lo direi.»*
+> *«Sei sceso da solo. Nessuno scende da solo.»*
+> *«In mezzo alla sala c'e' una faglia. La vedi.»*
+> *«Attraversala.»*
+> *«Quelli prima di te sono rimasti a guardarla.»*
+
+**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' lo sciamano, e il
+giocatore lo scopre solo quando gli parla — *«Ti ho parlato mentre dormivi. Non lo ricordi: e' normale.»*
+
+Se uno gira invece di entrare, la voce insiste **una volta sola** (*«La faglia. Non il muro.»*) e poi tace:
+insistere la trasformerebbe in un tutorial, e questa non e' una voce che spiega le cose.
+
+#### 🧿 Lo sciamano dice di cosa parla il gioco
+Si arriva al villaggio all'**ondata 0** con la missione in evidenza (*«Cerca lo sciamano. Sa cosa sei.»*).
+Avvicinandosi parte il discorso: sotto c'e' una cosa che non dorme, si chiama **AZ'GAROTH**, venti volte la
+roccia si aprira' e ogni volta si scende piu' in fondo. E la riga che dice tutto senza spiegare niente:
+*«Noi ci abbiamo provato. Siamo ancora qui, quindi hai capito com'e' andata.»*
+
+Il boss dell'ondata 20 esisteva da sempre e **non lo nominava nessuno**: era il buco che una storia riempie.
+
+Dopo il discorso la missione diventa **"Scendi fino ad AZ'GAROTH"**, e dal villaggio d'apertura la faglia
+porta **all'ondata 1** invece che al menu di fine ondata — perche' all'ondata 0 non c'e' nessun menu a cui
+tornare: si e' arrivati dalla cella, e di qui si scende.
+
+All'inizio dell'ondata 20 una riga sola chiude il cerchio: *«E' sotto di te. Non ti sta aspettando: non sa
+che esisti.»*
+
+#### 💬 I sottotitoli si scrivono
+Una striscia in basso, le lettere **una alla volta** (34 ms l'una). Non e' un vezzo: una riga che appare
+tutta insieme si legge in un colpo d'occhio e si preme subito, e la voce non ha il tempo di essere una
+voce. Le lettere che arrivano danno il ritmo del parlato.
+
+Il gioco **non si ferma mai**: si continua a vedere il personaggio e la mappa. E' una voce fuori campo, non
+un filmato, e la differenza sta tutta qui.
+
+- **Spazio** continua — ma il primo Spazio **finisce la riga** invece di passarla: chi ha gia' letto non
+  aspetta, ed e' la convenzione di tutti i giochi che hanno dialoghi.
+- **Esc** salta. E saltare salta la **scena**, non la partita: si arriva al villaggio lo stesso, la
+  missione cambia lo stesso, si scende lo stesso. E' l'errore facile, ed e' coperto da un test suo.
+- La riga **invecchia da sola** dopo 5,5 s: chi legge piano non deve premere niente.
+
+**In due o piu' il dialogo lo fa scorrere chi ha aperto la stanza**, gli altri leggono. Se dovessero
+premere tutti, ogni riga diventerebbe l'attesa dell'ultimo distratto — e una storia che si aspetta smette
+di essere una storia. A chi non comanda il suggerimento dei tasti non si mostra nemmeno: dirgli "premi
+Spazio" sarebbe una bugia, e le bugie dell'interfaccia si pagano in fiducia.
+
+#### 📜 Il testo sta in un file solo
+`shared/storia.js`, UMD come tutto il resto. Il testo si riscrive dieci volte prima di suonare giusto, e
+riscriverlo dentro il codice del server vuol dire rileggere la logica ogni volta per trovare la riga.
+
+#### 🔌 Dettagli tecnici che valgono una riga
+- **La riga corrente sta sul SERVER**, non sul client, e viaggia nello **snapshot** (due campi). Poteva
+  stare sul client e costare zero banda: ma in due schermi diversi le due voci andrebbero per conto loro,
+  e chi entra a meta' scena non vedrebbe niente. Cosi' invece si risincronizza da sola.
+- Il client **rincorre** la riga dello snapshot invece di reagire a un evento: un evento si perde (scheda
+  in secondo piano, ingresso a meta'), lo snapshot no. E se la riga e' gia' quella giusta non fa niente —
+  se no la riscriverebbe venti volte al secondo.
+- **`startGame(da, senzaStoria)`**: la suite fa partire una cinquantina di partite per misurare ondate,
+  bilanciamento e collisioni, e farle passare tutte dal risveglio vorrebbe dire provare cinquanta volte il
+  prologo e zero volte quello che si voleva provare. L'uscita e' dichiarata **in un posto solo** in cima a
+  `test/simulate.js`; il gioco chiama `startGame()` e il prologo c'e'.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2205 passati, 0 falliti**. Il TEST 68 e' l'unico che fa partire una partita vera,
+  col prologo, e prova la **catena intera**: risveglio → faglia → villaggio → sciamano → ondata 1. Piu' il
+  giro premendo sempre Esc, il capo che comanda in due, la riga che invecchia da sola, e le regole del
+  testo (nessuna riga piu' lunga di un paragrafo, i titoli delle missioni che stanno nel riquadro).
+- `test/client.js` — i pezzi dell'interfaccia, la riga che arriva dallo snapshot, Spazio ed Esc.
+- Controllato anche **quello che non si e' toccato**: ondata 5 in grotta, campo visivo, villaggio dal menu.
+
+---
+
 ### [2.6.0] — 2026-09-13 · "Il villaggio rifatto: due file di case, la piazza di terra, il portale nella casa delle guardie"
 
 #### 🏘️ La pianta: due file che si guardano

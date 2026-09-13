@@ -1361,5 +1361,60 @@
 
   // piantaCaverna e tessereStrozzatura escono anche da sole: i test le provano senza dover
   // generare una mappa intera, ed e' cosi' che si tiene onesto il vincolo delle strozzature.
-  return { generate, generateMarket, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME, piantaCaverna, tessereStrozzatura };
+  // ============================================================================================
+  // v2.7 — LA CELLA DEL RISVEGLIO
+  // ============================================================================================
+  // La prima cosa che si vede del gioco. Deve fare una cosa sola e farla senza spiegazioni: sei al
+  // buio, in mezzo c'e' una luce viola, e non c'e' nient'altro da fare che andarci.
+  //
+  // Quindi e' PICCOLA (22x16: due schermate scarse), e' una sala sola senza svolte — se ci fosse un
+  // corridoio uno lo esplorerebbe, e il primo minuto di gioco diventerebbe una caccia al tesoro — e
+  // dichiara `lit`, che qui non vuol dire "illuminata" ma "il buio lo fanno le sorgenti invece del
+  // campo visivo". Di sorgenti ce ne sono due: la faglia in mezzo e un braciere mezzo spento accanto
+  // al giaciglio. Tutto il resto e' nero.
+  const PROLOGO = {
+    w: 22, h: 16,
+    sala: { x0: 3, y0: 3, x1: 18, y1: 12 },
+    faglia: { x: 10.5, y: 7.5 },
+    giaciglio: { x: 5, y: 9 },
+    spawn: { x: 6, y: 9 },
+  };
+  function generatePrologo(seed) {
+    const w = PROLOGO.w, h = PROLOGO.h, TILE = C.TILE, SA = PROLOGO.sala;
+    const g = new Uint8Array(w * h).fill(C.T_WALL);
+    const mur = new Uint8Array(w * h);          // tutto 0: roccia di grotta, nessun concio. Non e' un edificio.
+    for (let y = SA.y0; y <= SA.y1; y++) for (let x = SA.x0; x <= SA.x1; x++) g[y * w + x] = C.T_FLOOR;
+    // due rientranze negli angoli, per non avere una scatola perfetta: la roccia non fa rettangoli
+    for (const [cx, cy, rx, ry] of [[SA.x0 + 1, SA.y0, 2, 1], [SA.x1 - 2, SA.y1, 2, 1]])
+      for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++)
+        if (x > 0 && y > 0 && x < w - 1 && y < h - 1) g[y * w + x] = C.T_WALL;
+
+    const props = [];
+    const P = (type, tx, ty, s, extra) => props.push(Object.assign({ type, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, s: s || 1, r: ((tx * 31 + ty * 17) % 100) / 100 }, extra || {}));
+    // il GIACIGLIO: e' da li' che ti sei svegliato, e serve a dire che qualcuno ti ha messo li'
+    P('letto', PROLOGO.giaciglio.x, PROLOGO.giaciglio.y, 1, { r: 0 });
+    P('brazier', PROLOGO.giaciglio.x - 0.6, PROLOGO.giaciglio.y - 1.8, 0.95);
+    P('sack', PROLOGO.giaciglio.x + 1.4, PROLOGO.giaciglio.y + 1.2, 0.9);
+    // e le macerie: sassi, ossa, ragnatele. Niente casse e niente da raccogliere — non c'e' niente da
+    // fare qui dentro, ed e' voluto.
+    for (const [x, y, sc] of [[8, 4.4, 0.6], [14.5, 5.2, 0.5], [7.4, 11.2, 0.55], [16, 9.6, 0.6], [12, 11.4, 0.5]]) P('rock', x, y, sc);
+    for (const [x, y] of [[9.4, 10.6], [15.4, 4.2]]) P('skull', x, y, 0.9);
+    for (const [x, y] of [[4.4, 4.4], [17, 11.4]]) P('web', x, y, 0.9);
+    P('chain', 12.6, 4.2, 0.9); P('chain', 6.6, 5.4, 0.85);
+
+    return {
+      w, h, tile: TILE, seed: seed >>> 0, level: 0, theme: THEMES[0], prologo: 1,
+      // `lit` come il villaggio: niente campo visivo, il buio lo bucano le sorgenti. Qui le sorgenti
+      // sono il braciere e la faglia, quindi la sala e' quasi tutta nera con una luce viola in mezzo —
+      // che e' esattamente l'immagine da cui deve partire il gioco.
+      lit: 1,
+      grid: Array.from(g), muri: Array.from(mur), floors: [],
+      spawn: { x: PROLOGO.spawn.x * TILE + TILE / 2, y: PROLOGO.spawn.y * TILE + TILE / 2 },
+      exit: { x: PROLOGO.faglia.x, y: PROLOGO.faglia.y },
+      portale: { x: PROLOGO.faglia.x, y: PROLOGO.faglia.y },
+      enemySpawns: [], crateSpawns: [], props, microAreas: [], village: null, solids: ingombri(props, { npcs: [], extras: [] }),
+    };
+  }
+
+  return { generate, generateMarket, generatePrologo, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME, PROLOGO, piantaCaverna, tessereStrozzatura };
 });

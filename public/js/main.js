@@ -90,11 +90,39 @@
   Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS);
     // v1.90 — la musica segue la SCHERMATA: il brano nelle ondate, il sintetizzatore al mercato e nel
     // riepilogo di fine ondata. La regola sta in A.scene(), qui si dice solo dove siamo.
-    A.scene(snap.phase === C.PHASE_MARKET ? 'village' : snap.phase === C.PHASE_SHOP ? 'shop' : 'wave'); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev); };
+    A.scene(snap.phase === C.PHASE_MARKET ? 'village' : snap.phase === C.PHASE_SHOP ? 'shop' : 'wave'); if (snap.phase !== C.PHASE_SHOP) HUD.hideShop(); if (snap.ev && snap.ev.length) for (const ev of snap.ev) onEv(ev);
+    // v2.7 — LA STORIA ARRIVA DALLO SNAPSHOT, non solo dagli eventi. Un evento si perde: se arriva
+    // mentre la scheda e' in secondo piano, o se uno entra a meta' scena, la riga non si vede piu' e
+    // resta il silenzio. Lo snapshot invece dice a ogni giro QUALE riga e' in corso, e il client si
+    // limita a rincorrerla — se e' gia' quella giusta non fa niente.
+    G.capo = !snap.cp || snap.cp === Net.id; storiaDaSnap(snap.st); HUD.missione(snap.ms ? STORIA.missioni[snap.ms] : null); };
   Net.onEvent = (ev) => onEv(ev);
+
+  // ===== v2.7 — LA STORIA =====================================================================
+  // Il server dice scena e riga; qui si scrive. `_st` ricorda cosa si sta gia' mostrando, cosi' lo
+  // snapshot (venti volte al secondo) non fa ripartire la stessa riga da capo venti volte al secondo.
+  const STORIA = (window.GAME && window.GAME.Storia) || { missioni: {} };
+  G._st = null;
+  function storiaDaSnap(st) {
+    if (!st) { if (G._st) { G._st = null; HUD.nascondiDialogo(); } return; }
+    const k = st.s + '|' + st.r;
+    if (G._st === k) return;
+    G._st = k;
+    const sc = STORIA[st.s]; if (!sc || !sc.righe[st.r]) { HUD.nascondiDialogo(); return; }
+    // il suggerimento dei tasti si mostra solo a chi puo' davvero premerli: in due o piu' il dialogo lo
+    // fa scorrere chi ha aperto la stanza, e dire agli altri "premi Spazio" sarebbe una bugia.
+    HUD.mostraDialogo(sc.chi, sc.righe[st.r], G.capo !== false);
+  }
 
   function onEv(ev) {
     switch (ev.t) {
+      // v2.7 — una riga sola, senza scena attorno: il sollecito della voce nella cella, lo sciamano che
+      // ti manda via, la riga dell'ultima discesa. Non ha un indice sul server perche' non ha un dopo.
+      case 'storia_riga_sola': HUD.mostraDialogo(ev.chi, ev.testo, false);
+        clearTimeout(G._rigaT); G._rigaT = setTimeout(() => { if (!G._st) HUD.nascondiDialogo(); }, 5200); break;
+      case 'storia_fine': G._st = null; HUD.nascondiDialogo(); break;
+      case 'missione': HUD.missione(STORIA.missioni[ev.id] || null); break;
+      case 'prologo': HUD.zoneName({ name: 'Non hai idea di dove sei', accent: '#9a5cff' }); break;
       // v1.69 — la progressione deve VEDERSI mentre giochi, non solo nel pannello di fine ondata.
       case 'levelup': R.ring(ev.x, ev.y, '#ffd27a', 6, 80, 0.55); R.burst(ev.x, ev.y, '#ffe9a8', 22, 200, 0.7);
         R.levelUp(ev.who, ev.lv);                       // la scritta sopra la testa vale per tutti, anche per i compagni
@@ -318,6 +346,14 @@
     requestAnimationFrame(loop);
   }
   window.addEventListener('keydown', (e) => {
+    // v2.7 — mentre parla qualcuno, Spazio ed Esc sono suoi. Vengono PRIMA di tutto il resto: Spazio e'
+    // anche "spara" e "pronto per l'ondata", ed e' quello il motivo per cui questo blocco sta in cima e
+    // finisce con un return. Chi non comanda preme a vuoto, e va bene cosi': sta leggendo.
+    if (G._st && !$('dial').classList.contains('hidden')) {
+      if (e.code === 'Space') { e.preventDefault();
+        if (!HUD.dialogoFretta() && G.capo !== false) Net.storiaAvanti(false); return; }
+      if (e.code === 'Escape') { e.preventDefault(); if (G.capo !== false) Net.storiaAvanti(true); return; }
+    }
     if (e.code === 'Enter') { const ci = $('chatInput'); if (ci.classList.contains('hidden')) { Input.clearKeys(); ci.classList.remove('hidden'); ci.focus(); } else { const t = ci.value.trim(); if (t) Net.chat(t); ci.value = ''; ci.classList.add('hidden'); Input.clearKeys(); Input.canvas && Input.canvas.focus(); } e.preventDefault(); }
     else if (e.code === 'Escape') { const ci = $('chatInput'); if (!ci.classList.contains('hidden')) { ci.value = ''; ci.classList.add('hidden'); } }
     else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { const b = $('nextWaveBtn'); if (b && !b.disabled) { Net.shopReady(); HUD.prontoPerOndata(); } }

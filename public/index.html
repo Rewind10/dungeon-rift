@@ -54,6 +54,17 @@
   <div id="bossBarWrap" class="hidden"><div id="bossName"></div><div id="bossBar"><i></i></div></div>
   <div id="killfeed"></div>
   <div id="centerFeed"></div>
+  <!-- v2.7 — LA MISSIONE IN EVIDENZA. Piccola, in alto a sinistra, sempre la stessa: dice cosa stai
+       facendo senza doverlo chiedere a nessuno. Sparisce quando non c'e' niente da fare. -->
+  <div id="quest" class="hidden"><div class="q-t" id="questT"></div><div class="q-d" id="questD"></div></div>
+  <!-- v2.7 — I SOTTOTITOLI. Una striscia in basso, le lettere che compaiono a poco a poco. Non ferma il
+       gioco e non copre niente: si continua a vedere il personaggio, che e' il motivo per cui e' una
+       voce fuori campo e non un filmato. -->
+  <div id="dial" class="hidden">
+    <div class="d-chi" id="dialChi"></div>
+    <div class="d-txt" id="dialTxt"></div>
+    <div class="d-hint" id="dialHint"><b>Spazio</b> continua · <b>Esc</b> salta</div>
+  </div>
 </div>
 <!-- ===== v2.2 — LA SCHERMATA PRINCIPALE A DUE COLONNE ==============================================
      Prima era un pannello solo, alto e stretto: dentro ci stavano il titolo, il nome, gli eroi, il
@@ -263,6 +274,7 @@
 <script src="/shared/potions.js"></script>
 <script src="/shared/bounties.js"></script>
 <script src="/shared/abilities.js"></script>
+<script src="/shared/storia.js"></script>
 <script src="/js/audio.js"></script>
 <script src="/js/net.js"></script>
 <script src="/js/input.js"></script>

@@ -12,6 +12,7 @@ const Ab = require('../shared/abilities.js');   // v1.85 — le dodici abilita' 
 const Pot = require('../shared/potions.js');
 const Bnt = require('../shared/bounties.js');
 const MapGen = require('../shared/mapgen.js');
+const Storia = require('../shared/storia.js');   // v2.7 — il testo della storia, tutto in un file solo
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
 const Waves = require('../shared/waves.js');
@@ -79,6 +80,10 @@ class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
     this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
+    // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
+    this.storia = null; this.missione = null; this._sciamano = null; this._sciamanoDetto = false;
+    this._sollecito = 0; this._sollecitoDetto = false; this._finaleDetto = false;
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
@@ -100,9 +105,11 @@ class Room {
   broadcast(o) { const s = JSON.stringify(o); for (const p of this.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} }
   sendTo(pid, o) { const p = this.players.get(pid); if (p && p.conn) try { p.conn.send(JSON.stringify(o)); } catch (_) {} }
 
-  newMap(seed, level, market) {
+  newMap(seed, level, market, prologo) {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
-    this.map = market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
+    // v2.7 — e il PROLOGO pure: una sala sola, la faglia in mezzo, niente altro.
+    this.map = prologo ? MapGen.generatePrologo(seed >>> 0)
+             : market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
     // v1.81 — zone e ragnatele sono POSTI sulla mappa vecchia: sulla nuova non vogliono dire niente.
     this.zones.length = 0; this.ragnatele.length = 0; this.muri.length = 0; this.trappole.length = 0; this.nebbie.length = 0; this.recinto = null; this.chiave = null; this.faglia = null;
     // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
@@ -117,6 +124,12 @@ class Room {
       // v1.56 — posizioni di fabbro, portale e botteghe arrivano dal villaggio, non piu' calcolate a runtime.
       this._layoutMarket();
       this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, market: 1 });
+      return;
+    }
+    if (prologo) {
+      // nella cella non c'e' niente da aprire e niente da comprare: c'e' una faglia. E' voluto — il primo
+      // minuto di gioco non deve avere alternative, se no diventa una caccia al tesoro al buio.
+      this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, prologo: 1 });
       return;
     }
     this.spawnCrates();
@@ -180,7 +193,7 @@ class Room {
   // quattordici livelli per vedere come si comporta il quindicesimo. Il personaggio non parte nudo — non
   // direbbe niente sulla giocabilita' — ma con l'esperienza, le monete e l'equipaggiamento che a quel
   // punto della partita avrebbe: vedi _preparaProva().
-  startGame(da) {
+  startGame(da, senzaStoria) {
     if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
     da = Math.max(1, Math.min(C.PROVA_MAX_ONDATA || 20, (da | 0) || 1));
     // v1.82 — una run nuova parte SENZA compagnia: il mercenario e' un ingaggio di questa partita, e
@@ -192,7 +205,17 @@ class Room {
     this.runStart = this.time;
     this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
     if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
-    this.newMap((Math.random() * 1e9) | 0, da); this.nextWave();
+    // v2.7 — LA PARTITA COMINCIA CON UNO CHE SI SVEGLIA. Non con un'ondata. Il prologo si salta (chi
+    // comanda preme Esc) ma non si spegne: e' il posto in cui il gioco dice di cosa parla, e senza quello
+    // l'ondata 1 comincia e basta, senza che nessuno sappia perche'.
+    // Le PROVE (`da > 1`, il pannello che fa partire da un'ondata a scelta) saltano tutto: li' si sta
+    // provando un'ondata, non giocando una partita.
+    // `senzaStoria` non e' una scorciatoia per il gioco: e' per le PROVE. La suite fa partire una
+    // cinquantina di partite per misurare ondate, bilanciamento e collisioni, e farle passare tutte dal
+    // risveglio vorrebbe dire provare cinquanta volte il prologo e zero volte quello che si voleva
+    // provare. Il prologo ha i suoi test, che partono di li'.
+    if (da > 1 || senzaStoria) { this.newMap((Math.random() * 1e9) | 0, Math.max(1, da)); this.nextWave(); }
+    else this.enterPrologo();
     if (process.env.DR_VILLAGGIO) { this.wave = 3; this.enterMarket(); }
   }
   // Il personaggio come sarebbe arrivato a quell'ondata: esperienza (quindi livello, punti e scelte in
@@ -242,6 +265,9 @@ class Room {
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    // v2.7 — l'ultima discesa: una riga sola, e chiude il cerchio aperto nella cella.
+    if (this.wave === (Storia.ONDATE || 20) && !this._finaleDetto) { this._finaleDetto = true;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.finale.chi, testo: Storia.finale.righe[0] } }); }
     this._preparaPrigionieri();                                   // v1.84 — a volte c'e' gente da liberare
     this._schieraMercenario();                                    // v1.82 — il mercenario torna in campo, curato
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
@@ -526,6 +552,88 @@ class Room {
       else if (!near && p._nearGear) { p._nearGear = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'gear_leave' } }); }
     }
   }
+  // ============================================================================================
+  // v2.7 — LA STORIA
+  // ============================================================================================
+  // Tre pezzi: il RISVEGLIO (una sala, una faglia, una voce), l'ARRIVO al villaggio con la missione in
+  // evidenza, e il DISCORSO dello sciamano. Il testo sta tutto in shared/storia.js.
+  //
+  // CHI COMANDA FA SCORRERE. In due o piu' si e' scelto che il dialogo lo faccia avanzare chi ha aperto
+  // la stanza: gli altri leggono. L'alternativa — tutti devono premere — trasforma ogni riga in
+  // un'attesa dell'ultimo distratto, e una storia che si aspetta smette di essere una storia.
+  //
+  // LA RIGA E' SUL SERVER, non sul client. Poteva stare sul client e costare zero banda: ma in due
+  // schermi diversi le due voci andrebbero per conto loro, e chi entra a meta' non vedrebbe niente. Qui
+  // e' un pezzo di stato come la fase, viaggia nello snapshot (due campi) e si risincronizza da sola.
+  _storiaApri(scena) {
+    const sc = Storia[scena]; if (!sc) return;
+    this.storia = { scena, riga: 0, n: sc.righe.length, t: 0 };
+  }
+  _storiaChiudi() { this.storia = null; }
+  // chi comanda: il primo giocatore vero ancora connesso. Non e' un ruolo dichiarato da nessuna parte —
+  // e' semplicemente chi c'era per primo, ed e' l'unica definizione che non ha bisogno di manutenzione.
+  get capo() { for (const p of this.players.values()) if (p.connected && !p.merc) return p; return null; }
+  avanzaStoria(pid, salta) {
+    if (!this.storia) return;
+    const cp = this.capo; if (cp && pid !== cp.id) return;     // gli altri leggono
+    if (salta) { this._storiaFine(); return; }
+    this.storia.riga++; this.storia.t = 0;
+    if (this.storia.riga >= this.storia.n) this._storiaFine();
+  }
+  _storiaFine() {
+    const scena = this.storia ? this.storia.scena : null;
+    this._storiaChiudi();
+    // saltare non salta la PARTITA: la scena finisce, ma quello che doveva succedere dopo succede lo
+    // stesso. E' la differenza fra "salta il filmato" e "salta il gioco", ed e' facile sbagliarla.
+    if (scena === 'sciamano') { this.missione = 'discesa'; this._sciamanoDetto = true; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } }); }
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_fine', scena } });
+  }
+  enterPrologo() {
+    this.phase = C.PHASE_PROLOGO;
+    this.wave = 0;
+    this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
+    this.newMap((Math.random() * 1e9) | 0, 0, false, true);
+    const T = C.TILE, pt = this.map.portale;
+    this.faglia = { x: Math.round(pt.x * T + T / 2), y: Math.round(pt.y * T + T / 2) };
+    this.missione = 'faglia'; this._sollecito = 0; this._sciamanoDetto = false; this._arrivoDetto = false;
+    this._storiaApri('prologo');
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'prologo' } });
+  }
+  // si attraversa la faglia della cella: si arriva al villaggio, e li' comincia la missione vera
+  _checkPrologoExit() {
+    if (!this.faglia) return;
+    for (const p of this.alivePlayers) {
+      if (MU.dist(p.x, p.y, this.faglia.x, this.faglia.y) > (C.FAGLIA_RAGGIO || 46) + p.radius) continue;
+      this._storiaChiudi();
+      this.wave = 0;                      // il villaggio d'apertura non consuma un'ondata
+      this.enterMarket();
+      this.missione = 'sciamano';
+      this._storiaApri('arrivo'); this._arrivoDetto = true;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'sciamano' } });
+      return;
+    }
+  }
+  // v2.7 — LO SCIAMANO. Non vende niente (e' scritto nella pianta: niente `crd`), quindi il richiamo di
+  // prossimita' dei mercanti non lo tocca. Qui ce n'e' uno suo, e serve a una cosa sola: la prima volta
+  // che gli si arriva davanti parte il discorso. Le volte dopo dice una riga e basta.
+  updateSciamano(dt) {
+    if (this.phase !== C.PHASE_MARKET || !this.map.village) return;
+    if (!this._sciamano) {
+      const sh = this.map.village.npcs.find(n => n.kind === 'sciamano');
+      this._sciamano = sh ? { x: sh.x, y: sh.y } : null;
+      if (!this._sciamano) return;
+    }
+    if (this.storia) return;                       // sta gia' parlando qualcuno
+    const RANGE = C.MARKET_MERCH_RANGE;
+    for (const p of this.alivePlayers) {
+      const near = MU.dist(p.x, p.y, this._sciamano.x, this._sciamano.y) <= RANGE;
+      if (near && !p._nearShm) {
+        p._nearShm = true;
+        if (!this._sciamanoDetto) this._storiaApri('sciamano');
+        else this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.sciamano.chi, testo: Storia.sciamano.ancora } });
+      } else if (!near && p._nearShm) p._nearShm = false;
+    }
+  }
   enterMarket() {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
@@ -548,7 +656,12 @@ class Room {
       this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null; this.faglia = null;
       for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
-      this._forceNewMap = true; this.riapriMenu(); return;
+      this._forceNewMap = true;
+      // v2.7 — IL VILLAGGIO D'APERTURA NON HA UN MENU DIETRO. Alle ondate normali la faglia riporta al
+      // menu di fine ondata, perche' da li' si e' venuti. All'ondata 0 non c'e' nessun menu di fine
+      // ondata a cui tornare: si e' arrivati dalla cella, e di qui si scende. Quindi si parte.
+      if (this.wave === 0) { this._storiaChiudi(); this.nextWave(); return; }
+      this.riapriMenu(); return;
     }
   }
   // v1.53 — dopo il pannello di fine ondata la DESTINAZIONE la sceglie il giocatore (pulsanti del menu di
@@ -2135,7 +2248,20 @@ class Room {
     // v2.0 — NIENTE TIMER NEL VILLAGGIO. Fino alla v1.99 in multiplayer la sosta si chiudeva da sola dopo
     // 120 s. Adesso il villaggio e' un posto in cui si sta, non una schermata da sbrigare: si riparte solo
     // quando qualcuno entra nel portale. In cambio, se uno resta fermo la partita aspetta: e' il prezzo.
-    if (this.phase === C.PHASE_MARKET) this._checkMarketExit();
+    if (this.phase === C.PHASE_PROLOGO) {
+      this._checkPrologoExit();
+      // la voce insiste UNA volta sola, e solo se il dialogo e' finito e uno gira invece di entrare.
+      if (!this.storia && this.faglia && !this._sollecitoDetto) {
+        this._sollecito += dt;
+        if (this._sollecito > (C.PROLOGO_SOLLECITO || 22)) { this._sollecitoDetto = true;
+          this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.prologo.chi, testo: Storia.prologo.sollecito } }); }
+      }
+    }
+    if (this.phase === C.PHASE_MARKET) { this._checkMarketExit(); this.updateSciamano(dt); }
+    // la riga corrente invecchia: chi legge piano non deve premere niente, chi va di fretta preme Spazio
+    if (this.storia) { this.storia.t += dt;
+      if (this.storia.t > (C.STORIA_RIGA || 5.5)) { this.storia.t = 0; this.storia.riga++;
+        if (this.storia.riga >= this.storia.n) this._storiaFine(); } }
     if (this.phase === C.PHASE_SHOP) { this.shopTimer -= dt; let all = true, conn = 0; for (const p of this.players.values()) if (p.connected && !p.dead) { conn++; if (!p.ready) all = false; }
       // v1.9 — pausa: in singolo si attende il click su "Continua" (nessun timeout forzato); in multiplayer resta un timeout anti-AFK.
       const timedOut = conn > 1 && this.shopTimer <= 0;
@@ -2642,14 +2768,22 @@ class Room {
     const chv = (this.chiave && !this.chiave.presa && this.chiave.suEid === null) ? { x: this.chiave.x, y: this.chiave.y } : null;
     const chIn = this.chiave ? (this.chiave.presa ? 2 : (this.chiave.suEid !== null ? 1 : 0)) : 0;   // 0 a terra · 1 su un elite · 2 in tasca
     // v2.0 — il portale si vede sia a fine ondata sia nel villaggio: e' lo stesso oggetto
-    const fg = ((this.phase === C.PHASE_CLEARED || this.phase === C.PHASE_MARKET) && this.faglia) ? this.faglia : null;
+    // v2.7 — e anche nella cella del risveglio: li' la faglia non e' un'uscita, e' l'unica cosa che c'e'.
+    const fg = ((this.phase === C.PHASE_CLEARED || this.phase === C.PHASE_MARKET || this.phase === C.PHASE_PROLOGO) && this.faglia) ? this.faglia : null;
     const tele = []; for (const w of this.ragnatele) tele.push({ x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2), c: w.col });
     const crates = []; for (const c of this.crates) crates.push({ e: c.eid, x: Math.round(c.x), y: Math.round(c.y) });
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0, ev: this.events };
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0,
+      // v2.7 — la storia viaggia nello snapshot, non solo negli eventi: due campi, e chi entra a meta'
+      // di una scena la trova al punto giusto invece di non vederla affatto.
+      st: this.storia ? { s: this.storia.scena, r: this.storia.riga } : null, ms: this.missione || null,
+      // chi comanda: serve al client per sapere se mostrare o no "Spazio continua". Dirlo a chi non
+      // puo' premere sarebbe una bugia, e le bugie dell'interfaccia si pagano in fiducia.
+      cp: (this.capo && this.capo.id) || null,
+      ev: this.events };
     this.events = []; return s;
   }
 }

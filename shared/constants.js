@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.6.0',
+    VERSION: '2.7.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -235,6 +235,7 @@
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)
       EXIT_WAVE: 'exit_wave', WAVE_STATS: 'wave_stats',   // v1.78 — il pulsante EXIT e il riepilogo di fine livello
       GO_VILLAGE: 'go_village',                            // v1.79 — la sezione Villaggio del menu di fine ondata
+      STORIA_AVANTI: 'storia_avanti',                      // v2.7 — chi comanda fa scorrere il dialogo (o lo salta)
     },
     PHASE_LOBBY: 'lobby', PHASE_COMBAT: 'combat', PHASE_SHOP: 'shop',
     PHASE_BOSS: 'boss', PHASE_GAMEOVER: 'gameover', PHASE_VICTORY: 'victory',
@@ -243,6 +244,15 @@
     // ondata nello stesso istante: brusco, e senza il tempo di raccogliere quello che era rimasto a terra.
     // Adesso c'e' una fase in mezzo: nessun nemico, il tempo si ferma, e si esce quando si vuole.
     PHASE_CLEARED: 'cleared',
+    // v2.7 — LA CELLA DEL RISVEGLIO. La partita non comincia piu' con un'ondata: comincia con uno che si
+    // sveglia al buio davanti a una faglia. Nessun nemico, nessun timer, nessun bottone: si attraversa.
+    PHASE_PROLOGO: 'prologo',
+    // ogni quanto la voce insiste, se uno gira invece di entrare nella faglia. Una volta sola: insistere
+    // la trasformerebbe in un tutorial, e questa non e' una voce che spiega le cose.
+    PROLOGO_SOLLECITO: 22,
+    // quanto tempo resta a schermo una riga prima che si possa passare alla successiva senza premere
+    // niente. Serve ai distratti e a chi legge piano; chi preme Spazio va piu' veloce.
+    STORIA_RIGA: 5.5,
   };
   return C;
 });

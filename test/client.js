@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new'), querySelector: () => mkEl('q') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'abilities', 'mapgen']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'abilities', 'mapgen', 'storia']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -1003,6 +1003,35 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const torce = mv2.props.filter(p => p.type === 'brazier' && Math.abs(p.x / T3 - 0.5 - (PZ3.x0 + PZ3.x1) / 2) <= (PZ3.x1 - PZ3.x0) / 2 + 2
       && Math.abs(p.y / T3 - 0.5 - (PZ3.y0 + PZ3.y1) / 2) <= (PZ3.y1 - PZ3.y0) / 2 + 2);
     ok(torce.length >= 8, 'e le torce fanno il giro con loro (' + torce.length + ')');
+  }
+
+  // --- 7) v2.7 — LA STORIA lato interfaccia. Il testo sta in shared/storia.js e il client lo legge da
+  //     li': se un domani qualcuno lo riscrive dentro l'HTML, questo blocco se ne accorge.
+  {
+    const St = window.GAME.Storia;
+    ok(!!St, 'il testo della storia arriva al client');
+    ok(St.prologo.chi === '', 'la voce del risveglio non ha nome');
+    // i pezzi dell'interfaccia esistono, e sono quelli che il codice cerca per id
+    const src3 = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    for (const id of ['dial', 'dialChi', 'dialTxt', 'dialHint', 'quest', 'questT', 'questD'])
+      ok(new RegExp('id="' + id + '"').test(src3), 'la pagina ha #' + id);
+    ok(/shared\/storia\.js/.test(src3), 'e carica il file della storia');
+    const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+    ok(/mostraDialogo\(/.test(srcH) && /nascondiDialogo\(/.test(srcH), 'l HUD sa aprire e chiudere i sottotitoli');
+    ok(/dialogoFretta\(/.test(srcH), 'e il primo Spazio finisce la riga invece di saltarla');
+    ok(/missione\(m\)/.test(srcH), 'e sa mostrare la missione');
+    // v2.7 — nella cella non si conta nessuna ondata: "ONDATA 0/20" sul risveglio e la cosa piu' stonata
+    ok(/snap\.phase === 'prologo'/.test(srcH), 'e nella cella la barra delle ondate sparisce');
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    ok(/storiaDaSnap\(snap\.st\)/.test(srcM), 'la riga in corso arriva dallo SNAPSHOT, non solo dagli eventi');
+    ok(/if \(G\._st === k\) return;/.test(srcM), 'e non si riscrive venti volte al secondo la stessa riga');
+    ok(/Net\.storiaAvanti\(true\)/.test(srcM), 'Esc salta');
+    ok(/if \(!HUD\.dialogoFretta\(\) && G\.capo !== false\) Net\.storiaAvanti\(false\)/.test(srcM), 'Spazio prima finisce la riga, poi passa oltre');
+    // il CSS: i due pezzi non devono rubare la scena
+    const srcC = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+    ok(/#dial\{/.test(srcC) && /#quest\{/.test(srcC), 'e hanno il loro stile');
+    ok(/#dial[^}]*pointer-events:none/.test(srcC), 'i sottotitoli non intercettano il mouse: sotto c e il gioco');
+    ok(/#quest[^}]*pointer-events:none/.test(srcC), 'e nemmeno la missione');
   }
 })();
 

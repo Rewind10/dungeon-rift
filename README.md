@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.6.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.7.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,28 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.7 (la storia: ci si sveglia, si attraversa, si parla, si scende)
+- **🕯️ La partita comincia con uno che si SVEGLIA.** Non con un'ondata. Una cella piccola, quasi nera, una
+  faglia viola in mezzo e una voce che non dice ne' dove sei ne' chi e':
+  *«Sei sveglio. Non chiedere dove. Non te lo direi. Sei sceso da solo. Nessuno scende da solo.»*
+  Non c'e' niente da raccogliere e niente da uccidere: c'e' una faglia. E' voluto — il primo minuto di
+  gioco non deve avere alternative, se no diventa una caccia al tesoro al buio.
+- **🏘️ Si arriva al VILLAGGIO con la missione in evidenza** (*«Cerca lo sciamano. Sa cosa sei.»*): un
+  riquadro piccolo in alto a sinistra che dice cosa stai facendo, senza doverlo chiedere a nessuno.
+- **🧿 LO SCIAMANO dice di cosa parla il gioco.** Avvicinandosi parte il discorso: sotto c'e' una cosa che
+  non dorme, si chiama **AZ'GAROTH**, venti volte la roccia si aprira', e *«noi ci abbiamo provato: siamo
+  ancora qui, quindi hai capito com'e' andata»*. E una riga che riapre la scena della cella: **«Ti ho
+  parlato mentre dormivi.»** — la voce del risveglio era lui, e non si presenta mai apposta.
+- **💬 Sottotitoli che si SCRIVONO**, una lettera alla volta. Non e' un vezzo: una riga che appare tutta
+  insieme si legge in un colpo d'occhio e si preme subito, e la voce non ha il tempo di essere una voce.
+  **Spazio** continua (il primo finisce la riga, chi ha gia' letto non aspetta), **Esc** salta.
+- **⏭️ Si salta sempre, ma non si spegne.** Saltare salta la SCENA, non la partita: si arriva al villaggio
+  lo stesso, la missione cambia lo stesso, si scende lo stesso. In due o piu', il dialogo lo fa scorrere
+  **chi ha aperto la stanza** — se dovessero premere tutti, ogni riga diventerebbe l'attesa dell'ultimo
+  distratto.
+- **📜 Tutto il testo sta in un file solo** (`shared/storia.js`). Si riscrive dieci volte prima di suonare
+  giusto, e riscriverlo dentro il codice del server vorrebbe dire rileggere la logica ogni volta.
 
 ## 🆕 Novita v2.6 (il villaggio rifatto: due file di case, una piazza di terra, il portale nella casa delle guardie)
 - **🏘️ PIANTA NUOVA — due file di edifici e lo spiazzo in mezzo.** La pianta della v2.0 era una sala con
@@ -1174,7 +1196,8 @@ dash che attraversa i nemici, 3 armi raccoglibili, musica tetra da dungeon, cass
 ## 🗂️ Architettura (file dedicati)
 ```
 shared/  constants (VERSION), mathutils, loot (BOON + EVO + item + XP + equipaggiamento), monsters (roster + boss),
-         heroes, mapgen (temi), pathfinding, ai (swarm/necromancer/brute/blob/gazer), waves (MODALITÀ + pool + scaling)
+         heroes, mapgen (temi + VILLAGGIO + cella del risveglio), storia (v2.7 — TUTTO il testo della storia),
+         pathfinding, ai (swarm/necromancer/brute/blob/gazer), waves (MODALITÀ + pool + scaling)
 server/  index, ws, Room (boon, hit-stop, modalità, evoluzioni, vite, XP, combo, evocazioni, anti-incastro)
 public/  index.html (scelta boon + badge versione), style.css
 public/js/ net, input, audio, renderer (puppet + sprite-sheet + boon-fx + MINIMAPPA), hud, main
