@@ -4449,19 +4449,21 @@ function testV193() {
 // TEST 65 — v1.97: il CIMITERO delle prime due ondate
 // ============================================================================
 function testV197() {
-  console.log('\n[TEST 65] v1.97 — il cimitero (ondate 1-2), la caverna dalla terza');
+  console.log('\n[TEST 65] v2.9.1 — il cimitero e in stand-by: si gioca nelle grotte, ma la pianta regge');
   const MG = require('../shared/mapgen.js');
   const dt = 1 / C.TICK_RATE;
 
   // --- 1) chi gioca dove ---
-  // v1.98 — il cimitero vale per la PRIMA ondata soltanto: dalla seconda si torna nella caverna.
-  assert(MG.generate(1001, 1).archetipo === 'cimitero', 'ondata 1: si gioca nel cimitero');
-  for (const lv of [2, 3, 7, 20]) assert(MG.generate(1000 + lv, lv).archetipo !== 'cimitero', 'ondata ' + lv + ': si torna nella caverna');
-  assert(C.CIMITERO_FINO_A === 1, 'e il confine e un numero solo, in constants (' + C.CIMITERO_FINO_A + ')');
+  // v2.9.1 — IL CIMITERO E' SPENTO, non cancellato. `CIMITERO_FINO_A` e' a zero, quindi TUTTE le ondate
+  // di combattimento — la prima compresa — si giocano nelle grotte. La pianta resta nel progetto e resta
+  // provata qui sotto forzandola: se marcisse, riaccenderla un domani non sarebbe piu' un numero solo.
+  assert(C.CIMITERO_FINO_A === 0, 'il cimitero e in stand-by (CIMITERO_FINO_A = ' + C.CIMITERO_FINO_A + ')');
+  for (const lv of [1, 2, 3, 7, 20]) assert(MG.generate(1000 + lv, lv).archetipo !== 'cimitero', 'ondata ' + lv + ': si gioca nelle grotte');
+  assert(MG.generate(1001, 1, true).archetipo === 'cimitero', 'ma forzata, la pianta del cimitero c e ancora');
 
   // --- 2) la pianta regge: connessa, con le sue lapidi, e niente vulcano ---
   for (const seed of [11, 222, 3333, 44444, 555555]) {
-    const m = MG.generate(seed, 1);
+    const m = MG.generate(seed, 1, true);
     // connettivita': dallo spawn si deve raggiungere TUTTO il pavimento
     const W = m.w, H = m.h, gri = m.grid;
     const sx = (m.spawn.x / m.tile) | 0, sy = (m.spawn.y / m.tile) | 0;
@@ -4491,18 +4493,20 @@ function testV197() {
   // --- 3) i tipi delle tessere sono solo un'informazione per il renderer ---
   // La griglia resta binaria: e' questo a permettere al cimitero di non toccare una riga di IA.
   {
-    const m = MG.generate(9090, 1);
+    const m = MG.generate(9090, 1, true);
     let fuoriPosto = 0;
     for (let i = 0; i < m.grid.length; i++) if (m.grid[i] !== C.T_WALL && m.muri[i] && m.muri[i] !== 1 && m.muri[i] !== 4) fuoriPosto++;
     assert(fuoriPosto < 40, 'i tipi restano allineati alla griglia dopo il ritocco anti-imbuto (' + fuoriPosto + ' scarti)');
     assert(MG.generate(9090, 5).muri === null, 'e nella caverna il campo non esiste proprio');
   }
 
-  // --- 4) SI GIOCA: trenta secondi di ondata vera nel cimitero, e nessuno resta incastrato ---
+  // --- 4) SI GIOCA: trenta secondi di ondata vera, e nessuno resta incastrato ---
+  // v2.9.1 — la partita vera adesso apre in GROTTA. La prova di movimento resta: e' quella che dice che
+  // dall'ondata 1 i nemici camminano invece di impiantarsi, ed e' il motivo per cui esiste questo blocco.
   {
     const room = new Room('v197'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
     room.startGame();
-    assert(room.map.archetipo === 'cimitero', 'la prima ondata di una partita vera e nel cimitero');
+    assert(room.map.archetipo !== 'cimitero' && !room.map.market, 'la prima ondata di una partita vera e in grotta');
     const partenze = new Map();
     for (let i = 0; i < C.TICK_RATE * 30; i++) {
       p.hp = room.effMaxHp(p); p.down = false; p.dead = false;
@@ -4518,10 +4522,10 @@ function testV197() {
       if (MU.dist(mo.x, mo.y, p0.x, p0.y) < 40) fermi++;
     }
     assert(contati > 3, 'ci sono abbastanza nemici per la prova (' + contati + ')');
-    assert(fermi <= contati * 0.34, 'e non restano incastrati fra le lapidi (' + fermi + ' fermi su ' + contati + ')');
+    assert(fermi <= contati * 0.34, 'e non restano incastrati (' + fermi + ' fermi su ' + contati + ')');
     for (const mo of room.monsters) if (!mo.dead) assert(!room.isWallAt(mo.x, mo.y), 'nessun nemico finisce dentro una tessera piena');
   }
-  ok('cimitero verificato: connesso, giocabile, e solo per le prime due ondate');
+  ok('cimitero in stand-by: si apre in grotta, e la sua pianta e ancora sana');
 }
 
 

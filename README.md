@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.9.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.9.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.9.1 (il cimitero in stand-by: si apre in grotta)
+- **⏸️ IL CIMITERO E' SPENTO, non cancellato.** `CIMITERO_FINO_A` da **1 a 0**: adesso **anche la prima
+  ondata si gioca nelle grotte**, come tutte le altre. La pianta, i tipi di tessera (lapide, cinta,
+  mausoleo, albero secco), il modo in cui il renderer li dipinge e i nomi di zona restano **tutti nel
+  progetto**. Per riaccenderlo basta rimettere `1`.
+- **🧪 E resta provato lo stesso.** `MG.generate(seed, level, forzaCim)` ha un terzo argomento che accende
+  la pianta comunque, e serve ai soli test: una pianta che non genera piu' nessuno marcisce in silenzio, e
+  il giorno che la riaccendi scopri che non funziona. TEST 65 adesso verifica **due cose**: che dall'ondata
+  1 in poi si giochi in grotta, e che il cimitero forzato sia ancora sano (connesso, con le sue lapidi, e
+  mai dentro un vulcano).
 
 ## 🆕 Novita v2.9.0 (i dialoghi riscritti, e lo sciamano diventa l'ORACOLO)
 - **🧿 Lo sciamano e' l'ORACOLO.** Stesso antro, stessa casa con le ossa appese, stesso ritratto — cambia

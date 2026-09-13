@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.9.0`
+**Versione attuale:** `2.9.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1143,10 +1143,19 @@ e il giocatore incassa **175 → 255 PV** (su ~325 di un Campione, **+46%**); a 
 
 ---
 
-## 🪦 IL CIMITERO *(v1.97 · rifatto e ristretto in v1.98 — solo la PRIMA ondata)*
+## 🪦 IL CIMITERO *(v1.97 · ristretto in v1.98 · **IN STAND-BY dalla v2.9.1**)*
 
-Dalla v1.97 le piante sono **due**. La **prima ondata** si gioca in un **cimitero**, dalla seconda torna
-la **caverna** di sempre (`CIMITERO_FINO_A` in constants: alzalo, abbassalo, o mettilo a 0 e sparisce).
+> ⏸️ **SPENTO AL MOMENTO — `CIMITERO_FINO_A: 0`.** Dalla v2.9.1 **anche la prima ondata si gioca nelle
+> grotte**. Il cimitero non e' stato cancellato: la pianta (`piantaCimitero`), i tipi di tessera (lapide,
+> cinta, mausoleo, albero secco), il modo in cui il renderer li dipinge e i nomi di zona sono **tutti
+> ancora qui**, e i test continuano a provarli forzando la pianta — `MG.generate(seed, 1, true)` — perche'
+> una pianta che non genera piu' nessuno marcisce in silenzio e il giorno che la riaccendi non funziona.
+> **Per riaccenderlo: rimettere `CIMITERO_FINO_A: 1`.** Tutto il resto di questa sezione descrive com'e'
+> fatto, e resta valido.
+
+Dalla v1.97 le piante sono **due**. La **prima ondata** si giocava in un **cimitero**, dalla seconda
+tornava la **caverna** di sempre (`CIMITERO_FINO_A` in constants: alzalo, abbassalo, o mettilo a 0 e
+sparisce — ed e' esattamente quello che si e' fatto in v2.9.1).
 
 Un cimitero non e roba sparsa: e **settori** separati da **vialetti**, e dentro ogni settore **file
 regolari**. E l ordine a dire che non e una grotta — la caverna e tutta disordine organico.

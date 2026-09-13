@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.9.0',
+    VERSION: '2.9.1',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -148,7 +148,12 @@
     // continua a entrare in coda man mano che si fa posto.
     // v1.97 — FINO A CHE ONDATA SI GIOCA NEL CIMITERO. Dalla successiva torna la caverna. E un solo
     // numero apposta: se domani il cimitero convince, si alza; se stanca, si abbassa a zero e sparisce.
-    CIMITERO_FINO_A: 1,
+    //
+    // v2.9.1 — IL CIMITERO E' IN STAND-BY, non cancellato. Messo a ZERO: l'ondata 1 riparte dalle grotte.
+    // La pianta (`piantaCimitero`), i tipi di tessera (lapide, cinta, mausoleo), il modo in cui il
+    // renderer li dipinge e il nome della zona sono TUTTI ancora qui e ancora provati dai test — per
+    // riaccenderlo basta rimettere 1. E' esattamente il motivo per cui questo era un numero solo.
+    CIMITERO_FINO_A: 0,
     // v1.99 — LE ONDATE CHE SI GIOCANO NELLA CALDERA: quelle dei due boss. E un elenco apposta —
     // aggiungerne una costa una virgola, e svuotarlo spegne la caldera senza toccare altro.
     CALDERA_ONDATE: [10, 20],

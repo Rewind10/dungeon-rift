@@ -2,6 +2,50 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.9.1] — 2026-09-13 · "Il cimitero in stand-by: si apre in grotta"
+
+#### ⏸️ Spento, non cancellato
+`CIMITERO_FINO_A` passa da **1** a **0**. Adesso **tutte** le ondate di combattimento — la prima compresa —
+si giocano nelle **grotte**.
+
+Il cimitero **resta nel progetto, intero**: `piantaCimitero()` con i suoi settori, i vialetti e le file di
+lapidi; i tipi di tessera (1 lapide, 2 pietra squadrata, 3 cinta, 4 albero secco); il `_dipingiCimitero()`
+del renderer che ci dipinge sopra; i quattro nomi di zona (*Il Vecchio Camposanto*, *Il Cimitero Sommerso*,
+*Il Campo di Gelo*, *Il Sepolcreto Arcano*); e la regola che non lo mette mai dentro un vulcano.
+
+**Si riaccende rimettendo `1`.** Era il senso di averlo fatto un numero solo in v1.97, ed e' la prima volta
+che serve davvero.
+
+#### 🧪 E resta provato, altrimenti marcisce
+Il rischio di uno stand-by fatto male e' che il codice spento smetta di essere verificato, si rompa per
+qualche modifica di passaggio, e il giorno che lo riaccendi non funzioni piu' — e nessuno sappia da quando.
+
+Quindi `generate(seed, level, forzaCim)` ha un **terzo argomento** che accende la pianta comunque, e serve
+**ai soli test**. TEST 65 e' stato riscritto e adesso verifica due cose invece di una:
+
+1. **che il cimitero sia spento** — `CIMITERO_FINO_A === 0`, e le ondate 1, 2, 3, 7 e 20 sono tutte grotte;
+2. **che la sua pianta sia ancora sana** — forzata su cinque semi: tutto il pavimento raggiungibile dallo
+   spawn, almeno 55 lapidi, il muro di cinta che gira tutto attorno, i mausolei, mai il tema lava, e lo
+   spazio calpestabile nella stessa fascia di una caverna.
+
+Il blocco che fa girare **30 secondi di ondata vera** (i nemici camminano invece di impiantarsi) resta, e
+adesso gira in **grotta**: e' il posto dove quell'ondata si gioca davvero.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2363 passati, 0 falliti**.
+- `test/client.js` — invariato *(restano i 2 fallimenti attesi sull'audio: `assets/` non c'e' in container)*.
+- **Misurato** — ondata 1 → `stella`/`quadrifoglio` (piante di caverna), ondata 3 → caverna, ondate 10 e 20
+  → **caldera, intatte**; cimitero forzato → 118 lapidi, pianta sana.
+- **Nel browser** — ondata 3 *(Caverne di Lava)* disegnata correttamente, **zero errori in console**.
+
+> ⚠️ **Un test ballerino, e non e' colpa di questa modifica.** *«e per la maggior parte del tempo non ti ha
+> visto affatto»* (TEST 62, il vagabondaggio) fallisce circa **1 volta su 4**: lo scheletro vaga a caso e
+> ogni tanto capita in linea di vista e ci resta. Misurato: fallisce con la stessa frequenza anche con il
+> cimitero **riacceso**, quindi era gia' cosi'. Si sistemerebbe alzando la soglia o dando un seme fisso a
+> quel test — da decidere.
+
+---
+
 ### [2.9.0] — 2026-09-13 · "I dialoghi riscritti, e lo sciamano diventa l'oracolo"
 
 #### 🧿 Un nome solo, in tutto il progetto

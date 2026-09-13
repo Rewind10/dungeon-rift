@@ -534,7 +534,10 @@
     return { g, camere, archetipo: 'caldera' };
   }
 
-  function generate(seed, level) {
+  // `forzaCim` accende il cimitero comunque, e serve a UNA cosa sola: dalla v2.9.1 la pianta e' in
+  // stand-by (`CIMITERO_FINO_A: 0`) e senza questo appiglio nessun test la genererebbe piu'. Una pianta
+  // che non viene piu' generata da nessuno marcisce in silenzio, e quando la si riaccende non funziona.
+  function generate(seed, level, forzaCim) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
     let theme = THEMES[Math.floor(rng() * THEMES.length)];
     const TILE = C.TILE, cxm = W >> 1, cym = H >> 1;
@@ -546,7 +549,7 @@
     // file di lapidi); dalla terza in poi torna la caverna di sempre. Il punto non e' la varieta' per la
     // varieta': e' che le prime due ondate sono quelle in cui il giocatore si fa un'idea del gioco, e
     // aprire dentro una grotta o dentro un camposanto non e' la stessa promessa.
-    const _cim = level <= (C.CIMITERO_FINO_A || 0);
+    const _cim = !!forzaCim || level <= (C.CIMITERO_FINO_A || 0);
     // v1.99 — le ondate dei boss (10 e 20) si giocano nella CALDERA. E un elenco, non un confronto:
     // aggiungere o togliere un ondata e cambiare un numero in constants.
     const _cal = !_cim && (C.CALDERA_ONDATE || []).indexOf(level) >= 0;
