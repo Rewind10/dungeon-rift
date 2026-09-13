@@ -83,7 +83,6 @@ class Room {
     // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
     // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
     this.storia = null; this.missione = null; this._oracolo = null; this._oracoloDetto = false;
-    this._condanna = 0;                                 // v2.9.2 — il conto alla rovescia delle guardie
     this._sollecito = 0; this._sollecitoDetto = false; this._finaleDetto = false;
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
@@ -194,11 +193,6 @@ class Room {
     // server, e un blocco che vale solo di la' non e' un blocco. Si ferma il movimento e tutto quello
     // che si fa con le mani (colpire, scattare, bere): la mira no, quella non sposta niente.
     // Non c'e' rischio di restare incastrati: la riga scade da sola dopo STORIA_RIGA secondi.
-    // v2.9.2 — `_rawAtk` e' il tasto d'attacco COSI' COME LO MANDA IL CLIENT, prima della censura qui
-    // sotto. Serve alle guardie: il fronte di salita si riarma quando il giocatore MOLLA, e durante una
-    // ramanzina `p.input.shoot` e' finto zero — leggerlo li' vorrebbe dire credere a un rilascio che non
-    // c'e' stato, e dare il secondo avvertimento a chi non ha mai tolto il dito dal mouse.
-    p._rawAtk = !!(i.shoot || i.q || i.e);
     if (this.storia) { p.input.mx = 0; p.input.my = 0; p.input.aim = i.aim || 0;
       p.input.shoot = false; p.input.q = false; p.input.e = false; p.input.dash = false; p.input.pot = 0; return; }
     p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
@@ -617,10 +611,6 @@ class Room {
     // saltare non salta la PARTITA: la scena finisce, ma quello che doveva succedere dopo succede lo
     // stesso. E' la differenza fra "salta il filmato" e "salta il gioco", ed e' facile sbagliarla.
     if (scena === 'oracolo') { this.missione = 'discesa'; this._oracoloDetto = true; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } }); }
-    // v2.9.2 — il terzo avvertimento non ne e' uno. Il conto alla rovescia parte QUI e non quando la
-    // guardia comincia a parlare: se partisse prima, chi legge piano vedrebbe il game over a meta' frase,
-    // e chi preme in fretta avrebbe due secondi di vantaggio. Il silenzio dopo la riga e' il punto.
-    if (scena === 'guardia3') this._condanna = C.VILL_CONDANNA || 2.6;
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_fine', scena } });
   }
   enterPrologo() {
@@ -670,30 +660,8 @@ class Room {
       } else if (!near && p._nearOra) p._nearOra = false;
     }
   }
-  // v2.9.2 — LE GUARDIE. Torna true quando il colpo va fermato, e in quel caso ha gia' aperto la scena.
-  //
-  // TRE COLPI E SEI FUORI, e il conto riparte a ogni ingresso nel villaggio: in una run di villaggi ce ne
-  // sono una decina, e un contatore che non si azzera mai vorrebbe dire che un clic per sbaglio al primo
-  // villaggio te lo porti dietro fino all'ondata venti.
-  //
-  // Il CONTO e' del singolo (ognuno ha i suoi tre), la CONDANNA e' di tutti: si scende in gruppo e si
-  // viene cacciati in gruppo. E' la scelta che rende il villaggio un posto dove ci si controlla a vicenda
-  // invece di un posto dove ognuno fa i fatti suoi.
-  _vigilanza(p) {
-    if (this.phase !== C.PHASE_MARKET || !this.map || !this.map.village) return false;  // fuori si combatte
-    if (this.storia) return true;      // una guardia sta gia' parlando: il colpo non parte e non si conta
-    if (p._reatoH) return true;        // non ha ancora mollato il tasto del colpo precedente
-    p._reatoH = true;
-    p._reati = (p._reati || 0) + 1;
-    const n = Math.min(C.VILL_AVVISI || 3, p._reati);
-    this._storiaApri('guardia' + n);
-    return true;
-  }
   enterMarket() {
     this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
-    // v2.9.2 — il conto degli avvertimenti riparte da zero a ogni villaggio, per tutti.
-    this._condanna = 0;
-    for (const q of this.players.values()) { q._reati = 0; q._reatoH = false; }
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
     // v2.0 — IL PORTALE AL CENTRO. Nel villaggio l'uscita non e' piu' un quadrato verde in fondo alla
@@ -1925,14 +1893,17 @@ class Room {
       const sp = Lv.SPEC_BY_ID[id]; if (!sp || sp.hero !== p.heroId) return;
       p.spec = id; p.specOffer = null; sp.apply(p); this._recomputeGear(p);
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'spec', x: p.x, y: p.y, who: p.id, name: p.name, id, title: sp.name, color: sp.color, icon: sp.icon } });
-      this.offerShop(p); return;
+      // v2.9.4 — la specializzazione aveva la PRECEDENZA sulla scelta in coda (`_inviaPannello`), ma dopo
+      // averla presa non passava la mano a nessuno: una passiva o un'abilita' arrivate nella stessa ondata
+      // restavano invisibili. Al 15 e' il caso peggiore, perche' dopo non arriva piu' nessuna ondata utile.
+      this.offerBoon(p); this.offerShop(p); return;
     }
     if (p.rankOffer && p.rankOffer.includes(id)) {
       const c = Lv.CARD_BY_ID[id]; if (!c || c.hero !== p.heroId) return;
       if (p.cards.includes(id)) return;                       // una carta non si prende due volte
       p.cards.push(id); p.rankOffer = null; c.apply(p); this._recomputeGear(p);
       this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'card', x: p.x, y: p.y, id, name: c.name, icon: c.icon } });
-      this.offerShop(p); return;
+      this.offerBoon(p); this.offerShop(p); return;   // v2.9.4 — e passa la mano a cio' che era in coda
     }
   }
 
@@ -2027,6 +1998,13 @@ class Room {
       prossimo, cap: pr.cap ? 1 : 0, max: Lv.MAX_LEVEL,
     });
   }
+  // v2.9.4 — C'E' QUALCOSA DA SCEGLIERE? Una riga sola, e prima non c'era: chi doveva rispondere a questa
+  // domanda guardava `scaglioniDovuti` e si DIMENTICAVA di `abilDovute`. Le code sono due — le passive
+  // (3, 6, 9, 12) e gli slot delle attive (8 e 14) — e chiederlo a una sola voleva dire che un'ondata che
+  // portava SOLO al livello 8, o SOLO al 14, non apriva niente: l'abilita' attiva restava in coda e il
+  // pannello diceva «niente da scegliere». Al 14 era definitiva, perche' dopo il 12 non c'e' piu' nessuno
+  // scaglione che possa riaprire il pannello e trascinarsela dietro.
+  _scelteInCoda(p) { return ((p.abilDovute || []).length + (p.scaglioniDovuti || []).length) > 0; }
   // Lo scaglione in cima alla coda decide COSA vedi: le due abilita' della tua classe piu' le due neutre.
   // Non si sorteggia niente — con una sola scelta per scaglione, nascondere un'opzione non aggiungerebbe
   // varieta' ma solo frustrazione.
@@ -2155,7 +2133,9 @@ class Room {
     // v1.79 — uno scaglione speso esce dalla coda. Chi ne ha due in sospeso (capita se un'ondata sola
     // porta dal livello 5 al 7) vede subito il secondo, senza aspettare l'ondata dopo.
     if (p.scaglioniDovuti && p.scaglioniDovuti.length) p.scaglioniDovuti.shift();
-    if (p.scaglioniDovuti && p.scaglioniDovuti.length && this.phase === C.PHASE_SHOP) this.offerBoon(p);
+    // v2.9.4 — e anche qui si guardava una coda sola: chi in un'ondata sola prendeva una passiva E uno
+    // slot attivo vedeva sparire il pannello dopo la prima delle due.
+    if (this._scelteInCoda(p) && this.phase === C.PHASE_SHOP) this.offerBoon(p);
     else if (this.phase === C.PHASE_SHOP) this.nienteCarta(p);
   }
   // v1.51 — elenco dei poteri attivi, per la barra in basso nell'HUD. Inviato solo quando cambia qualcosa
@@ -2317,13 +2297,6 @@ class Room {
       }
     }
     if (this.phase === C.PHASE_MARKET) { this._checkMarketExit(); this.updateOracolo(dt); }
-    // v2.9.2 — la condanna delle guardie. Scorre in ogni fase e non solo nel villaggio: se uno tira il
-    // terzo colpo e poi corre dentro la faglia, non se la cava — il game over lo raggiunge di sotto.
-    if (this._condanna > 0) {
-      this._condanna -= dt;
-      if (this._condanna <= 0) { this._condanna = 0;
-        if (this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) this.gameOver(); }
-    }
     // la riga corrente invecchia: chi legge piano non deve premere niente, chi va di fretta preme Spazio
     if (this.storia) { this.storia.t += dt;
       if (this.storia.t > (C.STORIA_RIGA || 5.5)) { this.storia.t = 0; this.storia.riga++;
@@ -2441,7 +2414,10 @@ class Room {
   _inviaPannello(p) {
     // Una scelta alla volta: la specializzazione del 15 ha la precedenza sullo scaglione.
     if (this.offerRank(p)) { p.boonOffer = null; p.boonPicked = true; }
-    else if ((p.scaglioniDovuti || []).length > 0) this.offerBoon(p);
+    // v2.9.4 — IL BUG DEI LIVELLI 8 E 14. Qui c'era `(p.scaglioniDovuti || []).length > 0`: le code sono
+    // DUE e questa ne guardava una. Un'ondata che portava solo al livello 8 (o solo al 14) finiva
+    // nell'`else`, cioe' «niente da scegliere», e l'abilita' attiva non veniva offerta mai.
+    else if (this._scelteInCoda(p)) this.offerBoon(p);
     else this.nienteCarta(p);
     this.inviaRiepilogo(p);
     this.offerShop(p); this.sendBoons(p);
@@ -2607,20 +2583,8 @@ class Room {
         } else { p.edgeTick = 0; if (over <= 0 || dep === 0) p._edgeWarn = 0; }
       } else { p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
       p.aim = p.input.aim; p.facing = p.input.aim;
-      // v2.9.2 — NEL VILLAGGIO NON SI SGUAINA. `_vigilanza` torna true quando il colpo va FERMATO: il
-      // controllo sta QUI e non dentro firePlayerWeapon/useQ/useE perche' questo e' l'unico punto in cui
-      // passano tutti e tre — freccia, spada e magia — e tre controlli in tre posti diversi sono tre
-      // posti in cui un domani se ne dimentica uno. Lo SCATTO non conta: non fa male a nessuno.
-      if (p.input.shoot && !p.buffs.dash) { if (!this._vigilanza(p)) this.firePlayerWeapon(p); }
-      if (p.input.q && !p._qH) { if (!this._vigilanza(p)) this.useQ(p); }
-      if (p.input.e && !p._eH) { if (!this._vigilanza(p)) this.useE(p); }
-      if (p.input.dash && !p._dH) this.useDash(p);
-      // il colpo si conta sul FRONTE di salita, e il fronte si riarma quando il giocatore MOLLA davvero —
-      // per questo si guarda `_rawAtk`, il tasto come lo manda il client, e non `p.input`, che durante una
-      // ramanzina e' azzerato d'ufficio. Senza il fronte, chi tiene premuto si becca il secondo
-      // avvertimento nel tick esatto in cui finisce di leggere il primo; leggendo la copia censurata,
-      // invece, chi ha mollato durante la ramanzina si vedrebbe ingoiare il colpo dopo senza un perche'.
-      if (!p._rawAtk) p._reatoH = false;
+      if (p.input.shoot && !p.buffs.dash) this.firePlayerWeapon(p);
+      if (p.input.q && !p._qH) this.useQ(p); if (p.input.e && !p._eH) this.useE(p); if (p.input.dash && !p._dH) this.useDash(p);
       // v1.71 — il tasto della cintura vale sul FRONTE di salita: tenerlo premuto beve una volta sola.
       if (p.input.pot && p.input.pot !== p._potH) this.usePotion(p, p.input.pot - 1);
       p._qH = p.input.q; p._eH = p.input.e; p._dH = p.input.dash; p._potH = p.input.pot;

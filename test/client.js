@@ -1043,18 +1043,17 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     // si sentono. Una riga marcata `p` aspetta in silenzio col volto a schermo prima di cominciare.
     ok(/PAUSA:/.test(srcH) && /pausa \? this\.PAUSA : 0/.test(srcH), 'e una riga marcata aspetta prima di scriversi');
     ok(St.oracolo.righe.some(q => q.p), 'e nel discorso dell’oracolo ci sono le pause');
-    // v2.9.2 — LE GUARDIE. Il testo arriva al client come tutto il resto del parlato, e ha un nome sopra:
-    // senza il nome il riquadro direbbe solo una frase brusca, e non si saprebbe chi l ha detta.
+    // v2.9.3 — le tre scene della guardia e il suo ritratto sono rimasti nel progetto ma NON LI USA
+    // NESSUNO (vedi la nota su VILL_AVVISI in constants.js: Spazio spara ed e' anche il tasto che fa
+    // scorrere i dialoghi). Si continua a controllare che il testo sia sano, cosi' non marcisce.
     for (const k of ['guardia1', 'guardia2', 'guardia3'])
-      ok(St[k] && St[k].righe.length > 0 && St[k].righe.every(q => q.chi === 'guardia'), 'la scena ' + k + ' parla con la voce della guardia');
-    ok(/guardia: 'Guardia'/.test(fs.readFileSync(ROOT + 'public/js/main.js', 'utf8')), 'e sopra la battuta c e scritto chi parla');
+      ok(St[k] && St[k].righe.length > 0 && St[k].righe.every(q => q.chi === 'guardia'), 'la scena ' + k + ' e ancora sana (ma spenta)');
     ok(/missione\(m\)/.test(srcH), 'e sa mostrare la missione');
     // v2.8 — il riquadro sta al centro, ha il ritratto di chi parla, e mentre parla non ci si muove
     ok(/ritratto\(chi, eroeId\)/.test(srcH), 'l HUD disegna il ritratto di chi parla');
     for (const k of ['guerriero', 'mago', 'ladro', 'oracolo', 'guardia'])
       ok(new RegExp(k + ':').test(srcH), 'e ha una tavolozza per ' + k);
-    // v2.9.2 — la guardia deve avere una SAGOMA sua: se cadesse nel ramo dell'elmo del guerriero, il
-    // giocatore vedrebbe il proprio avatar sgridare se stesso.
+    // v2.9.3 — il ritratto della guardia resta disegnato, per quando la regola del villaggio si rifara'.
     ok(/chi === 'guardia'/.test(srcH), 'e la guardia ha il suo ritratto, non quello del guerriero');
     ok(/if \(!chi\) \{ cv\.classList\.add\('vuoto'\); return; \}/.test(srcH),
       'ma la voce senza volto del risveglio non ne ha uno: e la scena, non una mancanza');

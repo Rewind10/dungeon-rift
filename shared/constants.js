@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.9.2',
+    VERSION: '2.9.4',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -154,10 +154,16 @@
     // renderer li dipinge e il nome della zona sono TUTTI ancora qui e ancora provati dai test — per
     // riaccenderlo basta rimettere 1. E' esattamente il motivo per cui questo era un numero solo.
     CIMITERO_FINO_A: 0,
-    // v2.9.2 — LE GUARDIE DEL VILLAGGIO. Quanti colpi si possono tirare li' dentro prima che finisca male,
-    // e quanti secondi passano fra «Ti avevo avvisato» e la schermata di fine partita.
-    // Il conto e' PER GIOCATORE e si azzera a ogni ingresso nel villaggio; la condanna vale per tutti: si
-    // scende in gruppo e si viene cacciati in gruppo.
+    // v2.9.3 — LE GUARDIE DEL VILLAGGIO SONO STATE TOLTE. Questi due numeri restano perche' il testo delle
+    // tre scene e il ritratto della guardia sono ancora nel progetto, ma NON LI LEGGE NESSUNO: in v2.9.2 la
+    // regola "nel villaggio non si sguaina" si e' rivelata irricevibile per un motivo solo, e va scritto
+    // qui perche' chiunque ci riprovi ci sbatta contro subito.
+    //
+    // IL MOTIVO: in `public/js/input.js` l'attacco e' `mouse.down || keys['Space']`. SPAZIO SPARA. Ed e'
+    // anche il tasto che fa scorrere i dialoghi. Quindi ogni Spazio premuto per leggere la ramanzina era
+    // un attacco nuovo appena la ramanzina finiva: la guardia ripartiva all'infinito e la partita si
+    // piantava. Per rifarla bisogna prima separare le due cose — o l'attacco non sta piu' su Spazio, o il
+    // colpo che chiude un dialogo non conta come colpo.
     VILL_AVVISI: 3,
     VILL_CONDANNA: 2.6,
     // v1.99 — LE ONDATE CHE SI GIOCANO NELLA CALDERA: quelle dei due boss. E un elenco apposta —

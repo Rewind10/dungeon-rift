@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.9.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.9.4 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,22 +24,38 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
-## 🆕 Novita v2.9.2 (nel villaggio non si sguaina: tre avvertimenti e sei fuori)
-- **🛡️ LE GUARDIE.** Se attacchi nel villaggio — freccia, spada o magia, **anche a vuoto** — il gioco **si
-  ferma** e una guardia ti parla. *«Ferma quella mano. Qui dentro non si sguaina.»* Al secondo colpo
-  l'ultimo avvertimento (*«Due. Non ci sara' un terzo avvertimento.»*), al terzo *«Ti avevo avvisato»* e
-  dopo **2,6 secondi di silenzio** la schermata di fine partita. Il villaggio era l'unico posto del gioco
-  senza una regola, e un posto senza regole non e' un paese: e' un negozio con le case attorno.
-- **🧑‍✈️ Il conto e' del singolo, la condanna e' di tutti.** Ognuno ha i suoi tre avvertimenti, ma al terzo
-  la run finisce per la squadra. Il conto **riparte a ogni villaggio**: un clic distratto al primo non te
-  lo porti dietro fino all'ondata venti. Numeri in `constants.js` (`VILL_AVVISI`, `VILL_CONDANNA`).
-- **😠 La guardia ha una faccia sua** — elmo *aperto* col nasale e la borchia d'ottone, bocca dritta. Quello
-  del guerriero e' chiuso e ha la feritoia: li' dentro non c'e' nessuno da guardare negli occhi, e per un
-  eroe va bene. Una guardia deve poterti guardare **male**.
-- **🎲 Un test ballerino in meno.** *«e per la maggior parte del tempo non ti ha visto affatto»* falliva una
-  volta su quattro: il vagabondaggio pesca da `Math.random`, che non e' seminato. Adesso il test semina
-  `Math.random` per la sua durata e lo rimette a posto. Misura esattamente quello che misurava, ma da'
-  sempre la stessa risposta — alzare la soglia avrebbe nascosto anche il segnale.
+## 🆕 Novita v2.9.4 (BUG GROSSO: le abilita' attive dei livelli 8 e 14 non venivano date)
+- **🐛 LO SLOT E NON ARRIVAVA MAI.** Segnalato giocando e misurato: in una run normale — un livello per
+  ondata — l'abilita' del tasto **Q** arrivava in ritardo (al livello **9**, appesa alla passiva) e quella
+  del tasto **E** **non arrivava affatto**. A fine partita `E = null`. **Perso in ogni singola run**, perche'
+  dopo il livello 12 non c'e' piu' nessuno scaglione che possa riaprire il pannello.
+- **🔎 Le code sono DUE, il codice ne guardava UNA.** `scaglioniDovuti` (passive: 3, 6, 9, 12) e
+  `abilDovute` (attive: 8 e 14). In **tre punti** si chiedeva «c'e' qualcosa da scegliere?» guardando solo
+  la prima: quando si apre il pannello, dopo aver preso una passiva, e dopo aver preso rango o
+  specializzazione. Adesso la domanda ha **una risposta sola** (`_scelteInCoda`), usata da tutti e tre.
+- **🎁 Due livelli in un'ondata danno DUE cose.** 8 e 9 insieme: prima l'attiva, poi la passiva. 14 e 15
+  insieme: la specializzazione **e** l'abilita' del tasto E — prima la specializzazione se la mangiava.
+- **🧪 Il test legge i messaggi, non lo stato interno.** Guardare `p.abilDovute` avrebbe detto che
+  l'abilita' c'era — e c'era, in coda — senza accorgersi che al giocatore non veniva mostrata mai. Il
+  TEST 69 decodifica il JSON che il server manda al client e "clicca" su cio' che gli viene offerto,
+  percorrendo le quattordici ondate di una run per tutte e tre le classi. Rimesso il codice vecchio,
+  fallisce con quattordici errori.
+
+## 🆕 Novita v2.9.3 (le guardie del villaggio sono state tolte)
+- **❌ LA REGOLA DEL VILLAGGIO NON C'E' PIU'.** La v2.9.2 aveva introdotto le guardie — attacchi nel
+  villaggio, il gioco si ferma, tre avvertimenti e sei fuori. **Era ingiocabile** e la v2.9.3 la toglie:
+  nel villaggio si attacca come prima, e non succede niente.
+- **💥 Il motivo, che vale la pena sapere: SPAZIO SPARA.** In `public/js/input.js` l'attacco e'
+  `mouse.down || keys['Space']`, e Spazio e' **anche** il tasto che fa scorrere i dialoghi. Ogni Spazio
+  premuto per leggere la ramanzina era un attacco nuovo appena il riquadro si chiudeva: la guardia
+  ripartiva all'infinito e la partita si piantava.
+- **🔍 E i test non l'hanno visto.** Quelli sul server chiamavano `setInput` a mano, quindi il legame fra
+  «Spazio continua» e «Spazio spara» li' dentro **non esisteva**; la prova nel browser verificava che i tre
+  avvertimenti comparissero *nell'ordine giusto* — e comparivano, ma per gli Spazio dello script, non per i
+  clic. Verificava l'effetto e non la causa.
+- **🧰 Il materiale resta.** Testi delle tre scene, ritratto della guardia e i due numeri in `constants.js`
+  sono ancora nel progetto, spenti. Per rifarla servirebbe prima separare le due cose — vedi la nota in
+  `CARATTERISTICHE.md`.
 
 ## 🆕 Novita v2.9.1 (il cimitero in stand-by: si apre in grotta)
 - **⏸️ IL CIMITERO E' SPENTO, non cancellato.** `CIMITERO_FINO_A` da **1 a 0**: adesso **anche la prima

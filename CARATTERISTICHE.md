@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.9.2`
+**Versione attuale:** `2.9.4`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -63,6 +63,33 @@ per le regole.
 **Cosa lasciano sul campo:** il muro di fuoco, le tagliole e la nube d'ombra sono **oggetti veri** nel
 mondo, mandati nello snapshot e disegnati come tali — non effetti sopra lo schermo. Il marchio si vede
 sopra la testa del nemico **da tutta la squadra**.
+
+### 🐛 Il bug dei livelli 8 e 14 *(corretto in v2.9.4)*
+
+**Non venivano offerte.** Segnalato giocando, e misurato: in una run normale — un livello per ondata — lo
+slot **Q arrivava in ritardo**, al livello 9, appeso alla passiva; e lo slot **E non arrivava MAI**. A fine
+partita `E = null` e l'abilita' ancora in coda. **Perso in ogni singola run**, perche' dopo il 12 non c'e'
+piu' nessuno scaglione che possa riaprire il pannello e trascinarsi dietro cio' che era rimasto sotto.
+
+**Le code sono DUE** — `scaglioniDovuti` (le passive: 3, 6, 9, 12) e `abilDovute` (gli slot attivi: 8 e
+14) — e in **tre punti** il codice ne interrogava **una sola**:
+
+| Dove | Cosa faceva | Conseguenza |
+|---|---|---|
+| `_inviaPannello` | apriva la scelta solo `if (scaglioniDovuti.length > 0)` | un'ondata che portava **solo** all'8 o **solo** al 14 finiva nell'`else`: «niente da scegliere» |
+| dopo aver preso una passiva | ripresentava il pannello solo se restavano **altre passive** | chi prendeva passiva e attiva nella stessa ondata vedeva sparire il pannello dopo la prima |
+| dopo aver preso **rango o specializzazione** | non passava la mano a nessuno | il 15 aveva la precedenza e si mangiava l'abilita' del 14 presa nella stessa ondata |
+
+La correzione e' una riga condivisa — `_scelteInCoda(p)`, che somma le due code — usata in tutti e tre i
+punti. La domanda «c'e' qualcosa da scegliere?» adesso ha **una risposta sola**, e non tre che possono
+divergere.
+
+**Il test legge i MESSAGGI, non lo stato.** E' la parte che conta: un test che avesse guardato
+`p.abilDovute` avrebbe detto che l'abilita' c'era — e c'era davvero, in coda — senza accorgersi che al
+giocatore non veniva mostrata mai. Il TEST 69 invece decodifica il JSON che il server manda al client,
+esattamente come farebbe il browser, e poi "clicca" su cio' che gli e' stato offerto: percorre le
+quattordici ondate di una run per tutte e tre le classi e verifica **dove** ogni scelta compare.
+Rimettendo il codice vecchio, fallisce con quattordici errori.
 
 ### La curva dell'esperienza *(ritarata in v1.79.1)*
 Cumulata al livello 15: **9.470**. La taratura viene dall'esperienza che i mostri di un'ondata mettono
@@ -551,51 +578,53 @@ domani cambiano devono cambiare in un posto solo.
 
 ---
 
-## 🛡️ LE GUARDIE: NEL VILLAGGIO NON SI SGUAINA *(v2.9.2)*
+## 🛡️ LE GUARDIE DEL VILLAGGIO — TOLTE *(provate in v2.9.2, rimosse in v2.9.3)*
 
-Il villaggio era l'unico posto del gioco **senza una regola**: potevi tirare frecciate ai paesani per venti
-minuti e non succedeva niente. Un posto senza regole non e' un paese, e' un negozio con le case attorno.
+> ❌ **NON C'E' PIU'.** Nel villaggio si puo' attaccare come prima, e non succede niente. Il testo delle tre
+> scene (`guardia1/2/3` in `storia.js`), il ritratto della guardia nell'HUD e i due numeri in `constants.js`
+> sono rimasti nel progetto, ma **non li legge nessuno**.
 
-Adesso, se attacchi li' dentro — **freccia, spada o magia, anche a vuoto** — il gioco **si ferma** e una
-guardia ti parla. Tre volte, e la terza non e' un avvertimento.
+L'idea era: se attacchi nel villaggio il gioco si ferma, una guardia ti avvisa, alla terza volta la run
+finisce. Ha funzionato nei test e si e' rivelata **ingiocabile** al primo minuto vero. Vale la pena scrivere
+perche', perche' e' un errore che si rifa' identico.
 
-| | Cosa succede |
-|---|---|
-| **1° colpo** | *«Ferma quella mano.»* · *«Qui dentro non si sguaina. Vale per te come per chiunque altro.»* — poi si riprende |
-| **2° colpo** | *«Due.»* · *«Non ci sarà un terzo avvertimento.»* — piu' corto del primo, apposta: chi ripete non merita altre parole |
-| **3° colpo** | *«Ti avevo avvisato.»* — e dopo **2,6 secondi di silenzio**, la schermata di fine partita |
+### 💥 Il motivo: **Spazio spara**
 
-**Perche' il gioco si FERMA.** Un messaggio in un angolo non lo legge nessuno, e al terzo colpo il giocatore
-direbbe *«e chi lo sapeva»*. Fermarlo e' l'unico modo di essere sicuri che l'abbia letto — ed e' anche il
-motivo per cui il primo avvertimento non punisce niente: copre il clic per sbaglio.
+In `public/js/input.js` l'attacco e':
 
-**Il conto e' del singolo, la condanna e' di tutti.** Ognuno ha i suoi tre, ma al terzo la run finisce per
-la squadra: si scende in gruppo e si viene cacciati in gruppo. E' quello che rende il villaggio un posto
-dove ci si controlla a vicenda.
+```js
+const shoot = this.mouse.down || !!this.keys['Space'];
+```
 
-**Il conto riparte a ogni villaggio.** In una run di villaggi ce ne sono una decina: un contatore che non si
-azzera mai vorrebbe dire portarsi un clic distratto del primo villaggio fino all'ondata venti.
+E **Spazio e' anche il tasto che fa scorrere i dialoghi**. Quindi ogni Spazio premuto per leggere la
+ramanzina della guardia era, nel tick dopo la chiusura del riquadro, **un attacco nuovo**: la guardia
+ripartiva, il giocatore premeva Spazio per leggerla, e cosi' all'infinito. La partita si piantava.
 
-### 🔩 Le tre scelte che lo tengono in piedi
+### 🔍 E perche' i test non l'hanno visto
 
-1. **Il controllo sta in UN punto solo** — la riga da cui passano tutte e tre le vie d'attacco
-   (`firePlayerWeapon`, `useQ`, `useE` sono attaccate), non dentro le tre funzioni. Tre controlli in tre
-   posti sono tre posti in cui un domani ci si dimentica di uno. Lo **scatto** non conta: non fa male a
-   nessuno.
-2. **Il colpo si conta sul FRONTE di salita, e il fronte si riarma solo quando molli davvero.** Senza,
-   chi tiene premuto il tasto si becca il secondo avvertimento nel tick esatto in cui finisce di leggere
-   il primo, e il terzo subito dopo — fuori dal villaggio senza aver capito perche'.
-3. **Il rilascio si legge da `_rawAtk`, non da `p.input`.** Durante una ramanzina l'input arriva azzerato
-   d'ufficio (e' lo stesso blocco che ferma i piedi durante i dialoghi): leggerlo li' vorrebbe dire credere
-   a un rilascio che non c'e' stato. `_rawAtk` e' il tasto **come lo manda il client**, prima della censura.
+Questa e' la parte che conta. C'erano nove controlli sul server e una prova nel browser, e **sono passati
+tutti**:
 
-**Il conto alla rovescia parte a riga FINITA**, non quando la guardia comincia a parlare: se partisse
-prima, chi legge piano vedrebbe il game over a meta' frase e chi preme in fretta avrebbe due secondi di
-vantaggio. Il silenzio dopo la riga e' il punto. E scorre in ogni fase: se tiri il terzo colpo e poi corri
-dentro la faglia, il game over ti raggiunge di sotto.
+- I **test sul server** chiamavano `setInput` a mano, quindi «premere Spazio per continuare» e «premere
+  Spazio per sparare» erano due cose scollegate: nella simulazione il legame che ha rotto il gioco **non
+  esisteva proprio**.
+- La **prova nel browser** guidava i tre avvertimenti e verificava che comparissero *nell'ordine giusto*.
+  Comparivano — ma non per i clic che credevo: erano gli Spazio dello script a far ripartire la guardia.
+  **Il test verificava l'effetto e non la causa**, quindi il bug lo ha attraversato senza toccarlo.
 
-I numeri stanno in `constants.js` — `VILL_AVVISI: 3`, `VILL_CONDANNA: 2.6` — perche' sono esattamente il
-tipo di cosa che si vuole ritarare dopo averla provata.
+La lezione, in una riga: *un test che guarda solo se la cosa giusta e' comparsa non sa dire se e' comparsa
+per il motivo giusto.*
+
+### 🔧 Cosa servirebbe per rifarla
+
+Prima **separare le due cose**, e sono due strade sole:
+
+1. l'attacco non sta piu' su Spazio (ma Spazio spara dalla prima versione, e cambiarlo tocca tutti);
+2. il colpo che chiude un dialogo **non conta come colpo** — cioe' dopo `storia_fine` l'attacco resta
+   disarmato finche' il giocatore non rilascia *e ripreme*.
+
+La seconda e' quella giusta, ed e' piccola. Ma va provata **con una prova che parta dai tasti veri**, non
+da `setInput`.
 
 ---
 

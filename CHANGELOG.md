@@ -2,6 +2,114 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.9.4] — 2026-09-13 · "Le abilita' attive dei livelli 8 e 14 non venivano date"
+
+#### 🐛 Il bug, e quanto era grosso
+Segnalato giocando: *«ai livelli 8 e 14 le abilita' attive non vengono applicate, il gioco le salta»*.
+Riprodotto e misurato. In una run normale, un livello per ondata, il giocatore prendeva:
+
+| | prima | dopo |
+|---|---|---|
+| livello 8 | *niente* | **attiva Q** |
+| livello 9 | attiva Q *(in ritardo)* + passiva epica | passiva epica |
+| livello 14 | *niente* | **attiva E** |
+| fine run | Q preso, **`E = null`**, coda ancora piena | Q ed E, coda vuota |
+
+Lo slot **E era perso in ogni singola partita**: dopo il livello 12 non c'e' piu' nessuno scaglione che
+possa riaprire il pannello e trascinarsi dietro l'abilita' rimasta sotto in coda.
+
+#### 🔎 Una domanda, tre risposte diverse
+Le code delle scelte sono **due**: `scaglioniDovuti` (le passive, ai livelli 3, 6, 9, 12) e `abilDovute`
+(gli slot attivi, 8 e 14). In **tre punti** il codice chiedeva «c'e' qualcosa da scegliere?» guardandone
+**una sola**:
+
+1. **`_inviaPannello`** apriva la scelta solo `if ((p.scaglioniDovuti || []).length > 0)`. Un'ondata che
+   portava **solo** al livello 8 o **solo** al 14 finiva nell'`else`, cioe' «niente da scegliere».
+2. **Dopo aver preso una passiva** ripresentava il pannello solo se restavano *altre passive*: chi in
+   un'ondata sola prendeva una passiva e uno slot attivo vedeva sparire il pannello dopo la prima delle due.
+3. **Dopo aver preso rango o specializzazione** non passava la mano a nessuno. La specializzazione del 15
+   ha la precedenza nel pannello — giustamente — ma una volta scelta lasciava il posto vuoto, e l'abilita'
+   del 14 presa nella stessa ondata spariva.
+
+La correzione e' una riga condivisa:
+
+```js
+_scelteInCoda(p) { return ((p.abilDovute || []).length + (p.scaglioniDovuti || []).length) > 0; }
+```
+
+usata in tutti e tre i punti. La domanda adesso ha **una risposta sola** invece di tre che possono
+divergere — ed e' il motivo per cui il bug e' esistito: non una svista, tre copie della stessa condizione
+scritte in momenti diversi.
+
+#### ✅ Verifiche
+- **TEST 69, nuovo — e legge i MESSAGGI, non lo stato.** E' la parte che conta: un test che avesse
+  interrogato `p.abilDovute` avrebbe detto che l'abilita' c'era — e c'era davvero, in coda — senza
+  accorgersi che al giocatore **non veniva mostrata mai**. Questo invece decodifica il JSON che il server
+  manda al client, esattamente come farebbe il browser, e poi "clicca" su cio' che gli e' stato offerto.
+  Percorre le **quattordici ondate** di una run intera per **tutte e tre le classi** e verifica *dove*
+  ogni scelta compare; poi i casi di doppio livello (7→9, 13→15, 11→12, 8→10); poi che la
+  specializzazione non si mangi cio' che ha sotto; poi che chi **non** sceglie si veda ripresentare la
+  scelta l'ondata dopo.
+- **Rimettendo il codice vecchio, TEST 69 fallisce con 14 errori** — verificato. Un test che non fallisce
+  sul bug che dovrebbe prendere non e' un test.
+- `test/simulate.js` — **2414 passati, 0 falliti**.
+- **Nel browser** — il pannello riceve l'offerta vera catturata dal server (*Carica / Grido di Guerra*,
+  slot Q, livello 8) e la disegna; in modalita' di prova il personaggio ha il tasto **Q — CARICA** acceso
+  nella barra e il tasto E ancora chiuso con su scritto «LIVELLO 14», che e' giusto. Zero errori in console.
+
+---
+
+### [2.9.3] — 2026-09-13 · "Le guardie tolte: Spazio sparava, ed era anche il tasto per continuare"
+
+#### ❌ La regola del villaggio e' stata rimossa
+La v2.9.2 aveva introdotto le guardie: attacchi nel villaggio, il gioco si ferma, tre avvertimenti e la run
+finisce. **Era ingiocabile.** Segnalato subito dall'uso vero: *«la guardia vede continuamente l'attacco»*,
+*«il gioco non prosegue piu'»*. Rimossa.
+
+Nel villaggio si attacca come prima e non succede niente. Restano nel progetto, **spenti e non collegati a
+niente**: il testo delle tre scene (`guardia1/2/3` in `storia.js`), il ritratto della guardia nell'HUD, e i
+due numeri in `constants.js` con sopra la spiegazione del perche' non si usano.
+
+#### 💥 Il motivo: Spazio spara
+In `public/js/input.js`:
+
+```js
+const shoot = this.mouse.down || !!this.keys['Space'];
+```
+
+**Spazio e' l'attacco.** Ed e' anche il tasto che fa scorrere i dialoghi. Quindi ogni Spazio premuto per
+leggere la ramanzina della guardia diventava, nel tick dopo la chiusura del riquadro, **un attacco nuovo**:
+guardia → Spazio per leggere → guardia → Spazio per leggere → all'infinito. La partita si piantava, ed e'
+esattamente cio' che e' stato visto.
+
+#### 🔍 E perche' nove controlli e una prova nel browser non l'hanno preso
+E' la parte che conta piu' della modifica stessa.
+
+- I **test sul server** chiamavano `setInput` a mano. Li' dentro «Spazio continua» e «Spazio spara» erano
+  due cose scollegate: **il legame che ha rotto il gioco non esisteva nella simulazione.** Nove assert
+  verdi su un meccanismo che nella realta' non poteva funzionare.
+- La **prova nel browser** guidava i tre avvertimenti e controllava che comparissero nell'ordine giusto.
+  Comparivano — ma non per i clic che credevo: erano gli **Spazio dello script** a far ripartire la
+  guardia. Il test verificava l'*effetto* e non la *causa*, quindi il bug ci e' passato attraverso senza
+  toccarlo. Un test che guarda solo se la cosa giusta e' comparsa non sa dire se e' comparsa per il motivo
+  giusto.
+
+#### 🔧 Cosa servirebbe per rifarla
+Separare le due cose, e le strade sono due: o l'attacco non sta piu' su Spazio (ma ci sta dalla prima
+versione, e cambiarlo tocca tutti), oppure **il colpo che chiude un dialogo non conta come colpo** — dopo
+`storia_fine` l'attacco resta disarmato finche' il giocatore non rilascia *e ripreme*. La seconda e' quella
+giusta ed e' piccola, ma va provata con una prova che **parta dai tasti veri**, non da `setInput`.
+
+#### ✅ Verifiche
+- `test/simulate.js` — TEST 69 rimosso col resto. **2374 passati**, restano i 2 ballerini noti del
+  mercenario.
+- `test/client.js` — i controlli sul testo delle tre scene e sul ritratto restano (cosi' il materiale
+  spento non marcisce), riformulati per dire che sono spenti. *(2 fallimenti attesi sull'audio.)*
+- **Nel browser** — nel villaggio: **dieci colpi di mouse e dieci Spazio, nessun riquadro, nessuna guardia,
+  il gioco prosegue.** Zero errori in console.
+
+---
+
 ### [2.9.2] — 2026-09-13 · "Nel villaggio non si sguaina"
 
 #### 🛡️ Il villaggio adesso ha una regola

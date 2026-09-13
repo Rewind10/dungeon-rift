@@ -4852,6 +4852,109 @@ function testV200() {
 // Questo e' l'unico test che fa partire una partita VERA, col prologo. Tutti gli altri lo saltano
 // (vedi la nota in cima al file), quindi se il giro della storia si rompe casca solo qui: e' per
 // questo che qui si prova la CATENA INTERA, non i pezzi.
+// ============================================================================
+// TEST 69 — v2.9.4: LE SCELTE DI FINE ONDATA non si perdono per strada
+// ============================================================================
+// IL BUG, segnalato giocando: ai livelli 8 e 14 — quelli delle ABILITA' ATTIVE — non veniva offerto
+// niente. Misurato: in una run normale, un livello per ondata, lo slot Q arrivava in ritardo (al 9,
+// appeso alla passiva) e lo slot E **non arrivava mai**: a fine partita `E = null` e la coda ancora
+// piena. Perso in ogni singola partita, perche' dopo il 12 non c'e' piu' nessuno scaglione che possa
+// riaprire il pannello e trascinarsi dietro l'abilita' rimasta in coda.
+//
+// PERCHE' QUESTO TEST LEGGE I MESSAGGI VERI. Non guarda `p.abilDovute` per decidere se e' andata bene:
+// guarda cosa il server MANDA al client, decodificando il JSON come farebbe il browser, e poi "clicca"
+// su quello che gli e' stato offerto. Un test che interroga lo stato interno avrebbe detto che l'abilita'
+// era in coda — e infatti c'era — senza accorgersi che al giocatore non veniva mostrata mai.
+function testSceltePannello() {
+  console.log('\n[TEST 69] v2.9.4 — le scelte di fine ondata: nessuna si perde, nemmeno in doppio livello');
+  const Lv = require('../shared/levels.js');
+
+  // un giocatore che a fine ondata prende TUTTO quello che gli viene offerto, finche' non gli offrono
+  // piu' niente. E' esattamente cio' che fa una persona davanti al pannello.
+  const nuovo = (eroe) => {
+    const off = [];
+    const conn = { send(t) { const m = JSON.parse(t);
+      if (m.t === C.MSG.OFFER_BOON || m.t === C.MSG.OFFER_RANK) off.push(m); } };
+    const r = new Room('sc_' + eroe); const p = r.addPlayer('a', conn, 'A', eroe);
+    r.startGame(1, true); r.phase = C.PHASE_SHOP;
+    return { r, p, off };
+  };
+  const svuota = (r, off) => {
+    const prese = []; let giri = 0;
+    while (giri++ < 25) {
+      const m = off.pop(); off.length = 0;
+      if (!m) break;
+      if (m.t === C.MSG.OFFER_RANK) { const id = m.cards && m.cards[0] && m.cards[0].id; if (!id) break;
+        r.pickRank('a', id); prese.push(m.spec ? 'spec' : 'rango'); continue; }
+      if (m.boons && m.boons.length) { r.pickBoon('a', m.boons[0].id);
+        prese.push(m.abil ? ('attiva-' + m.slot) : ('passiva-' + m.tier)); continue; }
+      break;                                   // "niente da scegliere": il pannello non offre altro
+    }
+    return prese;
+  };
+  const ondata = (ctx, aLiv) => {
+    ctx.r.addXp(ctx.p, Math.max(0, Lv.xpForLevel(aLiv) + 1 - ctx.p.xpPool));
+    ctx.off.length = 0; ctx.r._inviaPannello(ctx.p);
+    return svuota(ctx.r, ctx.off);
+  };
+
+  // --- 1) UNA RUN INTERA, un livello per ondata: le due attive arrivano AL LORO LIVELLO ---
+  for (const eroe of ['guerriero', 'mago', 'ladro']) {
+    const ctx = nuovo(eroe); const dove = {};
+    for (let L = 2; L <= Lv.MAX_LEVEL; L++) { const pr = ondata(ctx, L); if (pr.length) dove[L] = pr; }
+    const p = ctx.p;
+    assert((dove[8] || []).indexOf('attiva-q') >= 0, eroe + ': al livello 8 arriva l abilita del tasto Q (' + JSON.stringify(dove[8] || []) + ')');
+    assert((dove[14] || []).indexOf('attiva-e') >= 0, eroe + ': al livello 14 arriva quella del tasto E (' + JSON.stringify(dove[14] || []) + ')');
+    assert(!!p.abil.q && !!p.abil.e, eroe + ': e a fine run ha tutti e due i tasti (Q=' + p.abil.q + ' E=' + p.abil.e + ')');
+    // e le quattro passive restano ai loro scaglioni: le attive si SOMMANO, non prendono il posto
+    for (const s of Lv.SCAGLIONI)
+      assert((dove[s.lvl] || []).indexOf('passiva-' + s.tier) >= 0, eroe + ': al livello ' + s.lvl + ' arriva la passiva ' + s.tier);
+    assert((p.abilDovute || []).length === 0 && (p.scaglioniDovuti || []).length === 0,
+      eroe + ': e non resta niente in coda (' + JSON.stringify(p.abilDovute) + ' / ' + JSON.stringify(p.scaglioniDovuti) + ')');
+  }
+
+  // --- 2) DUE LIVELLI IN UNA SOLA ONDATA: si prendono ENTRAMBE le cose ---
+  // e' il caso segnalato: 8 e 9 insieme devono dare l'attiva E la passiva, non una delle due.
+  const doppi = [
+    [7, 9,  ['attiva-q', 'passiva-epic'],  'l attiva del Q e la passiva epica'],
+    [13, 15, ['attiva-e'],                 'l attiva dell E, anche se il 15 porta la specializzazione'],
+    [11, 12, ['passiva-divine'],           'la passiva divina'],
+    [8, 10,  ['passiva-epic'],             'la passiva epica'],
+  ];
+  for (const [da, a, attese, cosa] of doppi) {
+    const ctx = nuovo('guerriero');
+    for (let L = 2; L <= da; L++) ondata(ctx, L);
+    const prese = ondata(ctx, a);
+    for (const at of attese)
+      assert(prese.indexOf(at) >= 0, 'dal livello ' + da + ' al ' + a + ' in un ondata sola arriva ' + cosa + ' (' + JSON.stringify(prese) + ')');
+    assert((ctx.p.abilDovute || []).length === 0, 'e non resta un abilita appesa (' + JSON.stringify(ctx.p.abilDovute) + ')');
+  }
+
+  // --- 3) LA SPECIALIZZAZIONE DEL 15 non si mangia quello che c e sotto ---
+  // Aveva la precedenza nel pannello ma, una volta scelta, non passava la mano a nessuno: chi arrivava
+  // al 14 e al 15 nella stessa ondata perdeva l abilita del tasto E per sempre.
+  {
+    const ctx = nuovo('mago');
+    for (let L = 2; L <= 13; L++) ondata(ctx, L);
+    const prese = ondata(ctx, 15);
+    assert(prese.indexOf('spec') >= 0, 'la specializzazione arriva (' + JSON.stringify(prese) + ')');
+    assert(prese.indexOf('attiva-e') >= 0, 'e subito dopo l abilita del tasto E, che era in coda sotto');
+    assert(!!ctx.p.spec && !!ctx.p.abil.e, 'e il personaggio finisce con tutte e due (spec ' + ctx.p.spec + ', E ' + ctx.p.abil.e + ')');
+  }
+
+  // --- 4) CHI NON SCEGLIE NON PERDE NIENTE: la coda sopravvive all ondata ---
+  // se uno chiude il pannello senza scegliere, la scelta deve ripresentarsi la volta dopo.
+  {
+    const ctx = nuovo('ladro');
+    for (let L = 2; L <= 8; L++) { ctx.r.addXp(ctx.p, Math.max(0, Lv.xpForLevel(L) + 1 - ctx.p.xpPool)); }
+    assert((ctx.p.abilDovute || []).indexOf('q') >= 0, 'ha un abilita in sospeso senza aver scelto niente');
+    ctx.off.length = 0; ctx.r._inviaPannello(ctx.p);
+    const m = ctx.off[ctx.off.length - 1] || {};
+    assert(m.boons && m.boons.length > 0, 'e riaprendo il pannello gli viene offerta lo stesso (' + (m.boons || []).length + ' carte)');
+  }
+  ok('le scelte di fine ondata verificate: 8 e 14 arrivano, e il doppio livello da entrambe');
+}
+
 function testStoria() {
   console.log('\n[TEST 68] v2.7 — la storia: ci si sveglia, si attraversa, si parla, si scende');
   const Storia = require('../shared/storia.js');
@@ -5049,113 +5152,7 @@ function testStoria() {
   ok('la storia v2.9 verificata');
 }
 
-// ============================================================================
-// TEST 69 — v2.9.2: LE GUARDIE. Nel villaggio non si sguaina, e alla terza si esce.
-// ============================================================================
-function testGuardie() {
-  console.log('\n[TEST 69] v2.9.2 — le guardie: tre avvertimenti e la run finisce');
-  const Storia = require('../shared/storia.js');
-  const dt = 1 / C.TICK_RATE;
-  const conn = { send() {} };
-  // un colpo = premere e MOLLARE. Tenere premuto non conta due volte, ed e' il punto del fronte di salita.
-  const colpo = (r, pid, tasto) => {
-    r.setInput(pid, { mx: 0, my: 0, aim: 0, shoot: tasto !== 'q' && tasto !== 'e', q: tasto === 'q', e: tasto === 'e' });
-    r.update(dt);
-    r.setInput(pid, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false });
-    r.update(dt);
-  };
-  // finisce la scena che sta a schermo, riga per riga, come farebbe chi preme Spazio
-  const leggi = (r) => { if (!r.storia) return; const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); };
 
-  // --- 1) IL PRIMO COLPO: si ferma, e non parte niente ---
-  const r = new Room('grd'); const p = r.addPlayer('a', conn, 'A', 'mago') || r.players.get('a');
-  r.startGame(); r.enterMarket();
-  assert(r.phase === C.PHASE_MARKET && !!r.map.village, 'siamo nel villaggio');
-  assert((p._reati || 0) === 0, 'e il conto degli avvertimenti parte da zero');
-  colpo(r, 'a');
-  assert(r.storia && r.storia.scena === 'guardia1', 'il primo colpo: parla una guardia');
-  assert(r.bullets.length === 0, 'e il colpo NON parte: il proiettile non esiste proprio');
-  assert(p._reati === 1, 'e vale uno (' + p._reati + ')');
-  // e mentre parla non ci si muove: e' lo stesso blocco della storia, non un secondo meccanismo
-  r.setInput('a', { mx: 1, my: 0, aim: 0 });
-  assert(p.input.mx === 0, 'e mentre la guardia parla i piedi sono fermi');
-  leggi(r);
-  assert(r.storia === null && r._condanna === 0, 'finita la ramanzina il gioco riprende, e non e successo altro');
-
-  // --- 2) IL SECONDO: un altro avvertimento, e l ultimo ---
-  colpo(r, 'a');
-  assert(r.storia && r.storia.scena === 'guardia2', 'il secondo colpo: secondo avvertimento');
-  assert(p._reati === 2, 'e vale due (' + p._reati + ')');
-  leggi(r);
-  assert(r._condanna === 0, 'e si riprende ancora: al secondo non succede niente');
-
-  // --- 3) IL TERZO: «Ti avevo avvisato», e poi la partita finisce ---
-  colpo(r, 'a');
-  assert(r.storia && r.storia.scena === 'guardia3', 'il terzo colpo: quello che non e un avvertimento');
-  leggi(r);
-  assert(r._condanna > 0, 'e alla fine della riga parte il conto alla rovescia (' + r._condanna.toFixed(1) + 's)');
-  assert(r.phase === C.PHASE_MARKET, 'ma non subito: c e un silenzio in mezzo');
-  // un secondo non basta, la durata intera si'
-  for (let i = 0; i < C.TICK_RATE * 1; i++) r.update(dt);
-  assert(r.phase === C.PHASE_MARKET, 'dopo un secondo si e ancora vivi');
-  for (let i = 0; i < C.TICK_RATE * (C.VILL_CONDANNA + 1); i++) r.update(dt);
-  assert(r.phase === C.PHASE_GAMEOVER, 'e poi la run e finita (' + r.phase + ')');
-
-  // --- 4) LE TRE VIE SONO UNA SOLA REGOLA: spada, magia e freccia contano uguale ---
-  // e' il motivo per cui il controllo sta nel punto in cui passano tutte e tre, e non dentro le tre
-  // funzioni che sparano: tre controlli in tre posti sono tre posti in cui dimenticarsene uno.
-  for (const tasto of ['shoot', 'q', 'e']) {
-    const rr = new Room('grd_' + tasto); rr.addPlayer('a', conn, 'A', 'mago');
-    rr.startGame(); rr.enterMarket();
-    colpo(rr, 'a', tasto);
-    assert(rr.storia && rr.storia.scena === 'guardia1', 'anche con "' + tasto + '" la guardia interviene');
-  }
-
-  // --- 5) TENERE PREMUTO NON E TRE COLPI ---
-  // senza il fronte di salita, chi tiene giu il tasto si becca il secondo avvertimento nell istante in cui
-  // finisce di leggere il primo, e il terzo subito dopo: fuori dal villaggio senza aver capito perche.
-  {
-    const rr = new Room('grdH'); const q = rr.addPlayer('a', conn, 'A', 'guerriero') || rr.players.get('a');
-    rr.startGame(); rr.enterMarket();
-    for (let i = 0; i < 60; i++) { rr.setInput('a', { mx: 0, my: 0, aim: 0, shoot: true }); rr.update(dt); }
-    assert(q._reati === 1, 'due secondi col tasto premuto valgono UN avvertimento (' + q._reati + ')');
-    leggi(rr);
-    for (let i = 0; i < 60; i++) { rr.setInput('a', { mx: 0, my: 0, aim: 0, shoot: true }); rr.update(dt); }
-    assert(q._reati === 1, 'e continuare a tenerlo premuto non ne aggiunge un altro (' + q._reati + ')');
-  }
-
-  // --- 6) IL CONTO RIPARTE A OGNI VILLAGGIO ---
-  {
-    const rr = new Room('grdR'); const q = rr.addPlayer('a', conn, 'A', 'ladro') || rr.players.get('a');
-    rr.startGame(); rr.enterMarket();
-    colpo(rr, 'a'); leggi(rr); colpo(rr, 'a'); leggi(rr);
-    assert(q._reati === 2, 'due avvertimenti bruciati in questo villaggio');
-    rr.enterMarket();
-    assert(q._reati === 0 && q._reatoH === false, 'al villaggio dopo si riparte da zero');
-  }
-
-  // --- 7) E FUORI DAL VILLAGGIO SI COMBATTE, che era il punto di tutto ---
-  // v2.9.2 — LA VERIFICA DI CIO CHE NON E STATO TOCCATO. Il controllo sta nello stesso punto da cui parte
-  // ogni colpo della partita: se fosse scritto male, il gioco smetterebbe di sparare ovunque.
-  {
-    const rr = new Room('grdC'); const q = rr.addPlayer('a', conn, 'A', 'mago') || rr.players.get('a');
-    rr.startGame();
-    assert(rr.phase !== C.PHASE_MARKET, 'in campo, non al villaggio');
-    const prima = rr.bullets.length;
-    colpo(rr, 'a');
-    assert(rr.bullets.length > prima, 'il colpo parte eccome (' + prima + ' -> ' + rr.bullets.length + ')');
-    assert(rr.storia === null && (q._reati || 0) === 0, 'e nessuna guardia ha niente da ridire');
-  }
-
-  // --- 8) IL TESTO: corto, brusco, e senza spiegazioni ---
-  const tutte = [].concat(Storia.guardia1.righe, Storia.guardia2.righe, Storia.guardia3.righe);
-  assert(tutte.every(q => q.chi === 'guardia'), 'parla solo la guardia: non e un dialogo, e un ordine');
-  assert(tutte.every(q => q.t.length <= 90), 'e sono righe corte: una guardia non fa discorsi');
-  assert(Storia.guardia2.righe.length <= Storia.guardia1.righe.length, 'e il secondo avviso non e piu lungo del primo');
-  assert(Storia.guardia3.righe.length === 1, 'e il terzo e una riga sola');
-  ok('le guardie verificate: tre avvertimenti, poi fuori — e in campo si spara come sempre');
-}
-
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testGuardie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
