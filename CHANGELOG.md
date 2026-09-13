@@ -2,6 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.8.1] — 2026-09-13 · "La schermata di fine ondata parla la lingua del patto"
+
+Una rivelazione che spiega una regola vale solo se **poi la regola la dice anche l'interfaccia**. Dopo il
+colpo di scena della v2.8 la schermata fra un'ondata e l'altra affermava il contrario: *«PUNTI — dove metti
+quello che hai imparato»*. Lui non impara niente: **riceve**.
+
+| Dove | Prima | Adesso |
+|---|---|---|
+| Cornice del riepilogo | — | *Statistiche della partita* |
+| Titolo dei punti | dove metti quello che hai imparato | **cosa gli concedi** |
+| Sotto | — | *Non impara: riceve. Ogni punto che spendi qui e' una cosa che tu gli dai.* |
+| Carta a fine ondata | 🎴 SCEGLI UN'ABILITA' | **🎴 CONCEDIGLI UN'ABILITA'** · *Dona al tuo avatar una nuova abilita'* |
+| Elenco delle carte | LE TUE ABILITA' | **I poteri che hai concesso all'avatar** |
+| Rango | — | *Le tue azioni hanno permesso al tuo avatar di salire di livello* |
+| Emporio | — | *Le monete sono sue: questo se lo compra da solo.* |
+| Sotto il pulsante | — | *Prosegui* |
+
+**Il patto per esteso si legge una volta sola**, a fine ondata 1. Queste righe si rileggono venti volte, e
+la letteratura letta venti volte stanca: dalla seconda in poi restano solo quelle corte.
+
+**E l'invito a donare compare solo se c'e' davvero qualcosa da dare.** Con la scelta chiusa il titolo
+diventa "nessuna scelta questa volta", e sotto restava *«Dona al tuo avatar una nuova abilita'»*: un invito
+a fare una cosa impossibile e' peggio di nessun testo.
+
+Il testo sta in `shared/storia.js` come tutto il resto del parlato — `menu:` — quindi si riscrive senza
+aprire ne' l'HTML ne' l'HUD. L'unica cosa in tutta la schermata che **non** passa dalla divinita' sono le
+**monete**: quelle se le guadagna lui.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2279 passati, 0 falliti**.
+- `test/client.js` — le otto righe esistono, la schermata nomina l'**avatar**, le frasi vecchie
+  ("quello che hai imparato", "LE TUE ABILITA'") non ci sono piu', e il patto compare solo all'ondata 1.
+- Guardate a schermo tutte e tre le sezioni, con la scelta aperta e chiusa.
+
+---
+
 ### [2.8.0] — 2026-09-13 · "La stanza, il riquadro coi ritratti, e il colpo di scena"
 
 #### 🐛 Dal villaggio non si scendeva — ed e' istruttivo

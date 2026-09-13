@@ -103,6 +103,33 @@
       righe: [SC('È sotto di te. Non sa che esisti, e per ora è l’unico vantaggio che abbiamo.')],
     },
 
+    // ===================== IL MENU DI FINE ONDATA =====================
+    // v2.8.1 — Dopo il colpo di scena, la schermata fra un'ondata e l'altra diceva una cosa FALSA:
+    // "PUNTI — dove metti quello che hai imparato". Lui non impara niente. Quello che compare li' dentro
+    // — forza, costituzione, abilita' — sono DONI di chi tiene il mouse, ed e' esattamente la regola che
+    // lo sciamano ha promesso: «Lasciati guidare. Ti donera' i poteri che ti servono».
+    //
+    // Queste righe si leggono VENTI VOLTE, quindi sono corte e non fanno battute: una battuta letta venti
+    // volte diventa un fastidio. La spiegazione per esteso compare una volta sola, a fine ondata 1, e poi
+    // non si rivede piu'.
+    menu: {
+      // v2.8.2 — riscritte piu' PIANE. La prima versione era letteraria e in una schermata che si legge
+      // venti volte la letteratura stanca: qui serve che si capisca cosa fa un pulsante, non che suoni
+      // bene. Il colpo di scena lo regge la parola «avatar», che dice da sola chi e' lui e chi sei tu.
+      cornice:  'Statistiche della partita',
+      // solo a fine ondata 1: il patto, detto una volta e mai piu'
+      patto:    'Da qui lo guardi. Quello che gli dai in questa schermata — forza, costituzione, abilità — lui non se lo guadagna: lo riceve. È il patto.',
+      punti:    'Non impara: riceve. Ogni punto che spendi qui è una cosa che tu gli dai, e che prima non aveva.',
+      // le monete sono SUE: e' l'unica cosa in tutta la schermata che non passa da te, e dirlo serve a
+      // far capire perche' ci sono due monete diverse.
+      emporio:  'Le monete sono sue: questo se lo compra da solo.',
+      abilita:  'Dona al tuo avatar una nuova abilità',
+      rango:    'Le tue azioni hanno permesso al tuo avatar di salire di livello',
+      // l'intestazione dell'elenco di quelle gia' date
+      poteri:   'I poteri che hai concesso all’avatar',
+      riparti:  'Prosegui',
+    },
+
     // ===================== LE MISSIONI =====================
     // v2.8 — la missione PRINCIPALE resta accesa per tutta la partita (e' il filo della storia), ma non
     // toglie niente: taglie, prigionieri e tutto il resto continuano a funzionare come sempre. Per questo

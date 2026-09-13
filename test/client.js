@@ -633,7 +633,9 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(String(bsub.innerHTML).indexOf('massimo') > 0, 'al tetto dice che la crescita finisce li');
   HUD.setBoons({ boons: [{ id: 'pierce', name: 'Perforazione', icon: '🏹', rarity: 'rare', hero: 'ladro', desc: 'passa attraverso' }], tier: 'rare', tierName: 'Raro', tierColor: '#3aa0ff', scaglione: 2, tot: 4, resta: 1, liv: 6 }, () => {});
   ok(String(bsub.innerHTML).indexOf('2 di 4') > 0, 'a scelta aperta dice a quale scaglione sei');
-  ok(String(document.getElementById('boonTitle').textContent).indexOf('SCEGLI') > 0, 'e il titolo torna quello della scelta');
+  // v2.8.1 — "CONCEDIGLI", non "SCEGLI": dopo il colpo di scena la carta non se la prende lui,
+  // gliela dai tu. La parola e' la meta' del lavoro che fa questa schermata.
+  ok(String(document.getElementById('boonTitle').textContent).indexOf('CONCEDIGLI') > 0, 'e il titolo torna quello del dono');
   ok(String((document.getElementById('boonCards').children[0] || {}).innerHTML).indexOf('DELLA TUA CLASSE') > 0, 'e marca quali sono le abilita della tua classe');
 })();
 
@@ -1042,6 +1044,27 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(/#dial\{[^}]*left:50%/.test(srcC) && /#dial\{[^}]*top:/.test(srcC), 'e sta al centro dello schermo, non ai piedi');
     ok(/#dialFaccia\{/.test(srcC), 'e il ritratto ha la sua cornice');
     ok(/#quest[^}]*pointer-events:none/.test(srcC), 'e nemmeno la missione');
+
+    // --- v2.8.1 — LE RIGHE DEL DONO nel menu di fine ondata ---
+    // Dopo il colpo di scena questa schermata diceva una cosa FALSA: "dove metti quello che hai
+    // imparato". Lui non impara: riceve. Il testo sta in storia.js come tutto il resto del parlato.
+    ok(!!St.menu, 'il menu di fine ondata ha i suoi testi, e stanno in storia.js');
+    for (const k of ['cornice', 'patto', 'punti', 'emporio', 'abilita', 'rango', 'poteri', 'riparti'])
+      ok(typeof St.menu[k] === 'string' && St.menu[k].length > 3, 'c e la riga "' + k + '"');
+    // v2.8.2 — la parola che regge tutta la schermata: chi legge deve trovarci scritto AVATAR, se no
+    // "dona" e "concedi" restano parole senza un soggetto e il colpo di scena non arriva fin qui.
+    ok(/avatar/i.test(St.menu.abilita + St.menu.rango + St.menu.poteri), 'e la schermata nomina l avatar');
+    ok(!/quello che hai imparato/.test(src3), 'e la frase vecchia ("quello che hai imparato") non c e piu: era falsa');
+    ok(!/LE TUE ABILIT/.test(src3), 'e nemmeno "LE TUE ABILITA": adesso dice di chi sono e chi le ha date');
+    ok(/CONCEDIGLI UN/.test(src3) && /CONCEDIGLI UN/.test(srcH), 'la carta si CONCEDE, non si sceglie');
+    for (const id of ['menuCornice', 'menuPatto', 'notaPunti', 'notaEmporio', 'notaRango', 'notaAbilita', 'titoloPoteri'])
+      ok(new RegExp('id="' + id + '"').test(src3), 'la pagina ha #' + id);
+    ok(/_righeDono\(\)/.test(srcH), 'e l HUD le va a mettere al loro posto');
+    // il PATTO si vede una volta sola: letto venti volte sarebbe rumore
+    ok(/pat\.classList\.toggle\('hidden', w !== 1\)/.test(srcH), 'e il patto compare solo a fine ondata 1');
+    // e nessuna di queste righe e' un paragrafo: si leggono di sfuggita fra un ondata e l altra
+    const lungheM = Object.keys(St.menu).filter(k => k !== 'patto' && St.menu[k].length > 100);
+    ok(lungheM.length === 0, 'e sono corte (la sola lunga e il patto, che si legge una volta)');
   }
 })();
 

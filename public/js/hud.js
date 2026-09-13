@@ -309,12 +309,19 @@
       if (nota) {
         nota.innerHTML = sosp === 'spec' ? 'Scegli prima la tua <b>specializzazione</b> nella sezione ABILITÀ.'
           : sosp === 'abilita' ? 'Hai un\'<b>abilità da scegliere</b> nella sezione ABILITÀ.'
-          : (this._pronto ? 'Aspettiamo gli altri giocatori.' : 'Puoi passare dal villaggio prima di ripartire.');
+          : (this._pronto ? 'Aspettiamo gli altri giocatori.'
+            : ((window.GAME.Storia && window.GAME.Storia.menu && window.GAME.Storia.menu.riparti) || 'Quando sei pronto, rimandalo giù.')
+              + ' <span style="opacity:.7">Puoi passare dal villaggio prima di ripartire.</span>');
       }
       const vil = $('tabVillaggio');
       if (vil) { const ultima = this._stats && this._stats.wave >= (window.GAME.Constants.FINAL_WAVE || 20); vil.classList.toggle('off', !!ultima); }
     },
     _renderRiepilogo() {
+      // v2.8.1 — LE RIGHE DEL DONO. Dopo il colpo di scena questa schermata diceva una cosa falsa: lui
+      // non impara niente, riceve. Il testo sta in shared/storia.js come tutto il resto del parlato, e
+      // da qui si limita ad atterrare negli elementi giusti. Il PATTO — la spiegazione per esteso —
+      // compare solo a fine ondata 1: letta venti volte sarebbe rumore.
+      this._righeDono();
       const nota = $('riepilogoNota'); if (!nota) return;
       const w = this._stats ? this._stats.wave : 0;
       nota.innerHTML = 'Da qui puoi guardare il <b>personaggio</b>, spendere i punti, controllare le <b>abilità</b> e passare dal <b>villaggio</b>. '
@@ -324,10 +331,17 @@
     _renderAbilita() {
       const brow = $('boonCards'); if (!brow) return; brow.innerHTML = '';
       const bs = $('boonSub'), bt = $('boonTitle');
-      if (this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked) {
+      // v2.8.2 — "Dona al tuo avatar una nuova abilita'" si mostra SOLO quando c'e' davvero una carta da
+      // dare. Con la scelta chiusa il titolo diventa "nessuna scelta questa volta", e sotto restava un
+      // invito a donare qualcosa che non c'e': un invito a fare una cosa impossibile e' peggio di niente.
+      const na = $('notaAbilita');
+      const aperta = !!(this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked);
+      if (na) na.classList.toggle('hidden', !aperta);
+      if (aperta) {
         $('boonSection').classList.remove('hidden');
         const rar = RAR[this._boons.tier] || {};
-        if (bt) bt.textContent = this._boons.abil ? ('⚡ ABILITÀ ATTIVA — TASTO ' + (this._boons.tasto || 'Q')) : '🎴 SCEGLI UN\'ABILITÀ';
+        // v2.8.1 — "CONCEDIGLI", non "scegli": la carta non se la prende lui, gliela dai tu.
+        if (bt) bt.textContent = this._boons.abil ? ('⚡ ABILITÀ ATTIVA — TASTO ' + (this._boons.tasto || 'Q')) : '🎴 CONCEDIGLI UN\'ABILITÀ';
         if (bs && this._boons.abil) bs.innerHTML = 'Si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
           + ((this._boons.boons[0] && this._boons.boons[0].cd) || 30) + 's</b> · livello <b>' + (this._boons.liv || 6) + '</b>'
           + ' <span style="opacity:.75">— la scelta vale per tutta la partita</span>';
@@ -827,6 +841,17 @@
       $('endStats').innerHTML = html; scr.classList.remove('hidden');
     },
     hideEnd() { $('endScreen').classList.add('hidden'); },
+    _righeDono() {
+      const M = (window.GAME.Storia && window.GAME.Storia.menu) || null; if (!M) return;
+      const set = (id, t) => { const e = $(id); if (e) e.textContent = t; };
+      set('menuCornice', M.cornice);
+      set('notaPunti', M.punti); set('notaEmporio', M.emporio);
+      set('notaAbilita', M.abilita); set('notaRango', M.rango);
+      if (M.poteri) set('titoloPoteri', M.poteri);
+      const w = this._stats ? this._stats.wave : 0;
+      const pat = $('menuPatto');
+      if (pat) { pat.textContent = M.patto; pat.classList.toggle('hidden', w !== 1); }
+    },
 
     // ===== v2.7 — LA STORIA: sottotitoli e missione ==============================================
     // Il testo compare UNA LETTERA ALLA VOLTA. Non e' un vezzo: una riga che appare tutta insieme si

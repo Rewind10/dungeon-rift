@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.8.0`
+**Versione attuale:** `2.8.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -375,6 +375,33 @@ e' la **silhouette**.
 **Mentre parla qualcuno non ci si muove**, e il blocco sta sul **server** (`setInput`): il client puo'
 anche smettere di mandare i comandi, ma quello che decide dove sta un giocatore e' il server. Si ferma il
 movimento e tutto quello che si fa con le mani; la mira no, quella non sposta niente.
+
+### 🎁 E la schermata di fine ondata lo dice *(v2.8.1)*
+
+Una rivelazione che spiega una regola vale solo se **la regola poi la dice anche l'interfaccia**. Dopo il
+colpo di scena la schermata fra un'ondata e l'altra affermava il contrario: *«PUNTI — dove metti quello che
+hai imparato»*. Lui non impara niente: riceve.
+
+| Dove | Prima | Adesso |
+|---|---|---|
+| Cornice del riepilogo | — | *Statistiche della partita* |
+| Titolo dei punti | dove metti quello che hai imparato | **cosa gli concedi** |
+| Sotto | — | *Non impara: riceve. Ogni punto che spendi qui è una cosa che tu gli dai.* |
+| Carta a fine ondata | 🎴 SCEGLI UN'ABILITÀ | **🎴 CONCEDIGLI UN'ABILITÀ** · *Dona al tuo avatar una nuova abilità* |
+| Elenco delle carte | LE TUE ABILITÀ | **I poteri che hai concesso all'avatar** |
+| Rango | — | *Le tue azioni hanno permesso al tuo avatar di salire di livello* |
+| Emporio | — | *Le monete sono sue: questo se lo compra da solo.* |
+| Sotto il pulsante | — | *Prosegui* |
+
+**Il patto per esteso si legge una volta sola**, a fine ondata 1. Queste righe si rileggono venti volte, e
+la letteratura letta venti volte stanca: dalla seconda in poi restano solo quelle corte.
+
+E l'invito a donare compare **solo se c'e' davvero qualcosa da dare**: con la scelta chiusa il titolo
+diventa *«nessuna scelta questa volta»*, e sotto restava un invito a fare una cosa impossibile — che e'
+peggio di nessun testo.
+
+L'unica cosa in tutta la schermata che **non** passa dalla divinita' sono le **monete**: quelle se le
+guadagna lui, e dirlo serve a far capire perche' ci sono due monete diverse.
 
 ### 🎭 Il colpo di scena
 

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.8.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.8.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.8.1 (la schermata di fine ondata parla la lingua del patto)
+- **🎁 I potenziamenti sono DONI, e adesso lo dice.** Dopo il colpo di scena la schermata fra un'ondata e
+  l'altra diceva una cosa falsa — *«PUNTI — dove metti quello che hai imparato»*. Lui non impara niente:
+  **riceve**. Adesso: *«PUNTI — cosa gli concedi»*, *«🎴 CONCEDIGLI UN'ABILITÀ»*, *«Dona al tuo avatar una
+  nuova abilità»*, *«I poteri che hai concesso all'avatar»*.
+- **📜 Il patto, una volta sola.** A fine ondata 1 compare la spiegazione per esteso; dalla seconda in poi
+  restano solo le righe corte. Queste si leggono venti volte: la letteratura, letta venti volte, stanca.
+- **🔇 L'invito a donare compare solo se c'e' davvero qualcosa da dare.** Con la scelta chiusa il titolo
+  diventa *«nessuna scelta questa volta»*, e sotto restava un invito a fare una cosa impossibile.
 
 ## 🆕 Novita v2.8 (la stanza, il riquadro coi ritratti, e il colpo di scena)
 - **🐛 IL BUG GROSSO: dal villaggio non si scendeva.** Uscendo dal villaggio d'apertura si finiva

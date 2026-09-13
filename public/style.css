@@ -711,3 +711,18 @@ h2.info-h:not(:first-child){margin-top:17px}
   #dial .d-txt{font-size:16px;min-height:46px}
   #dialFaccia{width:64px;height:64px;flex:0 0 64px}}
 
+
+/* ===== v2.8.1 — LE RIGHE DEL DONO ==================================================================
+   Dopo il colpo di scena la schermata di fine ondata diceva una cosa falsa ("quello che hai imparato").
+   Queste righe la correggono: forza, costituzione e abilita' sono DONI di chi tiene il mouse.
+   Si leggono venti volte, quindi sono testo piccolo e quieto — devono farsi trovare, non chiamare. */
+.dono{margin:-2px auto 14px;max-width:660px;font-size:12.5px;line-height:1.5;color:#8b93a7;
+  font-style:italic;text-align:center}
+.dono.hidden{display:none}
+/* la CORNICE, in cima al riepilogo: questa invece si legge subito, ed e' la frase che inquadra tutto */
+.dono-cornice{margin:0 0 14px;font-size:15px;line-height:1.45;color:#ffe9b0;font-weight:600;
+  letter-spacing:.2px}
+/* il PATTO: solo a fine ondata 1, detto una volta e mai piu' */
+.dono-patto{margin:-6px 0 16px;padding:11px 14px;font-size:13.5px;line-height:1.55;color:#cfd6e6;
+  background:rgba(255,207,74,.05);border:1px solid rgba(255,207,74,.20);border-radius:10px}
+.dono-patto.hidden{display:none}
