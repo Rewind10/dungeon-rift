@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.9.4`
+**Versione attuale:** `2.11.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1024,6 +1024,117 @@ specializzazione al 15 · l'evoluzione delle armi · il villaggio fra un'ondata 
 
 **Niente immagini**, testo e icone: una guida fatta di schermate invecchia alla prima modifica alla grafica,
 questa no.
+
+---
+
+## 💾 IL SALVATAGGIO *(v2.11)*
+
+Si salva **dall'Ostessa**, per **10 monete**, **quando lo decidi tu**. Niente salvataggi automatici:
+scegliere quando salvare *e'* il salvataggio, e uno automatico toglie quella scelta senza chiedere.
+
+| | |
+|---|---|
+| **Dove si salva** | dal pannello dell'Ostessa, nel villaggio — la locanda e' il posto dove si salva in ogni gioco di ruolo da quarant'anni, e cosi' non c'e' niente da spiegare |
+| **Quanto costa** | 10 monete: abbastanza da essere un gesto, troppo poco da essere una scelta |
+| **Quanti** | **uno solo**: salvare sovrascrive. C'e' o non c'e' |
+| **Dove vive** | nel **browser** (`localStorage`). Il server non lo tiene |
+| **Come si riprende** | pulsante **RIPRENDI** nella prima schermata, con su scritto ondata, classe, livello e quando hai salvato |
+| **Da dove riparti** | dal **villaggio** di quell'ondata, con tutto quello che avevi |
+| **Se muori** | il salvataggio **resta**. Nessuno lo cancella: e' il punto di averlo |
+| **In cooperativa** | per ora no. Il pulsante lo dice |
+
+### 🔑 La regola: si salvano le CAUSE, non gli EFFETTI
+
+Un personaggio all'ondata 12 ha `stats.dmgMult = 1.08`, `perk.parata = 2`, `maxHp = 290`. Sono tutti numeri
+**calcolati** — da `_recomputeBoons` e `_recomputeGear` — a partire da cose piu' semplici: i punti che hai
+speso (`buys`), le carte che hai preso (`boonsOwned`), l'equipaggiamento che porti (`gear`).
+
+**Se salvassimo i numeri calcolati**, il giorno che ritari il costo di una statistica o il danno di
+un'armatura ogni partita salvata resterebbe con i numeri **vecchi** — e non si vedrebbe: nessun errore,
+nessun crash, solo un personaggio leggermente sbagliato che nessuno sa spiegare. Salvando le cause e
+ricalcolando al caricamento, un salvataggio vecchio prende automaticamente il bilanciamento nuovo.
+
+E' anche il motivo per cui `shared/salvataggio.js` e' corto: le cause sono diciassette campi, gli effetti
+sono cento.
+
+### 🧩 I tre dettagli che non si vedono
+
+1. **Il pacchetto si costruisce PRIMA di pagare.** Cosi' contiene le monete che avevi *prima* della sosta:
+   ricaricando non ti ritrovi a pagare la stessa sosta una seconda volta. Dieci monete si pagano una volta.
+2. **Si riparte da `startGame(1)`, non da `startGame(ondata)`.** Passare un'ondata alta accende la
+   **modalita' di prova** — `this.prova`, e il personaggio finto di `_preparaProva`. Una partita ripresa
+   non e' una prova: e' la tua, e i suoi record valgono. L'ondata gliela si dice a parte.
+3. **Le scelte in sospeso tornano a galla.** Chi salva con una carta ancora da scegliere se la ritrova
+   appena riprende — e' lo stesso errore della v2.9.4, che qui sarebbe stato facilissimo rifare.
+
+### 🧱 Un pacchetto rotto si rifiuta INTERO
+
+Formato sbagliato, classe che non esiste, livello impossibile: si rifiuta e la partita **non parte**. Un
+caricamento a meta' produce un personaggio impossibile, che e' molto peggio di un *«non si puo'»*. I numeri
+ritoccati a mano si stringono nei loro limiti — non e' antifrode (e' un gioco in singolo: chi vuole barare
+apre la console e bara), e' che un salvataggio corrotto non deve poter mandare per aria il server.
+
+### ⚠️ Il prezzo di tenerlo nel browser
+
+Cambi browser, o cancelli i dati del sito, e il salvataggio non c'e' piu'. E' il compromesso che si e'
+scelto: zero infrastruttura, nessun account, nessuna cartella da gestire sul server. `localStorage` inoltre
+**solleva un'eccezione** — non torna `null` — in finestra anonima, con i dati del sito bloccati e a spazio
+esaurito: ogni lettura e scrittura sta dentro `try/catch`, e se non si puo' scrivere **si dice**, invece di
+far finta di aver salvato. Un salvataggio che il giocatore crede di avere e non ha e' peggio di nessuno.
+
+---
+
+## 🎯 IL MIRINO AL GUINZAGLIO *(v2.10)*
+
+Il mirino non si allontana piu' di **200 px** dal personaggio. Il cursore lo muovi come vuoi: il mirino lo
+segue finche' sta dentro il raggio, e oltre si ferma sul bordo **conservando la direzione**.
+
+### 🚫 Perche' non si puo' "limitare il cursore"
+
+Una pagina web **non puo' spostare il cursore del sistema**: non esiste un'API per farlo, ed e' voluto —
+un sito che ti muove il puntatore e' un sito che ti fa cliccare dove vuole lui. L'unica strada e' il
+**pointer lock**: si chiede al browser di *nascondere* il cursore vero e di mandare solo gli **spostamenti**
+(`movementX/Y`). Da li' in poi il mirino e' roba nostra: lo teniamo noi, lo disegniamo noi, lo fermiamo dove
+vogliamo. E' come si controllano i twin-stick.
+
+### 🪢 Il guinzaglio e' un vettore dal centro
+
+Il personaggio sta **sempre al centro dello schermo** — la camera lo insegue — quindi il mirino e'
+semplicemente uno scostamento da li': si accumulano i movimenti e si **accorcia il vettore** quando supera
+il raggio. Accorciare non ruota: la direzione resta quella che hai scelto, ed e' l'unica cosa che il server
+riceve. Nessuna conversione fra mondo e schermo, perche' la mappa e' disegnata **1:1**.
+
+### 🔓 Si gioca anche senza il blocco
+
+Il pointer lock lo concede il browser, e solo dopo un clic; l'utente puo' uscirne con **Esc** quando vuole,
+e su un telefono non esiste. Se non c'e', il mirino segue il cursore vero — **clampato allo stesso raggio**.
+La regola del gioco e' identica nei due casi: cambia solo se il puntatore che vedi e' il tuo o il nostro.
+Per questo il guinzaglio sta in **un posto solo**, `_clamp()`: due strade e un clamp per ciascuna sarebbero
+due regole che prima o poi divergono.
+
+### 👁️ Un puntatore solo, e l'anello che si accende
+
+Il cursore del sistema sul canvas e' **nascosto** (`cursor:none`): se restasse visibile, senza pointer lock
+si vedrebbero **due puntatori separarsi** appena superi il raggio — quello vero che va avanti e il mirino
+che si ferma. Uno solo, e la regola si legge da se'.
+
+L'**anello a 200 px** si accende **solo mentre il mirino preme contro il limite**. Un cerchio sempre acceso
+attorno al personaggio sarebbe un orpello che si impara a non vedere in due minuti; acceso in quel momento
+li' e' invece la risposta alla domanda che il giocatore si sta facendo — *«perche' non va piu' in la'?»*.
+
+### ⚠️ Cosa NON cambia (e va detto)
+
+**Nessuna meccanica.** Il client manda al server solo `aim`, che e' un **angolo**: frecce, magie, fendente e
+perfino la Meteora partono da li', con una gittata loro gia' scritta. La **distanza** del mouse non e' mai
+stata mandata e non e' mai stata usata. Il guinzaglio cambia **come si sente il gioco in mano**, non dove
+arrivano i colpi. Se un domani si vorra' una gittata vera, e' un lavoro di bilanciamento, non di input.
+
+### 🧪 Il test prova la regola, non il disegno
+
+`test/client.js` carica `input.js` davvero, gli manda eventi di mouse finti e guarda **dove finisce il
+mirino**: dentro il raggio segue, fuori si ferma a 200 e l'angolo resta quello, in diagonale idem,
+sul personaggio esatto l'angolo non diventa `NaN`, e agganciato accumula spostamenti senza mai sfondare il
+guinzaglio. E' la parte che decide dove spari: vale la pena che si rompa li' e non in mano a chi gioca.
 
 ---
 

@@ -21,6 +21,10 @@
     hireMerc() { this.send({ t: C.MSG.HIRE_MERC }); },
     toggleCard(id) { this.send({ t: C.MSG.TOGGLE_CARD, id }); },
     rest() { this.send({ t: C.MSG.REST }); },
+    // v2.11 — il salvataggio: si compra (`salva`) e si riporta indietro (`riprendi`). Il pacchetto vive
+    // nel browser, non sul server: qui passa e basta.
+    salva() { this.send({ t: C.MSG.SALVA }); },
+    riprendi(dati) { this.send({ t: C.MSG.RIPRENDI, dati }); },
     shopReady(dest) { this.send({ t: C.MSG.SHOP_READY, dest: dest || 'wave' }); },  // v1.53 — 'wave' | 'market'
     exitWave() { this.send({ t: C.MSG.EXIT_WAVE }); },   // v1.78 — pulsante EXIT sulla mappa ripulita
     goVillage() { this.send({ t: C.MSG.GO_VILLAGE }); },  // v1.79 — sezione Villaggio del menu di fine ondata
@@ -81,6 +85,7 @@
       case C.MSG.OFFER_BANDIT: if (this.onOfferBandit) this.onOfferBandit(m); break;
       case C.MSG.OFFER_SEER: if (this.onOfferSeer) this.onOfferSeer(m); break;
       case C.MSG.OFFER_INN: if (this.onOfferInn) this.onOfferInn(m); break;
+      case C.MSG.SALVATO: if (this.onSalvato) this.onSalvato(m); break;   // v2.11 — il pacchetto da mettere in tasca
       case C.MSG.BOONS: if (this.onBoons) this.onBoons(m); break;  // v1.51 — poteri attivi
       case C.MSG.OFFER_MERCHANT: if (this.onOfferMerchant) this.onOfferMerchant(m); break;
       case C.MSG.CHAT: if (this.onChat) this.onChat(m); break;

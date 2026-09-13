@@ -1585,6 +1585,43 @@
       // esiste, e su una mappa illuminata si vedeva eccome (prima la copriva il buio).
       if (!this.map.lit) this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
       this._drawMinimap(ctx, world);
+      this._drawMirino(ctx, world);
+    },
+    // v2.10 — IL MIRINO. Prima non c'era: il mirino era il cursore del sistema (`cursor:crosshair` nel
+    // CSS). Adesso che il guinzaglio lo tiene a 200px il cursore vero non basta piu' — o e' nascosto dal
+    // pointer lock, o sta piu' in la' del mirino e i due si separerebbero sotto gli occhi.
+    //
+    // SI DISEGNA IN COORDINATE SCHERMO, non di mondo: il personaggio e' al centro e il mirino e' uno
+    // scostamento da li'. Passare per il mondo vorrebbe dire sommare la camera e sottrarla subito dopo.
+    //
+    // L'ANELLO SI VEDE SOLO QUANDO SERVE. Un cerchio sempre acceso attorno al personaggio sarebbe un
+    // orpello che si impara a non vedere in due minuti; acceso solo quando il mirino preme CONTRO il
+    // limite, invece, e' la risposta alla domanda che il giocatore si sta facendo in quel momento —
+    // «perche' non va piu' in la'?».
+    _drawMirino(ctx, world) {
+      const I = window.Input; if (!I || !I.mira || !world || !world.me) return;
+      if (this.w < 2) return;
+      const cx = this.w / 2, cy = this.h / 2, mx = cx + I.mira.x, my = cy + I.mira.y;
+      ctx.save();
+      if (I.alBordo) {                                   // il guinzaglio, mostrato solo mentre tira
+        ctx.strokeStyle = 'rgba(180,200,255,.13)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(cx, cy, I.MIRA_R, 0, 7); ctx.stroke();
+      }
+      const a = I.alBordo ? 0.95 : 0.7;
+      ctx.strokeStyle = 'rgba(10,12,18,.55)'; ctx.lineWidth = 4.5;  // il contorno scuro: si legge su tutto
+      for (let pass = 0; pass < 2; pass++) {
+        if (pass) { ctx.strokeStyle = 'rgba(226,236,255,' + a + ')'; ctx.lineWidth = 1.8; }
+        ctx.beginPath();
+        ctx.arc(mx, my, 7, 0, 7);
+        ctx.moveTo(mx - 13, my); ctx.lineTo(mx - 4, my);
+        ctx.moveTo(mx + 4, my);  ctx.lineTo(mx + 13, my);
+        ctx.moveTo(mx, my - 13); ctx.lineTo(mx, my - 4);
+        ctx.moveTo(mx, my + 4);  ctx.lineTo(mx, my + 13);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(226,236,255,' + a + ')';
+      ctx.beginPath(); ctx.arc(mx, my, 1.6, 0, 7); ctx.fill();
+      ctx.restore();
     },
     _flame(ctx, x, y, sc) { const t = this.time; const f = 1 + Math.sin(t * 12 + x) * 0.14 + Math.sin(t * 7.3 + y) * 0.1; const s = sc * f; let gr = ctx.createRadialGradient(x, y, 0, x, y, 26 * s); gr.addColorStop(0, 'rgba(255,150,40,.5)'); gr.addColorStop(1, 'rgba(255,80,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26 * s, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,120,30,.9)'; ctx.beginPath(); ctx.moveTo(x - 6 * s, y + 4 * s); ctx.quadraticCurveTo(x - 7 * s, y - 8 * s, x, y - 16 * s); ctx.quadraticCurveTo(x + 7 * s, y - 8 * s, x + 6 * s, y + 4 * s); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,225,120,.95)'; ctx.beginPath(); ctx.moveTo(x - 3 * s, y + 2 * s); ctx.quadraticCurveTo(x - 3.5 * s, y - 5 * s, x, y - 11 * s); ctx.quadraticCurveTo(x + 3.5 * s, y - 5 * s, x + 3 * s, y + 2 * s); ctx.closePath(); ctx.fill(); if (Math.random() < 0.25 * sc) this.particles.push({ x: x + MU.rand(-3, 3), y: y - 6 * s, vx: MU.rand(-8, 8), vy: -MU.rand(20, 50), life: MU.rand(0.4, 0.9), t: 0, fire: true, r: MU.rand(1.5, 3) * sc, over: true }); },
     _drawMerchant(ctx, mrc, me) {

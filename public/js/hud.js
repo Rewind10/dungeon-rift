@@ -503,18 +503,40 @@
     // ===== v1.74 — IL FOCOLARE DELL'OSTESSA =====
     // Un pannello piccolo: una cosa sola da fare, e il prezzo che si legge senza calcoli. La barra mostra
     // quanto ti manca, non quanto hai: e' quello che stai comprando.
-    showInn(data, onRest) {
-      if (data) this._inn = data; if (onRest) this._innCb = onRest;
+    showInn(data, onRest, onSalva) {
+      if (data) this._inn = data; if (onRest) this._innCb = onRest; if (onSalva) this._salvaCb = onSalva;
       const panel = $('innPanel'); if (!panel || !this._inn) return;
       panel.classList.remove('hidden'); this._renderInn();
     },
     hideInn() { const panel = $('innPanel'); if (panel) panel.classList.add('hidden'); this._innSig = null; },
+    // v2.11 — IL SALVATAGGIO, nello stesso pannello del riposo. Il pulsante dice sempre PERCHE' non si
+    // puo', quando non si puo': un pulsante spento e muto si legge come un guasto, e chi gioca resta li'
+    // a chiedersi se ha sbagliato qualcosa.
+    _renderSalva(d) {
+      const b = $('innSalva'); if (!b) return;
+      if (!d || d.salvaOk === undefined) { b.classList.add('hidden'); return; }
+      b.classList.remove('hidden');
+      if (d.salvaOk === 2) {          // gia' salvato qui: si puo' rifare, ma si dice che e' gia' fatto
+        b.innerHTML = '\uD83D\uDCBE salva di nuovo \u2014 <b>\uD83E\uDE99' + d.salvaCosto + '</b>';
+        b.className = 'parz'; b.onclick = () => { if (this._salvaCb) this._salvaCb(); };
+      } else if (d.salvaOk === 1) {
+        b.innerHTML = '\uD83D\uDCBE salva la partita \u2014 <b>\uD83E\uDE99' + d.salvaCosto + '</b>';
+        b.className = ''; b.onclick = () => { if (this._salvaCb) this._salvaCb(); };
+      } else if (d.salvaOk === -1) {
+        b.textContent = 'il salvataggio e per le partite in singolo';
+        b.className = 'off'; b.onclick = null;
+      } else if (d.salvaOk === 0) {
+        b.innerHTML = 'per salvare servono <b>\uD83E\uDE99' + d.salvaCosto + '</b>';
+        b.className = 'off'; b.onclick = null;
+      } else { b.classList.add('hidden'); }
+    },
     _renderInn() {
       const d = this._inn; if (!d) return;
       const hd = $('innHead');
       if (hd) hd.innerHTML = '\uD83C\uDF7A <b>Ostessa</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
-      const sig = [d.hp, d.mx, d.coins].join('|');
+      const sig = [d.hp, d.mx, d.coins, d.salvaCosto, d.salvaOk, d.ondata].join('|');
       if (sig === this._innSig) return; this._innSig = sig;
+      this._renderSalva(d);
       const bar = $('innBar'), txt = $('innText'), btn = $('innBtn');
       const f = Math.max(0, Math.min(1, d.hp / (d.mx || 1)));
       bar.style.width = Math.round(f * 100) + '%';

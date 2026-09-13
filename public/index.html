@@ -96,6 +96,11 @@
       <h2>Scegli il tuo eroe</h2>
       <div id="heroSelect"></div>
       <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
+      <!-- v2.11 — RIPRENDI sta nella PRIMA schermata, non nella sala d'attesa: una partita salvata si
+           riprende prima di scegliere eroe e stanza, non dopo. E compare SOLO se c'e' davvero un
+           salvataggio: un pulsante spento che dice "nessuna partita salvata" occupa lo stesso spazio per
+           dire una cosa che non serve a nessuno. Chi non ha mai salvato lo scoprira' dall'Ostessa. -->
+      <button id="riprendiBtn" class="primary riprendi hidden"></button>
       <div id="menuMsg"></div>
       <!-- v1.99 — la modalita' di prova torna VISIBILE nel menu. Era stata nascosta in v1.96.1 (si apriva
            con ?test o col tasto T): quelle due scorciatoie restano e non danno fastidio, ma il pannello
@@ -234,6 +239,9 @@
   <div class="inn-hp"><div class="bar"><i id="innBar"></i></div><div id="innHp"></div></div>
   <div id="innText"></div>
   <button id="innBtn"></button>
+  <!-- v2.11 — il SALVATAGGIO sta qui e non in un menu: la locanda e' il posto dove si salva in ogni
+       gioco di ruolo da quarant'anni, e cosi' non c'e' niente da spiegare. -->
+  <button id="innSalva"></button>
   <div class="merch-hint">Il riposo si paga a punto vita: paghi solo quello che ti serve</div>
 </div>
 <div id="seerPanel" class="hidden">
@@ -278,6 +286,7 @@
 <script src="/shared/bounties.js"></script>
 <script src="/shared/abilities.js"></script>
 <script src="/shared/storia.js"></script>
+<script src="/shared/salvataggio.js"></script>
 <script src="/js/audio.js"></script>
 <script src="/js/net.js"></script>
 <script src="/js/input.js"></script>

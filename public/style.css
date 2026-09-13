@@ -2,7 +2,12 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;user-select:none}
 .hidden{display:none !important}
-canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#05060a;cursor:crosshair}
+/* v2.10 — il cursore del sistema sul canvas NON si vede piu: il mirino lo disegna il gioco (renderer
+   _drawMirino) e sta al guinzaglio a 200px. Se restasse visibile, col pointer lock non attivo si
+   vedrebbero DUE puntatori che si separano appena superi il raggio: quello vero che va avanti e il
+   mirino che si ferma. Un puntatore solo, e la regola si legge da se. I pannelli sono DOM a parte e il
+   loro cursore resta quello di sempre. */
+canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#05060a;cursor:none}
 #menu,#lobby,#endScreen,#upgradeScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:40;background:radial-gradient(1200px 800px at 50% -10%,#161a2e 0%,#080910 60%,#05060a 100%)}
 /* v1.99 — NIENTE ARTWORK NEL MENU. Dalla v1.86 il menu e la sala d'attesa avevano l'illustrazione come
    sfondo (due strati: l'immagine intera piu' una copia sfocata a fare da cornice). Tolti tutti e due:
@@ -733,3 +738,11 @@ h2.info-h:not(:first-child){margin-top:17px}
 .dono-patto{margin:-6px 0 16px;padding:11px 14px;font-size:13.5px;line-height:1.55;color:#cfd6e6;
   background:rgba(255,207,74,.05);border:1px solid rgba(255,207,74,.20);border-radius:10px}
 .dono-patto.hidden{display:none}
+
+/* v2.11 — IL PULSANTE "RIPRENDI". Sta sotto "Entra in partita" e non deve rubargli la scena: chi apre il
+   gioco per giocare una partita nuova non deve inciampare in quello vecchio. Stessa forma, colore piu'
+   spento, e la riga piccola sotto dice QUANDO hai salvato — che e' l'unica cosa che ti fa capire se e'
+   la partita che stavi pensando o una di tre settimane fa. */
+#riprendiBtn.riprendi{background:linear-gradient(180deg,#2a3b52,#1b2637);color:#cfe0f5;border:2px solid rgba(120,170,230,.35);margin-top:8px;line-height:1.25}
+#riprendiBtn.riprendi:hover{filter:brightness(1.18)}
+#riprendiBtn.riprendi b{color:#ffcf4a}

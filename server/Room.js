@@ -13,6 +13,7 @@ const Pot = require('../shared/potions.js');
 const Bnt = require('../shared/bounties.js');
 const MapGen = require('../shared/mapgen.js');
 const Storia = require('../shared/storia.js');   // v2.7 — il testo della storia, tutto in un file solo
+const Salva = require('../shared/salvataggio.js');   // v2.11 — cosa c'e' dentro una partita salvata
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
 const Waves = require('../shared/waves.js');
@@ -1352,8 +1353,13 @@ class Room {
   }
   offerInn(p, near) {
     const c = this._contoOstessa(p);
+    // v2.11 — `salvaOk` dice al pannello COSA scrivere sul pulsante, e il perche' quando e' no:
+    //   -1 in cooperativa · 0 monete insufficienti · 1 si puo' · 2 si puo', ma qui hai gia' salvato
+    const inCoop = this.veri.length > 1;
+    const salvaOk = inCoop ? -1 : ((p.coins || 0) < Salva.COSTO ? 0 : (p._salvatoOnda === this.wave ? 2 : 1));
     this.sendTo(p.id, { t: C.MSG.OFFER_INN, near: near ? 1 : 0, coins: p.coins || 0,
-      hp: c.hp, mx: c.mx, manca: c.manca, pieno: c.pieno, curabili: c.curabili, spesa: c.spesa, perHp: C.INN_PER_HP });
+      hp: c.hp, mx: c.mx, manca: c.manca, pieno: c.pieno, curabili: c.curabili, spesa: c.spesa, perHp: C.INN_PER_HP,
+      salvaOk, salvaCosto: Salva.COSTO, ondata: this.wave });
   }
   _dallOstessa(p) {
     return this.phase === C.PHASE_MARKET && !!this.innkeeper &&
@@ -1370,6 +1376,76 @@ class Room {
     p.hpDebt = Math.max(0, (p.hpDebt || 0) - c.curabili);
     this.offerInn(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'rest', x: p.x, y: p.y, who: p.id, hp: c.curabili, spesa: c.spesa, pieno: c.curabili >= c.manca ? 1 : 0 } });
+  }
+  // ============================================================================================
+  // v2.11 — IL SALVATAGGIO
+  // ============================================================================================
+  // SI SALVA DALL'OSTESSA, e non e' comodita': la locanda e' il posto dove si salva in ogni gioco di
+  // ruolo da quarant'anni. Non c'e' niente da spiegare a chi gioca — ci si avvicina, c'e' un pulsante.
+  //
+  // SOLO IN SINGOLO, per adesso. In cooperativa un salvataggio e' un'altra cosa: bisogna decidere chi
+  // salva, cosa succede se uno non torna, se il personaggio e' tuo o della squadra. Farlo male adesso
+  // costerebbe piu' che non farlo.
+  //
+  // SOLO AL VILLAGGIO, che e' l'unico posto dove lo stato e' FERMO: niente proiettili a mezz'aria, niente
+  // ondata a meta', niente mostri da riprodurre. Il villaggio e' gia' un punto di sosta del gioco, e
+  // salvare li' vuol dire che il salvataggio contiene un personaggio, non una fotografia di una battaglia.
+  //
+  // NIENTE AUTOMATISMI: si salva quando lo decide chi gioca. Scegliere quando salvare E' il salvataggio.
+  get VERSIONE() { return C.VERSION; }
+  salvaAllOstessa(pid) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._dallOstessa(p)) return;
+    if (this.veri.length > 1) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'salva_no', perche: 'coop' } }); return; }
+    if ((p.coins || 0) < Salva.COSTO) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'salva_no', perche: 'monete' } }); return; }
+    const dati = Salva.costruisci(this, p);
+    if (!dati) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'salva_no', perche: 'errore' } }); return; }
+    // si paga DOPO aver costruito il pacchetto, e il pacchetto si costruisce prima di scalare le monete:
+    // cosi' il salvataggio contiene le monete che avevi PRIMA di pagarlo, e ricaricando non ti ritrovi a
+    // pagare la stessa sosta una seconda volta. Dieci monete si pagano una volta sola.
+    p.coins -= Salva.COSTO;
+    p._salvatoOnda = this.wave;      // per dire "salva di nuovo" invece di "salva", che e' piu' onesto
+    this.offerInn(p, 1);
+    this.sendTo(pid, { t: C.MSG.SALVATO, dati, eti: Salva.etichetta(dati) });
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'salvato', x: p.x, y: p.y, who: p.id, spesa: Salva.COSTO, ondata: this.wave } });
+  }
+  // Riprendere: si ricostruisce il personaggio dalle CAUSE e si riapre il villaggio dell'ondata salvata.
+  // L'ORDINE CONTA e non e' scambiabile: prima si azzera la partita (`startGame` fa la sua pulizia), poi
+  // si versano i dati nel giocatore, poi si RICALCOLA — ed e' il ricalcolo a rifare statistiche, perk e
+  // massimo dei PV dai punti spesi e dalle carte. Ricalcolare prima vorrebbe dire ricalcolare sul vuoto.
+  riprendi(pid, dati) {
+    const p = this.players.get(pid); if (!p) return;
+    if (this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY) return;
+    if (!Salva.valido(dati)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'riprendi_no' } }); return; }
+    const H = require('../shared/heroes.js').HEROES;
+    const onda = Math.max(0, Math.min(C.ONDATE || 20, dati.ondata | 0));
+    this.mode = dati.modo || this.mode;
+    // si riparte da `startGame(1, ...)` e NON da `startGame(onda, ...)`: passare un'ondata alta accende
+    // la MODALITA' DI PROVA — `this.prova = da`, e il personaggio finto di `_preparaProva`. Una partita
+    // ripresa non e' una prova: e' la tua, e l'ondata gliela diciamo noi due righe piu' sotto.
+    this.startGame(1, true);                       // pulizia completa, senza prologo e senza prova
+    if (!Salva.applica(p, dati)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'riprendi_no' } }); return; }
+    p.hero = H[p.heroId] || p.hero; p.maxHp = p.hero.hp;
+    this._recomputeGear(p); this._recomputeBoons(p);
+    p.hp = this.effMaxHp(p); p.hpDebt = 0;          // si riprende in forma: la sosta e' servita a quello
+    p.dead = false; p.down = false;
+    this.sendBoons(p);
+    // e si riapre il VILLAGGIO di quell'ondata, non l'ondata: e' li' che il giocatore aveva lasciato.
+    this.wave = onda;
+    this.enterMarket();
+    this.missione = 'discesa'; this._oracoloDetto = true; this._arrivoDetto = true;
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } });
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'ripreso', ondata: onda, livello: p.level } });
+    this._inviaPannelloDopoRipresa(p);
+  }
+  // le scelte rimaste in sospeso quando si e' salvato tornano a galla: se non si ripresentassero, chi
+  // salva con una carta non ancora scelta la perderebbe caricando, ed e' esattamente il bug che abbiamo
+  // appena sistemato altrove.
+  _inviaPannelloDopoRipresa(p) {
+    if (!this._scelteInCoda(p)) return;
+    const fase = this.phase; this.phase = C.PHASE_SHOP;
+    this.offerBoon(p);
+    this.phase = fase;
   }
   // v1.79 — LA CARTOMANTE E' CHIUSA. La struttura resta nel villaggio — porta, interno, insegna, e la
   // si puo' avvicinare — ma non offre piu' niente: con quattro abilita' passive in tutta la run, tutte

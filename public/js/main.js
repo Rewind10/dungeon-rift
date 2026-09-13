@@ -3,13 +3,59 @@
   'use strict';
   const C = window.GAME.Constants;
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
+  const SV = window.GAME.Salvataggio;   // v2.11 — cosa c'e' dentro una partita salvata
   const $ = (id) => document.getElementById(id);
   const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
+  // ===== v2.11 — L'ARCHIVIO: il salvataggio vive nel browser =====================================
+  // Il server lo costruisce e lo applica, ma non lo TIENE: cosi' non ha cartelle da gestire, file da
+  // ripulire, nomi da riconoscere. Il salvataggio segue il browser di chi gioca.
+  //
+  // TUTTO DENTRO try/catch, e non per pignoleria: `localStorage` SOLLEVA un'eccezione — non torna null —
+  // in finestra anonima, con i dati del sito bloccati, e quando lo spazio e' finito. Una riga scoperta
+  // qui dentro vuol dire il menu che non si apre, e il giocatore che non capisce perche'.
+  const Archivio = {
+    leggi() {
+      try { const t = localStorage.getItem(SV.CHIAVE); if (!t) return null;
+        const d = JSON.parse(t); return SV.valido(d) ? d : null; } catch (_) { return null; }
+    },
+    scrivi(d) { try { localStorage.setItem(SV.CHIAVE, JSON.stringify(d)); return true; } catch (_) { return false; } },
+    // non si cancella mai da soli: morire NON toglie il salvataggio. E' il punto di averlo.
+  };
+  // quando e' stato salvato, detto come lo direbbe una persona
+  function quandoTesto(ms) {
+    if (!ms) return '';
+    const m = Math.floor((Date.now() - ms) / 60000);
+    if (m < 2) return 'adesso';
+    if (m < 60) return m + ' minuti fa';
+    const h = Math.floor(m / 60); if (h < 24) return h === 1 ? 'un\'ora fa' : h + ' ore fa';
+    const g = Math.floor(h / 24); return g === 1 ? 'ieri' : g + ' giorni fa';
+  }
+  // Il pulsante RIPRENDI c'e' solo se c'e' davvero un salvataggio, e dice a che punto sei: "riprendi"
+  // e basta non dice se stai per tornare all'ondata 3 o alla 17, ed e' l'unica cosa che vuoi sapere.
+  function aggiornaRiprendi() {
+    const b = $('riprendiBtn'); if (!b) return null;
+    const d = Archivio.leggi(); const e = d && SV.etichetta(d);
+    if (!e) { b.classList.add('hidden'); b.onclick = null; return null; }
+    b.classList.remove('hidden');
+    b.innerHTML = '\u25B6\uFE0F  RIPRENDI \u2014 ondata <b>' + e.ondata + '</b> \u00b7 ' + e.classe +
+      ' Lv.' + e.livello + '<small style="display:block;opacity:.7;font-weight:400">salvata ' + quandoTesto(e.quando) + '</small>';
+    return d;
+  }
   function initMenu() {
     $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100);
     HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero;
-    $('connectBtn').onclick = () => { G.provaOnda = 0; entra($('roomInput').value.trim()); };
+    $('connectBtn').onclick = () => { G.provaOnda = 0; G.riprendiDati = null; entra($('roomInput').value.trim()); };
+    // v2.11 — RIPRENDI. Entra in una stanza tutta sua (come la modalita' di prova: il salvataggio e' di
+    // uno solo, e portarlo in una stanza con altri non vorrebbe dire niente) e appena il server risponde
+    // gli manda il pacchetto. Il salvataggio NON si cancella caricandolo: si resta dove si era, e se
+    // muori di nuovo puoi ripartire di li'.
+    const sv = aggiornaRiprendi();
+    if (sv) $('riprendiBtn').onclick = () => {
+      const d = Archivio.leggi(); if (!d) { aggiornaRiprendi(); return; }
+      G.provaOnda = 0; G.riprendiDati = d; G.meHero = d.heroId || G.meHero;
+      entra('ripresa-' + Math.floor(Math.random() * 9000 + 1000));
+    };
     // v1.91 — MODALITA' DI PROVA: venti pulsanti, uno per ondata. Serve a guardare prestazioni e
     // giocabilita' di un'ondata alta senza rigiocare le quattordici che vengono prima. Si entra in una
     // stanza tutta propria (nome a caso) e la run parte da sola: niente sala d'attesa da attraversare.
@@ -43,6 +89,7 @@
   Net.onWelcome = (m) => {
     $('menu').classList.add('hidden'); R.setMap(m.map);
     // in prova non si passa dalla sala d'attesa: si e' soli e la run parte subito dall'ondata scelta
+    if (G.riprendiDati && m.phase === C.PHASE_LOBBY) { Net.riprendi(G.riprendiDati); G.riprendiDati = null; return; }
     if (G.provaOnda && m.phase === C.PHASE_LOBBY) { Net.start(G.provaOnda); return; }
     if (m.phase === C.PHASE_LOBBY) showLobby(m.players); else enterGame();
   };
@@ -80,7 +127,16 @@
   // v1.73 — il tavolo della Cartomante: quali carte tieni accese.
   Net.onOfferSeer = (m) => { G.seerData = m; if (m.near) HUD.showSeer(m, (id) => Net.toggleCard(id)); };
   // v1.74 — il focolare dell'Ostessa: rimetterti in piedi a pagamento.
-  Net.onOfferInn = (m) => { G.innData = m; if (m.near) HUD.showInn(m, () => Net.rest()); };
+  Net.onOfferInn = (m) => { G.innData = m; if (m.near) HUD.showInn(m, () => Net.rest(), () => Net.salva()); };
+  // v2.11 — il pacchetto arriva dal server e si mette in tasca QUI, nel browser. Se `localStorage` non
+  // ne vuole sapere (finestra anonima, spazio finito) si dice, invece di far finta di aver salvato: un
+  // salvataggio che il giocatore crede di avere e non ha e' peggio di nessun salvataggio.
+  Net.onSalvato = (m) => {
+    const ok = Archivio.scrivi(m.dati);
+    aggiornaRiprendi();
+    if (ok) HUD.killfeed('\uD83D\uDCBE <b style="color:#9fe06a">Partita salvata</b> \u2014 ondata <b>' + (m.eti && m.eti.ondata) + '</b>, la riprendi dal menu');
+    else HUD.modeBanner('\uD83D\uDCBE NON SI PUO SALVARE', '#ff7a5a', 'Il browser non permette di conservare dati: finestra anonima, o spazio finito');
+  };
   Net.onBoons = (m) => { HUD.setActiveBoons(m.boons || []); };  // v1.51 — barra dei poteri attivi
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
@@ -233,6 +289,16 @@
       case 'bnd_leave': G._bndOpen = false; HUD.hideBandit(); break;
       case 'seer_leave': G._seerOpen = false; HUD.hideSeer(); break;
       case 'inn_leave': G._innOpen = false; HUD.hideInn(); break;
+      // v2.11 — il salvataggio: l'effetto sul posto (lo vedono anche i compagni) e il perche' del no.
+      case 'salvato': R.ring(ev.x, ev.y, '#9fe06a', 5, 70, 0.6); R.burst(ev.x, ev.y - 8, '#9fe06a', 20, 170, 0.7);
+        if (ev.who === Net.id) A.item && A.item(true); break;
+      case 'salva_no': HUD.modeBanner('\uD83D\uDCBE NON SI PUO SALVARE', '#ff7a5a',
+        ev.perche === 'coop' ? 'Il salvataggio e per le partite in singolo' :
+        ev.perche === 'monete' ? 'Servono ' + (C.SALVA_COSTO || 10) + ' monete' : 'Qualcosa non ha funzionato'); break;
+      case 'ripreso': HUD.modeBanner('\uD83D\uDCBE PARTITA RIPRESA', '#9fe06a',
+        'Ondata ' + ev.ondata + ' \u00b7 livello ' + ev.livello + ' \u2014 sei al villaggio, la faglia ti porta gi\u00f9'); break;
+      case 'riprendi_no': HUD.modeBanner('\uD83D\uDCBE SALVATAGGIO NON VALIDO', '#ff7a5a',
+        'E di una versione diversa del gioco, o e rovinato'); break;
       case 'rest': R.ring(ev.x, ev.y, '#ffd97a', 5, 62, 0.5); R.burst(ev.x, ev.y - 8, '#ffd97a', 18, 150, 0.6);
         if (ev.who === Net.id) { A.item && A.item(true); R.floater(ev.x, ev.y - 34, '+' + ev.hp + ' PV', '#ff5a7a');
           HUD.killfeed('\uD83C\uDF7A ' + (ev.pieno ? 'rimesso a nuovo' : 'un po\' di riposo') + ' \u2014 <b style="color:#ff5a7a">+' + ev.hp + ' PV</b> per <b style="color:#ffcf4a">' + ev.spesa + '</b> \uD83E\uDE99'); }
@@ -306,6 +372,16 @@
   function showEnd(victory, ev) { G.started = false; const st = ev && ev.stats; const dur = ev && ev.dur; setTimeout(() => { const snap = Net.latest() || { wave: G.world.wave }; HUD.end(victory, snap, G.world.me, st, dur); $('hud').classList.add('hidden'); }, 900); }
   $('restartBtn').onclick = () => { HUD.hideEnd(); location.reload(); };
 
+  // v2.10 — si sta giocando davvero? Cioe': nessuno dei pannelli a tutto schermo e' aperto. Lo decide lo
+  // stato del DOM e non una variabile nostra, perche' i pannelli li aprono e chiudono cinque punti diversi
+  // e una variabile che devono ricordarsi di aggiornare tutti prima o poi resta indietro.
+  function inPartita() {
+    if (!G.started) return false;
+    for (const id of ['menu', 'lobby', 'upgradeScreen', 'endScreen']) {
+      const el = $(id); if (el && !el.classList.contains('hidden')) return false;
+    }
+    return true;
+  }
   function buildWorld() {
     const pair = Net.interpPair(); if (!pair) return; const [prev, next, a] = pair; const w = G.world;
     const pm = {}; for (const p of prev.players) pm[p.i] = p;
@@ -318,7 +394,7 @@
       if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
       if (w.me.nb && G.bndData) { if (!G._bndOpen) G._bndOpen = true; HUD.showBandit(G.bndData, bndCb); } else if (!w.me.nb && G._bndOpen) { G._bndOpen = false; HUD.hideBandit(); }
       if (w.me.ns && G.seerData) { if (!G._seerOpen) G._seerOpen = true; HUD.showSeer(G.seerData, (id) => Net.toggleCard(id)); } else if (!w.me.ns && G._seerOpen) { G._seerOpen = false; HUD.hideSeer(); }
-      if (w.me.ni && G.innData) { if (!G._innOpen) G._innOpen = true; HUD.showInn(G.innData, () => Net.rest()); } else if (!w.me.ni && G._innOpen) { G._innOpen = false; HUD.hideInn(); }
+      if (w.me.ni && G.innData) { if (!G._innOpen) G._innOpen = true; HUD.showInn(G.innData, () => Net.rest(), () => Net.salva()); } else if (!w.me.ni && G._innOpen) { G._innOpen = false; HUD.hideInn(); }
       HUD.updateBelt(w.me); HUD.updateBounty(w.me); HUD.updateHeroBox(w.me);
     }
     const mm = {}; for (const m of prev.mon) mm[m.e] = m;
@@ -352,6 +428,10 @@
     if (G.started || Net.latest()) {
       if (!frozen) buildWorld();
       if (G.world.me && (now - G.lastInput) > 33) { G.lastInput = now; Net.sendInput(Input.build(R.w / 2, R.h / 2)); }
+      // v2.10 — IL POINTER LOCK VA SGANCIATO QUANDO SI APRE UN PANNELLO. Non e' un dettaglio: agganciati,
+      // il cursore non esiste e i pulsanti del menu di fine ondata non si potrebbero cliccare. Si guarda
+      // quale pannello e' a schermo, non si tiene un flag: i flag si dimenticano di essere spenti.
+      if (Input.locked && !inPartita()) Input.sgancia();
       if (!frozen) R.updateFx(dt);
       R.render(frozen ? 0 : dt, G.world);
       const snap = Net.latest();
@@ -377,7 +457,12 @@
   window.addEventListener('load', () => {
     const v = (C && C.VERSION) ? C.VERSION : '';
     if (v) { document.title = 'DUNGEON RIFT v' + v + ' — Roguelike Co-op'; const vb = $('verBadge'); if (vb) vb.textContent = 'v' + v; }
-    R.init($('game')); Input.init($('game')); initMenu(); requestAnimationFrame(loop);
+    R.init($('game')); Input.init($('game'));
+    // v2.10 — il pointer lock si chiede al CLIC, perche' il browser lo concede solo su un gesto
+    // dell'utente: chiederlo al caricamento verrebbe rifiutato e basta. Il clic che aggancia e' anche il
+    // clic che spara — sono due cose diverse e non si disturbano.
+    $('game').addEventListener('mousedown', () => { if (inPartita()) Input.aggancia(); });
+    initMenu(); requestAnimationFrame(loop);
     // v1.90 — la musica del menu. Il browser non fa partire l'audio prima di un gesto dell'utente:
     // A.scene() se ne accorge e riprova da solo al primo click o al primo tasto.
     A.scene('menu');

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.9.4 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.11.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,41 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.11.0 (si puo' SALVARE la partita, dall'Ostessa)
+- **💾 SI SALVA DALL'OSTESSA, per 10 monete, quando lo decidi tu.** Niente salvataggi automatici:
+  scegliere quando salvare *e'* il salvataggio. La locanda e' il posto dove si salva in ogni gioco di ruolo
+  da quarant'anni, quindi non c'e' niente da spiegare: ti avvicini, c'e' un pulsante.
+- **▶️ RIPRENDI, nella prima schermata.** Compare solo se c'e' davvero un salvataggio, e dice a che punto
+  sei: *«ondata 11 · Ladro Lv.11 — salvata ieri»*. Si riparte dal **villaggio** di quell'ondata con tutto
+  quello che avevi: livello, abilita', carte, monete, pozioni, equipaggiamento.
+- **☠️ Morire NON cancella il salvataggio.** Nessuno lo cancella: e' il punto di averlo.
+- **🔑 Si salvano le CAUSE, non gli EFFETTI.** Nel pacchetto ci sono i punti spesi, le carte prese e
+  l'equipaggiamento — non `dmgMult` o `maxHp`, che sono **calcolati**. Se salvassimo i numeri calcolati, il
+  giorno che ritari una statistica ogni partita salvata resterebbe col bilanciamento vecchio, in silenzio.
+  Cosi' invece un salvataggio vecchio prende automaticamente il bilanciamento nuovo.
+- **📦 Vive nel browser** (`localStorage`): zero infrastruttura, nessun account. Il prezzo, detto chiaro:
+  cambi browser o cancelli i dati del sito e non c'e' piu'. E se il browser non permette di scrivere
+  (finestra anonima, spazio finito) **te lo dice**, invece di far finta di aver salvato.
+- **🧱 Un pacchetto rotto si rifiuta INTERO.** Formato di un'altra versione, classe inesistente, livello
+  impossibile: non si carica a meta'. Un personaggio impossibile e' molto peggio di un «non si puo'».
+- **👥 In cooperativa per ora no**, e il pulsante lo dice invece di restare spento e muto.
+
+## 🆕 Novita v2.10.0 (il mirino non si allontana piu' di 200px)
+- **🎯 IL MIRINO AL GUINZAGLIO.** Il cursore lo muovi come vuoi: il mirino lo segue finche' sta dentro
+  **200px** dal personaggio, e oltre si ferma sul bordo **conservando la direzione**.
+- **🚫 Perche' non bastava "limitare il cursore".** Una pagina web **non puo' spostare il cursore del
+  sistema** — non esiste un'API, ed e' voluto. L'unica strada e' il **pointer lock**: il browser nasconde
+  il cursore vero e ci manda solo gli spostamenti, e da li' il mirino e' roba nostra. Si aggancia al primo
+  clic; **Esc** lo rilascia, e allora il mirino segue il cursore vero, clampato allo stesso raggio. La
+  regola e' la stessa nei due casi.
+- **👁️ Un puntatore solo.** Il cursore del sistema sul canvas e' nascosto: se restasse visibile se ne
+  vedrebbero **due separarsi** appena superi il raggio. L'**anello a 200px** si accende solo mentre il
+  mirino preme contro il limite — sempre acceso sarebbe un orpello, li' e' la risposta alla domanda
+  *«perche' non va piu' in la'?»*.
+- **⚠️ Nessuna meccanica cambia, e va detto.** Il client manda al server solo `aim`, che e' un **angolo**:
+  la distanza del mouse non e' mai stata mandata ne' usata. Il guinzaglio cambia **come si sente il gioco
+  in mano**, non dove arrivano i colpi. Una gittata vera delle armi, se la vorrai, e' un altro lavoro.
 
 ## 🆕 Novita v2.9.4 (BUG GROSSO: le abilita' attive dei livelli 8 e 14 non venivano date)
 - **🐛 LO SLOT E NON ARRIVAVA MAI.** Segnalato giocando e misurato: in una run normale — un livello per

@@ -16,7 +16,7 @@ function mkEl(id) {
 global.document = { getElementById: id => (nodes[id] = nodes[id] || mkEl(id)), createElement: () => mkEl('new'), querySelector: () => mkEl('q') };
 global.window = { GAME: {} };
 global.setTimeout = () => {}; global.clearTimeout = () => {};
-for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'abilities', 'mapgen', 'storia']) {
+for (const f of ['constants', 'mathutils', 'monsters', 'heroes', 'loot', 'gear', 'levels', 'potions', 'bounties', 'abilities', 'mapgen', 'storia', 'salvataggio']) {
   const src = fs.readFileSync(ROOT + 'shared/' + f + '.js', 'utf8');
   new Function('self', 'window', 'module', src)(window, window, undefined);
 }
@@ -1094,6 +1094,96 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const lungheM = Object.keys(St.menu).filter(k => k !== 'patto' && St.menu[k].length > 100);
     ok(lungheM.length === 0, 'e sono corte (la sola lunga e il patto, che si legge una volta)');
   }
+})();
+
+// --- v2.10 — IL MIRINO AL GUINZAGLIO ---------------------------------------------------------------
+// Qui si prova la REGOLA, non il disegno: `input.js` e' caricato davvero e gli si fanno arrivare degli
+// eventi di mouse finti, poi si guarda dove finisce il mirino. E' la parte che decide dove spari, quindi
+// vale la pena provarla senza browser: cosi' un domani si rompe qui e non in mano a chi gioca.
+(function () {
+  const listeners = {};
+  const fakeCanvas = {
+    addEventListener(k, f) { (listeners[k] = listeners[k] || []).push(f); },
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 600 }),
+    requestPointerLock() { this._chiesto = true; },
+  };
+  // la finestra finta e' ANCHE la sandbox: input.js si pubblica su `window.Input`, quindi deve essere
+  // lo stesso oggetto che gli passiamo e su cui registra i suoi ascoltatori.
+  const win = { addEventListener() {}, Input: null };
+  const doc = { addEventListener() {}, pointerLockElement: null, activeElement: null, exitPointerLock() {} };
+  new Function('window', 'document', fs.readFileSync(ROOT + 'public/js/input.js', 'utf8'))(win, doc);
+  const I = win.Input;
+  ok(!!I, 'input.js si carica e pubblica Input');
+  I.init(fakeCanvas);
+  const muovi = (x, y) => { for (const f of (listeners.mousemove || [])) f({ clientX: x, clientY: y, movementX: 0, movementY: 0 }); };
+  const dist = () => Math.hypot(I.mira.x, I.mira.y);
+  const gradi = () => Math.round(Math.atan2(I.mira.y, I.mira.x) * 180 / Math.PI);
+
+  ok(I.MIRA_R === 200, 'il guinzaglio e 200px (' + I.MIRA_R + ')');
+  // il centro del canvas finto e' (500, 300)
+  muovi(590, 300);
+  ok(Math.round(dist()) === 90, 'dentro il raggio il mirino segue il cursore (' + Math.round(dist()) + 'px)');
+  ok(!I.alBordo, 'e non sta premendo contro il limite');
+  muovi(999, 300);                       // 499px a destra: ben oltre
+  ok(Math.round(dist()) === 200, 'oltre il raggio si ferma a 200 (' + Math.round(dist()) + 'px)');
+  ok(I.alBordo, 'e lo dice al renderer, che accende l anello');
+  ok(gradi() === 0, 'ma la DIREZIONE resta quella del cursore (' + gradi() + ' gradi)');
+  // l angolo si conserva anche in diagonale: e' la cosa che conta, perche' e' cio' che si manda al server
+  // in alto a sinistra: il centro del canvas finto e' (500, 300), quindi lo scostamento e' (-500, -300)
+  // e l'angolo vale atan2(-300, -500) = -149 gradi. Clampare accorcia il vettore, non lo ruota.
+  muovi(0, 0);
+  ok(Math.round(dist()) === 200, 'anche in diagonale si ferma a 200 (' + Math.round(dist()) + 'px)');
+  ok(gradi() === -149, 'e punta sempre li: clampare accorcia, non ruota (' + gradi() + ' gradi)');
+  // il centro esatto non ha un angolo: non deve produrre NaN, o la mira si rompe
+  muovi(500, 300);
+  const b = I.build(500, 300);
+  ok(isFinite(b.aim), 'col cursore esattamente sul personaggio l angolo resta un numero (' + b.aim + ')');
+  // e cio' che si manda al server e' l angolo del MIRINO, non piu' quello del cursore
+  muovi(999, 300);
+  ok(Math.abs(I.build(500, 300).aim) < 1e-9, 'l angolo mandato al server e quello del mirino clampato');
+  // il pointer lock: accumula gli spostamenti invece di seguire una posizione
+  doc.pointerLockElement = fakeCanvas; I.locked = true;
+  I.mira.x = 0; I.mira.y = 0;
+  for (const f of (listeners.mousemove || [])) f({ clientX: 0, clientY: 0, movementX: 40, movementY: 0 });
+  ok(Math.round(I.mira.x) === 40, 'agganciato, il mirino si muove degli SPOSTAMENTI (' + Math.round(I.mira.x) + ')');
+  for (let k = 0; k < 30; k++) for (const f of (listeners.mousemove || [])) f({ clientX: 0, clientY: 0, movementX: 40, movementY: 0 });
+  ok(Math.round(dist()) === 200, 'e anche spingendo all infinito il guinzaglio tiene (' + Math.round(dist()) + 'px)');
+  // il disegno c e, e il CSS non mostra piu' due puntatori
+  const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+  ok(/_drawMirino\(/.test(srcR), 'il renderer disegna il mirino');
+  ok(/cursor:none/.test(fs.readFileSync(ROOT + 'public/style.css', 'utf8')), 'e il cursore del sistema sul canvas e nascosto: un puntatore solo');
+  const srcMm = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+  ok(/Input\.aggancia\(\)/.test(srcMm), 'il clic aggancia il pointer lock');
+  ok(/Input\.locked && !inPartita\(\)/.test(srcMm), 'e si sgancia quando si apre un pannello, se no i pulsanti non si cliccano');
+})();
+
+// --- v2.11 — IL SALVATAGGIO, lato interfaccia ------------------------------------------------------
+(function () {
+  const SV = window.GAME.Salvataggio;
+  ok(!!SV, 'il modulo del salvataggio arriva anche al client');
+  ok(/shared\/salvataggio\.js/.test(fs.readFileSync(ROOT + 'public/index.html', 'utf8')), 'e la pagina lo carica');
+  // l'etichetta del pulsante: e' l'unica cosa che il menu deve saper leggere dal pacchetto
+  const finto = { f: SV.FORMATO, heroId: 'ladro', level: 11, ondata: 7, nome: 'Tizio', quando: Date.now() };
+  const e = SV.etichetta(finto);
+  ok(e && e.ondata === 7 && e.classe === 'Ladro' && e.livello === 11, 'e sa dire a che punto sei senza aprire il pacchetto: ' + JSON.stringify(e));
+  ok(SV.etichetta({ f: 999 }) === null, 'e di un pacchetto che non capisce non dice niente, invece di inventare');
+  // il pulsante RIPRENDI sta nella PRIMA schermata, non nella sala d attesa: una partita salvata si
+  // riprende prima di scegliere eroe e stanza, non dopo. (Ed era finito nel posto sbagliato al primo giro.)
+  const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+  const menu = html.slice(html.indexOf('<div id="menu">'), html.indexOf('<div id="lobby"'));
+  ok(/id="riprendiBtn"/.test(menu), 'il pulsante RIPRENDI sta nella prima schermata');
+  ok(/id="riprendiBtn"[^>]*hidden/.test(menu), 'e nasce nascosto: chi non ha salvato non deve vederlo');
+  ok(/id="innSalva"/.test(html), 'e il salvataggio si compra dal pannello dell Ostessa');
+  const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+  ok(/localStorage\.setItem\(SV\.CHIAVE/.test(srcM), 'il pacchetto si tiene nel browser');
+  ok(/catch \(_\) \{ return null; \}/.test(srcM), 'e le letture sono protette: localStorage SOLLEVA in finestra anonima');
+  ok(/Net\.riprendi\(G\.riprendiDati\)/.test(srcM), 'e riprendere lo rimanda al server');
+  ok(!/removeItem\(SV\.CHIAVE/.test(srcM), 'e NESSUNO lo cancella: morire non toglie il salvataggio, e il punto di averlo');
+  const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+  ok(/_renderSalva\(/.test(srcH), 'l HUD disegna il pulsante del salvataggio');
+  // il pulsante dice sempre PERCHE non si puo: uno spento e muto si legge come un guasto
+  for (const [v, cosa] of [['-1', 'in cooperativa'], ['0', 'senza monete'], ['1', 'si puo'], ['2', 'gia salvato qui']])
+    ok(new RegExp('salvaOk === ' + v).test(srcH), 'e distingue il caso "' + cosa + '"');
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

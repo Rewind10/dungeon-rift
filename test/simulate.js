@@ -4955,6 +4955,140 @@ function testSceltePannello() {
   ok('le scelte di fine ondata verificate: 8 e 14 arrivano, e il doppio livello da entrambe');
 }
 
+// ============================================================================
+// TEST 70 — v2.11: IL SALVATAGGIO
+// ============================================================================
+// LA REGOLA CHE QUESTO TEST DIFENDE: si salvano le CAUSE, non gli EFFETTI. Un personaggio all'ondata 12
+// ha `stats.dmgMult`, `perk.parata`, `maxHp` — tutti numeri CALCOLATI dai punti spesi, dalle carte prese e
+// dall'equipaggiamento. Salvare i numeri calcolati vorrebbe dire che il giorno che ritari una statistica
+// ogni partita salvata resta col bilanciamento vecchio, in silenzio. Qui si salva, si ricarica in una
+// stanza NUOVA — come riaprire il browser domani — e si confronta campo per campo.
+function testSalvataggio() {
+  console.log('\n[TEST 70] v2.11 — il salvataggio: si salvano le cause, gli effetti si rifanno');
+  const SV = require('../shared/salvataggio.js');
+  const preso = [];
+  const conn = { send(t) { const m = JSON.parse(t); preso.push(m); } };
+
+  // --- 1) IL GIRO INTERO: si salva all'Ostessa, si riapre domani ---
+  const r = new Room('sv'); const p = r.addPlayer('a', conn, 'A', 'mago');
+  r.startGame(12, true); r.wave = 11; r.enterMarket();
+  p.coins = 300;
+  p.x = r.innkeeper.x; p.y = r.innkeeper.y;
+  const cause = JSON.stringify(SV.CAMPI.map(k => p[k]));
+  const statPrima = JSON.stringify(p.stats), hpPrima = r.effMaxHp(p);
+  preso.length = 0;
+  r.salvaAllOstessa('a');
+  const sal = preso.find(m => m.t === C.MSG.SALVATO);
+  assert(!!sal, 'l Ostessa consegna il pacchetto');
+  assert(p.coins === 300 - SV.COSTO, 'e si paga: ' + SV.COSTO + ' monete (' + p.coins + ')');
+  // il pacchetto si costruisce PRIMA di pagare: se no, ricaricando, la stessa sosta si paga due volte
+  assert(sal.dati.coins === 300, 'ma il salvataggio tiene le monete di PRIMA: la sosta si paga una volta sola (' + sal.dati.coins + ')');
+  assert(sal.eti && sal.eti.ondata === 11 && sal.eti.classe === 'Mago', 'e l etichetta dice dove sei: ' + JSON.stringify(sal.eti));
+
+  // una stanza NUOVA, un giocatore che comincia guerriero: e' riaprire il browser domani
+  const r2 = new Room('sv2'); const q = r2.addPlayer('a', { send() {} }, 'A', 'guerriero');
+  r2.riprendi('a', sal.dati);
+  assert(q.heroId === 'mago', 'riprendendo torni la CLASSE che avevi, non quella scelta nel menu (' + q.heroId + ')');
+  assert(JSON.stringify(SV.CAMPI.map(k => q[k])) === cause, 'e tutte le cause tornano identiche');
+  assert(JSON.stringify(q.stats) === statPrima, 'e gli EFFETTI sono stati rifatti dal ricalcolo, non copiati');
+  assert(r2.effMaxHp(q) === hpPrima, 'compreso il massimo dei PV (' + r2.effMaxHp(q) + ')');
+  assert(q.hp === r2.effMaxHp(q), 'e si riprende in forma: la sosta serviva a quello');
+
+  // --- 2) SI RIPARTE DAL VILLAGGIO di quell ondata, e NON in modalita di prova ---
+  assert(r2.phase === C.PHASE_MARKET && !!r2.map.village, 'si riapre nel villaggio, dove avevi salvato');
+  assert(r2.wave === 11, 'dell ondata giusta (' + r2.wave + ')');
+  // IL TRANELLO: `startGame(onda)` accende la modalita di prova e fabbrica un personaggio finto. Una
+  // partita ripresa non e una prova: e la tua, e i suoi record valgono.
+  assert(r2.prova === 0, 'e NON e una prova: i record valgono (prova=' + r2.prova + ')');
+  assert(r2.monsters.length === 0, 'e nel villaggio non c e nessuno da ammazzare');
+
+  // --- 3) LE SCELTE IN SOSPESO non si perdono nel salvataggio ---
+  // chi salva con una carta ancora da scegliere deve ritrovarsela: e lo stesso errore di v2.9.4,
+  // commesso in un posto nuovo.
+  {
+    const ra = new Room('sv3'); const pa = ra.addPlayer('a', conn, 'A', 'ladro');
+    ra.startGame(1, true); ra.wave = 5; ra.enterMarket();
+    pa.coins = 50; pa.x = ra.innkeeper.x; pa.y = ra.innkeeper.y;
+    pa.scaglioniDovuti = ['rare']; pa.abilDovute = ['q'];
+    preso.length = 0; ra.salvaAllOstessa('a');
+    const s3 = preso.find(m => m.t === C.MSG.SALVATO);
+    assert(s3 && s3.dati.abilDovute.length === 1 && s3.dati.scaglioniDovuti.length === 1, 'le scelte in sospeso entrano nel pacchetto');
+    const rb = new Room('sv4'); const qb = rb.addPlayer('a', conn, 'A', 'ladro');
+    preso.length = 0;
+    rb.riprendi('a', s3.dati);
+    assert(qb.abilDovute.length === 1 && qb.scaglioniDovuti.length === 1, 'e riprendendo sono ancora li');
+    assert(preso.some(m => m.t === C.MSG.OFFER_BOON && m.boons && m.boons.length), 'e il pannello te le ripresenta subito');
+  }
+
+  // --- 4) SI SALVA SOLO DOVE HA SENSO ---
+  {
+    const rc = new Room('sv5'); const pc = rc.addPlayer('a', conn, 'A', 'guerriero');
+    rc.startGame(1, true);                                  // in combattimento
+    pc.coins = 500;
+    preso.length = 0; rc.salvaAllOstessa('a');
+    assert(!preso.some(m => m.t === C.MSG.SALVATO), 'in mezzo a un ondata non si salva: lo stato non e fermo');
+    rc.wave = 3; rc.enterMarket();
+    pc.x = rc.innkeeper.x + 900; pc.y = rc.innkeeper.y;     // al villaggio, ma lontano dall Ostessa
+    preso.length = 0; rc.salvaAllOstessa('a');
+    assert(!preso.some(m => m.t === C.MSG.SALVATO), 'e nemmeno dall altra parte del villaggio: si salva DA LEI');
+    pc.x = rc.innkeeper.x; pc.y = rc.innkeeper.y;
+    pc.coins = SV.COSTO - 1;
+    preso.length = 0; rc.salvaAllOstessa('a');
+    assert(!preso.some(m => m.t === C.MSG.SALVATO), 'e senza monete non si salva');
+    assert(preso.some(m => m.ev && m.ev.t === 'salva_no' && m.ev.perche === 'monete'), 'ma si dice PERCHE: un pulsante muto si legge come un guasto');
+    pc.coins = SV.COSTO;
+    preso.length = 0; rc.salvaAllOstessa('a');
+    assert(preso.some(m => m.t === C.MSG.SALVATO), 'con le monete esatte si salva (' + SV.COSTO + ')');
+  }
+
+  // --- 5) UN PACCHETTO ROTTO SI RIFIUTA INTERO, non si carica a meta ---
+  // un caricamento parziale produce un personaggio impossibile, che e molto peggio di un "non si puo".
+  {
+    const buono = JSON.parse(JSON.stringify(sal.dati));
+    const rotti = [
+      [null, 'niente'],
+      [Object.assign({}, buono, { f: 999 }), 'formato di un altra versione'],
+      [Object.assign({}, buono, { heroId: 'stregone' }), 'una classe che non esiste'],
+      [Object.assign({}, buono, { level: 9999 }), 'un livello impossibile'],
+      [Object.assign({}, buono, { ondata: -3 }), 'un ondata impossibile'],
+    ];
+    for (const [d, cosa] of rotti) {
+      assert(!SV.valido(d), 'si rifiuta un salvataggio con ' + cosa);
+      const rx = new Room('svx'); const qx = rx.addPlayer('a', { send() {} }, 'A', 'guerriero');
+      rx.riprendi('a', d);
+      assert(rx.phase === C.PHASE_LOBBY, 'e la partita non parte a meta (' + cosa + '): resta ' + rx.phase);
+    }
+    // e i numeri ritoccati a mano si stringono nei loro limiti invece di produrre un mostro
+    const furbo = Object.assign({}, buono, { coins: -500, lives: 99, points: -7 });
+    const rf = new Room('svf'); const qf = rf.addPlayer('a', { send() {} }, 'A', 'guerriero');
+    rf.riprendi('a', furbo);
+    assert(qf.coins >= 0 && qf.lives <= 9 && qf.points >= 0, 'i numeri ritoccati si stringono: monete ' + qf.coins + ', vite ' + qf.lives + ', punti ' + qf.points);
+  }
+
+  // --- 6) IL CAMPO NUOVO CHE QUALCUNO DIMENTICHERA -------------------------------------------------
+  // Questo e il controllo che vale per il FUTURO: chi aggiunge al giocatore una causa nuova — un tipo di
+  // moneta, un oggetto, un mestiere — e non la mette in CAMPI, la perde a ogni salvataggio e non se ne
+  // accorge. Qui si sporca OGNI campo dichiarato e si verifica che torni indietro: se un campo sparisse
+  // dall elenco, questo assert lo prende.
+  {
+    const rg = new Room('svg'); const pg = rg.addPlayer('a', conn, 'A', 'guerriero');
+    rg.startGame(1, true); rg.wave = 4; rg.enterMarket();
+    pg.coins = 999; pg.x = rg.innkeeper.x; pg.y = rg.innkeeper.y;
+    pg.level = 7; pg.points = 3; pg.lives = 1; pg.xpPool = 1234;
+    pg.cards = ['x']; pg.boonsOwned = { heavyarm: 2 }; pg.cardOn = { heavyarm: 1 };
+    pg.buys = { st_for: 4 }; pg.owned = { gue_spada: 1 }; pg.belt = ['p_forza', null, null];
+    pg.abil = { q: 'ab_carica', e: null }; pg.scaglioniDovuti = ['epic']; pg.abilDovute = ['e'];
+    // la fotografia si prende PRIMA di salvare: salvare scala le monete, e il pacchetto tiene quelle di
+    // prima (e' voluto — vedi il blocco 1 — quindi qui va confrontato con il prima, non con il dopo).
+    const foto = {}; for (const k of SV.CAMPI) foto[k] = JSON.stringify(pg[k]);
+    preso.length = 0; rg.salvaAllOstessa('a');
+    const sg = preso.find(m => m.t === C.MSG.SALVATO);
+    for (const k of SV.CAMPI)
+      assert(JSON.stringify(sg.dati[k]) === foto[k], 'il campo "' + k + '" entra nel pacchetto');
+  }
+  ok('salvataggio verificato: le cause si salvano, gli effetti si rifanno, e un pacchetto rotto non entra');
+}
+
 function testStoria() {
   console.log('\n[TEST 68] v2.7 — la storia: ci si sveglia, si attraversa, si parla, si scende');
   const Storia = require('../shared/storia.js');
@@ -5153,6 +5287,6 @@ function testStoria() {
 }
 
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

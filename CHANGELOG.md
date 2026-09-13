@@ -2,6 +2,142 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.11.0] — 2026-09-13 · "Si puo' salvare la partita, e si salva dall'Ostessa"
+
+#### 💾 Come funziona
+Si salva **dall'Ostessa**, per **10 monete**, **quando lo decidi tu**. Niente salvataggi automatici:
+scegliere quando salvare *e'* il salvataggio, e uno automatico toglie quella scelta senza chiedere.
+
+| | |
+|---|---|
+| **Dove** | pannello dell'Ostessa, nel villaggio |
+| **Quanto** | 10 monete: abbastanza da essere un gesto, troppo poco da essere una scelta |
+| **Quanti** | **uno solo** — salvare sovrascrive |
+| **Dove vive** | nel **browser** (`localStorage`); il server non tiene niente |
+| **Come si riprende** | pulsante **RIPRENDI** nella prima schermata, con ondata, classe, livello e quando |
+| **Da dove** | dal **villaggio** di quell'ondata, con tutto quello che avevi |
+| **Se muori** | il salvataggio **resta**: nessuno lo cancella |
+| **In co-op** | per ora no, e il pulsante lo dice |
+
+La locanda come punto di salvataggio non e' comodita': e' il posto dove si salva in ogni gioco di ruolo da
+quarant'anni, quindi al giocatore non c'e' niente da spiegare.
+
+#### 🔑 La regola: si salvano le CAUSE, non gli EFFETTI
+Un personaggio all'ondata 12 ha `stats.dmgMult`, `perk.parata`, `maxHp` — numeri **calcolati** da
+`_recomputeBoons` e `_recomputeGear` a partire da cose piu' semplici: i punti spesi (`buys`), le carte prese
+(`boonsOwned`), l'equipaggiamento (`gear`).
+
+Se salvassimo i numeri calcolati, il giorno che ritari il costo di una statistica **ogni partita salvata
+resterebbe col bilanciamento vecchio** — e non si vedrebbe: nessun errore, nessun crash, solo un
+personaggio leggermente sbagliato che nessuno sa spiegare. Salvando le cause e ricalcolando al caricamento,
+un salvataggio vecchio prende automaticamente il bilanciamento nuovo. E' il motivo per cui
+`shared/salvataggio.js` e' corto: le cause sono diciassette campi, gli effetti sono cento.
+
+#### 🧩 I tre dettagli che non si vedono
+1. **Il pacchetto si costruisce PRIMA di pagare**, cosi' contiene le monete di *prima* della sosta:
+   ricaricando non paghi la stessa sosta due volte.
+2. **Si riparte da `startGame(1)` e non da `startGame(ondata)`**: passare un'ondata alta accende la
+   **modalita' di prova** (`this.prova`, e il personaggio finto di `_preparaProva`). Una partita ripresa
+   non e' una prova — e' la tua, e i suoi record valgono. L'ondata gliela si dice a parte.
+3. **Le scelte in sospeso tornano a galla**: chi salva con una carta ancora da scegliere se la ritrova
+   appena riprende. E' lo stesso errore della v2.9.4, che qui sarebbe stato facilissimo rifare in un posto
+   nuovo.
+
+#### 🧱 Un pacchetto rotto si rifiuta intero
+Formato di un'altra versione, classe inesistente, livello o ondata impossibili: si rifiuta e **la partita
+non parte**. Un caricamento a meta' produce un personaggio impossibile, molto peggio di un «non si puo'». I
+numeri ritoccati a mano si stringono nei loro limiti — non e' antifrode (in singolo chi vuole barare apre
+la console), e' che un salvataggio corrotto non deve poter mandare per aria il server.
+
+#### ⚠️ Il prezzo di tenerlo nel browser
+Cambi browser o cancelli i dati del sito e non c'e' piu'. E' il compromesso scelto: zero infrastruttura,
+nessun account, nessuna cartella da gestire. `localStorage` inoltre **solleva** — non torna `null` — in
+finestra anonima, coi dati del sito bloccati e a spazio esaurito: ogni lettura e scrittura sta in
+`try/catch`, e **se non si puo' scrivere si dice**. Un salvataggio che il giocatore crede di avere e non ha
+e' peggio di nessun salvataggio.
+
+#### 🐛 Preso in corsa
+Il pulsante RIPRENDI era finito nella **sala d'attesa** invece che nella prima schermata: il test lo
+trovava (c'era, e senza la classe `hidden`) ma il giocatore no, perche' il pannello che lo conteneva era
+chiuso. Visto nella schermata catturata nel browser, spostato, e adesso c'e' un controllo che pretende che
+stia dentro `<div id="menu">` e non altrove.
+
+#### ✅ Verifiche
+- **TEST 70, nuovo** — si salva all'ondata 11 con un mago cresciuto, si riapre in una stanza **nuova** con
+  un giocatore che comincia guerriero (cioe' riaprire il browser domani), e si confronta **campo per
+  campo**: tutte le cause tornano identiche, gli **effetti** (statistiche, massimo PV) vengono **rifatti dal
+  ricalcolo** e coincidono. Piu': si riparte nel villaggio giusto e **non** in modalita' di prova; le scelte
+  in sospeso entrano nel pacchetto e vengono ripresentate; non si salva in mezzo a un'ondata, ne' lontano
+  dall'Ostessa, ne' senza monete (e si dice sempre **perche'**); cinque pacchetti rotti si rifiutano senza
+  far partire niente; e un controllo che **sporca ogni campo dichiarato** e verifica che torni indietro —
+  quello serve a chi un domani aggiungera' una causa nuova e si dimentichera' di metterla nell'elenco.
+- `test/client.js` — il modulo arriva al client, l'etichetta del pulsante, **RIPRENDI dentro `#menu`** e
+  nascosto di suo, le letture protette, e che **nessuno** chiami `removeItem`.
+- **Nel browser** — pacchetto vero catturato da una partita in Node, iniettato: finisce in `localStorage`,
+  la pagina **riaperta da zero** mostra *«RIPRENDI — ondata 11 · Ladro Lv.11 · salvata adesso»*, e
+  cliccandolo la partita riparte davvero (fase `market`, ondata 11, missione «Scendi fino ad AZ'GAROTH»).
+  I quattro stati del pulsante dell'Ostessa disegnati e letti uno per uno. Zero errori in console.
+- `test/simulate.js` — **2461 passati**, restano i 2 ballerini noti del mercenario.
+
+---
+
+### [2.10.0] — 2026-09-13 · "Il mirino al guinzaglio: 200px e non uno di piu'"
+
+#### 🎯 Cosa fa
+Il mirino non si allontana piu' di **200 px** dal personaggio. Il cursore lo muovi dove vuoi: dentro il
+raggio il mirino lo segue, oltre si ferma sul bordo **conservando la direzione** — accorciare un vettore
+non lo ruota, e la direzione e' l'unica cosa che il server riceve.
+
+#### 🚫 Perche' non si poteva fare "limitando il cursore"
+Una pagina web **non puo' spostare il cursore del sistema**. Non esiste un'API, ed e' voluto: un sito che
+ti muove il puntatore e' un sito che ti fa cliccare dove vuole lui. L'unica strada e' il **pointer lock** —
+si chiede al browser di *nascondere* il cursore vero e di mandare solo gli **spostamenti**
+(`movementX/Y`). Da li' in poi il mirino e' roba nostra: lo teniamo noi, lo disegniamo noi, lo fermiamo dove
+vogliamo. E' come si controllano i twin-stick.
+
+Il guinzaglio e' quindi **un vettore dal centro**: il personaggio sta sempre al centro dello schermo, si
+accumulano i movimenti e si accorcia il vettore quando supera il raggio. Nessuna conversione fra mondo e
+schermo — la mappa e' disegnata **1:1**.
+
+#### 🔓 E si gioca anche senza il blocco
+Il pointer lock lo concede il browser e solo dopo un **clic**; l'utente ne esce con **Esc** quando vuole, e
+su un telefono non esiste. Se non c'e', il mirino segue il cursore vero **clampato allo stesso raggio**: la
+regola del gioco e' identica, cambia solo se il puntatore che vedi e' il tuo o il nostro. Per questo il
+guinzaglio sta in **un posto solo** (`_clamp()`) — due strade con un clamp per ciascuna sono due regole che
+prima o poi divergono.
+
+Il pointer lock si **sgancia da solo** quando si apre un pannello (fine ondata, menu, sala d'attesa): da
+agganciati il cursore non esiste e i pulsanti non si potrebbero cliccare. Lo decide lo stato del DOM, non
+un flag nostro: i pannelli li aprono cinque punti diversi e un flag che devono ricordarsi tutti resta
+indietro.
+
+#### 👁️ Un puntatore solo, e l'anello che si accende
+Il cursore del sistema sul canvas e' **nascosto** (`cursor:none`, prima era `crosshair`): se restasse
+visibile, senza pointer lock si vedrebbero **due puntatori separarsi** appena superi il raggio — quello
+vero che continua e il mirino che si ferma.
+
+L'**anello a 200 px** si accende **solo mentre il mirino preme contro il limite**. Sempre acceso sarebbe un
+orpello che si impara a non vedere in due minuti; acceso in quel momento e' la risposta alla domanda che il
+giocatore si sta facendo: *«perche' non va piu' in la'?»*.
+
+#### ⚠️ Cosa NON cambia, e va detto chiaro
+**Nessuna meccanica.** Il client manda al server solo `aim`, che e' un **angolo**: frecce, magie, fendente e
+perfino la Meteora partono da li', con una gittata loro gia' scritta. La **distanza** del mouse non e' mai
+stata mandata e non e' mai stata usata. Il guinzaglio cambia **come si sente il gioco in mano**, non dove
+arrivano i colpi. Se un domani servira' una gittata vera delle armi, e' un lavoro di bilanciamento.
+
+#### ✅ Verifiche
+- `test/client.js` — **prova la regola, non il disegno**: carica `input.js` davvero, gli manda eventi di
+  mouse finti e guarda dove finisce il mirino. Dentro il raggio segue (90px); fuori si ferma a **200
+  esatti** e l'angolo resta quello (0°); in diagonale idem (−149°, cioe' l'angolo del cursore: clampare
+  accorcia, non ruota); col cursore **esattamente sul personaggio** l'angolo non diventa `NaN`; agganciato
+  accumula gli spostamenti e anche spingendo trenta volte non sfonda il guinzaglio.
+- **Nel browser** — cursore a 600px dal centro → mirino a **200, angolo 0**; in alto a sinistra → 200,
+  angolo conservato; a 90px → segue libero e l'anello resta spento. Zero errori in console.
+- `test/simulate.js` — **2412 passati**, restano i 2 ballerini noti del mercenario.
+
+---
+
 ### [2.9.4] — 2026-09-13 · "Le abilita' attive dei livelli 8 e 14 non venivano date"
 
 #### 🐛 Il bug, e quanto era grosso

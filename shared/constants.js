@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.9.4',
+    VERSION: '2.11.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -247,6 +247,10 @@
       HIRE_MERC: 'hire_merc',                                                                  // v1.82 — reclutamento
       TOGGLE_CARD: 'toggle_card', OFFER_SEER: 'offer_seer',                                  // v1.73 — Cartomante
       REST: 'rest', OFFER_INN: 'offer_inn',                                                    // v1.74 — Ostessa
+      // v2.11 — IL SALVATAGGIO. `SALVA` e' la richiesta (compro il salvataggio dall'Ostessa), `SALVATO`
+      // e' la risposta col pacchetto che il client si mette in tasca, `RIPRENDI` e' il pacchetto che
+      // torna indietro quando si riparte. Il server non tiene niente: costruisce e applica, e basta.
+      SALVA: 'salva', SALVATO: 'salvato', RIPRENDI: 'riprendi',
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)

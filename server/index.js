@@ -40,6 +40,8 @@ attach(server, (conn) => {
       case C.MSG.HIRE_MERC: if (room) room.assumiMercenario(pid); break;   // v1.82 — reclutamento al Banditore
       case C.MSG.TOGGLE_CARD: if (room) room.toggleCard(pid, m.id); break;
       case C.MSG.REST: if (room) room.restAtInn(pid); break;
+      case C.MSG.SALVA: if (room) room.salvaAllOstessa(pid); break;       // v2.11 — il salvataggio dall'Ostessa
+      case C.MSG.RIPRENDI: if (room) room.riprendi(pid, m.dati); break;   // v2.11 — e il ritorno, dal menu
       case C.MSG.SHOP_READY: if (room) room.shopReady(pid, m.dest); break;
       case C.MSG.EXIT_WAVE: if (room) room.exitWave(pid); break;           // v1.78 — pulsante EXIT sulla mappa ripulita
       case C.MSG.GO_VILLAGE: if (room) room.vaiAlVillaggio(pid); break;   // v1.79 — sezione Villaggio del menu di fine ondata
