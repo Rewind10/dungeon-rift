@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.8.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.8.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.8.2 (la schermata d'avvio invoglia invece di spiegare)
+- **✨ Un RICHIAMO sotto il titolo, al posto delle regole.** La colonna di destra aveva *«Come funziona una
+  run»*: cinque punti fitti di numeri — due boss, quattro vie di crescita, i livelli 3·6·9·12 — da leggere
+  prima ancora di aver premuto un tasto. Chi arriva nuovo non vuole un manuale, vuole sapere se gli
+  interessa. Adesso sotto il titolo ci sono tre frasi, vaghe di proposito:
+  > *Scendi. Venti volte, e ogni volta piu' a fondo. Le armi che impugni cambiano forma, i nemici imparano
+  > in fretta, e laggiu' qualcosa si e' appena svegliato. Fra una discesa e l'altra c'e' un villaggio dove
+  > tirare il fiato — poi si torna giu'.*
+  A destra restano i **comandi**, che servono davvero mentre si gioca.
+- **🧪 La modalita' di prova torna nascosta** — nascosta, non tolta. E' uno strumento di sviluppo, e in una
+  schermata d'avvio un pannello che dice "parti dall'ondata 14" e' rumore. Si riapre come sempre con
+  **`?test`** nell'indirizzo o col **tasto T** stando nel menu, e la T resta scritta fra i comandi.
 
 ## 🆕 Novita v2.8.1 (la schermata di fine ondata parla la lingua del patto)
 - **🎁 I potenziamenti sono DONI, e adesso lo dice.** Dopo il colpo di scena la schermata fra un'ondata e

@@ -525,15 +525,21 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(rd.some(r => r.indexOf('this._dipingiCimitero(') >= 0 && r.indexOf('m.muri') >= 0), 'il cimitero si dipinge solo quando la mappa ha le sue tessere');
   }
 
-  // v1.99 — la modalita' di prova e' di nuovo VISIBILE nel menu: si sceglie l'ondata e si parte.
-  // Le due scorciatoie della v1.96.1 (?test e il tasto T) restano, e servirebbero se la si richiudesse.
+  // v2.8.2 — la modalita' di prova e' di nuovo NASCOSTA nel menu (lo era in v1.96.1, poi resa visibile in
+  // v1.99). Nascosta, non tolta: e' uno strumento di sviluppo, non una voce del gioco, e in una schermata
+  // d'avvio che deve invogliare a giocare un pannello che dice "parti dall'ondata 14" e' rumore.
+  // Le due scorciatoie che la riaprono sono l'unico modo per arrivarci, quindi qui si controllano tutte
+  // e tre le cose insieme: che sia nascosta, che ci sia ancora, e che le scorciatoie funzionino.
   {
     const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
     const mn = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
-    ok(/<details class="help prova" id="provaBox">/.test(html), 'il pannello di prova si vede nel menu');
-    ok(html.indexOf('id="provaGrid"') > 0, 'con la sua griglia di ondate');
-    ok(/\[\?&#\]test/.test(mn), 'e le scorciatoie restano: ?test nell indirizzo');
+    ok(/<details class="help prova hidden" id="provaBox">/.test(html), 'il pannello di prova nasce nascosto');
+    ok(html.indexOf('id="provaGrid"') > 0, 'ma c e ancora, con la sua griglia di ondate');
+    ok(/\[\?&#\]test/.test(mn), 'e le scorciatoie che lo riaprono: ?test nell indirizzo');
     ok(mn.indexOf("e.key !== 't' && e.key !== 'T'") > 0, 'e il tasto T stando nel menu');
+    ok(/prova\.classList\.remove\('hidden'\)/.test(mn), 'e sono loro a togliergli il "hidden"');
+    // il tasto T resta scritto nei comandi: e' l'unico modo per sapere che quella scorciatoia esiste
+    ok(html.indexOf('Modalità di prova') > 0, 'e il tasto T resta documentato fra i comandi');
   }
 
   // v2.2 — LA SCHERMATA PRINCIPALE A DUE COLONNE. Il titolo fuori dal pannello, e la guida aperta di
@@ -560,6 +566,16 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
                             ['>M<', 'musica'], ['Invio', 'chat'], ['>T<', 'prova']])
       ok(info.indexOf(k.replace(/[<>]/g, m => m === '>' ? '>' : '<')) > 0 || info.indexOf(k) > 0, 'nei comandi c e il tasto per ' + chi);
     ok(/accende e spegne la torcia/.test(info), 'e del tasto L si dice cosa fa');
+    // v2.8.2 — IL RICHIAMO ha preso il posto delle regole. "Come funziona una run" erano cinque punti
+    // fitti di numeri, letti prima ancora di aver premuto un tasto: chi arriva nuovo non vuole un
+    // manuale, vuole sapere se gli interessa. Adesso sotto il titolo ci sono tre frasi vaghe di
+    // proposito, e la colonna di destra tiene solo i COMANDI, che servono mentre si gioca.
+    const tit = men.slice(men.indexOf('<div id="titolone">'), men.indexOf('id="menuColonne"'));
+    ok(/class="occhiello"/.test(tit), 'sotto il titolo c e il richiamo');
+    ok(!/info-h">\u{1F3AF} Come funziona/u.test(men) && !/class="info-lista"/.test(men),
+      'e l elenco delle regole non c e piu nella colonna di destra');
+    ok(!/\b10\u00aa\b|\b20\u00aa\b/.test(tit), 'e il richiamo non fa numeri: e vago di proposito');
+    ok(/#titolone \.occhiello\{/.test(css), 'e ha il suo stile, con la larghezza bloccata');
   }
 
   // v1.99 — il menu NON ha piu' l'illustrazione di sfondo: e' tornato il fondo scuro di sempre.

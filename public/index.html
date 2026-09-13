@@ -82,6 +82,12 @@
   <div id="titolone">
     <h1>DUNGEON <span>RIFT</span></h1>
     <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori <small id="verBadge" class="ver">v2.2.0</small></p>
+    <!-- v2.8.2 — IL RICHIAMO. Qui prima non c'era niente e la guida a destra spiegava tutto per filo e per
+         segno: cinque punti fitti, prima ancora di aver premuto un tasto. Chi arriva nuovo non vuole un
+         manuale, vuole sapere se gli interessa. Quindi: vago di proposito, tre frasi, nessun numero. -->
+    <p class="occhiello">Scendi. Venti volte, e ogni volta più a fondo.<br>
+      Le armi che impugni cambiano forma, i nemici imparano in fretta, e laggiù qualcosa si è appena
+      svegliato. Fra una discesa e l’altra c’è un villaggio dove tirare il fiato — poi si torna giù.</p>
   </div>
   <div id="menuColonne">
     <div class="menu-card">
@@ -94,7 +100,7 @@
       <!-- v1.99 — la modalita' di prova torna VISIBILE nel menu. Era stata nascosta in v1.96.1 (si apriva
            con ?test o col tasto T): quelle due scorciatoie restano e non danno fastidio, ma il pannello
            adesso c'e' e basta. -->
-      <details class="help prova" id="provaBox">
+      <details class="help prova hidden" id="provaBox">
         <summary>🧪 Modalità di prova — parti da un'ondata</summary>
         <p class="tag" style="margin:8px 0 6px;font-size:13px">Entri da solo con il personaggio che avresti a
           quel punto: livello, punti spesi, equipaggiamento e abilità. Serve a guardare prestazioni e
@@ -104,7 +110,10 @@
     </div>
 
     <!-- La colonna delle info: UNA PAGINA SOLA, tutta aperta. Niente accordion — un accordion in una
-         schermata di avvio e' un modo elegante di non far leggere niente a nessuno. -->
+         schermata di avvio e' un modo elegante di non far leggere niente a nessuno.
+         v2.8.2 — qui c'era anche "Come funziona una run", cinque punti fitti di regole. E' diventato il
+         RICHIAMO sotto il titolo, vago di proposito: chi arriva nuovo non vuole un manuale, vuole sapere
+         se gli interessa. Qui restano i COMANDI, che servono davvero mentre si gioca. -->
     <aside class="info-card" id="infoCard">
       <h2 class="info-h">⌨️ Comandi</h2>
       <div class="tasti">
@@ -119,24 +128,6 @@
         <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
         <div class="tasto"><span class="kb">T</span><b>Modalità di prova</b><i>da questa schermata</i></div>
       </div>
-
-      <h2 class="info-h">🎯 Come funziona una run</h2>
-      <ol class="info-lista">
-        <li><b>Venti ondate, due boss.</b> Il Colosso della Faglia alla <b>10ª</b>, AZ'GAROTH alla <b>20ª</b>.
-          Ogni ondata ha un <b>tempo obiettivo</b> ⏱: restaci sotto e prendi XP e monete extra.</li>
-        <li><b>Hai due vite.</b> Quando cadi ne perdi una e riparti; finite quelle, la run è chiusa.
-          In cooperativa un compagno può rialzarti.</li>
-        <li><b>Cresci in quattro modi diversi</b>, e sono scelte separate:<br>
-          <span class="via">✦ <b>XP</b> → statistiche</span>
-          <span class="via">🎴 <b>Livelli 3·6·9·12</b> → una carta su quattro</span>
-          <span class="via">⚡ <b>Livelli 8·14</b> → un'abilità attiva su due</span>
-          <span class="via">🪙 <b>Monete</b> → equipaggiamento dal fabbro</span><br>
-          Al <b>15</b> arriva la specializzazione: il bivio che decide che eroe sei diventato.</li>
-        <li><b>Le armi evolvono.</b> Portane una al <b>Lv.3</b> con la statistica giusta e diventa un'altra arma.</li>
-        <li><b>Fra un'ondata e l'altra c'è il villaggio.</b> Osteria, fucina, erborista, sciamano e gilda
-          delle taglie: si compra, si riposa, e si riparte dalla <b>faglia in mezzo alla piazza</b>.
-          Nessun timer: ci si sta quanto si vuole.</li>
-      </ol>
 
       <p class="info-nota">Nelle grotte vedi solo dove arriva la <b>torcia</b>: davanti lontano, alle spalle
         quasi niente, e i muri fanno ombra. Quello che non vedi resta comunque sulla <b>minimappa</b>.</p>

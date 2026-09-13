@@ -2,6 +2,46 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.8.2] — 2026-09-13 · "La schermata d'avvio invoglia invece di spiegare"
+
+#### ✨ Un richiamo, al posto di un manuale
+La colonna di destra della schermata d'avvio conteneva *«🎯 Come funziona una run»*: cinque punti fitti con
+dentro i due boss e le loro ondate, il tempo obiettivo, le due vite, le **quattro** vie di crescita coi
+livelli 3·6·9·12 e 8·14, l'evoluzione delle armi e il villaggio. Tutto vero, tutto utile — e tutto da
+leggere **prima ancora di aver premuto un tasto**.
+
+Chi arriva la prima volta non vuole un manuale: vuole sapere se il gioco gli interessa. Quindi quel blocco
+e' diventato un **richiamo sotto il titolo**, vago di proposito, senza un numero che sia uno:
+
+> *Scendi. Venti volte, e ogni volta piu' a fondo. Le armi che impugni cambiano forma, i nemici imparano in
+> fretta, e laggiu' qualcosa si e' appena svegliato. Fra una discesa e l'altra c'e' un villaggio dove
+> tirare il fiato — poi si torna giu'.*
+
+La larghezza e' bloccata a 620 px e non e' un vezzo: una riga lunga tutto lo schermo non si legge, perche'
+l'occhio non ritrova l'inizio della riga dopo.
+
+Nella colonna di destra restano i **comandi**, che servono davvero — e si leggono mentre si gioca, non
+prima.
+
+#### 🧪 La modalita' di prova torna nascosta
+Nascosta, **non tolta**. E' uno strumento di sviluppo — "parti dall'ondata 14 col personaggio che avresti a
+quel punto" — e in una schermata che deve invogliare a cominciare una partita e' rumore. Era stata nascosta
+in v1.96.1 e rimessa in vista in v1.99; adesso torna dietro le due scorciatoie di allora:
+
+- **`?test`** (o `#test`) nell'indirizzo;
+- il **tasto T** stando nel menu.
+
+La T resta scritta fra i comandi: e' l'unico modo per sapere che quella scorciatoia esiste, e un'uscita di
+sicurezza che nessuno sa dov'e' non e' un'uscita di sicurezza.
+
+#### ✅ Verifiche
+- `test/client.js` — il pannello nasce nascosto, la griglia c'e' ancora, le due scorciatoie gli tolgono il
+  `hidden`, e la T resta documentata. Piu': sotto il titolo c'e' il richiamo, l'elenco delle regole non c'e'
+  piu' nella colonna di destra, e il richiamo **non fa numeri**.
+- Guardata a schermo a 1600 e a 1100 px, e provate tutte e due le scorciatoie.
+
+---
+
 ### [2.8.1] — 2026-09-13 · "La schermata di fine ondata parla la lingua del patto"
 
 Una rivelazione che spiega una regola vale solo se **poi la regola la dice anche l'interfaccia**. Dopo il

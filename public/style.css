@@ -55,6 +55,13 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 #titolone h1{font-size:clamp(38px,6.4vw,72px);letter-spacing:clamp(4px,1vw,12px);margin:0 0 6px}
 #titolone .tag{margin:0;font-size:15px}
 #titolone .ver{margin-left:10px}
+/* v2.8.2 — IL RICHIAMO sotto il titolo. Ha preso il posto dei cinque punti di regole che stavano nella
+   colonna di destra: li' erano un manuale da leggere prima di aver premuto un tasto, qui sono tre frasi
+   che dicono se il gioco ti interessa. Larghezza bloccata perche' una riga lunga tutto lo schermo non si
+   legge: l'occhio non ritrova l'inizio della riga dopo. */
+#titolone .occhiello{max-width:min(620px,88vw);margin:14px auto 0;font-size:14.5px;line-height:1.62;
+  color:#a9b5cc;letter-spacing:.1px}
+@media (max-width:1080px){#titolone .occhiello{font-size:13.5px;line-height:1.55;margin-top:11px}}
 /* le due colonne. La guida non e' un ripensamento: ha la stessa larghezza del pannello di sinistra,
    perche' leggerla e' meta' del lavoro di chi arriva la prima volta. */
 #menuColonne{display:flex;gap:22px;align-items:flex-start;justify-content:center;flex:none;
