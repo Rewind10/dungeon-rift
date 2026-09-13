@@ -1010,7 +1010,9 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   {
     const St = window.GAME.Storia;
     ok(!!St, 'il testo della storia arriva al client');
-    ok(St.prologo.chi === '', 'la voce del risveglio non ha nome');
+    ok(St.prologo.righe.every(q => q.chi !== 'sciamano'), 'nel risveglio lo sciamano non si presenta');
+    ok(St.prologo.righe.some(q => q.chi === ''), 'la voce che parla non ha volto');
+    ok(St.sciamano.righe.some(q => q.chi === 'tu'), 'e il discorso dello sciamano e un dialogo');
     // i pezzi dell'interfaccia esistono, e sono quelli che il codice cerca per id
     const src3 = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
     for (const id of ['dial', 'dialChi', 'dialTxt', 'dialHint', 'quest', 'questT', 'questD'])
@@ -1020,6 +1022,12 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(/mostraDialogo\(/.test(srcH) && /nascondiDialogo\(/.test(srcH), 'l HUD sa aprire e chiudere i sottotitoli');
     ok(/dialogoFretta\(/.test(srcH), 'e il primo Spazio finisce la riga invece di saltarla');
     ok(/missione\(m\)/.test(srcH), 'e sa mostrare la missione');
+    // v2.8 — il riquadro sta al centro, ha il ritratto di chi parla, e mentre parla non ci si muove
+    ok(/ritratto\(chi, eroeId\)/.test(srcH), 'l HUD disegna il ritratto di chi parla');
+    for (const k of ['guerriero', 'mago', 'ladro', 'sciamano'])
+      ok(new RegExp(k + ':').test(srcH), 'e ha una tavolozza per ' + k);
+    ok(/if \(!chi\) \{ cv\.classList\.add\('vuoto'\); return; \}/.test(srcH),
+      'ma la voce senza volto del risveglio non ne ha uno: e la scena, non una mancanza');
     // v2.7 — nella cella non si conta nessuna ondata: "ONDATA 0/20" sul risveglio e la cosa piu' stonata
     ok(/snap\.phase === 'prologo'/.test(srcH), 'e nella cella la barra delle ondate sparisce');
     const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
@@ -1030,7 +1038,9 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     // il CSS: i due pezzi non devono rubare la scena
     const srcC = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
     ok(/#dial\{/.test(srcC) && /#quest\{/.test(srcC), 'e hanno il loro stile');
-    ok(/#dial[^}]*pointer-events:none/.test(srcC), 'i sottotitoli non intercettano il mouse: sotto c e il gioco');
+    ok(/#dial[^}]*pointer-events:none/.test(srcC), 'il riquadro non intercetta il mouse: sotto c e il gioco');
+    ok(/#dial\{[^}]*left:50%/.test(srcC) && /#dial\{[^}]*top:/.test(srcC), 'e sta al centro dello schermo, non ai piedi');
+    ok(/#dialFaccia\{/.test(srcC), 'e il ritratto ha la sua cornice');
     ok(/#quest[^}]*pointer-events:none/.test(srcC), 'e nemmeno la missione');
   }
 })();

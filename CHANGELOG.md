@@ -2,6 +2,102 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.8.0] — 2026-09-13 · "La stanza, il riquadro coi ritratti, e il colpo di scena"
+
+#### 🐛 Dal villaggio non si scendeva — ed e' istruttivo
+Uscendo dal villaggio d'apertura si finiva all'ondata 1 **sulla mappa del villaggio**: dodici mostri
+piantati addosso al giocatore in mezzo alle botteghe.
+
+```js
+// prima
+if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { … }
+// adesso
+if (this._forceNewMap || (this.wave > 1 && this.wave % 2 === 1)) { … }
+```
+
+La bandiera **"rigenera la mappa" era chiusa dentro un controllo che all'ondata 1 e' falso**. Una riga
+scritta quando all'ondata 1 ci si arrivava in un modo solo — da `startGame`, che la mappa se l'era gia'
+fatta — e rimasta li' per venti versioni senza dare fastidio. Poi la v2.7 ha aperto una seconda strada
+verso l'ondata 1, e il difetto e' uscito subito.
+
+**Una bandiera che vuol dire "fai X" non va messa in AND con una condizione che non c'entra.** Se e'
+alzata si fa X, a qualunque ondata. Il test ora pretende che dopo il villaggio la mappa sia una grotta,
+che sia stata rigenerata, e che abbia dei posti dove far comparire i nemici — le tre cose che mancavano.
+
+#### 🛏️ Non e' piu' una cella: e' la tua stanza
+La v2.7 apriva in una cella di roccia, e non reggeva quello che dice il testo: il personaggio si sveglia
+e chiede *«perche' si e' aperto un portale nella mia stanza»*. Con la roccia viva attorno quella frase
+non sta in piedi.
+
+Adesso e' **20x14**, assi per terra, muri di **conci**, un letto, una cassapanca, un tavolo, una
+lanterna accesa sul comodino. E in mezzo, dove ieri c'era il pavimento, un portale.
+
+Non ha uscite, ed e' voluto: e' una camera da letto, non un livello. Se ci fosse una porta uno proverebbe
+ad aprirla, e il primo minuto di gioco diventerebbe una caccia alla maniglia.
+
+#### 🖼️ Il dialogo e' un riquadro al centro, col ritratto di chi parla
+Nella v2.7 era una striscia in basso col testo sopra uno sfondo sfumato: **elegante e illeggibile**. Su
+un pavimento chiaro le lettere sparivano, e comunque durante il gioco l'occhio sta al centro dello
+schermo, non ai piedi.
+
+Adesso e' un riquadro vero — opaco, bordato d'oro — con dentro il **ritratto** di chi parla. Disegnati a
+codice come tutto il resto: **guerriero** (elmo con la feritoia e gli occhi che brillano dentro),
+**mago** (cappello a punta con la stella, barba), **ladro** (cappuccio calato e fazzoletto sul viso),
+**sciamano** (corna, cappuccio, barba bianca).
+
+Sono di **fronte**, non dall'alto: una testa vista dall'alto dentro un riquadro di dialogo non si legge
+come una faccia. E sono semplici apposta — ottanta pixel non reggono i dettagli, quello che li fa
+riconoscere e' la **silhouette**.
+
+La voce senza volto del risveglio **non ha ritratto e non ha nome**, e non e' una mancanza: e' lo
+sciamano, e il giocatore lo scopre solo quando gli parla.
+
+#### 🔒 Mentre parla qualcuno non ci si muove
+Il blocco sta sul **server**, in `setInput`. Il client puo' anche smettere di mandare i comandi, ma
+quello che decide dove sta un giocatore e' il server, e un blocco che vale solo di la' non e' un blocco.
+Si ferma il movimento e tutto quello che si fa con le mani; la mira no, quella non sposta niente. Non
+c'e' rischio di restare incastrati: la riga scade da sola dopo `STORIA_RIGA` secondi.
+
+#### 🎭 Il colpo di scena: una divinita' davanti a uno schermo
+Il discorso dello sciamano e' stato riscritto da capo, ed e' un **dialogo** — l'avatar non capisce e
+continua a chiedere, che e' giusto: e' lui il posseduto, non l'informato.
+
+> **SCIAMANO** — Sotto questo villaggio dorme una cosa vecchia di mille anni. Si chiama AZ'GAROTH, e si
+> sta svegliando.
+> **TU** — Cosa volete da me?
+> **SCIAMANO** — Tu sei stato scelto. Da una divinita'.
+> **TU** — Non capisco.
+> **SCIAMANO** — Sei lo strumento di un Dio.
+> **TU** — …
+> **SCIAMANO** — Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.
+> **SCIAMANO** — Si'. Dico a te che ci stai guardando.
+
+**Non e' «l'eroe sei tu»: e' «sei lo strumento di un Dio, e il Dio e' chi tiene il mouse».** La
+differenza non e' di gusto — la seconda versione **spiega una regola**: le carte potere che arrivano a
+fine ondata sono i doni della divinita'. *«Lasciati guidare. Ti donera' i poteri che ti servono.»* Una
+rivelazione che spiega una regola vale dieci rivelazioni che strizzano l'occhio, e il test pretende che
+quelle tre cose (divinita', schermo, poteri) restino nel testo anche se un domani lo si riscrive.
+
+#### 📋 "Missione principale", non "missione"
+Il filo della storia resta acceso per tutta la partita, ma taglie, prigionieri e tutto il resto
+continuano a funzionare come sempre: la parola nel riquadro lo dice senza spiegarlo. E chi esce dal
+villaggio **senza** parlare con lo sciamano non si ritrova "trova lo sciamano" appeso per venti ondate:
+la missione diventa comunque la discesa, perche' e' quello che sta facendo.
+
+#### 🐛 Corretti per strada
+- Nel prologo la fiala della vita restava vuota con scritto "—/—": nascondendo la barra delle ondate
+  avevo messo un `return`, e si portava via tutto quello che veniva dopo nella stessa funzione.
+  **Nascondere un pezzo non vuol dire saltare il resto.**
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2279 passati, 0 falliti**, con la non-regressione del bug (dopo il villaggio:
+  grotta, mappa rigenerata, posti di spawn) e la prova del blocco movimenti.
+- `test/client.js` — i ritratti per ognuno dei quattro, il riquadro al centro, la voce senza volto.
+- Provato in browser il giro intero coi tre eroi: stanza → portale → villaggio → sciamano → **ondata 1
+  in una grotta 64x46 con dodici nemici**.
+
+---
+
 ### [2.7.0] — 2026-09-13 · "La storia: ci si sveglia, si attraversa, si parla, si scende"
 
 #### 🕯️ La partita comincia con uno che si sveglia

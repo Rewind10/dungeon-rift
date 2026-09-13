@@ -187,7 +187,15 @@ class Room {
     this._recomputeGear(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
-  setInput(pid, i) { const p = this.players.get(pid); if (!p) return; p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
+  setInput(pid, i) { const p = this.players.get(pid); if (!p) return;
+    // v2.8 — MENTRE PARLA QUALCUNO NON CI SI MUOVE. Il blocco sta QUI, sul server, e non nel client: il
+    // client puo' anche smettere di mandare i comandi, ma quello che decide dove sta un giocatore e' il
+    // server, e un blocco che vale solo di la' non e' un blocco. Si ferma il movimento e tutto quello
+    // che si fa con le mani (colpire, scattare, bere): la mira no, quella non sposta niente.
+    // Non c'e' rischio di restare incastrati: la riga scade da sola dopo STORIA_RIGA secondi.
+    if (this.storia) { p.input.mx = 0; p.input.my = 0; p.input.aim = i.aim || 0;
+      p.input.shoot = false; p.input.q = false; p.input.e = false; p.input.dash = false; p.input.pot = 0; return; }
+    p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
 
   // v1.91 — `da` e' la MODALITA' DI PROVA: si parte direttamente dall'ondata voluta invece di rifare
   // quattordici livelli per vedere come si comporta il quindicesimo. Il personaggio non parte nudo — non
@@ -214,6 +222,7 @@ class Room {
     // cinquantina di partite per misurare ondate, bilanciamento e collisioni, e farle passare tutte dal
     // risveglio vorrebbe dire provare cinquanta volte il prologo e zero volte quello che si voleva
     // provare. Il prologo ha i suoi test, che partono di li'.
+    this._forceNewMap = false;   // si riparte puliti: la bandiera e' di chi esce dal villaggio, non di chi comincia
     if (da > 1 || senzaStoria) { this.newMap((Math.random() * 1e9) | 0, Math.max(1, da)); this.nextWave(); }
     else this.enterPrologo();
     if (process.env.DR_VILLAGGIO) { this.wave = 3; this.enterMarket(); }
@@ -261,13 +270,29 @@ class Room {
     this.wave++;
     this.mode = Waves.modeForWave(this.wave);
     this.phase = Waves.isBossWave(this.wave) ? C.PHASE_BOSS : C.PHASE_COMBAT;
-    if (this.wave > 1 && (this.wave % 2 === 1 || this._forceNewMap)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }  // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella stanza del mercante
+    // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella
+    // stanza del mercante.
+    // v2.8 — E VALE ANCHE ALL'ONDATA 1. Qui c'era `this.wave > 1 && (... || this._forceNewMap)`: la
+    // bandiera "rigenera" era chiusa dentro un controllo che all'ondata 1 e' falso, quindi non valeva
+    // niente. Finche' l'ondata 1 arrivava solo da startGame (che la mappa se l'era gia' fatta) non si
+    // vedeva; dalla v2.7 all'ondata 1 ci si arriva ANCHE dal villaggio d'apertura, e il risultato era che
+    // la prima ondata si combatteva dentro il villaggio — su una mappa senza posti dove far comparire i
+    // nemici, quindi con dodici mostri piantati addosso al giocatore e le botteghe attorno.
+    // La bandiera vuol dire "rigenera", punto: se e' alzata si rigenera, a qualunque ondata.
+    if (this._forceNewMap || (this.wave > 1 && this.wave % 2 === 1)) { this._forceNewMap = false; this.newMap((Math.random() * 1e9) | 0, this.wave); }
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    // v2.8 — se uno esce dal villaggio SENZA parlare con lo sciamano, la missione in evidenza resterebbe
+    // "trova lo sciamano" per venti ondate, mentre sta gia' scendendo. Chi salta ha saltato: la missione
+    // diventa comunque la discesa, perche' e' quello che sta facendo.
+    if (this.wave >= 1 && this.missione && this.missione !== 'discesa') {
+      this.missione = 'discesa'; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } });
+    }
     // v2.7 — l'ultima discesa: una riga sola, e chiude il cerchio aperto nella cella.
     if (this.wave === (Storia.ONDATE || 20) && !this._finaleDetto) { this._finaleDetto = true;
-      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.finale.chi, testo: Storia.finale.righe[0] } }); }
+      const fi = Storia.finale.righe[0];
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: fi.chi, testo: fi.t } }); }
     this._preparaPrigionieri();                                   // v1.84 — a volte c'e' gente da liberare
     this._schieraMercenario();                                    // v1.82 — il mercenario torna in campo, curato
     for (const p of this.players.values()) p.noLifeLost = true;   // v1.72 — la lavagna si pulisce a ogni ondata
@@ -630,7 +655,7 @@ class Room {
       if (near && !p._nearShm) {
         p._nearShm = true;
         if (!this._sciamanoDetto) this._storiaApri('sciamano');
-        else this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.sciamano.chi, testo: Storia.sciamano.ancora } });
+        else { const an = Storia.sciamano.ancora; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: an.chi, testo: an.t } }); }
       } else if (!near && p._nearShm) p._nearShm = false;
     }
   }
@@ -2254,7 +2279,8 @@ class Room {
       if (!this.storia && this.faglia && !this._sollecitoDetto) {
         this._sollecito += dt;
         if (this._sollecito > (C.PROLOGO_SOLLECITO || 22)) { this._sollecitoDetto = true;
-          this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: Storia.prologo.chi, testo: Storia.prologo.sollecito } }); }
+          const so = Storia.prologo.sollecito;
+          this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: so.chi, testo: so.t } }); }
       }
     }
     if (this.phase === C.PHASE_MARKET) { this._checkMarketExit(); this.updateSciamano(dt); }

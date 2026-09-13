@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.7.0`
+**Versione attuale:** `2.8.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -334,7 +334,69 @@ dell'ondata 20 — AZ'GAROTH — esisteva da sempre e **non lo nominava nessuno*
 
 Adesso la partita comincia con uno che **si sveglia**.
 
-### 🕯️ La cella del risveglio
+### 🛏️ La tua stanza
+
+Fase nuova (`PHASE_PROLOGO`), mappa nuova (`generatePrologo`): **20x14**, assi per terra, muri di
+**conci**, un letto, una cassapanca, un tavolo, una lanterna accesa sul comodino. E in mezzo, dove ieri
+c'era il pavimento, un **portale**.
+
+*(Nella v2.7 era una cella di roccia, e non reggeva quello che dice il testo: il personaggio si sveglia e
+chiede «perche' si e' aperto un portale nella mia stanza». Con la roccia viva attorno quella frase non
+sta in piedi.)*
+
+**Non ha uscite, ed e' voluto**: e' una camera da letto, non un livello. Se ci fosse una porta uno
+proverebbe ad aprirla, e il primo minuto di gioco diventerebbe una caccia alla maniglia. Niente nemici,
+niente casse, niente mercanti: c'e' un portale, e non c'e' nient'altro da fare che andarci.
+
+Dichiara `lit` — che non vuol dire "illuminata" ma *il buio lo fanno le **sorgenti** invece del campo
+visivo*. Le sorgenti sono due: la lanterna e il portale. E' notte.
+
+### 🖼️ Il riquadro del dialogo
+
+Un **riquadro al centro dello schermo**, opaco, bordato d'oro, con dentro il **ritratto** di chi parla.
+
+*(Nella v2.7 era una striscia in basso col testo sopra uno sfondo sfumato: elegante e illeggibile. Su un
+pavimento chiaro le lettere sparivano, e comunque durante il gioco l'occhio sta al centro.)*
+
+I ritratti sono disegnati a codice come tutto il resto — zero asset:
+
+| Chi | Come lo riconosci |
+|---|---|
+| **Guerriero** | elmo con la feritoia, e due occhi che brillano dentro |
+| **Mago** | cappello a punta con la stella, barba |
+| **Ladro** | cappuccio calato, fazzoletto sul viso |
+| **Sciamano** | corna, cappuccio, barba bianca |
+| *la voce del risveglio* | **nessun ritratto** — ed e' la scena, non una mancanza |
+
+Sono di **fronte**, non dall'alto: una testa vista dall'alto dentro un riquadro di dialogo non si legge
+come una faccia. E semplici apposta — ottanta pixel non reggono i dettagli, quello che li fa riconoscere
+e' la **silhouette**.
+
+**Mentre parla qualcuno non ci si muove**, e il blocco sta sul **server** (`setInput`): il client puo'
+anche smettere di mandare i comandi, ma quello che decide dove sta un giocatore e' il server. Si ferma il
+movimento e tutto quello che si fa con le mani; la mira no, quella non sposta niente.
+
+### 🎭 Il colpo di scena
+
+Il discorso dello sciamano e' un **dialogo**: l'avatar non capisce e continua a chiedere, ed e' giusto —
+e' lui il posseduto, non l'informato.
+
+> **SCIAMANO** — Tu sei stato scelto. Da una divinita'.
+> **TU** — Non capisco.
+> **SCIAMANO** — Sei lo strumento di un Dio.
+> **TU** — …
+> **SCIAMANO** — Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.
+> **SCIAMANO** — Si'. Dico a te che ci stai guardando.
+
+**Non e' «l'eroe sei tu»: e' «sei lo strumento di un Dio, e il Dio e' chi tiene il mouse».** La
+differenza non e' di gusto: la seconda versione **spiega una regola**. Le carte potere che arrivano a
+fine ondata sono i doni della divinita' — *«Lasciati guidare. Ti donera' i poteri che ti servono.»*
+
+Una rivelazione che spiega una regola vale dieci rivelazioni che strizzano l'occhio, e il test pretende
+che quelle tre cose — **divinita'**, **schermo**, **poteri** — restino nel testo anche se un domani lo si
+riscrive da capo.
+
+### 🕯️ (v2.7) La scena del risveglio
 
 Fase nuova (`PHASE_PROLOGO`), mappa nuova (`generatePrologo`): **22x16**, una sala sola, quasi nera, con
 una **faglia viola** in mezzo e un braciere mezzo spento accanto al giaciglio.

@@ -1362,53 +1362,61 @@
   // piantaCaverna e tessereStrozzatura escono anche da sole: i test le provano senza dover
   // generare una mappa intera, ed e' cosi' che si tiene onesto il vincolo delle strozzature.
   // ============================================================================================
-  // v2.7 — LA CELLA DEL RISVEGLIO
+  // v2.8 — LA TUA STANZA
   // ============================================================================================
-  // La prima cosa che si vede del gioco. Deve fare una cosa sola e farla senza spiegazioni: sei al
-  // buio, in mezzo c'e' una luce viola, e non c'e' nient'altro da fare che andarci.
+  // La prima cosa che si vede del gioco. Nella v2.7 era una cella di roccia e non funzionava con quello
+  // che dice il testo: il personaggio si sveglia e chiede "perche' si e' aperto un portale NELLA MIA
+  // STANZA" — quindi dev'essere una stanza, non una grotta. Assi per terra, conci ai muri, un letto, una
+  // cassapanca, una lanterna. E in mezzo, dove ieri c'era il pavimento, un portale acceso.
   //
-  // Quindi e' PICCOLA (22x16: due schermate scarse), e' una sala sola senza svolte — se ci fosse un
-  // corridoio uno lo esplorerebbe, e il primo minuto di gioco diventerebbe una caccia al tesoro — e
-  // dichiara `lit`, che qui non vuol dire "illuminata" ma "il buio lo fanno le sorgenti invece del
-  // campo visivo". Di sorgenti ce ne sono due: la faglia in mezzo e un braciere mezzo spento accanto
-  // al giaciglio. Tutto il resto e' nero.
+  // E' PICCOLA (20x14) e non ha uscite: e' una camera da letto, non un livello. Se ci fosse una porta uno
+  // proverebbe ad aprirla, e il primo minuto di gioco diventerebbe una caccia alla maniglia. Non c'e'
+  // niente da raccogliere e niente da uccidere: c'e' un portale.
+  //
+  // Dichiara `lit`, che non vuol dire "illuminata" ma "il buio lo fanno le sorgenti invece del campo
+  // visivo". Le sorgenti sono due: la lanterna sul comodino e il portale. E' notte.
   const PROLOGO = {
-    w: 22, h: 16,
-    sala: { x0: 3, y0: 3, x1: 18, y1: 12 },
-    faglia: { x: 10.5, y: 7.5 },
-    giaciglio: { x: 5, y: 9 },
-    spawn: { x: 6, y: 9 },
+    w: 20, h: 14,
+    stanza: { x0: 3, y0: 3, x1: 16, y1: 10 },
+    faglia: { x: 11, y: 6.5 },
+    letto: { x: 5, y: 7 },
+    spawn: { x: 7, y: 7 },
   };
   function generatePrologo(seed) {
-    const w = PROLOGO.w, h = PROLOGO.h, TILE = C.TILE, SA = PROLOGO.sala;
+    const w = PROLOGO.w, h = PROLOGO.h, TILE = C.TILE, SA = PROLOGO.stanza;
     const g = new Uint8Array(w * h).fill(C.T_WALL);
-    const mur = new Uint8Array(w * h);          // tutto 0: roccia di grotta, nessun concio. Non e' un edificio.
+    const mur = new Uint8Array(w * h);
     for (let y = SA.y0; y <= SA.y1; y++) for (let x = SA.x0; x <= SA.x1; x++) g[y * w + x] = C.T_FLOOR;
-    // due rientranze negli angoli, per non avere una scatola perfetta: la roccia non fa rettangoli
-    for (const [cx, cy, rx, ry] of [[SA.x0 + 1, SA.y0, 2, 1], [SA.x1 - 2, SA.y1, 2, 1]])
-      for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++)
-        if (x > 0 && y > 0 && x < w - 1 && y < h - 1) g[y * w + x] = C.T_WALL;
+    // i muri della stanza sono CONCI (2), non roccia: e' una casa. Il resto della mappa non si vede.
+    for (let y = SA.y0 - 1; y <= SA.y1 + 1; y++) for (let x = SA.x0 - 1; x <= SA.x1 + 1; x++) {
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      if (g[y * w + x] === C.T_WALL) mur[y * w + x] = 2;
+    }
 
     const props = [];
     const P = (type, tx, ty, s, extra) => props.push(Object.assign({ type, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, s: s || 1, r: ((tx * 31 + ty * 17) % 100) / 100 }, extra || {}));
-    // il GIACIGLIO: e' da li' che ti sei svegliato, e serve a dire che qualcuno ti ha messo li'
-    P('letto', PROLOGO.giaciglio.x, PROLOGO.giaciglio.y, 1, { r: 0 });
-    P('brazier', PROLOGO.giaciglio.x - 0.6, PROLOGO.giaciglio.y - 1.8, 0.95);
-    P('sack', PROLOGO.giaciglio.x + 1.4, PROLOGO.giaciglio.y + 1.2, 0.9);
-    // e le macerie: sassi, ossa, ragnatele. Niente casse e niente da raccogliere — non c'e' niente da
-    // fare qui dentro, ed e' voluto.
-    for (const [x, y, sc] of [[8, 4.4, 0.6], [14.5, 5.2, 0.5], [7.4, 11.2, 0.55], [16, 9.6, 0.6], [12, 11.4, 0.5]]) P('rock', x, y, sc);
-    for (const [x, y] of [[9.4, 10.6], [15.4, 4.2]]) P('skull', x, y, 0.9);
-    for (const [x, y] of [[4.4, 4.4], [17, 11.4]]) P('web', x, y, 0.9);
-    P('chain', 12.6, 4.2, 0.9); P('chain', 6.6, 5.4, 0.85);
+    // il LETTO da cui ti sei appena alzato, con la lanterna accesa accanto
+    P('letto', PROLOGO.letto.x, PROLOGO.letto.y, 1, { r: 0 });
+    P('candelabra', PROLOGO.letto.x + 0.1, PROLOGO.letto.y - 1.6, 1);
+    // e le cose di una stanza in cui vive qualcuno
+    P('credenza', SA.x0 + 0.7, SA.y0 + 0.7, 0.95, { r: 1 });
+    P('cratebox', SA.x0 + 0.8, SA.y1 - 0.7, 0.95);
+    P('tavolo', SA.x0 + 3.2, SA.y1 - 0.9, 0.9);
+    P('panca', SA.x0 + 3.2, SA.y1 - 2.0, 0.9);
+    P('scaffale', SA.x0 + 6.0, SA.y0 + 0.7, 0.9, { r: 0 });
+    P('barrel', SA.x1 - 0.8, SA.y1 - 0.8, 0.9);
+    P('tappeto', SA.x0 + 3.4, SA.y0 + 2.6, 1.1, { col: '#6b4630' });
+    P('rastrelliera', SA.x1 - 2.4, SA.y0 + 0.7, 0.85, { r: 0 });
+    // e qualche segno che il portale ha rotto qualcosa aprendosi: sassi e una ragnatela nell'angolo
+    for (const [x, y, sc] of [[PROLOGO.faglia.x - 1.6, PROLOGO.faglia.y + 1.4, 0.5], [PROLOGO.faglia.x + 1.7, PROLOGO.faglia.y - 1.3, 0.45]]) P('rock', x, y, sc);
+    P('web', SA.x1 - 0.6, SA.y0 + 0.5, 0.8);
 
     return {
       w, h, tile: TILE, seed: seed >>> 0, level: 0, theme: THEMES[0], prologo: 1,
-      // `lit` come il villaggio: niente campo visivo, il buio lo bucano le sorgenti. Qui le sorgenti
-      // sono il braciere e la faglia, quindi la sala e' quasi tutta nera con una luce viola in mezzo —
-      // che e' esattamente l'immagine da cui deve partire il gioco.
       lit: 1,
-      grid: Array.from(g), muri: Array.from(mur), floors: [],
+      grid: Array.from(g), muri: Array.from(mur),
+      // il pavimento di casa: assi, come nelle case del villaggio
+      floors: [{ x0: SA.x0, y0: SA.y0, x1: SA.x1, y1: SA.y1, kind: 'legno', col: '#554129' }],
       spawn: { x: PROLOGO.spawn.x * TILE + TILE / 2, y: PROLOGO.spawn.y * TILE + TILE / 2 },
       exit: { x: PROLOGO.faglia.x, y: PROLOGO.faglia.y },
       portale: { x: PROLOGO.faglia.x, y: PROLOGO.faglia.y },

@@ -4844,11 +4844,15 @@ function testStoria() {
 
   // --- 1) LA CELLA. Piccola, senza nemici, senza casse: c'e' una faglia e basta ---
   const pm = MapGen.generatePrologo(7);
-  assert(pm.w <= 26 && pm.h <= 20, 'la cella e piccola (' + pm.w + 'x' + pm.h + ')');
+  assert(pm.w <= 26 && pm.h <= 20, 'la stanza e piccola (' + pm.w + 'x' + pm.h + ')');
   assert(pm.prologo === 1 && pm.lit === 1, 'si dichiara prologo, e il buio lo fanno le sorgenti');
   assert(pm.enemySpawns.length === 0 && pm.crateSpawns.length === 0, 'niente nemici e niente casse: non c e altro da fare');
-  assert(!!pm.portale && !!pm.muri, 'ha la faglia e il tipo dei suoi muri');
-  assert(Array.from(pm.muri).every(t => t === 0), 'e i muri sono tutti roccia di grotta: non e un edificio');
+  assert(!!pm.portale && !!pm.muri, 'ha il portale e il tipo dei suoi muri');
+  // v2.8 — E' UNA STANZA, NON UNA CELLA. Il testo dice "perche' si e' aperto un portale nella mia
+  // stanza": se attorno c'e' roccia viva, quella frase non sta in piedi. Muri di conci, assi per terra.
+  assert(Array.from(pm.muri).some(t => t === 2), 'i muri sono conci: e una casa, non una grotta');
+  assert((pm.floors || []).some(f => f.kind === 'legno'), 'e per terra ci sono le assi');
+  assert(pm.props.some(q => q.type === 'letto'), 'c e il letto da cui ti sei alzato');
   // ci si cammina: dalla partenza si raggiunge la faglia
   {
     const isFloor = (x, y) => pm.grid[y * pm.w + x] !== C.T_WALL;
@@ -4888,9 +4892,18 @@ function testStoria() {
   assert(r.storia && r.storia.scena === 'sciamano', 'avvicinandosi parte il discorso');
   assert(r.storia.n === Storia.sciamano.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
   // il discorso nomina il boss e dice quante ondate: e' il suo mestiere
-  const tutto = Storia.sciamano.righe.join(' ');
+  const tutto = Storia.sciamano.righe.map(q => q.t).join(' ');
   assert(tutto.indexOf('AZ') >= 0, 'e nomina il boss');
   assert(/[Vv]enti/.test(tutto), 'e dice quante volte si scende');
+  // v2.8 — LA RIVELAZIONE. Non e' un dettaglio di colore: e' il motivo per cui la storia esiste, ed e'
+  // anche quello che spiega da dove arrivano i poteri di fine ondata. Se qualcuno riscrive il discorso
+  // e la perde per strada, il gioco torna a essere venti ondate senza perche'.
+  assert(/divinit|Dio/.test(tutto), 'e dice che dietro l avatar c e una divinita');
+  assert(/schermo/.test(tutto), 'e che quella divinita sta davanti a uno schermo');
+  assert(/poteri/.test(tutto), 'e che e lei a donare i poteri: la rivelazione spiega una REGOLA');
+  // ed e' un DIALOGO: parlano in due, se no e' una conferenza
+  const diTu = Storia.sciamano.righe.filter(q => q.chi === 'tu').length;
+  assert(diTu >= 4, 'e l avatar risponde (' + diTu + ' battute sue): e un dialogo, non un monologo');
   // il numero di righe si prende PRIMA del giro: all'ultima `storia` diventa null, e una condizione
   // che rilegge r.storia.n a ogni giro esplode sull'ultima iterazione.
   { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
@@ -4906,6 +4919,33 @@ function testStoria() {
   assert(r.phase === C.PHASE_COMBAT || r.phase === C.PHASE_BOSS, 'dalla faglia del villaggio si va in campo');
   assert(r.wave === 1, 'all ondata 1 (' + r.wave + ')');
   assert(r.pending > 0, 'e i nemici stanno arrivando (' + r.pending + ')');
+
+  // --- 4b) v2.8 — E SI SCENDE IN UNA GROTTA, NON NEL VILLAGGIO ---
+  // IL BUG. Dal villaggio d'apertura si finiva all'ondata 1 *sulla mappa del villaggio*: `nextWave()`
+  // rigenerava solo `if (this.wave > 1 && (... || this._forceNewMap))`, quindi la bandiera "rigenera"
+  // era chiusa dentro un controllo che all'ondata 1 e' falso. Finche' all'ondata 1 ci si arrivava solo
+  // da startGame (che la mappa se l'era gia' fatta) non si vedeva. Risultato: dodici mostri piantati
+  // addosso al giocatore in mezzo alle botteghe, su una mappa con ZERO posti dove farli comparire.
+  assert(!r.map.market, 'e si combatte in una grotta, non nel villaggio');
+  assert(r.map.w !== 60 || r.map.h !== 46, 'la mappa e stata rigenerata (' + r.map.w + 'x' + r.map.h + ')');
+  assert((r.map.enemySpawns || []).length > 50, 'e ha i suoi posti dove far comparire i nemici (' + (r.map.enemySpawns || []).length + ')');
+
+  // --- 4c) v2.8 — MENTRE PARLA QUALCUNO NON CI SI MUOVE ---
+  // Il blocco sta sul SERVER: il client puo' anche smettere di mandare i comandi, ma chi decide dove sta
+  // un giocatore e' il server, e un blocco che vale solo di la' non e' un blocco.
+  {
+    const rb = new Room('sto1b'); const pb = rb.addPlayer('a', conn, 'A', 'ladro');
+    avviaConStoria(rb);
+    const x0 = pb.x, y0 = pb.y;
+    rb.setInput('a', { mx: 1, my: 1, shoot: true, dash: true });
+    for (let i = 0; i < C.TICK_RATE; i++) rb.update(1 / C.TICK_RATE);
+    assert(Math.hypot(pb.x - x0, pb.y - y0) < 1, 'mentre parla non ci si sposta di un pixel');
+    const n2 = rb.storia.n; for (let i = 0; i < n2; i++) rb.avanzaStoria('a', false);
+    const x1 = pb.x;
+    rb.setInput('a', { mx: 1, my: 0 });
+    for (let i = 0; i < C.TICK_RATE; i++) rb.update(1 / C.TICK_RATE);
+    assert(Math.abs(pb.x - x1) > 100, 'e finito il dialogo si torna a camminare (' + Math.round(Math.abs(pb.x - x1)) + ' px)');
+  }
 
   // --- 5) SALTARE SALTA LA SCENA, NON LA PARTITA ---
   // E' l'errore facile: "salta" che salta anche quello che doveva succedere dopo, e ci si ritrova
@@ -4924,6 +4964,16 @@ function testStoria() {
   assert(r2.missione === 'discesa', 'e saltando il discorso la missione cambia lo stesso');
   p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
   assert(r2.wave === 1, 'e si scende lo stesso all ondata 1');
+  // v2.8 — e chi esce SENZA nemmeno parlargli non resta con "trova lo sciamano" appeso per venti ondate
+  {
+    const r6 = new Room('sto6'); const p6 = r6.addPlayer('a', conn, 'A', 'mago');
+    avviaConStoria(r6); r6.avanzaStoria('a', true);
+    p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
+    r6.avanzaStoria('a', true);
+    assert(r6.missione === 'sciamano', 'appena arrivato la missione e trovare lo sciamano');
+    p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
+    assert(r6.wave === 1 && r6.missione === 'discesa', 'ma uscendo senza parlargli diventa comunque la discesa');
+  }
 
   // --- 6) IN DUE: il dialogo lo fa scorrere CHI COMANDA ---
   const r3 = new Room('sto3'); r3.addPlayer('a', conn, 'A', 'guerriero'); r3.addPlayer('b', conn, 'B', 'mago');
@@ -4951,11 +5001,19 @@ function testStoria() {
   assert(r5.phase !== C.PHASE_PROLOGO && r5.wave === 7, 'la prova parte dall ondata scelta (' + r5.wave + ')');
 
   // --- 9) IL TESTO: non e' codice, ma ha comunque delle regole ---
-  assert(Storia.prologo.chi === '', 'la voce del risveglio non ha un nome: e il punto della scena');
-  assert(Storia.sciamano.chi === 'Sciamano', 'lo sciamano invece si presenta');
-  for (const sc of ['prologo', 'arrivo', 'sciamano', 'finale'])
+  // v2.8 — ogni riga dice CHI parla. La voce del risveglio ha `chi: ''` e non e' una dimenticanza: e'
+  // lo sciamano, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
+  for (const sc of ['prologo', 'arrivo', 'sciamano', 'finale']) {
     assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
-  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.sciamano.righe).filter(t => t.length > 110);
+    for (const q of Storia[sc].righe) {
+      assert(typeof q.t === 'string' && q.t.length > 0, 'ogni riga di ' + sc + ' ha un testo');
+      assert(['tu', 'sciamano', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
+    }
+  }
+  assert(Storia.prologo.righe.some(q => q.chi === ''), 'nel risveglio parla una voce senza volto');
+  assert(!Storia.prologo.righe.some(q => q.chi === 'sciamano'), 'e non si presenta: e lui, ma non si sa ancora');
+  assert(Storia.arrivo.righe.every(q => q.chi === ''), 'e al villaggio e ancora una voce');
+  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.sciamano.righe).map(q => q.t).filter(t => t.length > 130);
   assert(lunghe.length === 0, 'e nessuna riga e un paragrafo: si leggono a schermo, non su carta (' + lunghe.length + ' troppo lunghe)');
   for (const k in Storia.missioni) { const m = Storia.missioni[k];
     assert(m.t && m.t.length <= 34, 'la missione ' + k + ' sta nel riquadro (' + m.t.length + ' caratteri)'); }

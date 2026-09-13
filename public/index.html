@@ -56,13 +56,18 @@
   <div id="centerFeed"></div>
   <!-- v2.7 — LA MISSIONE IN EVIDENZA. Piccola, in alto a sinistra, sempre la stessa: dice cosa stai
        facendo senza doverlo chiedere a nessuno. Sparisce quando non c'e' niente da fare. -->
-  <div id="quest" class="hidden"><div class="q-t" id="questT"></div><div class="q-d" id="questD"></div></div>
+  <div id="quest" class="hidden"><div class="q-lbl">Missione principale</div><div class="q-t" id="questT"></div><div class="q-d" id="questD"></div></div>
   <!-- v2.7 — I SOTTOTITOLI. Una striscia in basso, le lettere che compaiono a poco a poco. Non ferma il
        gioco e non copre niente: si continua a vedere il personaggio, che e' il motivo per cui e' una
        voce fuori campo e non un filmato. -->
   <div id="dial" class="hidden">
-    <div class="d-chi" id="dialChi"></div>
-    <div class="d-txt" id="dialTxt"></div>
+    <div class="d-top">
+      <canvas id="dialFaccia" width="120" height="120"></canvas>
+      <div class="d-lato">
+        <div class="d-chi" id="dialChi"></div>
+        <div class="d-txt" id="dialTxt"></div>
+      </div>
+    </div>
     <div class="d-hint" id="dialHint"><b>Spazio</b> continua · <b>Esc</b> salta</div>
   </div>
 </div>

@@ -4,14 +4,24 @@
  * riscrive dieci volte prima di suonare giusto, e riscriverlo dentro il codice del server vuol dire
  * rileggere la logica ogni volta per trovare la riga. Cosi' invece si apre un file e si scrive.
  *
- * IL REGISTRO, che e' la cosa da non perdere nelle riscritture: SECCO. Frasi corte. Nessuna
- * spiegazione. Chi parla sa piu' di quello che dice, e non ha nessuna intenzione di dirlo tutto.
- * Niente "o valoroso eroe", niente profezie recitate, niente aggettivi in fila. Se una riga si puo'
- * accorciare, si accorcia; se spiega una cosa che il giocatore vede da solo, si toglie.
+ * v2.8 — OGNI RIGA HA IL SUO INTERLOCUTORE. Prima la scena aveva UNA voce sola; adesso sono dialoghi, e
+ * `chi` sta sulla riga:
+ *     'tu'       — l'avatar: ritratto della classe scelta, nome della classe
+ *     'sciamano' — lo sciamano
+ *     ''         — la voce senza volto del risveglio (e' lui, ma non si sa ancora)
+ * Nel testo, `{eroe}` diventa il nome della classe di chi sta leggendo: in tre a schermo ognuno si sente
+ * nominare la sua.
  *
- * IL FILO. La voce del risveglio e lo SCIAMANO sono la stessa persona, e il giocatore lo scopre solo
- * quando gli parla ("Ti ho parlato mentre dormivi"). E' per questo che la voce non si presenta mai e
- * non ha un nome: `chi: ''` non e' una dimenticanza, e' il punto.
+ * IL REGISTRO: secco, frasi corte, nessuna spiegazione di troppo. Chi parla sa piu' di quello che dice.
+ * Se una riga si puo' accorciare, si accorcia; se spiega una cosa che il giocatore vede da solo, si toglie.
+ *
+ * IL FILO. La voce del risveglio e lo SCIAMANO sono la stessa persona, e il giocatore lo scopre quando
+ * gli parla. E' per questo che la voce non si presenta e non ha ritratto: `chi: ''` e' il punto, non una
+ * dimenticanza.
+ *
+ * LA RIVELAZIONE. Non e' "l'eroe sei tu": e' "sei lo strumento di un Dio, e il Dio e' chi tiene il mouse".
+ * Detta cosi' spiega anche una REGOLA — i poteri che arrivano a fine ondata sono i suoi doni — e una
+ * rivelazione che spiega una regola vale dieci rivelazioni che strizzano l'occhio.
  */
 (function (root, factory) {
   const m = factory();
@@ -20,72 +30,86 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // scorciatoie per scrivere il dialogo senza rumore attorno
+  const TU = (t) => ({ chi: 'tu', t });
+  const SC = (t) => ({ chi: 'sciamano', t });
+  const VO = (t) => ({ chi: '', t });
+
   const S = {
-    // il nome del boss dell'ondata 20. Sta qui perche' la storia lo pronuncia, e se un domani cambia
-    // deve cambiare in un posto solo.
-    BOSS: "AZ'GAROTH",
+    // il nome del boss dell'ondata 20 e quante volte si scende. La storia li pronuncia, quindi stanno
+    // qui: se un domani cambiano, cambiano in un posto solo.
+    BOSS: 'AZ’GAROTH',
     ONDATE: 20,
 
     // ===================== 1. IL RISVEGLIO =====================
-    // Si apre nel buio, con la faglia accesa in mezzo alla sala. La voce non dice dove sei, non dice
-    // chi e', non dice cosa c'e' dall'altra parte. Dice solo di attraversare.
+    // Si apre nella TUA stanza, con un portale acceso in mezzo. Non si spiega niente: uno si sveglia, c'e'
+    // un portale dove ieri c'era il pavimento, e una voce gli dice di attraversarlo.
     prologo: {
-      chi: '',
       righe: [
-        'Sei sveglio.',
-        'Non chiedere dove. Non te lo direi.',
-        'Sei sceso da solo. Nessuno scende da solo.',
-        'In mezzo alla sala c’è una faglia. La vedi.',
-        'Attraversala.',
-        'Quelli prima di te sono rimasti a guardarla.',
+        TU('Cos’è quella luce?'),
+        TU('Si è aperto un portale. Nella mia stanza.'),
+        TU('Nella. Mia. Stanza.'),
+        VO('Non aver paura. L’ho aperto io.'),
+        TU('E tu chi saresti?'),
+        VO('Uno che ti aspetta dall’altra parte.'),
+        VO('Attraversa. Ti spiego tutto quando arrivi.'),
+        TU('E se non attraverso?'),
+        VO('Attraversi.'),
       ],
-      // se uno si mette a girare invece di entrare. Una sola, e poi la voce tace: insistere la
-      // trasformerebbe in un tutorial.
-      sollecito: 'La faglia. Non il muro.',
+      // se uno gira per la stanza invece di entrare. Una volta sola: insistere la trasformerebbe in un
+      // tutorial, e questa non e' una voce che spiega le cose.
+      sollecito: VO('Il portale. Non la finestra.'),
     },
 
     // ===================== 2. L'ARRIVO AL VILLAGGIO =====================
     arrivo: {
-      chi: '',
       righe: [
-        'Questo era un posto tranquillo.',
-        'Cerca lo sciamano. Sa cosa sei.',
+        VO('Sei passato. Bene.'),
+        VO('Ora trovami. Fila di levante, la casa con le ossa appese.'),
       ],
     },
 
     // ===================== 3. LO SCIAMANO =====================
-    // Il discorso vero. Deve dire tre cose e nessuna di piu': che sotto c'e' qualcosa, che si scende
-    // venti volte, e che gli altri ci hanno gia' provato. Il "com'e' andata" non si spiega: si guarda
-    // il villaggio mezzo vuoto e si capisce.
+    // Il discorso vero, ed e' un dialogo: l'avatar non capisce, e il fatto che non capisca e' giusto —
+    // e' lui il posseduto, non l'informato. Le sue righe servono a scandire, non a fare domande retoriche.
     sciamano: {
-      chi: 'Sciamano',
       righe: [
-        'Sei arrivato. Non ci speravo più.',
-        'Ti ho parlato mentre dormivi. Non lo ricordi: è normale.',
-        'Sotto di noi c’è una cosa che non dorme.',
-        'Si chiama AZ’GAROTH. Il nome non serve a niente, ma la gente sta più tranquilla se le cose hanno un nome.',
-        'Venti volte la roccia si aprirà. Venti volte ti verranno addosso.',
-        'Ogni volta più in fondo. Ogni volta più vicino a lui.',
-        'Noi ci abbiamo provato. Siamo ancora qui, quindi hai capito com’è andata.',
-        'Tu no. Tu sei sceso da solo.',
-        'Vai. La faglia è nella casa delle guardie.',
+        SC('Ti sei fatto aspettare.'),
+        TU('Mi hai aperto un portale in camera.'),
+        SC('E tu l’hai attraversato. Questo dice di te più di quanto credi.'),
+        SC('Sotto questo villaggio dorme una cosa vecchia di mille anni. Si chiama AZ’GAROTH, e si sta svegliando.'),
+        TU('Cosa volete da me?'),
+        SC('Tu sei stato scelto. Da una divinità.'),
+        TU('Non capisco.'),
+        SC('Sei lo strumento di un Dio.'),
+        TU('…'),
+        SC('Al di là del nostro mondo, seduto davanti a uno schermo, c’è qualcuno che ti muove.'),
+        SC('Sì. Dico a te che ci stai guardando.'),
+        TU('Continuo a non capire.'),
+        SC('Capirai. Per ora ti basti questo: sei l’eletto, scelto da un Dio per salvarci tutti.'),
+        TU('Cosa devo fare?'),
+        SC('Làsciati guidare. Ti donerà i poteri che ti servono.'),
+        TU('Ma…'),
+        SC('Ora va’. Attraversa la faglia. Venti volte la terra si aprirà, e in fondo ci sarà lui.'),
+        SC('Compi il destino che la divinità ha scelto per te.'),
       ],
       // se gli si torna davanti dopo. Una riga sola: un vecchio che ha gia' detto tutto.
-      ancora: 'Ti ho già detto tutto. Vai.',
+      ancora: SC('Ti ho detto tutto. Adesso tocca a te. A te davvero.'),
     },
 
     // ===================== 4. L'ULTIMA DISCESA =====================
-    // All'inizio dell'ondata 20, quando la storia si chiude. Non e' un discorso: e' una riga sola.
+    // All'inizio dell'ondata 20. Non e' un discorso: e' una riga sola.
     finale: {
-      chi: 'Sciamano',
-      righe: ['È sotto di te. Non ti sta aspettando: non sa che esisti.'],
+      righe: [SC('È sotto di te. Non sa che esisti, e per ora è l’unico vantaggio che abbiamo.')],
     },
 
-    // ===================== LE MISSIONI IN EVIDENZA =====================
-    // Il riquadro in alto a sinistra. Titolo corto, una riga di spiegazione sotto.
+    // ===================== LE MISSIONI =====================
+    // v2.8 — la missione PRINCIPALE resta accesa per tutta la partita (e' il filo della storia), ma non
+    // toglie niente: taglie, prigionieri e tutto il resto continuano a funzionare come sempre. Per questo
+    // il riquadro si chiama "missione principale" e non "missione": non e' l'unica cosa da fare.
     missioni: {
-      faglia:   { t: 'Attraversa la faglia', d: 'In mezzo alla sala' },
-      sciamano: { t: 'Trova lo sciamano',    d: 'Nel villaggio, fila di levante' },
+      faglia:   { t: 'Attraversa il portale', d: 'In mezzo alla stanza' },
+      sciamano: { t: 'Trova lo sciamano',     d: 'Villaggio, fila di levante' },
       discesa:  { t: 'Scendi fino ad AZ’GAROTH', d: 'Venti ondate' },
     },
   };

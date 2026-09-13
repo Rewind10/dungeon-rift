@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.7.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.8.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,31 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.8 (la stanza, il riquadro coi ritratti, e il colpo di scena)
+- **🐛 IL BUG GROSSO: dal villaggio non si scendeva.** Uscendo dal villaggio d'apertura si finiva
+  all'ondata 1 *sulla mappa del villaggio*. `nextWave()` rigenerava la mappa solo
+  `if (this.wave > 1 && (… || this._forceNewMap))`: la bandiera **"rigenera" era chiusa dentro un
+  controllo che all'ondata 1 e' falso**. Finche' all'ondata 1 ci si arrivava solo da `startGame` (che la
+  mappa se l'era gia' fatta) non si vedeva; dalla v2.7 ci si arriva anche dal villaggio, e il risultato
+  erano dodici mostri piantati addosso al giocatore in mezzo alle botteghe, su una mappa con **zero**
+  posti dove farli comparire. La bandiera adesso vuol dire *rigenera*, punto.
+- **🛏️ Non e' piu' una cella: e' LA TUA STANZA.** Assi per terra, muri di conci, un letto, una
+  cassapanca, una lanterna accesa sul comodino — e in mezzo, dove ieri c'era il pavimento, un portale.
+  Il testo dice *«perche' si e' aperto un portale nella mia stanza»*: con la roccia viva attorno quella
+  frase non stava in piedi.
+- **🖼️ Il dialogo e' un RIQUADRO AL CENTRO, col ritratto di chi parla.** Prima era una striscia in basso
+  col testo su uno sfondo sfumato: elegante e illeggibile. Adesso e' un riquadro opaco, bordato d'oro,
+  con dentro la faccia di chi sta parlando — **guerriero, mago, ladro e sciamano**, disegnati a codice
+  come tutto il resto. La voce senza volto del risveglio non ha ritratto, ed e' la scena.
+- **🔒 Mentre parla qualcuno non ci si muove.** Il blocco sta sul **server**: il client puo' anche
+  smettere di mandare i comandi, ma chi decide dove sta un giocatore e' il server.
+- **🎭 IL COLPO DI SCENA.** Lo sciamano non dice *«l'eroe sei tu»*: dice che dietro l'avatar c'e' una
+  **divinita' seduta davanti a uno schermo**, e che e' lei a donare i poteri. Cosi' la rivelazione non
+  strizza l'occhio — **spiega una regola**: le carte che arrivano a fine ondata sono i suoi doni.
+  Ed e' un dialogo vero, con l'avatar che non capisce e continua a chiedere.
+- **📋 "MISSIONE PRINCIPALE"**, non "missione": il filo della storia resta acceso per tutta la partita,
+  ma taglie, prigionieri e tutto il resto continuano a funzionare come sempre.
 
 ## 🆕 Novita v2.7 (la storia: ci si sveglia, si attraversa, si parla, si scende)
 - **🕯️ La partita comincia con uno che si SVEGLIA.** Non con un'ondata. Una cella piccola, quasi nera, una

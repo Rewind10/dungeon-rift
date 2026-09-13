@@ -101,12 +101,18 @@
       // v2.7 — NELLA CELLA NON C'E' NESSUNA ONDATA. "ONDATA 0/20 · NEMICI 0" in cima al risveglio era
       // la cosa piu' stonata della scena: dice al giocatore che sta giocando a un gioco a ondate prima
       // ancora che il gioco gli abbia detto dov'e'. Li' la barra sparisce e basta.
+      // ATTENZIONE: qui c'era un `return`, e si portava via tutto quello che viene DOPO in questa
+      // funzione — compresa la fiala della vita, che nel prologo restava vuota con scritto "—/—".
+      // Si nasconde la barra e si va avanti: nascondere un pezzo non vuol dire saltare il resto.
       const tb = $('topbar');
-      if (tb) { if (snap.phase === 'prologo') { tb.classList.add('hidden'); return; } tb.classList.remove('hidden'); }
+      const inPrologo = snap.phase === 'prologo';
+      if (tb) tb.classList.toggle('hidden', inPrologo);
       // v2.7 — "ONDATA 0/20" non vuol dire niente: l'ondata 0 e' il villaggio d'apertura, quello in cui
       // si arriva dalla cella e non si e' ancora combattuto. Un trattino dice la stessa cosa senza mentire.
-      $('waveNum').textContent = snap.wave > 0 ? (snap.wave + '/' + window.GAME.Constants.FINAL_WAVE) : '\u2014';
-      $('ecNum').textContent = snap.mcount + (snap.pend > 0 ? '+' : '');
+      if (!inPrologo) {
+        $('waveNum').textContent = snap.wave > 0 ? (snap.wave + '/' + window.GAME.Constants.FINAL_WAVE) : '\u2014';
+        $('ecNum').textContent = snap.mcount + (snap.pend > 0 ? '+' : '');
+      }
       const ph = { combat: 'COMBATTIMENTO', boss: '⚠ BOSS', shop: 'POTENZIAMENTI', lobby: 'LOBBY', gameover: 'SCONFITTA', victory: 'VITTORIA', cleared: '✔ MAPPA RIPULITA' };
       let phase = ph[snap.phase] || '';
       $('phaseInfo').textContent = phase;
@@ -833,10 +839,105 @@
     // senza pensarci.
     VEL: 34,                                    // millisecondi per lettera
     _dial: null,
+
+    // ===== v2.8 — I RITRATTI ======================================================================
+    // Disegnati a codice come tutto il resto del gioco: zero asset, e cambiano colore col tema di chi
+    // parla. Sono di FRONTE — gli eroi in campo si vedono dall'alto, e una testa vista dall'alto in un
+    // riquadro di dialogo non si legge come una faccia. Qui invece guardano in camera, ed e' quello a
+    // farli leggere come qualcuno che ti sta parlando.
+    //
+    // Semplici apposta: ottanta pixel non reggono i dettagli. Ognuno ha la sua SILHOUETTE — l'elmo con
+    // la feritoia, il cappuccio col cappello a punta, la maschera, le corna — e quella basta.
+    _rrc(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r);
+      g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); },
+    ritratto(chi, eroeId) {
+      const cv = $('dialFaccia'); if (!cv || !cv.getContext) return;
+      // la voce senza volto del risveglio non ha ritratto, e non e' una mancanza: e' la scena
+      if (!chi) { cv.classList.add('vuoto'); return; }
+      cv.classList.remove('vuoto');
+      const g = cv.getContext('2d'), W = cv.width, H = cv.height;
+      g.clearRect(0, 0, W, H);
+      const P = {
+        sciamano:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
+        guerriero: { veste: '#7f8895', vesteDk: '#2f3742', pelle: '#e0b183', acc: '#e0a52c' },
+        mago:      { veste: '#3d3c8c', vesteDk: '#14133a', pelle: '#e3c396', acc: '#00f0c8' },
+        ladro:     { veste: '#3c5140', vesteDk: '#1d2a22', pelle: '#e6c79c', acc: '#9ef0b0' },
+      }[chi === 'tu' ? (eroeId || 'guerriero') : 'sciamano'] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
+
+      // fondo: un alone del colore di chi parla, cosi' il riquadro non e' un buco nero
+      const bg = g.createRadialGradient(W / 2, H * 0.62, 4, W / 2, H * 0.62, W * 0.72);
+      bg.addColorStop(0, P.vesteDk); bg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+
+      const cx = W / 2, cy = H * 0.56, R = W * 0.30;
+      // le SPALLE, che stanno sotto a tutto e dicono la corporatura
+      g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 3;
+      g.beginPath(); g.ellipse(cx, cy + R * 1.72, R * (chi === 'tu' && eroeId === 'guerriero' ? 1.62 : 1.34), R * 0.82, 0, Math.PI, 0);
+      g.closePath(); g.fill(); g.stroke();
+      // la TESTA
+      g.fillStyle = P.pelle; g.strokeStyle = '#07080c'; g.lineWidth = 3;
+      g.beginPath(); g.ellipse(cx, cy, R * 0.86, R, 0, 0, 7); g.fill(); g.stroke();
+
+      const occhi = (dy, col) => { g.fillStyle = col || '#15171f';
+        g.beginPath(); g.ellipse(cx - R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7);
+        g.ellipse(cx + R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7); g.fill(); };
+
+      if (chi === 'sciamano') {
+        // CORNA e cappuccio: si riconosce dalla sagoma, prima ancora che dal colore
+        g.strokeStyle = '#e8e0cc'; g.lineWidth = 5; g.lineCap = 'round';
+        for (const lato of [-1, 1]) { g.beginPath(); g.moveTo(cx + lato * R * 0.7, cy - R * 0.5);
+          g.quadraticCurveTo(cx + lato * R * 1.5, cy - R * 1.3, cx + lato * R * 1.05, cy - R * 1.85); g.stroke(); }
+        g.lineCap = 'butt';
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 3;
+        g.beginPath(); g.ellipse(cx, cy - R * 0.34, R * 1.02, R * 0.86, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+        occhi(-R * 0.02, '#0b1512');
+        g.fillStyle = P.acc;   // due punti di luce negli occhi: e' lui che ti guarda
+        g.beginPath(); g.arc(cx - R * 0.33, cy - R * 0.06, R * 0.055, 0, 7); g.arc(cx + R * 0.33, cy - R * 0.06, R * 0.055, 0, 7); g.fill();
+        g.strokeStyle = '#cfc7b4'; g.lineWidth = 2.4;   // la barba
+        for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(cx + i * R * 0.24, cy + R * 0.6);
+          g.lineTo(cx + i * R * 0.30, cy + R * 1.3); g.stroke(); }
+      } else if (eroeId === 'guerriero') {
+        // ELMO con la feritoia: la cosa piu' riconoscibile che esista
+        g.fillStyle = '#8d97a5'; g.strokeStyle = '#07080c'; g.lineWidth = 3;
+        g.beginPath(); g.ellipse(cx, cy - R * 0.12, R * 1.0, R * 1.06, 0, Math.PI, 0);
+        g.lineTo(cx + R, cy + R * 0.5); g.lineTo(cx - R, cy + R * 0.5); g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = '#11141a';    // la feritoia
+        this._rrc(g, cx - R * 0.72, cy - R * 0.22, R * 1.44, R * 0.36, R * 0.14); g.fill();
+        g.fillStyle = P.acc; g.beginPath();  // e due occhi che brillano dentro
+        g.arc(cx - R * 0.32, cy - R * 0.04, R * 0.085, 0, 7); g.arc(cx + R * 0.32, cy - R * 0.04, R * 0.085, 0, 7); g.fill();
+        g.fillStyle = '#6f7a88'; this._rrc(g, cx - R * 0.09, cy - R * 1.0, R * 0.18, R * 1.5, R * 0.08); g.fill();  // la cresta
+      } else if (eroeId === 'mago') {
+        // CAPPELLO A PUNTA e barba: idem
+        occhi(0);
+        g.strokeStyle = '#d9d4c8'; g.lineWidth = 2.6;
+        for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(cx + i * R * 0.26, cy + R * 0.55);
+          g.lineTo(cx + i * R * 0.34, cy + R * 1.45); g.stroke(); }
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 3;
+        g.beginPath(); g.ellipse(cx, cy - R * 0.66, R * 1.36, R * 0.26, 0, 0, 7); g.fill(); g.stroke();  // la tesa
+        g.beginPath(); g.moveTo(cx - R * 0.86, cy - R * 0.72);
+        g.quadraticCurveTo(cx - R * 0.2, cy - R * 2.4, cx + R * 0.62, cy - R * 2.0);
+        g.quadraticCurveTo(cx + R * 0.6, cy - R * 1.0, cx + R * 0.86, cy - R * 0.72);
+        g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = P.acc; g.beginPath(); g.arc(cx + R * 0.5, cy - R * 1.9, R * 0.14, 0, 7); g.fill();  // la stella
+      } else {
+        // il LADRO: cappuccio calato e mezza faccia coperta
+        g.fillStyle = '#2a3a2e'; g.strokeStyle = '#07080c'; g.lineWidth = 3;   // il fazzoletto sul viso
+        this._rrc(g, cx - R * 0.9, cy + R * 0.12, R * 1.8, R * 0.9, R * 0.18); g.fill(); g.stroke();
+        occhi(-R * 0.22);
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 3;     // il cappuccio
+        g.beginPath(); g.moveTo(cx - R * 1.12, cy + R * 0.7);
+        g.quadraticCurveTo(cx - R * 1.16, cy - R * 1.5, cx, cy - R * 1.42);
+        g.quadraticCurveTo(cx + R * 1.16, cy - R * 1.5, cx + R * 1.12, cy + R * 0.7);
+        g.quadraticCurveTo(cx + R * 0.72, cy - R * 0.22, cx, cy - R * 0.3);
+        g.quadraticCurveTo(cx - R * 0.72, cy - R * 0.22, cx - R * 1.12, cy + R * 0.7);
+        g.closePath(); g.fill(); g.stroke();
+      }
+    },
     // riga: l'indice che comanda il server · testo: quello che c'e' da scrivere
-    mostraDialogo(chi, testo, conSuggerimento) {
+    mostraDialogo(chi, testo, conSuggerimento, eroeId, nome) {
       const box = $('dial'); if (!box) return;
-      $('dialChi').textContent = chi || '';
+      $('dialChi').textContent = nome || '';
+      this.ritratto(chi, eroeId);
       const h = $('dialHint'); if (h) h.style.display = conSuggerimento === false ? 'none' : '';
       box.classList.remove('hidden');
       this._dial = { testo: testo || '', i: 0, t0: performance.now(), finita: false };
@@ -876,6 +977,9 @@
       if (!m) { b.classList.add('hidden'); this._quest = null; return; }
       if (this._quest === m.t) { b.classList.remove('hidden'); return; }
       this._quest = m.t;
+      // v2.8 — "MISSIONE PRINCIPALE", non "missione": il filo della storia resta acceso per tutta la
+      // partita, ma taglie, prigionieri e tutto il resto continuano a funzionare come sempre. La
+      // parola serve a dirlo senza spiegarlo.
       $('questT').textContent = m.t; $('questD').textContent = m.d || '';
       b.classList.remove('hidden');
       // si rianima solo quando CAMBIA: una missione che pulsa a ogni fotogramma e' un fastidio
