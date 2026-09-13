@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.3.0`
+**Versione attuale:** `2.4.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -400,18 +400,44 @@ Quindi nel villaggio il velo **non si stende**. La pianta dichiara `lit: 1`, e:
 |---|---|
 | **Chi lo dichiara** | solo `generateMarket`. Nessuna mappa di combattimento ha `lit` |
 | **Chi lo legge** | il renderer, da quella bandiera — non dal tipo di mappa |
-| **Cosa cambia** | niente campo visivo ne ombre dai muri. Sopra resta una **velatura** (`VILL_OMBRA`, v2.3: **55%** al centro, 85% ai bordi) e gli aloni di luce — focolari, falo, mercanti, portale, lanterne dei girovaghi — la bucano |
+| **Cosa cambia** | niente campo visivo ne ombre dai muri. Il villaggio e **buio** (`VILL_BUIO: 0.90`) e la luce la fanno **solo le sorgenti**, che ci scavano dentro i loro buchi |
 | **Il tasto L** | il cono torcia non rimette al buio il villaggio |
 
 *Se un giorno si aggiunge un'altra mappa illuminata, si aggiunge `lit` a quella pianta e basta. Ma le ondate
 non devono averlo: meta' della loro tensione e' il velo.*
 
-*v2.3 — la velatura e salita a **0,55**. Il villaggio non e piu una sala illuminata: e un paese sottoterra
-di notte, e a farlo vedere sono i fuochi. Le botteghe si trovano seguendo la luce, che e come si trovano le
-botteghe di notte. Con `VILL_OMBRA: 0` si torna alla luce piena della v2.0.2.*
+### La patina, e perche non era un problema di numeri *(v2.4)*
 
-*Attenzione alla scala: col rapporto della v2.2 (2,15x ai bordi) a 0,55 gli angoli sarebbero andati a nero
-pieno. Adesso il centro vale `V` e i bordi si fermano a 0,96 — buio, ma mai cieco.*
+Dalla v2.2 alla v2.3 sopra al villaggio c'era una **velatura**: un rettangolo semitrasparente steso su
+tutto. Piu la si caricava (0,18 → 0,26 → 0,55) e piu si vedeva per quello che era.
+
+**Un velo uniforme non scurisce: SBIANCA.** Schiarisce i neri esattamente quanto spegne i chiari, quindi
+comprime tutto verso il grigio — ed e per questo che sembrava una pellicola appoggiata sul disegno invece
+di un posto buio. *Il difetto non era il valore: era il metodo.*
+
+Adesso il villaggio e **quasi nero** e la luce la fanno **solo le sorgenti**, che ci scavano dentro i loro
+buchi. E lo **stesso meccanismo del campo visivo delle grotte** — una tela a parte, si cancella, si sfoca,
+si appoggia — applicato alle sorgenti invece che alla vista. La differenza e tutta qui: **la si aggiungeva
+grigio, qui si toglie buio**.
+
+| Sorgente | Raggio base | Nel villaggio (x1,45) |
+|---|---|---|
+| falo della piazza | 430 | **624** |
+| focolare di casa | 200 | **290** |
+| braciere / candelabro | 120 | **174** |
+| alone del mercante | 100 | **145** |
+| lanterna di un girovago | 104 | **151** |
+| il portale | 220 | **319** |
+| e il cerchietto che ti porti dietro | — | **130** (`VILL_EROE`) |
+
+**Il numero da non sbagliare.** `VILL_LUCE` moltiplica il RAGGIO, e l'area va col quadrato: "area doppia" e
+**radice di due** (1,45), non due. Col raggio raddoppiato l'area e quadrupla, e al primo tentativo il
+villaggio si e acceso tutto — le pozze si sovrapponevano e del buio non restava niente. Il test pretende
+che `K*K` sia vicino a 2.
+
+Il moltiplicatore vale **anche per il colore caldo** degli aloni, non solo per il buco nel buio: se
+crescesse solo il buco resterebbe un alone grigio con un puntino caldo in mezzo. Sta in un posto solo
+(`KL`), e fuori dal villaggio vale 1.
 
 Tolto il velo sono servite altre due cose. La **tavolozza** del villaggio era tarata per essere guardata
 attraverso il velo (pavimento `#1c1813`, roccia `#050607`): senza, era una macchia marrone quasi nera —

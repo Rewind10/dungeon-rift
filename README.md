@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.3.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.4.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.4 (via la patina: il villaggio e' buio, e la luce la fanno le sorgenti)
+- **🩶 Cos'era la patina.** Dalla v2.2 il villaggio aveva sopra una velatura: un rettangolo semitrasparente
+  steso su tutto. **Un velo uniforme non scurisce, SBIANCA** — schiarisce i neri quanto spegne i chiari — e
+  il risultato era una pellicola grigia appoggiata sul disegno. Il difetto non era il valore, era il metodo.
+- **🕯️ Adesso il villaggio e' quasi nero** (`VILL_BUIO: 0.90`) e la luce la fanno **solo le sorgenti**, che
+  ci scavano dentro i loro buchi: focolari, falo', bracieri, aloni dei mercanti, portale e lanterne dei
+  girovaghi. Stesso meccanismo del campo visivo delle grotte, applicato alle sorgenti invece che alla vista:
+  **li' si aggiungeva grigio, qui si toglie buio**.
+- **💡 E ogni sorgente illumina il doppio di area** (`VILL_LUCE: 1.45`). Attenzione al numero: "area doppia"
+  e' radice di due sul raggio, non due — col raggio raddoppiato l'area e' quadrupla, e infatti al primo
+  tentativo il villaggio si e' acceso tutto. Il test pretende che il conto torni a 2, non a 4.
 
 ## 🆕 Novita v2.3 (il villaggio di notte, e la gente che ci cammina)
 - **🌑 Parecchio piu' scuro**: `VILL_OMBRA` da 0,26 a **0,55**. Non e' "meno visibile", e' un altro posto —

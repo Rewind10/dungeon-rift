@@ -836,6 +836,24 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     ok(i1 > 0 && i2 > 0 && i1 < i2, 'e si azzerano PRIMA di ridisegnarli, non dopo');
   }
 
+
+  // --- 3f) v2.4 — IL VILLAGGIO E' BUIO, E LA LUCE LA FANNO LE SORGENTI. Dalla v2.2 al v2.3 sopra al
+  //     villaggio c'era una VELATURA: un rettangolo semitrasparente steso su tutto. Un velo uniforme non
+  //     scurisce, SBIANCA — schiarisce i neri tanto quanto spegne i chiari — e il risultato era una patina
+  //     grigia. Adesso il villaggio e' quasi nero e ogni sorgente ci scava dentro il suo buco.
+  ok(!/VILL_OMBRA/.test(src2), 'la velatura del villaggio non c e piu (VILL_OMBRA sparito dal renderer)');
+  ok((C2.VILL_BUIO || 0) >= 0.8, 'il villaggio e buio dove non arriva luce (' + C2.VILL_BUIO + ')');
+  ok(/destination-out[\s\S]{0,2600}this\.campfires\) buco/.test(src2) || /const buco = \(/.test(src2),
+    'e le sorgenti ci scavano dentro i loro buchi, invece di aggiungere grigio sopra');
+  // "area doppia" e' RADICE DI DUE sul raggio, non due: al primo tentativo avevo raddoppiato il raggio,
+  // che e' area quadrupla, e il villaggio si e' acceso tutto.
+  const K = C2.VILL_LUCE || 1;
+  ok(K > 1.2 && K < 1.7, 'ogni sorgente illumina il doppio di area (raggio x' + K + ' = area x' + (K * K).toFixed(2) + ')');
+  ok(Math.abs(K * K - 2) < 0.3, 'e il conto torna: area x' + (K * K).toFixed(2) + ', non x4');
+  ok(/const KL = this\.map\.lit \? \(C\.VILL_LUCE/.test(src2),
+    'il moltiplicatore vale anche per il colore caldo, non solo per il buco: se no resta un alone grigio con un puntino in mezzo');
+  ok((C2.VILL_EROE || 0) > 60, 'e ci si porta dietro un cerchietto, per non essere ciechi fra una luce e l altra');
+
   // --- 4) SOLO LE MAPPE DI COMBATTIMENTO. Il villaggio dichiara `lit` e non ha campo visivo ---
   const MG2 = window.GAME.MapGen;
   ok(!!MG2.generateMarket(1).lit, 'il villaggio e illuminato (lit)');

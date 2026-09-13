@@ -2,6 +2,48 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.4.0] — 2026-09-13 · "Via la patina: il villaggio è buio, e la luce la fanno le sorgenti"
+
+#### 🩶 Cos'era la patina
+Dalla v2.2 il villaggio aveva sopra una **velatura**: un rettangolo semitrasparente steso su tutto. Piu' la
+si caricava (0,18 → 0,26 → 0,55) e piu' si vedeva per quello che era.
+
+**Un velo uniforme non scurisce: SBIANCA.** Schiarisce i neri esattamente quanto spegne i chiari, quindi
+comprime tutto verso il grigio — ed e' per questo che sembrava una pellicola appoggiata sul disegno invece
+di un posto buio. Il difetto non era il valore: era il metodo.
+
+#### 🕯️ Adesso: buio vero, bucato dalle sorgenti
+Il villaggio e' **quasi nero** (`VILL_BUIO: 0.90`) e la luce la fanno **solo le sorgenti**, che ci scavano
+dentro i loro buchi: i sette focolari delle case, il falo' della piazza, bracieri e candelabri, gli aloni
+dei mercanti, il portale e le lanterne dei girovaghi. Piu' un cerchietto che ci si porta dietro
+(`VILL_EROE: 130`), per non essere ciechi fra una luce e l'altra.
+
+E' **lo stesso meccanismo del campo visivo delle grotte** — una tela a parte, si cancella col
+`destination-out`, si sfoca, si appoggia — applicato alle sorgenti invece che alla vista. La differenza con
+la velatura e' tutta qui: **la' si aggiungeva grigio, qui si toglie buio**. Il nero resta nero e i colori
+restano colori.
+
+#### 💡 E ogni sorgente illumina il doppio
+`VILL_LUCE: 1.45` moltiplica il raggio di **ogni** luce del villaggio: focolare 200 → 290, torcia 120 →
+174, falo' 430 → 624, alone del mercante 100 → 145.
+
+**Attenzione al numero, perche' l'ho sbagliato al primo colpo.** "Area doppia" e' **radice di due** sul
+raggio (1,41), non due: col raggio raddoppiato l'area e' QUADRUPLA, e il villaggio si e' acceso tutto —
+le pozze di luce si sovrapponevano e del buio non restava niente. Adesso il conto e' raggio ×1,45 = area
+×2,1, e il test lo pretende: `K*K` dev'essere vicino a 2, non a 4.
+
+Il moltiplicatore vale **anche per il colore caldo**, non solo per il buco nel buio: se crescesse solo il
+buco resterebbe un alone grigio con un puntino caldo in mezzo. Sta scritto in un posto solo (`KL`), e fuori
+dal villaggio vale 1 — le grotte non cambiano di una virgola.
+
+#### 🧪 Test
+Il client verifica che la velatura sia sparita dal renderer, che il villaggio sia buio dove non arriva
+luce, che le sorgenti scavino invece di aggiungere grigio, che il moltiplicatore valga anche per il colore,
+e — quello che conta di piu' — che **il conto dell'area torni a 2 e non a 4**. **2108 test, 0 falliti.**
+
+**Verificato anche cio' che non ho toccato**: l'ondata 7 in partita vera ha la sua torcia e le sue ombre,
+identiche.
+
 ### [2.3.0] — 2026-09-12 · "Il villaggio di notte, e la gente che ci cammina"
 
 #### 🌑 Parecchio piu' scuro
