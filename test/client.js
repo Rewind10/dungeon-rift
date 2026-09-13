@@ -1126,7 +1126,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(!I.alBordo, 'e non sta premendo contro il limite');
   muovi(999, 300);                       // 499px a destra: ben oltre
   ok(Math.round(dist()) === 200, 'oltre il raggio si ferma a 200 (' + Math.round(dist()) + 'px)');
-  ok(I.alBordo, 'e lo dice al renderer, che accende l anello');
+  ok(I.alBordo, 'e sa di starci premendo contro');
   ok(gradi() === 0, 'ma la DIREZIONE resta quella del cursore (' + gradi() + ' gradi)');
   // l angolo si conserva anche in diagonale: e' la cosa che conta, perche' e' cio' che si manda al server
   // in alto a sinistra: il centro del canvas finto e' (500, 300), quindi lo scostamento e' (-500, -300)
@@ -1151,10 +1151,30 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   // il disegno c e, e il CSS non mostra piu' due puntatori
   const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
   ok(/_drawMirino\(/.test(srcR), 'il renderer disegna il mirino');
+  // v2.11.1 — l'anello a 200px e' stato TOLTO: si accendeva e si spegneva addosso al personaggio ed era
+  // rumore. Il limite si capisce dal mirino che si ferma.
+  ok(!/arc\(cx, cy, I\.MIRA_R/.test(srcR), 'ma non l anello del guinzaglio: era brutto ed e stato tolto');
+  ok(/if \(!I\.guinzaglio\) return;/.test(srcR), 'e nel villaggio non disegna niente: li comanda il cursore del sistema');
   ok(/cursor:none/.test(fs.readFileSync(ROOT + 'public/style.css', 'utf8')), 'e il cursore del sistema sul canvas e nascosto: un puntatore solo');
   const srcMm = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
   ok(/Input\.aggancia\(\)/.test(srcMm), 'il clic aggancia il pointer lock');
-  ok(/Input\.locked && !inPartita\(\)/.test(srcMm), 'e si sgancia quando si apre un pannello, se no i pulsanti non si cliccano');
+  ok(/Input\.locked && \(inVillaggio \|\| !inPartita\(\)\)/.test(srcMm), 'e si sgancia coi pannelli aperti E nel villaggio, se no i pulsanti non si cliccano');
+  // v2.11.1 — IL BUG: nel villaggio il mouse serve a cliccare i banchi, e col pointer lock il cursore
+  // non esiste. Guinzaglio spento, cursore di sistema di nuovo visibile.
+  ok(/Input\.setGuinzaglio\(!inVillaggio\)/.test(srcMm), 'nel villaggio il guinzaglio si spegne');
+  ok(/classList\.toggle\('libero', inVillaggio \|\| !inPartita\(\)\)/.test(srcMm), 'e il cursore del sistema torna visibile');
+  ok(/canvas#game\.libero\{cursor:crosshair\}/.test(fs.readFileSync(ROOT + 'public/style.css', 'utf8')), 'e il CSS glielo permette');
+  // a guinzaglio spento il mirino va dove vuole: e' il cursore vero a comandare
+  I.locked = false; doc.pointerLockElement = null;
+  I.setGuinzaglio(false);
+  muovi(999, 300);
+  ok(Math.round(dist()) === 499, 'col guinzaglio spento il mirino segue il cursore ovunque (' + Math.round(dist()) + 'px)');
+  ok(!I.alBordo, 'e non c e nessun bordo contro cui premere');
+  fakeCanvas._chiesto = false; I.aggancia();
+  ok(!fakeCanvas._chiesto, 'e non si aggancia nemmeno il pointer lock: il cursore serve per cliccare');
+  // e riaccendendolo il mirino si riaccorcia SUBITO, senza aspettare il prossimo movimento del mouse
+  I.setGuinzaglio(true);
+  ok(Math.round(dist()) === 200, 'riaccendendolo il mirino rientra subito (' + Math.round(dist()) + 'px)');
 })();
 
 // --- v2.11 — IL SALVATAGGIO, lato interfaccia ------------------------------------------------------

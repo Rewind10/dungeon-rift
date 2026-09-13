@@ -431,7 +431,17 @@
       // v2.10 — IL POINTER LOCK VA SGANCIATO QUANDO SI APRE UN PANNELLO. Non e' un dettaglio: agganciati,
       // il cursore non esiste e i pulsanti del menu di fine ondata non si potrebbero cliccare. Si guarda
       // quale pannello e' a schermo, non si tiene un flag: i flag si dimenticano di essere spenti.
-      if (Input.locked && !inPartita()) Input.sgancia();
+      //
+      // v2.11.1 — E NEL VILLAGGIO IL GUINZAGLIO SI SPEGNE DEL TUTTO. Li' il mouse non serve a sparare:
+      // serve a CLICCARE i banchi — fabbro, Ostessa, Erborista, Banditore hanno dei pulsanti. Col pointer
+      // lock il cursore non esiste, quindi quei pulsanti non si potevano premere: era un bug vero, non un
+      // fastidio. Dentro il villaggio torna il cursore del sistema e il mirino non si disegna nemmeno.
+      const inVillaggio = (Net.latest() || {}).phase === C.PHASE_MARKET;
+      Input.setGuinzaglio(!inVillaggio);
+      if (Input.locked && (inVillaggio || !inPartita())) Input.sgancia();
+      // il cursore del sistema sul canvas si rivede quando serve cliccare: nel villaggio, e quando il
+      // gioco non e' in mano al giocatore. In combattimento resta nascosto — li' il puntatore e' il mirino.
+      $('game').classList.toggle('libero', inVillaggio || !inPartita());
       if (!frozen) R.updateFx(dt);
       R.render(frozen ? 0 : dt, G.world);
       const snap = Net.latest();

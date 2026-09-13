@@ -1594,19 +1594,19 @@
     // SI DISEGNA IN COORDINATE SCHERMO, non di mondo: il personaggio e' al centro e il mirino e' uno
     // scostamento da li'. Passare per il mondo vorrebbe dire sommare la camera e sottrarla subito dopo.
     //
-    // L'ANELLO SI VEDE SOLO QUANDO SERVE. Un cerchio sempre acceso attorno al personaggio sarebbe un
-    // orpello che si impara a non vedere in due minuti; acceso solo quando il mirino preme CONTRO il
-    // limite, invece, e' la risposta alla domanda che il giocatore si sta facendo in quel momento —
-    // «perche' non va piu' in la'?».
+    // v2.11.1 — NIENTE ANELLO. Nella v2.10 compariva un cerchio a 200px mentre il mirino premeva contro il
+    // limite, per spiegare perche' non andasse piu' in la'. All'occhio non funzionava — un cerchio che si
+    // accende e si spegne addosso al personaggio e' rumore, e il limite si capisce comunque dal mirino che
+    // si ferma. Tolto.
+    //
+    // v2.11.1 — E NEL VILLAGGIO NON SI DISEGNA AFFATTO: li' comanda il cursore del sistema (serve per
+    // cliccare sui banchi), e disegnarne un secondo vorrebbe dire due puntatori a schermo.
     _drawMirino(ctx, world) {
       const I = window.Input; if (!I || !I.mira || !world || !world.me) return;
+      if (!I.guinzaglio) return;
       if (this.w < 2) return;
       const cx = this.w / 2, cy = this.h / 2, mx = cx + I.mira.x, my = cy + I.mira.y;
       ctx.save();
-      if (I.alBordo) {                                   // il guinzaglio, mostrato solo mentre tira
-        ctx.strokeStyle = 'rgba(180,200,255,.13)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(cx, cy, I.MIRA_R, 0, 7); ctx.stroke();
-      }
       const a = I.alBordo ? 0.95 : 0.7;
       ctx.strokeStyle = 'rgba(10,12,18,.55)'; ctx.lineWidth = 4.5;  // il contorno scuro: si legge su tutto
       for (let pass = 0; pass < 2; pass++) {

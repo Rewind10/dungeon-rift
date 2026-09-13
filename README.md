@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.11.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.11.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,15 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.11.1 (due correzioni al mirino)
+- **🐛 NEL VILLAGGIO NON SI CLICCAVA PIU'.** Col pointer lock il cursore **non esiste**, e nel villaggio il
+  mouse serve proprio a quello: cliccare i pulsanti di fabbro, Ostessa, Erborista e Banditore. Adesso
+  dentro il villaggio il guinzaglio si **spegne**, il cursore del sistema torna visibile e il mirino non si
+  disegna nemmeno — li' dentro non si spara. Uscendo dalla faglia il mirino rientra subito nei 200 px.
+- **⭕ TOLTO L'ANELLO a 200 px.** Si accendeva quando il mirino premeva contro il limite: all'occhio non
+  funzionava, un cerchio che lampeggia addosso al personaggio e' rumore. Il limite si capisce lo stesso —
+  il mirino si ferma.
 
 ## 🆕 Novita v2.11.0 (si puo' SALVARE la partita, dall'Ostessa)
 - **💾 SI SALVA DALL'OSTESSA, per 10 monete, quando lo decidi tu.** Niente salvataggi automatici:

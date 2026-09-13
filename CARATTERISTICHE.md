@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.11.0`
+**Versione attuale:** `2.11.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1112,15 +1112,28 @@ La regola del gioco e' identica nei due casi: cambia solo se il puntatore che ve
 Per questo il guinzaglio sta in **un posto solo**, `_clamp()`: due strade e un clamp per ciascuna sarebbero
 due regole che prima o poi divergono.
 
-### 👁️ Un puntatore solo, e l'anello che si accende
+### 🏘️ Ma NEL VILLAGGIO il guinzaglio si spegne *(v2.11.1)*
 
-Il cursore del sistema sul canvas e' **nascosto** (`cursor:none`): se restasse visibile, senza pointer lock
-si vedrebbero **due puntatori separarsi** appena superi il raggio — quello vero che va avanti e il mirino
-che si ferma. Uno solo, e la regola si legge da se'.
+Non e' un'eccezione estetica: e' che nel villaggio il mouse **serve per cliccare**. Fabbro, Ostessa,
+Erborista e Banditore hanno dei pannelli con dei pulsanti, e col pointer lock **il cursore non esiste**:
+quei pulsanti non si potevano piu' premere. Era un bug vero, non un fastidio.
 
-L'**anello a 200 px** si accende **solo mentre il mirino preme contro il limite**. Un cerchio sempre acceso
-attorno al personaggio sarebbe un orpello che si impara a non vedere in due minuti; acceso in quel momento
-li' e' invece la risposta alla domanda che il giocatore si sta facendo — *«perche' non va piu' in la'?»*.
+Quindi dentro il villaggio: niente pointer lock, il **cursore del sistema torna visibile**, il guinzaglio e'
+spento e il mirino **non si disegna affatto** — se no ce ne sarebbero due a schermo. Li' dentro non si spara.
+
+Riaccendendolo (uscendo dalla faglia) il mirino **rientra subito** nei 200 px: nel villaggio puo' essere
+finito a seicento pixel, e senza questo resterebbe disegnato lontanissimo fino al primo movimento del mouse.
+
+### 👁️ Un puntatore solo
+
+Il cursore del sistema sul canvas e' **nascosto** in combattimento (`cursor:none`): se restasse visibile,
+senza pointer lock si vedrebbero **due puntatori separarsi** appena superi il raggio — quello vero che va
+avanti e il mirino che si ferma. Uno solo, e la regola si legge da se'.
+
+*(v2.10 disegnava anche un **anello** a 200 px, acceso mentre il mirino premeva contro il limite, per
+spiegare perche' non andasse piu' in la'. All'occhio non funzionava — un cerchio che si accende e si spegne
+addosso al personaggio e' rumore — ed e' stato **tolto** in v2.11.1. Il limite si capisce lo stesso: il
+mirino si ferma.)*
 
 ### ⚠️ Cosa NON cambia (e va detto)
 

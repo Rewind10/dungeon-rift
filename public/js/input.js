@@ -17,6 +17,14 @@
  * uscirne con Esc quando vuole, e su un telefono non esiste. Se non c'e', il mirino segue il cursore vero
  * — CLAMPATO ALLO STESSO RAGGIO. Cosi' la regola del gioco e' identica nei due casi: cambia solo se il
  * puntatore che vedi e' il tuo o il nostro. Per questo il guinzaglio sta in un posto solo, `_clamp()`.
+ *
+ * v2.11.1 — NEL VILLAGGIO IL GUINZAGLIO SI SPEGNE, e non e' un'eccezione estetica: e' che nel villaggio
+ * il mouse serve per CLICCARE — il fabbro, l'Ostessa, l'Erborista hanno dei pannelli con dei pulsanti.
+ * Col pointer lock il cursore non esiste proprio, quindi quei pulsanti non si potevano premere; e anche
+ * senza pointer lock, un mirino fermo a 200px mentre il puntatore vero va avanti e' la confusione che
+ * volevamo evitare. Li' dentro non si spara: comanda il cursore del sistema, e basta.
+ *
+ * `guinzaglio` lo decide il gioco (main.js, guardando la fase). Qui si obbedisce e basta.
  */
 (function () {
   'use strict';
@@ -25,22 +33,33 @@
     // il MIRINO: scostamento in pixel dal centro dello schermo, cioe' dal personaggio.
     mira: { x: 140, y: 0 },
     MIRA_R: 200,              // il guinzaglio
+    guinzaglio: true,         // v2.11.1 — acceso in combattimento, spento nel villaggio (lo decide main.js)
     locked: false,            // il browser ci ha dato il pointer lock?
-    alBordo: false,           // sta premendo contro il limite: lo legge il renderer per farlo vedere
+    alBordo: false,           // sta premendo contro il limite
     // L'UNICO punto in cui il guinzaglio viene applicato. Col pointer lock e senza si passa di qui, ed e'
     // il motivo per cui le due strade non possono divergere.
     _clamp() {
       let d = Math.hypot(this.mira.x, this.mira.y);
       if (!d) { this.mira.x = 1; d = 1; }        // a distanza zero non esiste un angolo: si tiene a destra
+      if (!this.guinzaglio) { this.alBordo = false; return; }   // nel villaggio il mirino va dove vuole
       if (d > this.MIRA_R) { const k = this.MIRA_R / d; this.mira.x *= k; this.mira.y *= k; this.alBordo = true; }
       else this.alBordo = d > this.MIRA_R - 6;
     },
     // si aggancia al primo clic sul canvas: prima non si puo', il browser lo concede solo su un gesto.
+    // A guinzaglio spento NON si aggancia mai: li' il cursore serve per cliccare, e il pointer lock lo
+    // farebbe sparire — che e' esattamente il bug per cui nel villaggio non si apriva piu' niente.
     aggancia() {
-      if (this.locked || !this.canvas || !this.canvas.requestPointerLock) return;
+      if (!this.guinzaglio || this.locked || !this.canvas || !this.canvas.requestPointerLock) return;
       try { this.canvas.requestPointerLock(); } catch (_) {}
     },
     sgancia() { try { if (document.pointerLockElement) document.exitPointerLock(); } catch (_) {} },
+    // acceso/spento dal gioco a seconda della fase. RIACCENDENDOLO si riaccorcia subito il mirino: nel
+    // villaggio puo' essere finito a seicento pixel, e uscendo dalla faglia resterebbe li' — disegnato
+    // lontanissimo — fino al primo movimento del mouse.
+    setGuinzaglio(v) {
+      v = !!v; if (v === this.guinzaglio) return;
+      this.guinzaglio = v; this._clamp();
+    },
     init(canvas) {
       this.canvas = canvas;
       document.addEventListener('pointerlockchange', () => {

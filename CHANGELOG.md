@@ -2,6 +2,50 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.11.1] — 2026-09-13 · "Nel villaggio il mirino si toglie di mezzo"
+
+#### 🐛 Col pointer lock nel villaggio non si cliccava piu'
+Segnalato giocando: *«non mi permette di cliccare nei menu (armaiolo, ostessa)»*. Ed era esatto.
+
+Il pointer lock **fa sparire il cursore** — e' il suo mestiere. In combattimento va benissimo: il puntatore
+e' il mirino e non c'e' niente da cliccare. Nel villaggio no: fabbro, Ostessa, Erborista e Banditore hanno
+dei **pannelli con dei pulsanti**, e senza cursore quei pulsanti non si potevano premere. Il pannello si
+apriva avvicinandosi e restava li', inutilizzabile.
+
+Adesso dentro il villaggio:
+
+| | |
+|---|---|
+| pointer lock | **sganciato**, e il clic non lo riaggancia |
+| guinzaglio | **spento**: il mirino segue il cursore ovunque |
+| cursore del sistema | **di nuovo visibile** (`canvas#game.libero`) |
+| mirino disegnato | **no** — se no ce ne sarebbero due a schermo |
+
+Lo decide la **fase** che arriva nello snapshot (`market`), non un flag nostro: e' la stessa ragione per cui
+lo sgancio dei pannelli guarda il DOM invece di ricordarsi uno stato.
+
+E riaccendendolo — uscendo dalla faglia — il mirino **rientra subito** nei 200 px (`setGuinzaglio`): nel
+villaggio puo' essere finito a seicento pixel, e senza quel riaggancio resterebbe disegnato lontanissimo
+fino al primo movimento del mouse.
+
+#### ⭕ Tolto l'anello a 200 px
+Nella v2.10 compariva un cerchio mentre il mirino premeva contro il limite, per rispondere alla domanda
+*«perche' non va piu' in la'?»*. Il ragionamento reggeva, il risultato no: un cerchio che si accende e si
+spegne addosso al personaggio e' rumore. Tolto. Il limite si capisce lo stesso — il mirino si ferma, e
+quello si vede.
+
+#### ✅ Verifiche
+- `test/client.js` — col guinzaglio spento il mirino segue il cursore **ovunque** (499 px su un canvas
+  finto), `aggancia()` non chiede piu' il pointer lock, e riaccendendolo il mirino **rientra subito** a 200.
+  Piu': che il renderer **non disegni piu' l'anello**, che non disegni niente a guinzaglio spento, e che
+  main.js spenga il guinzaglio e riaccenda il cursore nel villaggio.
+- **Nel browser** — nel villaggio: `guinzaglio:false`, `lock:false`, cursore `crosshair`, mirino libero a
+  680 px, e **un clic non aggancia** il pointer lock. In combattimento: mirino fermo a 200 px, **nessun
+  anello**, cursore `none`. Zero errori in console.
+- `test/simulate.js` — **2463 passati, 0 falliti**.
+
+---
+
 ### [2.11.0] — 2026-09-13 · "Si puo' salvare la partita, e si salva dall'Ostessa"
 
 #### 💾 Come funziona

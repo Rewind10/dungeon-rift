@@ -8,6 +8,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
    mirino che si ferma. Un puntatore solo, e la regola si legge da se. I pannelli sono DOM a parte e il
    loro cursore resta quello di sempre. */
 canvas#game{position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#05060a;cursor:none}
+/* v2.11.1 — ma nel VILLAGGIO il cursore torna: li' il mouse serve a cliccare i banchi (fabbro, Ostessa,
+   Erborista), non a sparare. Lo stesso quando il gioco non e' in mano al giocatore. */
+canvas#game.libero{cursor:crosshair}
 #menu,#lobby,#endScreen,#upgradeScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:40;background:radial-gradient(1200px 800px at 50% -10%,#161a2e 0%,#080910 60%,#05060a 100%)}
 /* v1.99 — NIENTE ARTWORK NEL MENU. Dalla v1.86 il menu e la sala d'attesa avevano l'illustrazione come
    sfondo (due strati: l'immagine intera piu' una copia sfocata a fare da cornice). Tolti tutti e due:
