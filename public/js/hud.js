@@ -889,10 +889,13 @@
       g.clearRect(0, 0, W, H);
       const P = {
         oracolo:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
+        // v2.9.2 — la guardia: acciaio e ottone. Volutamente LONTANA dal verderame dell'oracolo, perche'
+        // quando compare quel riquadro il giocatore deve capire in mezzo secondo che non e' il vecchio.
+        guardia:   { veste: '#6b7382', vesteDk: '#262c36', pelle: '#dcae7e', acc: '#c9a227' },
         guerriero: { veste: '#7f8895', vesteDk: '#2f3742', pelle: '#e0b183', acc: '#e0a52c' },
         mago:      { veste: '#3d3c8c', vesteDk: '#14133a', pelle: '#e3c396', acc: '#00f0c8' },
         ladro:     { veste: '#3c5140', vesteDk: '#1d2a22', pelle: '#e6c79c', acc: '#9ef0b0' },
-      }[chi === 'tu' ? (eroeId || 'guerriero') : 'oracolo'] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
+      }[chi === 'tu' ? (eroeId || 'guerriero') : chi] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
 
       // fondo: un alone del colore di chi parla, cosi' il riquadro non e' un buco nero
       const bg = g.createRadialGradient(W / 2, H * 0.62, 4, W / 2, H * 0.62, W * 0.72);
@@ -926,6 +929,20 @@
         g.strokeStyle = '#cfc7b4'; g.lineWidth = 2.4;   // la barba
         for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(cx + i * R * 0.24, cy + R * 0.6);
           g.lineTo(cx + i * R * 0.30, cy + R * 1.3); g.stroke(); }
+      } else if (chi === 'guardia') {
+        // v2.9.2 — ELMO APERTO COL NASALE. L'elmo del guerriero e' chiuso e ha la feritoia: li' dentro non
+        // c'e' nessuno da guardare negli occhi, ed e' giusto cosi' per un eroe. La guardia invece deve
+        // poterti guardare MALE, quindi la faccia si vede: occhi, bocca dritta, e una barra di ferro in
+        // mezzo. Basta la sagoma a dire che non e' ne' l'oracolo ne' il tuo avatar.
+        occhi(-R * 0.02);
+        g.strokeStyle = '#3a2a1c'; g.lineWidth = 3.2; g.lineCap = 'round';       // la bocca: una linea dritta
+        g.beginPath(); g.moveTo(cx - R * 0.30, cy + R * 0.60); g.lineTo(cx + R * 0.30, cy + R * 0.60); g.stroke();
+        g.lineCap = 'butt';
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 3;       // la calotta
+        g.beginPath(); g.ellipse(cx, cy - R * 0.22, R * 1.00, R * 0.96, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+        this._rrc(g, cx - R * 0.11, cy - R * 0.30, R * 0.22, R * 0.66, R * 0.08); g.fill(); g.stroke();   // il nasale
+        g.fillStyle = P.acc; g.strokeStyle = '#07080c'; g.lineWidth = 2;         // la borchia in fronte
+        g.beginPath(); g.arc(cx, cy - R * 0.66, R * 0.12, 0, 7); g.fill(); g.stroke();
       } else if (eroeId === 'guerriero') {
         // ELMO con la feritoia: la cosa piu' riconoscibile che esista
         g.fillStyle = '#8d97a5'; g.strokeStyle = '#07080c'; g.lineWidth = 3;

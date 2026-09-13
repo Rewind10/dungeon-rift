@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.9.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.9.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,23 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.9.2 (nel villaggio non si sguaina: tre avvertimenti e sei fuori)
+- **🛡️ LE GUARDIE.** Se attacchi nel villaggio — freccia, spada o magia, **anche a vuoto** — il gioco **si
+  ferma** e una guardia ti parla. *«Ferma quella mano. Qui dentro non si sguaina.»* Al secondo colpo
+  l'ultimo avvertimento (*«Due. Non ci sara' un terzo avvertimento.»*), al terzo *«Ti avevo avvisato»* e
+  dopo **2,6 secondi di silenzio** la schermata di fine partita. Il villaggio era l'unico posto del gioco
+  senza una regola, e un posto senza regole non e' un paese: e' un negozio con le case attorno.
+- **🧑‍✈️ Il conto e' del singolo, la condanna e' di tutti.** Ognuno ha i suoi tre avvertimenti, ma al terzo
+  la run finisce per la squadra. Il conto **riparte a ogni villaggio**: un clic distratto al primo non te
+  lo porti dietro fino all'ondata venti. Numeri in `constants.js` (`VILL_AVVISI`, `VILL_CONDANNA`).
+- **😠 La guardia ha una faccia sua** — elmo *aperto* col nasale e la borchia d'ottone, bocca dritta. Quello
+  del guerriero e' chiuso e ha la feritoia: li' dentro non c'e' nessuno da guardare negli occhi, e per un
+  eroe va bene. Una guardia deve poterti guardare **male**.
+- **🎲 Un test ballerino in meno.** *«e per la maggior parte del tempo non ti ha visto affatto»* falliva una
+  volta su quattro: il vagabondaggio pesca da `Math.random`, che non e' seminato. Adesso il test semina
+  `Math.random` per la sua durata e lo rimette a posto. Misura esattamente quello che misurava, ma da'
+  sempre la stessa risposta — alzare la soglia avrebbe nascosto anche il segnale.
 
 ## 🆕 Novita v2.9.1 (il cimitero in stand-by: si apre in grotta)
 - **⏸️ IL CIMITERO E' SPENTO, non cancellato.** `CIMITERO_FINO_A` da **1 a 0**: adesso **anche la prima

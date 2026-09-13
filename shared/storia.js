@@ -38,6 +38,7 @@
   // aspetta un attimo prima di cominciare a scriversi.
   const TU = (t, p) => ({ chi: 'tu', t, p: p ? 1 : 0 });
   const OR = (t, p) => ({ chi: 'oracolo', t, p: p ? 1 : 0 });
+  const GU = (t, p) => ({ chi: 'guardia', t, p: p ? 1 : 0 });
   const VO = (t, p) => ({ chi: '', t, p: p ? 1 : 0 });
 
   const S = {
@@ -151,6 +152,33 @@
         OR('lo decide lui.'),
         OR('O forse lo decidi tu.', 1),
       ],
+    },
+
+    // ===================== LE GUARDIE: NEL VILLAGGIO NON SI SGUAINA =====================
+    // v2.9.2 — Tre colpi e sei fuori. Non e' una punizione per il gusto di punire: e' l'unica regola che
+    // il villaggio ha, e senza una regola il villaggio e' un negozio con le case attorno.
+    //
+    // PERCHE' IL GIOCO SI FERMA. Un messaggio in un angolo verrebbe letto da nessuno, e al terzo colpo il
+    // giocatore direbbe "e chi lo sapeva". Fermarlo e' l'unico modo di essere sicuri che l'abbia letto —
+    // ed e' anche il motivo per cui il primo avvertimento non punisce niente: copre il clic per sbaglio.
+    //
+    // IL REGISTRO: una guardia non spiega, non minaccia due volte e non fa discorsi. Conta.
+    guardia1: {
+      righe: [
+        GU('Ferma quella mano.'),
+        GU('Qui dentro non si sguaina. Vale per te come per chiunque altro.'),
+      ],
+    },
+    // il secondo. Piu' corto del primo, ed e' voluto: chi ripete non merita altre parole.
+    guardia2: {
+      righe: [
+        GU('Due.', 1),
+        GU('Non ci sarà un terzo avvertimento.'),
+      ],
+    },
+    // il terzo. Una riga sola, e quello che viene dopo non lo dice nessuno.
+    guardia3: {
+      righe: [GU('Ti avevo avvisato.', 1)],
     },
 
     // ===================== 4. L'ULTIMA DISCESA =====================

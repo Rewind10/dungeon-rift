@@ -3447,6 +3447,17 @@ function testV180() {
   // v1.97 — questa prova vuole la CAVERNA: dalla 1.97 le ondate 1-2 si giocano nel cimitero, che e' molto
   // piu' aperto (2350 tessere libere contro 1370) e quindi ti fa vedere da lontano. Li' il branco arriva
   // per un motivo giusto — ti VEDE — e non si misurerebbe piu' il vagabondaggio, si misurerebbe la mappa.
+  //
+  // v2.9.2 — E VUOLE ANCHE UN CASO SOLO, SEMPRE LO STESSO. La mappa era gia' seminata (4242), ma il
+  // vagabondaggio pesca da `Math.random`, che non lo e': lo scheletro girava a caso e una volta su quattro
+  // capitava in linea di vista e ci restava, facendo fallire la soglia del 50%. Un test che grida al lupo
+  // una volta su quattro smette di essere letto, ed e' peggio di non averlo.
+  //
+  // La strada sbagliata sarebbe alzare la soglia: nasconde il rumore E il segnale, e il giorno che l'IA
+  // peggiora davvero non se ne accorge nessuno. Qui invece si semina `Math.random` per la durata del
+  // blocco e lo si rimette a posto subito dopo: il test misura esattamente quello che misurava prima, ma
+  // da' sempre la stessa risposta. Chi cambia l'IA vede cambiare il numero, ed e' l'unico allarme utile.
+  const _rndVero = Math.random; Math.random = MU.seedRng(0xBEEF);
   room.newMap(4242, 5); room.wave = 5;
   room.pending = 0; room.waveList = []; room.monsters.length = 0;
   let spot = null;
@@ -3549,6 +3560,7 @@ function testV180() {
   for (let i = 0; i < C.TICK_RATE * 8 && !fun.dead; i++) { z.hp = r3.effMaxHp(z); r3.setInput('c', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); r3.update(dt); }
   assert(MU.dist(fun.x, fun.y, fx, fy) < 45, 'il Fungo Sporifero resta piantato dov e (' + MU.dist(fun.x, fun.y, fx, fy).toFixed(0) + ' px): non cammina, al massimo lo spingono');
 
+  Math.random = _rndVero;   // il seme vale SOLO per questo test: il resto della suite resta vario
   ok('vagabondaggio verificato: ti cercano con gli occhi, non con la mappa');
 }
 
@@ -5015,11 +5027,11 @@ function testStoria() {
   // --- 9) IL TESTO: non e' codice, ma ha comunque delle regole ---
   // v2.8 — ogni riga dice CHI parla. La voce del risveglio ha `chi: ''` e non e' una dimenticanza: e'
   // l’oracolo, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
-  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora', 'finale']) {
+  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora', 'guardia1', 'guardia2', 'guardia3', 'finale']) {
     assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
     for (const q of Storia[sc].righe) {
       assert(typeof q.t === 'string' && q.t.length > 0, 'ogni riga di ' + sc + ' ha un testo');
-      assert(['tu', 'oracolo', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
+      assert(['tu', 'oracolo', 'guardia', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
     }
   }
   assert(Storia.prologo.righe.some(q => q.chi === ''), 'nel risveglio parla una voce senza volto');
@@ -5037,6 +5049,113 @@ function testStoria() {
   ok('la storia v2.9 verificata');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================
+// TEST 69 — v2.9.2: LE GUARDIE. Nel villaggio non si sguaina, e alla terza si esce.
+// ============================================================================
+function testGuardie() {
+  console.log('\n[TEST 69] v2.9.2 — le guardie: tre avvertimenti e la run finisce');
+  const Storia = require('../shared/storia.js');
+  const dt = 1 / C.TICK_RATE;
+  const conn = { send() {} };
+  // un colpo = premere e MOLLARE. Tenere premuto non conta due volte, ed e' il punto del fronte di salita.
+  const colpo = (r, pid, tasto) => {
+    r.setInput(pid, { mx: 0, my: 0, aim: 0, shoot: tasto !== 'q' && tasto !== 'e', q: tasto === 'q', e: tasto === 'e' });
+    r.update(dt);
+    r.setInput(pid, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false });
+    r.update(dt);
+  };
+  // finisce la scena che sta a schermo, riga per riga, come farebbe chi preme Spazio
+  const leggi = (r) => { if (!r.storia) return; const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); };
+
+  // --- 1) IL PRIMO COLPO: si ferma, e non parte niente ---
+  const r = new Room('grd'); const p = r.addPlayer('a', conn, 'A', 'mago') || r.players.get('a');
+  r.startGame(); r.enterMarket();
+  assert(r.phase === C.PHASE_MARKET && !!r.map.village, 'siamo nel villaggio');
+  assert((p._reati || 0) === 0, 'e il conto degli avvertimenti parte da zero');
+  colpo(r, 'a');
+  assert(r.storia && r.storia.scena === 'guardia1', 'il primo colpo: parla una guardia');
+  assert(r.bullets.length === 0, 'e il colpo NON parte: il proiettile non esiste proprio');
+  assert(p._reati === 1, 'e vale uno (' + p._reati + ')');
+  // e mentre parla non ci si muove: e' lo stesso blocco della storia, non un secondo meccanismo
+  r.setInput('a', { mx: 1, my: 0, aim: 0 });
+  assert(p.input.mx === 0, 'e mentre la guardia parla i piedi sono fermi');
+  leggi(r);
+  assert(r.storia === null && r._condanna === 0, 'finita la ramanzina il gioco riprende, e non e successo altro');
+
+  // --- 2) IL SECONDO: un altro avvertimento, e l ultimo ---
+  colpo(r, 'a');
+  assert(r.storia && r.storia.scena === 'guardia2', 'il secondo colpo: secondo avvertimento');
+  assert(p._reati === 2, 'e vale due (' + p._reati + ')');
+  leggi(r);
+  assert(r._condanna === 0, 'e si riprende ancora: al secondo non succede niente');
+
+  // --- 3) IL TERZO: «Ti avevo avvisato», e poi la partita finisce ---
+  colpo(r, 'a');
+  assert(r.storia && r.storia.scena === 'guardia3', 'il terzo colpo: quello che non e un avvertimento');
+  leggi(r);
+  assert(r._condanna > 0, 'e alla fine della riga parte il conto alla rovescia (' + r._condanna.toFixed(1) + 's)');
+  assert(r.phase === C.PHASE_MARKET, 'ma non subito: c e un silenzio in mezzo');
+  // un secondo non basta, la durata intera si'
+  for (let i = 0; i < C.TICK_RATE * 1; i++) r.update(dt);
+  assert(r.phase === C.PHASE_MARKET, 'dopo un secondo si e ancora vivi');
+  for (let i = 0; i < C.TICK_RATE * (C.VILL_CONDANNA + 1); i++) r.update(dt);
+  assert(r.phase === C.PHASE_GAMEOVER, 'e poi la run e finita (' + r.phase + ')');
+
+  // --- 4) LE TRE VIE SONO UNA SOLA REGOLA: spada, magia e freccia contano uguale ---
+  // e' il motivo per cui il controllo sta nel punto in cui passano tutte e tre, e non dentro le tre
+  // funzioni che sparano: tre controlli in tre posti sono tre posti in cui dimenticarsene uno.
+  for (const tasto of ['shoot', 'q', 'e']) {
+    const rr = new Room('grd_' + tasto); rr.addPlayer('a', conn, 'A', 'mago');
+    rr.startGame(); rr.enterMarket();
+    colpo(rr, 'a', tasto);
+    assert(rr.storia && rr.storia.scena === 'guardia1', 'anche con "' + tasto + '" la guardia interviene');
+  }
+
+  // --- 5) TENERE PREMUTO NON E TRE COLPI ---
+  // senza il fronte di salita, chi tiene giu il tasto si becca il secondo avvertimento nell istante in cui
+  // finisce di leggere il primo, e il terzo subito dopo: fuori dal villaggio senza aver capito perche.
+  {
+    const rr = new Room('grdH'); const q = rr.addPlayer('a', conn, 'A', 'guerriero') || rr.players.get('a');
+    rr.startGame(); rr.enterMarket();
+    for (let i = 0; i < 60; i++) { rr.setInput('a', { mx: 0, my: 0, aim: 0, shoot: true }); rr.update(dt); }
+    assert(q._reati === 1, 'due secondi col tasto premuto valgono UN avvertimento (' + q._reati + ')');
+    leggi(rr);
+    for (let i = 0; i < 60; i++) { rr.setInput('a', { mx: 0, my: 0, aim: 0, shoot: true }); rr.update(dt); }
+    assert(q._reati === 1, 'e continuare a tenerlo premuto non ne aggiunge un altro (' + q._reati + ')');
+  }
+
+  // --- 6) IL CONTO RIPARTE A OGNI VILLAGGIO ---
+  {
+    const rr = new Room('grdR'); const q = rr.addPlayer('a', conn, 'A', 'ladro') || rr.players.get('a');
+    rr.startGame(); rr.enterMarket();
+    colpo(rr, 'a'); leggi(rr); colpo(rr, 'a'); leggi(rr);
+    assert(q._reati === 2, 'due avvertimenti bruciati in questo villaggio');
+    rr.enterMarket();
+    assert(q._reati === 0 && q._reatoH === false, 'al villaggio dopo si riparte da zero');
+  }
+
+  // --- 7) E FUORI DAL VILLAGGIO SI COMBATTE, che era il punto di tutto ---
+  // v2.9.2 — LA VERIFICA DI CIO CHE NON E STATO TOCCATO. Il controllo sta nello stesso punto da cui parte
+  // ogni colpo della partita: se fosse scritto male, il gioco smetterebbe di sparare ovunque.
+  {
+    const rr = new Room('grdC'); const q = rr.addPlayer('a', conn, 'A', 'mago') || rr.players.get('a');
+    rr.startGame();
+    assert(rr.phase !== C.PHASE_MARKET, 'in campo, non al villaggio');
+    const prima = rr.bullets.length;
+    colpo(rr, 'a');
+    assert(rr.bullets.length > prima, 'il colpo parte eccome (' + prima + ' -> ' + rr.bullets.length + ')');
+    assert(rr.storia === null && (q._reati || 0) === 0, 'e nessuna guardia ha niente da ridire');
+  }
+
+  // --- 8) IL TESTO: corto, brusco, e senza spiegazioni ---
+  const tutte = [].concat(Storia.guardia1.righe, Storia.guardia2.righe, Storia.guardia3.righe);
+  assert(tutte.every(q => q.chi === 'guardia'), 'parla solo la guardia: non e un dialogo, e un ordine');
+  assert(tutte.every(q => q.t.length <= 90), 'e sono righe corte: una guardia non fa discorsi');
+  assert(Storia.guardia2.righe.length <= Storia.guardia1.righe.length, 'e il secondo avviso non e piu lungo del primo');
+  assert(Storia.guardia3.righe.length === 1, 'e il terzo e una riga sola');
+  ok('le guardie verificate: tre avvertimenti, poi fuori — e in campo si spara come sempre');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testGuardie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

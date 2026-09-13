@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.9.1`
+**Versione attuale:** `2.9.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -366,6 +366,7 @@ I ritratti sono disegnati a codice come tutto il resto — zero asset:
 | **Mago** | cappello a punta con la stella, barba |
 | **Ladro** | cappuccio calato, fazzoletto sul viso |
 | **Oracolo** | corna, cappuccio, barba bianca |
+| **Guardia** *(v2.9.2)* | elmo **aperto** col nasale e la borchia d'ottone, bocca dritta — l'elmo del guerriero e' chiuso e ha la feritoia: li' dentro non c'e' nessuno da guardare negli occhi, e per un eroe va bene. Una guardia invece deve poterti guardare **male** |
 | *la voce del risveglio* | **nessun ritratto** — ed e' la scena, non una mancanza |
 
 Sono di **fronte**, non dall'alto: una testa vista dall'alto dentro un riquadro di dialogo non si legge
@@ -547,6 +548,54 @@ domani cambiano devono cambiare in un posto solo.
    bilanciamento e collisioni. Farle passare tutte dal risveglio vorrebbe dire provare cinquanta volte il
    prologo e zero volte quello che si voleva provare. L'uscita e' dichiarata **in un posto solo**, in cima
    a `test/simulate.js`; il gioco chiama `startGame()` e il prologo c'e'.
+
+---
+
+## 🛡️ LE GUARDIE: NEL VILLAGGIO NON SI SGUAINA *(v2.9.2)*
+
+Il villaggio era l'unico posto del gioco **senza una regola**: potevi tirare frecciate ai paesani per venti
+minuti e non succedeva niente. Un posto senza regole non e' un paese, e' un negozio con le case attorno.
+
+Adesso, se attacchi li' dentro — **freccia, spada o magia, anche a vuoto** — il gioco **si ferma** e una
+guardia ti parla. Tre volte, e la terza non e' un avvertimento.
+
+| | Cosa succede |
+|---|---|
+| **1° colpo** | *«Ferma quella mano.»* · *«Qui dentro non si sguaina. Vale per te come per chiunque altro.»* — poi si riprende |
+| **2° colpo** | *«Due.»* · *«Non ci sarà un terzo avvertimento.»* — piu' corto del primo, apposta: chi ripete non merita altre parole |
+| **3° colpo** | *«Ti avevo avvisato.»* — e dopo **2,6 secondi di silenzio**, la schermata di fine partita |
+
+**Perche' il gioco si FERMA.** Un messaggio in un angolo non lo legge nessuno, e al terzo colpo il giocatore
+direbbe *«e chi lo sapeva»*. Fermarlo e' l'unico modo di essere sicuri che l'abbia letto — ed e' anche il
+motivo per cui il primo avvertimento non punisce niente: copre il clic per sbaglio.
+
+**Il conto e' del singolo, la condanna e' di tutti.** Ognuno ha i suoi tre, ma al terzo la run finisce per
+la squadra: si scende in gruppo e si viene cacciati in gruppo. E' quello che rende il villaggio un posto
+dove ci si controlla a vicenda.
+
+**Il conto riparte a ogni villaggio.** In una run di villaggi ce ne sono una decina: un contatore che non si
+azzera mai vorrebbe dire portarsi un clic distratto del primo villaggio fino all'ondata venti.
+
+### 🔩 Le tre scelte che lo tengono in piedi
+
+1. **Il controllo sta in UN punto solo** — la riga da cui passano tutte e tre le vie d'attacco
+   (`firePlayerWeapon`, `useQ`, `useE` sono attaccate), non dentro le tre funzioni. Tre controlli in tre
+   posti sono tre posti in cui un domani ci si dimentica di uno. Lo **scatto** non conta: non fa male a
+   nessuno.
+2. **Il colpo si conta sul FRONTE di salita, e il fronte si riarma solo quando molli davvero.** Senza,
+   chi tiene premuto il tasto si becca il secondo avvertimento nel tick esatto in cui finisce di leggere
+   il primo, e il terzo subito dopo — fuori dal villaggio senza aver capito perche'.
+3. **Il rilascio si legge da `_rawAtk`, non da `p.input`.** Durante una ramanzina l'input arriva azzerato
+   d'ufficio (e' lo stesso blocco che ferma i piedi durante i dialoghi): leggerlo li' vorrebbe dire credere
+   a un rilascio che non c'e' stato. `_rawAtk` e' il tasto **come lo manda il client**, prima della censura.
+
+**Il conto alla rovescia parte a riga FINITA**, non quando la guardia comincia a parlare: se partisse
+prima, chi legge piano vedrebbe il game over a meta' frase e chi preme in fretta avrebbe due secondi di
+vantaggio. Il silenzio dopo la riga e' il punto. E scorre in ogni fase: se tiri il terzo colpo e poi corri
+dentro la faglia, il game over ti raggiunge di sotto.
+
+I numeri stanno in `constants.js` — `VILL_AVVISI: 3`, `VILL_CONDANNA: 2.6` — perche' sono esattamente il
+tipo di cosa che si vuole ritarare dopo averla provata.
 
 ---
 

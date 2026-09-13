@@ -1043,11 +1043,19 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     // si sentono. Una riga marcata `p` aspetta in silenzio col volto a schermo prima di cominciare.
     ok(/PAUSA:/.test(srcH) && /pausa \? this\.PAUSA : 0/.test(srcH), 'e una riga marcata aspetta prima di scriversi');
     ok(St.oracolo.righe.some(q => q.p), 'e nel discorso dell’oracolo ci sono le pause');
+    // v2.9.2 — LE GUARDIE. Il testo arriva al client come tutto il resto del parlato, e ha un nome sopra:
+    // senza il nome il riquadro direbbe solo una frase brusca, e non si saprebbe chi l ha detta.
+    for (const k of ['guardia1', 'guardia2', 'guardia3'])
+      ok(St[k] && St[k].righe.length > 0 && St[k].righe.every(q => q.chi === 'guardia'), 'la scena ' + k + ' parla con la voce della guardia');
+    ok(/guardia: 'Guardia'/.test(fs.readFileSync(ROOT + 'public/js/main.js', 'utf8')), 'e sopra la battuta c e scritto chi parla');
     ok(/missione\(m\)/.test(srcH), 'e sa mostrare la missione');
     // v2.8 — il riquadro sta al centro, ha il ritratto di chi parla, e mentre parla non ci si muove
     ok(/ritratto\(chi, eroeId\)/.test(srcH), 'l HUD disegna il ritratto di chi parla');
-    for (const k of ['guerriero', 'mago', 'ladro', 'oracolo'])
+    for (const k of ['guerriero', 'mago', 'ladro', 'oracolo', 'guardia'])
       ok(new RegExp(k + ':').test(srcH), 'e ha una tavolozza per ' + k);
+    // v2.9.2 — la guardia deve avere una SAGOMA sua: se cadesse nel ramo dell'elmo del guerriero, il
+    // giocatore vedrebbe il proprio avatar sgridare se stesso.
+    ok(/chi === 'guardia'/.test(srcH), 'e la guardia ha il suo ritratto, non quello del guerriero');
     ok(/if \(!chi\) \{ cv\.classList\.add\('vuoto'\); return; \}/.test(srcH),
       'ma la voce senza volto del risveglio non ne ha uno: e la scena, non una mancanza');
     // v2.7 — nella cella non si conta nessuna ondata: "ONDATA 0/20" sul risveglio e la cosa piu' stonata

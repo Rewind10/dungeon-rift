@@ -122,7 +122,8 @@
     const mio = G.meHero || 'guerriero';
     const nomeEroe = (H[mio] && H[mio].name) ? H[mio].name.charAt(0) + H[mio].name.slice(1).toLowerCase() : 'eroe';
     const testo = String(r.t || '').replace(/\{eroe\}/g, nomeEroe);
-    const nome = r.chi === 'tu' ? nomeEroe : (r.chi === 'oracolo' ? 'Oracolo' : '');
+    const NOMI = { oracolo: 'Oracolo', guardia: 'Guardia' };
+    const nome = r.chi === 'tu' ? nomeEroe : (NOMI[r.chi] || '');
     // v2.9 — `p` e' la PAUSA del copione: la riga aspetta un attimo in silenzio prima di scriversi.
     HUD.mostraDialogo(r.chi, testo, conTasti, mio, nome, !!r.p);
   }

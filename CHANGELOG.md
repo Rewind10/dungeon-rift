@@ -2,6 +2,80 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.9.2] — 2026-09-13 · "Nel villaggio non si sguaina"
+
+#### 🛡️ Il villaggio adesso ha una regola
+Era l'unico posto del gioco che non ne aveva: potevi tirare frecciate ai paesani per venti minuti e non
+succedeva niente. Un posto senza regole non e' un paese, e' un negozio con le case attorno.
+
+Adesso, se attacchi li' dentro — **freccia, spada o magia, anche a vuoto** — il gioco **si ferma** e una
+guardia ti parla.
+
+| | Cosa succede |
+|---|---|
+| **1° colpo** | *«Ferma quella mano.»* · *«Qui dentro non si sguaina. Vale per te come per chiunque altro.»* |
+| **2° colpo** | *«Due.»* · *«Non ci sarà un terzo avvertimento.»* |
+| **3° colpo** | *«Ti avevo avvisato.»* — e dopo **2,6 secondi di silenzio**, fine partita |
+
+**Perche' si ferma il gioco.** Un messaggio in un angolo non lo legge nessuno, e al terzo colpo il giocatore
+direbbe *«e chi lo sapeva»*. Fermarlo e' l'unico modo di essere sicuri che l'abbia letto — ed e' anche il
+motivo per cui il primo avvertimento non punisce niente: copre il clic per sbaglio. Il secondo avviso e'
+**piu' corto** del primo, apposta: chi ripete non merita altre parole. Il terzo e' **una riga sola**.
+
+**Il conto e' del singolo, la condanna e' di tutti.** Ognuno ha i suoi tre, ma al terzo la run finisce per la
+squadra: si scende in gruppo e si viene cacciati in gruppo. **Il conto riparte a ogni villaggio** — in una
+run ce ne sono una decina, e un contatore che non si azzera mai vorrebbe dire portarsi un clic distratto del
+primo villaggio fino all'ondata venti. I due numeri stanno in `constants.js`: `VILL_AVVISI: 3`,
+`VILL_CONDANNA: 2.6`.
+
+#### 🔩 Le tre scelte che lo tengono in piedi
+1. **Il controllo sta in UN punto solo** — la riga da cui passano tutte e tre le vie d'attacco
+   (`firePlayerWeapon`, `useQ`, `useE` sono attaccate), non dentro le tre funzioni. Tre controlli in tre
+   posti sono tre posti in cui un domani ci si dimentica di uno. Lo **scatto** non conta: non fa male a
+   nessuno.
+2. **Il colpo si conta sul FRONTE di salita, e il fronte si riarma solo quando molli davvero.** Senza, chi
+   tiene premuto il tasto si becca il secondo avvertimento nel tick esatto in cui finisce di leggere il
+   primo, e il terzo subito dopo — fuori dal villaggio senza aver capito perche'.
+3. **Il rilascio si legge da `_rawAtk`, non da `p.input`.** Durante una ramanzina l'input arriva azzerato
+   d'ufficio (e' lo stesso blocco che ferma i piedi durante i dialoghi): leggerlo li' vorrebbe dire credere
+   a un rilascio che non c'e' stato, e ingoiare senza un perche' il colpo successivo di chi aveva mollato.
+
+**Il conto alla rovescia parte a riga FINITA**, non quando la guardia comincia a parlare: se partisse prima,
+chi legge piano vedrebbe il game over a meta' frase e chi preme in fretta avrebbe due secondi di vantaggio.
+Il silenzio dopo la riga e' il punto. E scorre in **ogni fase**: chi tira il terzo colpo e poi corre dentro
+la faglia non se la cava — il game over lo raggiunge di sotto.
+
+#### 😠 La guardia ha una faccia sua
+Elmo **aperto** col nasale e la borchia d'ottone, bocca dritta, acciaio e ottone. L'elmo del guerriero e'
+chiuso e ha la feritoia: li' dentro non c'e' nessuno da guardare negli occhi, e per un eroe va benissimo.
+Una guardia invece deve poterti guardare **male**. E i colori stanno volutamente lontani dal verderame
+dell'oracolo: quando compare quel riquadro devi capire in mezzo secondo che non e' il vecchio.
+
+#### 🎲 Un test ballerino in meno
+*«e per la maggior parte del tempo non ti ha visto affatto»* (TEST 62, il vagabondaggio) falliva circa **una
+volta su quattro** — misurato, e falliva uguale anche prima della v2.9.1, quindi non era una regressione. La
+mappa era gia' seminata, ma il vagabondaggio pesca da `Math.random`, che non lo e': lo scheletro girava a
+caso e ogni tanto capitava in linea di vista e ci restava.
+
+**La strada sbagliata sarebbe stata alzare la soglia**: nasconde il rumore *e* il segnale, e il giorno che
+l'IA peggiora davvero non se ne accorge nessuno. Invece il test adesso semina `Math.random` per la propria
+durata e lo rimette a posto alla fine. Misura esattamente quello che misurava, ma da' sempre la stessa
+risposta — e chi cambia l'IA vede cambiare il numero, che e' l'unico allarme utile.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **TEST 69 nuovo**: il primo colpo ferma il gioco e *il proiettile non esiste
+  proprio*; il secondo e il terzo; il conto alla rovescia che parte a riga finita e non un attimo prima;
+  le tre vie d'attacco che contano uguale; **tenere premuto due secondi vale UN avvertimento**; il conto che
+  riparte a ogni villaggio; e — la verifica di cio' che **non** e' stato toccato — che **in campo si spari
+  come sempre**, visto che il controllo sta nel punto da cui passa ogni colpo della partita.
+  **2405 passati, 0 falliti, su sette esecuzioni di fila.**
+- `test/client.js` — la tavolozza e la sagoma della guardia, le tre scene e il nome sopra la battuta
+  *(restano i 2 fallimenti attesi sull'audio: `assets/` non c'e' in container)*.
+- **Nel browser** — i tre avvertimenti in sequenza col ritratto giusto e il nome «GUARDIA», e la schermata
+  di fine partita che arriva dopo il silenzio. **Zero errori in console.**
+
+---
+
 ### [2.9.1] — 2026-09-13 · "Il cimitero in stand-by: si apre in grotta"
 
 #### ⏸️ Spento, non cancellato

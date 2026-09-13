@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.9.1',
+    VERSION: '2.9.2',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -154,6 +154,12 @@
     // renderer li dipinge e il nome della zona sono TUTTI ancora qui e ancora provati dai test — per
     // riaccenderlo basta rimettere 1. E' esattamente il motivo per cui questo era un numero solo.
     CIMITERO_FINO_A: 0,
+    // v2.9.2 — LE GUARDIE DEL VILLAGGIO. Quanti colpi si possono tirare li' dentro prima che finisca male,
+    // e quanti secondi passano fra «Ti avevo avvisato» e la schermata di fine partita.
+    // Il conto e' PER GIOCATORE e si azzera a ogni ingresso nel villaggio; la condanna vale per tutti: si
+    // scende in gruppo e si viene cacciati in gruppo.
+    VILL_AVVISI: 3,
+    VILL_CONDANNA: 2.6,
     // v1.99 — LE ONDATE CHE SI GIOCANO NELLA CALDERA: quelle dei due boss. E un elenco apposta —
     // aggiungerne una costa una virgola, e svuotarlo spegne la caldera senza toccare altro.
     CALDERA_ONDATE: [10, 20],
