@@ -2,6 +2,82 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.9.0] — 2026-09-13 · "I dialoghi riscritti, e lo sciamano diventa l'oracolo"
+
+#### 🧿 Un nome solo, in tutto il progetto
+Lo **sciamano** e' diventato l'**ORACOLO**. Non cambia niente di quello che fa — stesso antro nella fila di
+levante, stessa casa con le ossa appese alla porta, stesso ritratto (corna, cappuccio, barba bianca) —
+cambia come si chiama.
+
+E si chiama cosi' **dappertutto**: `shared/mapgen.js` (`kind: 'oracolo'`, che e' la fonte da cui leggono
+tutti gli altri), `server/Room.js` (`_oracolo`, `_oracoloDetto`, `updateOracolo`, `_nearOra`),
+`public/js/renderer.js` (la tavolozza, il bastone con le ossa, il banco), `public/js/hud.js` (il ritratto),
+`public/js/main.js` (il nome sopra la battuta), la missione in evidenza, i due file di test e i documenti.
+**79 occorrenze in 9 file.** Un nome che sopravvive in meta' progetto e' un nome che un domani torna fuori
+nel posto sbagliato.
+
+#### ✍️ Tutti i dialoghi riscritti
+Risveglio, arrivo al villaggio e discorso dell'oracolo: testo nuovo da capo, piu' secco e con molto piu'
+botta-e-risposta.
+
+Il risveglio adesso comincia dal personaggio che **non capisce cosa sta guardando**, non da una voce che
+spiega:
+
+> **TU** — *«Cos'e' quella luce?»* · *«No…»* · *«C'e' un portale. Nella mia stanza.»*
+> **VOCE** — *«Non temere.»*
+> **TU** — *«E perche' dovrei attraversarlo?»*
+> **VOCE** — *«Perche' e' gia' troppo tardi per tornare indietro.»*
+
+La voce continua a non presentarsi (`chi: ''`), e al villaggio e' ancora lei: *«Eccoti. Ora vieni da me.
+Cerca la casa con le ossa appese alla porta.»*
+
+#### ⏸️ Le pause: le didascalie diventano silenzio
+Il copione aveva delle **didascalie** — *«Pausa.»*, *«l'oracolo osserva il giocatore per qualche istante»*,
+*«sorride appena»*. Stamparle a schermo sarebbe stato l'errore facile: una didascalia **dice** al giocatore
+cosa dovrebbe provare, ed e' il modo piu' sicuro perche' non lo provi.
+
+Quindi non si scrivono: si **sentono**. Una riga marcata `p: 1` in `storia.js` resta **900 ms in silenzio**
+col volto gia' a schermo e il cursore che lampeggia, poi comincia a scriversi. Otto righe del discorso sono
+marcate cosi', e sono esattamente le tre rivelazioni e i loro appoggi:
+
+> *«Da qualcuno che non vive in questo mondo.»* · *«Un Dio.»* · *«E ti sta guidando.»* · *«Non lo hai
+> ancora capito?»* · *«E' quello che tiene gli occhi su di te in questo momento.»*
+
+Tecnicamente la pausa e' un **`t0` spostato in avanti**, non un `setTimeout`: cosi' e' lo stesso orologio
+che governa le lettere, e lo Spazio che ha fretta la salta senza dover anche spegnere un timer. La trappola
+da evitare e' che durante la pausa il contatore delle lettere e' **negativo**, e `slice(0, -3)` taglia dalla
+*fine*: si tiene a zero, se no la riga comparirebbe a pezzi al contrario.
+
+#### 🎭 Il colpo di scena non dice piu' "schermo"
+Prima: *«Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.»*
+Adesso: *«Non lo hai ancora capito?»* … *«E' quello che tiene gli occhi su di te in questo momento.»*
+
+Indicare lo schermo era spiegare la battuta. Cosi' l'ultimo passo lo fa il giocatore, che e' l'unico modo
+perche' quel passo valga qualcosa. La regola che la rivelazione **spiega** resta intatta: *«Avrai bisogno
+dei suoi poteri per arrivare in fondo»* — cioe' le carte che arrivano a fine ondata sono i suoi doni. Il
+test, di conseguenza, non pretende piu' la parola *schermo* ma il *«ti sta guardando»*.
+
+#### 🗣️ Tornando dall'oracolo: un congedo, non una riga
+Fino alla v2.8, tornandogli davanti, partiva **una riga sola** mandata al singolo giocatore
+(`storia_riga_sola`): non si vedeva in due, non si saltava con Esc, non bloccava i piedi. Adesso e' una
+**scena vera** (`oracoloAncora`), cinque righe, che si chiude con l'unico dubbio di tutto il racconto:
+
+> *«Il resto… lo decide lui.»* · *«O forse lo decidi tu.»*
+
+#### ✅ Verifiche
+- `test/simulate.js` — TEST 68 aggiornato: il giro intero (risveglio → villaggio → oracolo → ondata 1), il
+  congedo che parte al ritorno ed e' **piu' corto** del discorso, le pause presenti nel copione, e nessuna
+  didascalia stampata a schermo. **2362 passati, 0 falliti.**
+- `test/client.js` — il `PAUSA` dell'HUD, la pausa che arriva **dal copione** e non dal codice, e la
+  tavolozza del ritratto dell'oracolo. *(restano i 2 fallimenti attesi sull'audio: `assets/` non c'e' in
+  container)*
+- **Nel browser** — il prologo parte col testo nuovo e la missione giusta; la pausa misurata: a 250 ms il
+  riquadro e' **muto col solo cursore**, a 1650 ms la riga c'e' tutta. Attraversata la faglia si arriva al
+  villaggio con *«Trova l'oracolo · Villaggio, la casa con le ossa appese»*, e la grotta dell'ondata 1
+  resta una grotta. **Zero errori in console.**
+
+---
+
 ### [2.8.2] — 2026-09-13 · "La schermata d'avvio invoglia invece di spiegare"
 
 #### ✨ Un richiamo, al posto di un manuale
@@ -119,14 +195,14 @@ schermo, non ai piedi.
 Adesso e' un riquadro vero — opaco, bordato d'oro — con dentro il **ritratto** di chi parla. Disegnati a
 codice come tutto il resto: **guerriero** (elmo con la feritoia e gli occhi che brillano dentro),
 **mago** (cappello a punta con la stella, barba), **ladro** (cappuccio calato e fazzoletto sul viso),
-**sciamano** (corna, cappuccio, barba bianca).
+**oracolo** (corna, cappuccio, barba bianca).
 
 Sono di **fronte**, non dall'alto: una testa vista dall'alto dentro un riquadro di dialogo non si legge
 come una faccia. E sono semplici apposta — ottanta pixel non reggono i dettagli, quello che li fa
 riconoscere e' la **silhouette**.
 
 La voce senza volto del risveglio **non ha ritratto e non ha nome**, e non e' una mancanza: e' lo
-sciamano, e il giocatore lo scopre solo quando gli parla.
+oracolo, e il giocatore lo scopre solo quando gli parla.
 
 #### 🔒 Mentre parla qualcuno non ci si muove
 Il blocco sta sul **server**, in `setInput`. Il client puo' anche smettere di mandare i comandi, ma
@@ -135,18 +211,18 @@ Si ferma il movimento e tutto quello che si fa con le mani; la mira no, quella n
 c'e' rischio di restare incastrati: la riga scade da sola dopo `STORIA_RIGA` secondi.
 
 #### 🎭 Il colpo di scena: una divinita' davanti a uno schermo
-Il discorso dello sciamano e' stato riscritto da capo, ed e' un **dialogo** — l'avatar non capisce e
+Il discorso dell’oracolo e' stato riscritto da capo, ed e' un **dialogo** — l'avatar non capisce e
 continua a chiedere, che e' giusto: e' lui il posseduto, non l'informato.
 
-> **SCIAMANO** — Sotto questo villaggio dorme una cosa vecchia di mille anni. Si chiama AZ'GAROTH, e si
+> **ORACOLO** — Sotto questo villaggio dorme una cosa vecchia di mille anni. Si chiama AZ'GAROTH, e si
 > sta svegliando.
 > **TU** — Cosa volete da me?
-> **SCIAMANO** — Tu sei stato scelto. Da una divinita'.
+> **ORACOLO** — Tu sei stato scelto. Da una divinita'.
 > **TU** — Non capisco.
-> **SCIAMANO** — Sei lo strumento di un Dio.
+> **ORACOLO** — Sei lo strumento di un Dio.
 > **TU** — …
-> **SCIAMANO** — Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.
-> **SCIAMANO** — Si'. Dico a te che ci stai guardando.
+> **ORACOLO** — Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.
+> **ORACOLO** — Si'. Dico a te che ci stai guardando.
 
 **Non e' «l'eroe sei tu»: e' «sei lo strumento di un Dio, e il Dio e' chi tiene il mouse».** La
 differenza non e' di gusto — la seconda versione **spiega una regola**: le carte potere che arrivano a
@@ -157,7 +233,7 @@ quelle tre cose (divinita', schermo, poteri) restino nel testo anche se un doman
 #### 📋 "Missione principale", non "missione"
 Il filo della storia resta acceso per tutta la partita, ma taglie, prigionieri e tutto il resto
 continuano a funzionare come sempre: la parola nel riquadro lo dice senza spiegarlo. E chi esce dal
-villaggio **senza** parlare con lo sciamano non si ritrova "trova lo sciamano" appeso per venti ondate:
+villaggio **senza** parlare con l’oracolo non si ritrova "trova l’oracolo" appeso per venti ondate:
 la missione diventa comunque la discesa, perche' e' quello che sta facendo.
 
 #### 🐛 Corretti per strada
@@ -169,7 +245,7 @@ la missione diventa comunque la discesa, perche' e' quello che sta facendo.
 - `test/simulate.js` — **2279 passati, 0 falliti**, con la non-regressione del bug (dopo il villaggio:
   grotta, mappa rigenerata, posti di spawn) e la prova del blocco movimenti.
 - `test/client.js` — i ritratti per ognuno dei quattro, il riquadro al centro, la voce senza volto.
-- Provato in browser il giro intero coi tre eroi: stanza → portale → villaggio → sciamano → **ondata 1
+- Provato in browser il giro intero coi tre eroi: stanza → portale → villaggio → oracolo → **ondata 1
   in una grotta 64x46 con dodici nemici**.
 
 ---
@@ -203,14 +279,14 @@ tutto:
 > *«Attraversala.»*
 > *«Quelli prima di te sono rimasti a guardarla.»*
 
-**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' lo sciamano, e il
+**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' l’oracolo, e il
 giocatore lo scopre solo quando gli parla — *«Ti ho parlato mentre dormivi. Non lo ricordi: e' normale.»*
 
 Se uno gira invece di entrare, la voce insiste **una volta sola** (*«La faglia. Non il muro.»*) e poi tace:
 insistere la trasformerebbe in un tutorial, e questa non e' una voce che spiega le cose.
 
-#### 🧿 Lo sciamano dice di cosa parla il gioco
-Si arriva al villaggio all'**ondata 0** con la missione in evidenza (*«Cerca lo sciamano. Sa cosa sei.»*).
+#### 🧿 L’oracolo dice di cosa parla il gioco
+Si arriva al villaggio all'**ondata 0** con la missione in evidenza (*«Cerca l’oracolo. Sa cosa sei.»*).
 Avvicinandosi parte il discorso: sotto c'e' una cosa che non dorme, si chiama **AZ'GAROTH**, venti volte la
 roccia si aprira' e ogni volta si scende piu' in fondo. E la riga che dice tutto senza spiegare niente:
 *«Noi ci abbiamo provato. Siamo ancora qui, quindi hai capito com'e' andata.»*
@@ -261,7 +337,7 @@ riscriverlo dentro il codice del server vuol dire rileggere la logica ogni volta
 
 #### ✅ Verifiche
 - `test/simulate.js` — **2205 passati, 0 falliti**. Il TEST 68 e' l'unico che fa partire una partita vera,
-  col prologo, e prova la **catena intera**: risveglio → faglia → villaggio → sciamano → ondata 1. Piu' il
+  col prologo, e prova la **catena intera**: risveglio → faglia → villaggio → oracolo → ondata 1. Piu' il
   giro premendo sempre Esc, il capo che comanda in due, la riga che invecchia da sola, e le regole del
   testo (nessuna riga piu' lunga di un paragrafo, i titoli delle missioni che stanno nel riquadro).
 - `test/client.js` — i pezzi dell'interfaccia, la riga che arriva dallo snapshot, Spazio ed Esc.
@@ -332,7 +408,7 @@ spigoli si legge come una finestra.
 Il falo' e' sceso da **430 a 340** di raggio (x1,45 = 624 → 493 px). Con la vecchia sala calda era la luce
 della stanza; sul pavimento freddo della grotta era diventato un alone bianco largo mezzo schermo.
 
-#### 🧿 La Cartomante e' diventata lo Sciamano
+#### 🧿 La Cartomante e' diventata lo Oracolo
 Per ora non fa nulla: niente `crd`, quindi il server non gli attacca nemmeno il richiamo di prossimita'. Le
 sue carte erano spente da tempo (`CARTOMANTE_ATTIVA`), quindi non si perde niente — cambia chi abita
 l'antro. Verderame invece di viola, bastone con le ossa invece del ventaglio di carte, ciotola dei fumi sul
@@ -367,7 +443,7 @@ spenta a schermo dalla v2.1 ma ancora **cotta** sui bordi della mappa.
   zona isolata**, tutte e tredici le stanze raggiungibili, ogni mercante avvicinabile.
 - `test/client.js` — nuovi blocchi per la lista unica delle sorgenti, la cottura del villaggio, i tipi di
   muro (conci per le case, roccia sul perimetro), il pavimento (terra in piazza, assi nelle case, grotta
-  nello spiazzo), la piazza chiara, la guardia, lo sciamano e i dodici banchi.
+  nello spiazzo), la piazza chiara, la guardia, l’oracolo e i dodici banchi.
 - Controllato anche **quello che non si e' toccato**: mappa di combattimento all'ondata 5, campo visivo a
   torcia, ombre dei muri e nebbia delle grotte invariati.
 

@@ -858,7 +858,7 @@
         smith:     { cloth: '#8a3b2a', cloth2: '#e8d9b0', accent: '#ffb14a' },
         herbalist: { cloth: '#3f6b34', cloth2: '#dfe8b0', accent: '#9fe06a' },
         innkeeper: { cloth: '#8a6a2a', cloth2: '#e8dcb0', accent: '#ffd97a' },
-        sciamano:  { cloth: '#2f5a52', cloth2: '#cfe6df', accent: '#7fd6c0' },
+        oracolo:  { cloth: '#2f5a52', cloth2: '#cfe6df', accent: '#7fd6c0' },
         crier:     { cloth: '#6b3a3a', cloth2: '#e8c9b0', accent: '#ff9a8a' },
       };
       const c = PAL[p.kind] || PAL.crier;
@@ -880,7 +880,7 @@
         g.strokeStyle = '#4e7a3c'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(22, 2); g.lineTo(20 + i * 4, -10); g.stroke(); } }
       else if (p.kind === 'innkeeper') { for (const dx of [-16, -4, 8]) { g.fillStyle = '#c9a35a'; this._rr(g, dx, -8, 9, 12, 2); g.fill(); g.fillStyle = '#f0e2b8'; g.fillRect(dx + 1, -8, 7, 3); }
         g.fillStyle = '#6b4d2c'; this._rr(g, 20, -10, 12, 14, 3); g.fill(); }
-      else if (p.kind === 'sciamano') {  // v2.6 — sul banco dello sciamano: la ciotola dei fumi e le ossa
+      else if (p.kind === 'oracolo') {  // v2.6 — sul banco dell’oracolo: la ciotola dei fumi e le ossa
         g.fillStyle = '#2a3a35'; g.beginPath(); g.ellipse(0, -1, 11, 6, 0, 0, 7); g.fill();
         const og = g.createRadialGradient(-2, -4, 1, 0, -2, 13); og.addColorStop(0, 'rgba(127,214,192,.85)'); og.addColorStop(1, 'rgba(60,140,120,.12)');
         g.fillStyle = og; g.beginPath(); g.arc(0, -4, 12, 0, 7); g.fill();
@@ -1666,15 +1666,15 @@
     // degli eroi invece e' gia' tarata per la lettura a picco — ed e' l'unico disegno del gioco che sia
     // stato limato fino a convincere. Riusarlo costa niente e tiene insieme lo stile: se un domani un
     // eroe cambia, i mercanti cambiano con lui.
-    // v2.6 — `sciamano` ha preso il posto di `seer`. La cartomante era un mago viola col ventaglio di
-    // carte; lo sciamano e' un'altra cosa — verderame, ossa, pelli — e si vede da lontano che non e' lei.
-    _vendorBase: { smith: 'guerriero', crier: 'guerriero', innkeeper: 'ladro', herbalist: 'mago', sciamano: 'mago', patron: 'ladro' },
+    // v2.6 — `oracolo` ha preso il posto di `seer`. La cartomante era un mago viola col ventaglio di
+    // carte; l’oracolo e' un'altra cosa — verderame, ossa, pelli — e si vede da lontano che non e' lei.
+    _vendorBase: { smith: 'guerriero', crier: 'guerriero', innkeeper: 'ladro', herbalist: 'mago', oracolo: 'mago', patron: 'ladro' },
     _vendorPal: {
       smith:     { cloth: '#8a5a2c', clothDk: '#4a2f14', steelDk: '#4a4038', pelo: '#5a4026', skin: '#e0b183', trim: '#ffb14a' },
       crier:     { cloth: '#6b5a72', clothDk: '#33303f', steelDk: '#5a6070', pelo: '#4a4050', skin: '#e0b48f', trim: '#ff9a8a' },
       innkeeper: { cloth: '#b8863c', clothDk: '#6b4a1c', skin: '#f0c795', wood: '#8a6534', trim: '#ffd97a' },
       herbalist: { body: '#3f6b34', bodyDk: '#1f3a1b', accent: '#9fe06a', orlo: 'rgba(159,224,106,.8)', skin: '#e3c396', trim: '#9fe06a' },
-      sciamano:  { body: '#3f6b60', bodyDk: '#1c332e', accent: '#7fd6c0', orlo: 'rgba(127,214,192,.8)', skin: '#d6b48f', trim: '#7fd6c0' },
+      oracolo:  { body: '#3f6b60', bodyDk: '#1c332e', accent: '#7fd6c0', orlo: 'rgba(127,214,192,.8)', skin: '#d6b48f', trim: '#7fd6c0' },
       patron:    { cloth: '#a08a68', clothDk: '#6b5940', body: '#a08a68', bodyDk: '#6b5940', pelo: '#63513a', skin: '#e6c79c', wood: '#7a5a34', trim: '#e8d9b0' },
     },
     _vendorTool(ctx, kind, r) {
@@ -1689,7 +1689,7 @@
         ctx.strokeStyle = '#4e7a3c'; ctx.lineWidth = 1.6;
         for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(-4, 2); ctx.quadraticCurveTo(2, -2 + k, 7, -6 + k * 3); ctx.stroke(); }
         ctx.fillStyle = '#9fe06a'; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.ellipse(7, -6 + k * 3, 2.2, 3.2, k * 0.4, 0, 7); ctx.fill(); }
-      } else if (kind === 'sciamano') {             // v2.6 — il bastone con le ossa e le piume appese
+      } else if (kind === 'oracolo') {             // v2.6 — il bastone con le ossa e le piume appese
         ctx.strokeStyle = '#6b5436'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(3, -12); ctx.stroke();
         ctx.fillStyle = '#e8e0cc'; ctx.strokeStyle = '#3a3428'; ctx.lineWidth = 1.1;
         ctx.beginPath(); ctx.arc(4, -14, 4.2, 0, 7); ctx.fill(); ctx.stroke();       // il teschietto in cima

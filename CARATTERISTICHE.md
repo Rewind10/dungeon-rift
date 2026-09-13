@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.8.2`
+**Versione attuale:** `2.9.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -327,7 +327,7 @@ verra' aggiunta domani.
 
 ---
 
-## 📖 LA STORIA *(v2.7)*
+## 📖 LA STORIA *(v2.7 · testo riscritto e l’oracolo in v2.9)*
 
 Fino alla v2.6 la partita cominciava con l'ondata 1: apparivi in una grotta e ti venivano addosso. Il boss
 dell'ondata 20 — AZ'GAROTH — esisteva da sempre e **non lo nominava nessuno**. Quello era il buco.
@@ -365,7 +365,7 @@ I ritratti sono disegnati a codice come tutto il resto — zero asset:
 | **Guerriero** | elmo con la feritoia, e due occhi che brillano dentro |
 | **Mago** | cappello a punta con la stella, barba |
 | **Ladro** | cappuccio calato, fazzoletto sul viso |
-| **Sciamano** | corna, cappuccio, barba bianca |
+| **Oracolo** | corna, cappuccio, barba bianca |
 | *la voce del risveglio* | **nessun ritratto** — ed e' la scena, non una mancanza |
 
 Sono di **fronte**, non dall'alto: una testa vista dall'alto dentro un riquadro di dialogo non si legge
@@ -405,23 +405,30 @@ guadagna lui, e dirlo serve a far capire perche' ci sono due monete diverse.
 
 ### 🎭 Il colpo di scena
 
-Il discorso dello sciamano e' un **dialogo**: l'avatar non capisce e continua a chiedere, ed e' giusto —
+Il discorso dell’oracolo e' un **dialogo**: l'avatar non capisce e continua a chiedere, ed e' giusto —
 e' lui il posseduto, non l'informato.
 
-> **SCIAMANO** — Tu sei stato scelto. Da una divinita'.
-> **TU** — Non capisco.
-> **SCIAMANO** — Sei lo strumento di un Dio.
+> **TU** — Diverso come?
+> **ORACOLO** — Sei stato scelto.
+> **TU** — Da chi?
+> **ORACOLO** — *(pausa)* Da qualcuno che non vive in questo mondo.
+> **ORACOLO** — *(pausa)* Un Dio.
+> …
+> **TU** — Ma chi e'?
+> **ORACOLO** — *(pausa)* Non lo hai ancora capito?
+> **ORACOLO** — *(pausa)* E' quello che tiene gli occhi su di te in questo momento.
 > **TU** — …
-> **SCIAMANO** — Al di la' del nostro mondo, seduto davanti a uno schermo, c'e' qualcuno che ti muove.
-> **SCIAMANO** — Si'. Dico a te che ci stai guardando.
 
 **Non e' «l'eroe sei tu»: e' «sei lo strumento di un Dio, e il Dio e' chi tiene il mouse».** La
 differenza non e' di gusto: la seconda versione **spiega una regola**. Le carte potere che arrivano a
-fine ondata sono i doni della divinita' — *«Lasciati guidare. Ti donera' i poteri che ti servono.»*
+fine ondata sono i doni della divinita' — *«Avrai bisogno dei suoi poteri per arrivare in fondo.»*
 
-Una rivelazione che spiega una regola vale dieci rivelazioni che strizzano l'occhio, e il test pretende
-che quelle tre cose — **divinita'**, **schermo**, **poteri** — restino nel testo anche se un domani lo si
-riscrive da capo.
+*(v2.9 — la rivelazione non pronuncia piu' la parola **schermo**. Indicare lo schermo e' spiegare la
+battuta: *«tiene gli occhi su di te in questo momento»* dice la stessa cosa e lascia al giocatore l'ultimo
+passo. Il test adesso pretende **divinita'**, **ti sta guardando**, **poteri**.)*
+
+Una rivelazione che spiega una regola vale dieci rivelazioni che strizzano l'occhio, e quelle tre cose
+devono restare nel testo anche se un domani lo si riscrive da capo.
 
 ### 🕯️ (v2.7) La scena del risveglio
 
@@ -442,35 +449,66 @@ ancora che il gioco gli abbia detto dov'e'.
 Frasi corte, nessuna spiegazione. Chi parla sa piu' di quello che dice e non ha nessuna intenzione di dirlo
 tutto. Niente *«o valoroso eroe»*, niente profezie recitate, niente aggettivi in fila.
 
-> *«Sei sveglio.»* · *«Non chiedere dove. Non te lo direi.»* · *«Sei sceso da solo. Nessuno scende da
-> solo.»* · *«In mezzo alla sala c'e' una faglia. La vedi.»* · *«Attraversala.»* · *«Quelli prima di te
-> sono rimasti a guardarla.»*
+> **TU** — *«Cos'e' quella luce?»* · *«No…»* · *«C'e' un portale. Nella mia stanza.»*
+> **VOCE** — *«Non temere.»*
+> **TU** — *«Chi sei?»*
+> **VOCE** — *«Qualcuno che ti sta aspettando.»*
+> **TU** — *«E perche' dovrei attraversarlo?»*
+> **VOCE** — *«Perche' e' gia' troppo tardi per tornare indietro.»*
+> **TU** — *«Non hai ancora risposto.»*
+> **VOCE** — *«Attraversa. Le risposte sono dall'altra parte.»*
 
-**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' lo sciamano, e il
-giocatore lo scopre solo quando gli parla — *«Ti ho parlato mentre dormivi. Non lo ricordi: e' normale.»*
+**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' l’oracolo, e il
+giocatore lo scopre solo quando gli parla: al villaggio la stessa voce dice *«Eccoti. Ora vieni da me»*, e
+la casa con le ossa appese e' la sua.
 
-Se uno gira invece di entrare, la voce insiste **una volta sola** e poi tace: insistere la trasformerebbe
-in un tutorial.
+Se uno gira invece di entrare, la voce insiste **una volta sola** e poi tace — *«Non e' la finestra.»* —
+perche' insistere la trasformerebbe in un tutorial.
 
-### 🧿 Lo sciamano
+### 🧿 L’oracolo
 
-Si arriva al villaggio all'**ondata 0** con la missione in evidenza. Avvicinandosi allo sciamano parte il
-discorso — ed e' li' che il gioco dice di cosa parla: sotto c'e' una cosa che non dorme, si chiama
-**AZ'GAROTH**, **venti volte** la roccia si aprira' e ogni volta si scende piu' in fondo. *«Noi ci abbiamo
-provato. Siamo ancora qui, quindi hai capito com'e' andata.»*
+*(In v2.6 era la **cartomante**, in v2.7-2.8 lo **sciamano**. Dalla v2.9 e' l'**oracolo**: stesso antro,
+stessa casa con le ossa appese, stesso ritratto — corna, cappuccio, barba. Il nome sta in `mapgen` come
+`kind: 'oracolo'` e da li' lo leggono renderer, HUD e server: uno solo, non cinque.)*
+
+Si arriva al villaggio all'**ondata 0** con la missione in evidenza — **«Trova l'oracolo · Villaggio, la
+casa con le ossa appese»**. Avvicinandosi parte il discorso, ed e' li' che il gioco dice di cosa parla:
+sotto il villaggio dorme una cosa che non avrebbe mai dovuto svegliarsi, si chiama **AZ'GAROTH**, e le
+**venti fratture** sono la strada per arrivarci. *«Poi scopriremo se il Dio ha scelto bene.»*
 
 Dopo, la missione diventa **"Scendi fino ad AZ'GAROTH"**, e dal villaggio d'apertura la faglia porta
 **all'ondata 1** invece che al menu di fine ondata: all'ondata 0 non c'e' nessun menu a cui tornare.
 
-All'inizio dell'ondata 20 una riga sola chiude il cerchio: *«E' sotto di te. Non ti sta aspettando: non sa
-che esisti.»*
+**Tornandogli davanti** non ripete il discorso: dalla v2.9 dice un **congedo** di cinque righe
+(`oracoloAncora`) che si chiude con l'unico dubbio di tutto il racconto — *«Il resto… lo decide lui. O
+forse lo decidi tu.»* Fino alla v2.8 era **una riga sola** sparata al singolo giocatore: non si vedeva in
+due, non si saltava, non bloccava i piedi. Adesso e' una scena come le altre.
+
+All'inizio dell'ondata 20 una riga sola chiude il cerchio: *«E' sotto di te. Non sa che esisti, e per ora
+e' l'unico vantaggio che abbiamo.»*
 
 ### 💬 I sottotitoli si scrivono
 
-Una striscia in basso, le lettere **una alla volta** (34 ms l'una). **Non e' un vezzo**: una riga che
+Nel riquadro al centro, le lettere **una alla volta** (34 ms l'una). **Non e' un vezzo**: una riga che
 appare tutta insieme si legge in un colpo d'occhio e si preme subito, e la voce non ha il tempo di essere
 una voce. Le lettere che arrivano danno il ritmo del parlato, ed e' quello che fa la differenza fra un
 dialogo e una didascalia.
+
+### ⏸️ E ogni tanto tacciono *(v2.9)*
+
+Il copione dell'oracolo ha delle **didascalie**: *«Pausa.»*, *«l'oracolo osserva il giocatore per qualche
+istante»*, *«sorride appena»*. Stamparle a schermo sarebbe l'errore piu' facile del mondo — una didascalia
+**dice** al giocatore cosa dovrebbe provare, e dirglielo e' il modo piu' sicuro perche' non lo provi.
+
+Quindi non si scrivono: si **sentono**. Una riga marcata `p: 1` in `storia.js` resta **900 ms in silenzio**
+col volto gia' a schermo e il cursore che lampeggia, e solo dopo comincia a scriversi. Otto righe del
+discorso sono marcate cosi', e sono esattamente le tre rivelazioni e i loro appoggi: *«Da qualcuno che non
+vive in questo mondo.»* · *«Un Dio.»* · *«E ti sta guidando.»* · *«Non lo hai ancora capito?»*
+
+Tecnicamente la pausa e' un **`t0` spostato in avanti**, non un `setTimeout`: cosi' e' lo stesso orologio
+che governa le lettere, e lo Spazio che ha fretta la salta senza dover anche spegnere un timer. L'unica
+trappola e' che durante la pausa il contatore delle lettere e' **negativo**, e `slice(0, -3)` taglierebbe
+dalla *fine*: si tiene a zero, se no la riga comparirebbe a pezzi al contrario.
 
 **Il gioco non si ferma mai**: si continua a vedere il personaggio e la mappa. E' una voce fuori campo, non
 un filmato.
@@ -532,7 +570,7 @@ riconoscibile a colpo d'occhio dall'alto: **due file di case che si guardano**, 
 | Dove | Cosa |
 |---|---|
 | **Fila di ponente** | casa del portale · **osteria** · **fucina** · due case |
-| **Fila di levante** | **erboristeria** · **antro dello sciamano** · **gilda** · due case |
+| **Fila di levante** | **erboristeria** · **antro dell’oracolo** · **gilda** · due case |
 | **Nello spiazzo** | una casa a settentrione, due a mezzogiorno |
 | **Al centro** | la **piazza**: 16x18 di terra battuta, il falo' nel mezzo, il pozzo di fianco |
 | **Attorno alla piazza** | **dodici torce** e **dodici bancarelle**, alternate, girate verso il centro |

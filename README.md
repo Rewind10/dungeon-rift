@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.8.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.9.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,28 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.9.0 (i dialoghi riscritti, e lo sciamano diventa l'ORACOLO)
+- **🧿 Lo sciamano e' l'ORACOLO.** Stesso antro, stessa casa con le ossa appese, stesso ritratto — cambia
+  il nome, e cambia dappertutto: `mapgen`, server, renderer, HUD, missione in evidenza (*«Trova
+  l'oracolo»*), documenti e test. **79 occorrenze in 9 file**, perche' un nome che sopravvive in meta'
+  progetto e' un nome che un domani torna fuori nel posto sbagliato.
+- **✍️ Tutti i dialoghi riscritti da capo.** Il risveglio, l'arrivo al villaggio e il discorso
+  dell'oracolo: testo nuovo, piu' secco, piu' botta-e-risposta. Il risveglio adesso comincia dal
+  personaggio che **non capisce cosa sta guardando** (*«Cos'e' quella luce?» · «No…» · «C'e' un portale.
+  Nella mia stanza.»*), e la voce risponde senza rispondere (*«Perche' e' gia' troppo tardi per tornare
+  indietro.»*).
+- **⏸️ LE PAUSE.** Il copione ha delle didascalie — *«Pausa.»*, *«l'oracolo sorride appena»*. Stamparle a
+  schermo direbbe al giocatore cosa dovrebbe provare; **non si scrivono, si sentono**: una riga marcata
+  aspetta 900 ms in silenzio col volto gia' a schermo, e solo dopo comincia a scriversi. Otto righe del
+  discorso sono marcate cosi', e sono le tre rivelazioni e i loro appoggi — *«Un Dio.»*, *«E ti sta
+  guidando.»*, *«Non lo hai ancora capito?»*
+- **🎭 Il colpo di scena non dice piu' "schermo".** Adesso e' *«E' quello che tiene gli occhi su di te in
+  questo momento.»* Indicare lo schermo era spiegare la battuta: cosi' l'ultimo passo lo fa il giocatore.
+- **🗣️ Tornando dall'oracolo c'e' un CONGEDO, non una riga.** Prima era una riga sola sparata al singolo
+  giocatore: non si vedeva in due, non si saltava, non bloccava i piedi. Adesso e' una scena di cinque
+  righe come le altre, e si chiude con l'unico dubbio di tutto il racconto: *«Il resto… lo decide lui. O
+  forse lo decidi tu.»*
 
 ## 🆕 Novita v2.8.2 (la schermata d'avvio invoglia invece di spiegare)
 - **✨ Un RICHIAMO sotto il titolo, al posto delle regole.** La colonna di destra aveva *«Come funziona una
@@ -61,11 +83,11 @@ Test: `npm test`
   frase non stava in piedi.
 - **🖼️ Il dialogo e' un RIQUADRO AL CENTRO, col ritratto di chi parla.** Prima era una striscia in basso
   col testo su uno sfondo sfumato: elegante e illeggibile. Adesso e' un riquadro opaco, bordato d'oro,
-  con dentro la faccia di chi sta parlando — **guerriero, mago, ladro e sciamano**, disegnati a codice
+  con dentro la faccia di chi sta parlando — **guerriero, mago, ladro e oracolo**, disegnati a codice
   come tutto il resto. La voce senza volto del risveglio non ha ritratto, ed e' la scena.
 - **🔒 Mentre parla qualcuno non ci si muove.** Il blocco sta sul **server**: il client puo' anche
   smettere di mandare i comandi, ma chi decide dove sta un giocatore e' il server.
-- **🎭 IL COLPO DI SCENA.** Lo sciamano non dice *«l'eroe sei tu»*: dice che dietro l'avatar c'e' una
+- **🎭 IL COLPO DI SCENA.** L’oracolo non dice *«l'eroe sei tu»*: dice che dietro l'avatar c'e' una
   **divinita' seduta davanti a uno schermo**, e che e' lei a donare i poteri. Cosi' la rivelazione non
   strizza l'occhio — **spiega una regola**: le carte che arrivano a fine ondata sono i suoi doni.
   Ed e' un dialogo vero, con l'avatar che non capisce e continua a chiedere.
@@ -78,9 +100,9 @@ Test: `npm test`
   *«Sei sveglio. Non chiedere dove. Non te lo direi. Sei sceso da solo. Nessuno scende da solo.»*
   Non c'e' niente da raccogliere e niente da uccidere: c'e' una faglia. E' voluto — il primo minuto di
   gioco non deve avere alternative, se no diventa una caccia al tesoro al buio.
-- **🏘️ Si arriva al VILLAGGIO con la missione in evidenza** (*«Cerca lo sciamano. Sa cosa sei.»*): un
+- **🏘️ Si arriva al VILLAGGIO con la missione in evidenza** (*«Cerca l’oracolo. Sa cosa sei.»*): un
   riquadro piccolo in alto a sinistra che dice cosa stai facendo, senza doverlo chiedere a nessuno.
-- **🧿 LO SCIAMANO dice di cosa parla il gioco.** Avvicinandosi parte il discorso: sotto c'e' una cosa che
+- **🧿 L’ORACOLO dice di cosa parla il gioco.** Avvicinandosi parte il discorso: sotto c'e' una cosa che
   non dorme, si chiama **AZ'GAROTH**, venti volte la roccia si aprira', e *«noi ci abbiamo provato: siamo
   ancora qui, quindi hai capito com'e' andata»*. E una riga che riapre la scena della cella: **«Ti ho
   parlato mentre dormivi.»** — la voce del risveglio era lui, e non si presenta mai apposta.
@@ -114,7 +136,7 @@ Test: `npm test`
 - **💡 Piazza chiara, resto buio** (`VILL_PIAZZA`, `VILL_PZ_ORLO`): dentro il rettangolo della piazza il
   buio vale meno, e fra i due si passa sfumando. Non e' una luce appoggiata sopra — quella sarebbe di nuovo
   una patina — e' buio che si toglie.
-- **🧿 La Cartomante e' diventata lo SCIAMANO** (per ora non fa nulla). Le sue carte erano spente da tempo,
+- **🧿 La Cartomante e' diventata lo ORACOLO** (per ora non fa nulla). Le sue carte erano spente da tempo,
   quindi non si perde niente: cambia chi abita l'antro, e non e' piu' un mago viola col ventaglio di carte
   ma verderame, ossa e ciotola dei fumi.
 - **🩶 E la patina, davvero.** Non era uno strato di troppo: era uno **sfasamento**. Il buio si bucava con un

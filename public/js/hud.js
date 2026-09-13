@@ -863,6 +863,11 @@
     // successiva. E' la convenzione di tutti i giochi che hanno dialoghi, e chi la conosce la usa
     // senza pensarci.
     VEL: 34,                                    // millisecondi per lettera
+    // v2.9 — LA PAUSA. Una riga marcata `p:1` nel copione aspetta questo prima di cominciare a scriversi:
+    // sono le "Pause" e le didascalie (`l'oracolo osserva`, `sorride appena`). Scritte a schermo direbbero
+    // al giocatore cosa dovrebbe provare; un silenzio di mezzo secondo prima di «Un Dio.» glielo fa
+    // provare. Il riquadro col volto resta li' muto: e' il volto che fa la pausa, non il testo.
+    PAUSA: 900,                                 // millisecondi di silenzio prima di una riga marcata
     _dial: null,
 
     // ===== v2.8 — I RITRATTI ======================================================================
@@ -883,11 +888,11 @@
       const g = cv.getContext('2d'), W = cv.width, H = cv.height;
       g.clearRect(0, 0, W, H);
       const P = {
-        sciamano:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
+        oracolo:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
         guerriero: { veste: '#7f8895', vesteDk: '#2f3742', pelle: '#e0b183', acc: '#e0a52c' },
         mago:      { veste: '#3d3c8c', vesteDk: '#14133a', pelle: '#e3c396', acc: '#00f0c8' },
         ladro:     { veste: '#3c5140', vesteDk: '#1d2a22', pelle: '#e6c79c', acc: '#9ef0b0' },
-      }[chi === 'tu' ? (eroeId || 'guerriero') : 'sciamano'] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
+      }[chi === 'tu' ? (eroeId || 'guerriero') : 'oracolo'] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
 
       // fondo: un alone del colore di chi parla, cosi' il riquadro non e' un buco nero
       const bg = g.createRadialGradient(W / 2, H * 0.62, 4, W / 2, H * 0.62, W * 0.72);
@@ -907,7 +912,7 @@
         g.beginPath(); g.ellipse(cx - R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7);
         g.ellipse(cx + R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7); g.fill(); };
 
-      if (chi === 'sciamano') {
+      if (chi === 'oracolo') {
         // CORNA e cappuccio: si riconosce dalla sagoma, prima ancora che dal colore
         g.strokeStyle = '#e8e0cc'; g.lineWidth = 5; g.lineCap = 'round';
         for (const lato of [-1, 1]) { g.beginPath(); g.moveTo(cx + lato * R * 0.7, cy - R * 0.5);
@@ -958,14 +963,16 @@
         g.closePath(); g.fill(); g.stroke();
       }
     },
-    // riga: l'indice che comanda il server · testo: quello che c'e' da scrivere
-    mostraDialogo(chi, testo, conSuggerimento, eroeId, nome) {
+    // riga: l'indice che comanda il server · testo: quello che c'e' da scrivere · pausa: il silenzio prima
+    mostraDialogo(chi, testo, conSuggerimento, eroeId, nome, pausa) {
       const box = $('dial'); if (!box) return;
       $('dialChi').textContent = nome || '';
       this.ritratto(chi, eroeId);
       const h = $('dialHint'); if (h) h.style.display = conSuggerimento === false ? 'none' : '';
       box.classList.remove('hidden');
-      this._dial = { testo: testo || '', i: 0, t0: performance.now(), finita: false };
+      // la pausa e' un t0 SPOSTATO IN AVANTI, non un setTimeout: cosi' e' lo stesso orologio che governa
+      // le lettere, e lo Spazio che ha fretta la salta senza dover anche spegnere un timer.
+      this._dial = { testo: testo || '', i: 0, t0: performance.now() + (pausa ? this.PAUSA : 0), finita: false };
       this._dialDisegna();
       if (!this._dialRaf) this._dialRaf = requestAnimationFrame(() => this._dialTick());
     },
@@ -973,9 +980,12 @@
       this._dialRaf = 0;
       const d = this._dial; if (!d) return;
       if (!d.finita) {
+        // durante la pausa `quante` e' negativo: si tiene a zero, altrimenti slice(0, -3) taglierebbe
+        // dalla FINE e la riga comparirebbe a pezzi al contrario.
         const quante = Math.floor((performance.now() - d.t0) / this.VEL);
-        if (quante !== d.i) { d.i = Math.min(quante, d.testo.length); this._dialDisegna(); }
-        if (d.i >= d.testo.length) d.finita = true;
+        const n = Math.max(0, Math.min(quante, d.testo.length));
+        if (n !== d.i) { d.i = n; this._dialDisegna(); }
+        if (quante >= d.testo.length) d.finita = true;
       }
       if (!d.finita) this._dialRaf = requestAnimationFrame(() => this._dialTick());
     },

@@ -954,10 +954,10 @@
         col: '#ffb14a', room: 'fucina' },
       { x: 53.4, y: 7.4,  kind: 'herbalist', name: 'Erborista',  pot: 1, sub: 'pozioni',
         col: '#9fe06a', room: 'erbe' },
-      // v2.6 — LA CARTOMANTE E' DIVENTATA LO SCIAMANO. Le sue carte erano spente da tempo
+      // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO. Le sue carte erano spente da tempo
       // (CARTOMANTE_ATTIVA), quindi non si perde niente: cambia chi abita l'antro. Per ora non fa
       // nulla — niente `crd`, quindi il server non gli attacca nemmeno il richiamo di prossimita'.
-      { x: 53.4, y: 17,   kind: 'sciamano',  name: 'Sciamano',   sub: 'spiriti',
+      { x: 53.4, y: 17,   kind: 'oracolo',  name: 'Oracolo',   sub: 'spiriti',
         col: '#7fd6c0', room: 'antro' },
       { x: 53.4, y: 26,   kind: 'crier',     name: 'Capitano',   bnd: 1, sub: 'taglie e usato',
         col: '#ff9a8a', room: 'retro' },
@@ -1168,9 +1168,9 @@
       P('barrel', r.x0 + 4.6, r.y0 + 0.8, 0.95); P('sack', r.x0 + 4.6, r.y1 - 0.8, 0.9);
     }
 
-    // ===================== L'ANTRO DELLO SCIAMANO =====================
+    // ===================== L'ANTRO DELL’ORACOLO =====================
     // v2.6 — era la stanza della cartomante, col tappeto e il ventaglio di carte. Adesso ci abita lo
-    // sciamano: il fuoco per terra, i cristalli, le ossa appese. Non vende niente e non parla — sta li'.
+    // oracolo: il fuoco per terra, i cristalli, le ossa appese. Non vende niente e non parla — sta li'.
     {
       const r = R('antro'), cy = (r.y0 + r.y1) / 2;
       P('tappeto', r.x1 - 2.4, cy, 1.3, { col: '#2f5a52' });

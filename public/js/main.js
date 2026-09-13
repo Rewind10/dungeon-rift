@@ -114,22 +114,23 @@
     riga(sc.righe[st.r], G.capo !== false);
   }
   // v2.8 — una riga e' `{ chi, t }`. `chi` decide RITRATTO e nome: 'tu' e' l'avatar (quindi la classe di
-  // chi sta leggendo — in tre a schermo ognuno vede il suo), 'sciamano' e' lui, '' e' la voce senza volto
-  // del risveglio. E `{eroe}` dentro il testo diventa il nome della classe: e' quando lo sciamano nomina
+  // chi sta leggendo — in tre a schermo ognuno vede il suo), 'oracolo' e' lui, '' e' la voce senza volto
+  // del risveglio. E `{eroe}` dentro il testo diventa il nome della classe: e' quando l’oracolo nomina
   // "quel guerriero" che la rivelazione smette di essere astratta.
   function riga(r, conTasti) {
     const H = (window.GAME.Heroes && window.GAME.Heroes.HEROES) || {};
     const mio = G.meHero || 'guerriero';
     const nomeEroe = (H[mio] && H[mio].name) ? H[mio].name.charAt(0) + H[mio].name.slice(1).toLowerCase() : 'eroe';
     const testo = String(r.t || '').replace(/\{eroe\}/g, nomeEroe);
-    const nome = r.chi === 'tu' ? nomeEroe : (r.chi === 'sciamano' ? 'Sciamano' : '');
-    HUD.mostraDialogo(r.chi, testo, conTasti, mio, nome);
+    const nome = r.chi === 'tu' ? nomeEroe : (r.chi === 'oracolo' ? 'Oracolo' : '');
+    // v2.9 — `p` e' la PAUSA del copione: la riga aspetta un attimo in silenzio prima di scriversi.
+    HUD.mostraDialogo(r.chi, testo, conTasti, mio, nome, !!r.p);
   }
 
   function onEv(ev) {
     switch (ev.t) {
-      // v2.7 — una riga sola, senza scena attorno: il sollecito della voce nella cella, lo sciamano che
-      // ti manda via, la riga dell'ultima discesa. Non ha un indice sul server perche' non ha un dopo.
+      // v2.7 — una riga sola, senza scena attorno: il sollecito della voce nella stanza e la riga
+      // dell'ultima discesa. Non ha un indice sul server perche' non ha un dopo.
       case 'storia_riga_sola': riga({ chi: ev.chi, t: ev.testo }, false);
         clearTimeout(G._rigaT); G._rigaT = setTimeout(() => { if (!G._st) HUD.nascondiDialogo(); }, 5200); break;
       case 'storia_fine': G._st = null; HUD.nascondiDialogo(); break;

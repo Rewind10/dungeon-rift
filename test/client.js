@@ -995,13 +995,13 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok((C2.VILL_PIAZZA || 1) < (C2.VILL_BUIO || 1), 'nella piazza il buio vale meno che fuori: piazza chiara, resto buio');
   ok((C2.VILL_PZ_ORLO || 0) > 0, 'e il passaggio fra i due sfuma invece di tagliare');
 
-  // --- 6c) v2.6 — LA GUARDIA e LO SCIAMANO. Due figure nuove, e nessuna delle due e' un eroe ricolorato.
+  // --- 6c) v2.6 — LA GUARDIA e L’ORACOLO. Due figure nuove, e nessuna delle due e' un eroe ricolorato.
   ok(R5._PAESANI.indexOf('guardia') >= 0, 'la guardia e un paesano, col suo disegno');
   ok(!!R5._paesaniPal.guardia, 'e la sua tavolozza');
   ok(!/seer:/.test(src2), 'della cartomante non resta traccia nel renderer');
-  ok(/sciamano:/.test(src2), 'al suo posto c e lo sciamano');
-  ok(/_vendorBase: \{[^}]*sciamano: 'mago'/.test(src2), 'lo sciamano ha la sua base');
-  ok(/kind === 'sciamano'/.test(src2), 'e i suoi attrezzi: bastone, ossa, ciotola dei fumi');
+  ok(/oracolo:/.test(src2), 'al suo posto c e l’oracolo');
+  ok(/_vendorBase: \{[^}]*oracolo: 'mago'/.test(src2), 'l’oracolo ha la sua base');
+  ok(/kind === 'oracolo'/.test(src2), 'e i suoi attrezzi: bastone, ossa, ciotola dei fumi');
 
   // --- 6d) v2.6 — I DODICI BANCHI. Ogni mestiere ha il suo disegno: chi arrivava al ramo finale senza
   //     un caso suo vendeva candele, e con dodici banchi me ne sarei accorto tardi.
@@ -1028,9 +1028,9 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   {
     const St = window.GAME.Storia;
     ok(!!St, 'il testo della storia arriva al client');
-    ok(St.prologo.righe.every(q => q.chi !== 'sciamano'), 'nel risveglio lo sciamano non si presenta');
+    ok(St.prologo.righe.every(q => q.chi !== 'oracolo'), 'nel risveglio l’oracolo non si presenta');
     ok(St.prologo.righe.some(q => q.chi === ''), 'la voce che parla non ha volto');
-    ok(St.sciamano.righe.some(q => q.chi === 'tu'), 'e il discorso dello sciamano e un dialogo');
+    ok(St.oracolo.righe.some(q => q.chi === 'tu'), 'e il discorso dell’oracolo e un dialogo');
     // i pezzi dell'interfaccia esistono, e sono quelli che il codice cerca per id
     const src3 = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
     for (const id of ['dial', 'dialChi', 'dialTxt', 'dialHint', 'quest', 'questT', 'questD'])
@@ -1039,10 +1039,14 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
     ok(/mostraDialogo\(/.test(srcH) && /nascondiDialogo\(/.test(srcH), 'l HUD sa aprire e chiudere i sottotitoli');
     ok(/dialogoFretta\(/.test(srcH), 'e il primo Spazio finisce la riga invece di saltarla');
+    // v2.9 — LE PAUSE: le didascalie del copione ("Pausa.", "l’oracolo sorride appena") non si stampano,
+    // si sentono. Una riga marcata `p` aspetta in silenzio col volto a schermo prima di cominciare.
+    ok(/PAUSA:/.test(srcH) && /pausa \? this\.PAUSA : 0/.test(srcH), 'e una riga marcata aspetta prima di scriversi');
+    ok(St.oracolo.righe.some(q => q.p), 'e nel discorso dell’oracolo ci sono le pause');
     ok(/missione\(m\)/.test(srcH), 'e sa mostrare la missione');
     // v2.8 — il riquadro sta al centro, ha il ritratto di chi parla, e mentre parla non ci si muove
     ok(/ritratto\(chi, eroeId\)/.test(srcH), 'l HUD disegna il ritratto di chi parla');
-    for (const k of ['guerriero', 'mago', 'ladro', 'sciamano'])
+    for (const k of ['guerriero', 'mago', 'ladro', 'oracolo'])
       ok(new RegExp(k + ':').test(srcH), 'e ha una tavolozza per ' + k);
     ok(/if \(!chi\) \{ cv\.classList\.add\('vuoto'\); return; \}/.test(srcH),
       'ma la voce senza volto del risveglio non ne ha uno: e la scena, non una mancanza');
@@ -1051,6 +1055,7 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
     ok(/storiaDaSnap\(snap\.st\)/.test(srcM), 'la riga in corso arriva dallo SNAPSHOT, non solo dagli eventi');
     ok(/if \(G\._st === k\) return;/.test(srcM), 'e non si riscrive venti volte al secondo la stessa riga');
+    ok(/mostraDialogo\([^)]*!!r\.p\)/.test(srcM), 'e la pausa la decide il copione, non il codice');
     ok(/Net\.storiaAvanti\(true\)/.test(srcM), 'Esc salta');
     ok(/if \(!HUD\.dialogoFretta\(\) && G\.capo !== false\) Net\.storiaAvanti\(false\)/.test(srcM), 'Spazio prima finisce la riga, poi passa oltre');
     // il CSS: i due pezzi non devono rubare la scena

@@ -5,7 +5,7 @@ const { Room } = require('../server/Room.js');
 // v2.7 — LE PROVE PARTONO DALL'ONDATA 1, NON DAL RISVEGLIO
 // ============================================================================================
 // Dalla v2.7 una partita vera comincia col prologo: ci si sveglia in una cella, si attraversa una
-// faglia, si arriva al villaggio e si parla con lo sciamano. Giusto per il gioco, inutile per queste
+// faglia, si arriva al villaggio e si parla con l’oracolo. Giusto per il gioco, inutile per queste
 // prove: qui si fanno partire una cinquantina di partite per misurare ondate, bilanciamento,
 // collisioni e NaN, e farle passare tutte dal prologo vorrebbe dire provare cinquanta volte il
 // prologo e zero volte quello che si voleva provare.
@@ -988,13 +988,13 @@ function testV157() {
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
   assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende equipaggiamento: il fabbro');
   assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
-  // v2.6 — LA CARTOMANTE E' DIVENTATA LO SCIAMANO, e per ora non fa nulla: niente `crd`, quindi il
+  // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO, e per ora non fa nulla: niente `crd`, quindi il
   // server non gli attacca nemmeno il richiamo di prossimita'. Le sue carte erano gia' spente
   // (CARTOMANTE_ATTIVA), quindi non si e' perso niente: e' cambiato chi abita l'antro.
   assert(m.village.npcs.filter(n => n.crd).length === 0, 'la cartomante non c e piu');
-  assert(m.village.npcs.filter(n => n.kind === 'sciamano').length === 1, 'al suo posto c e lo sciamano');
+  assert(m.village.npcs.filter(n => n.kind === 'oracolo').length === 1, 'al suo posto c e l’oracolo');
   assert(m.village.npcs.every(n => n.kind !== 'seer'), 'e di cartomanti non ne resta traccia');
-  { const sc = m.village.npcs.find(n => n.kind === 'sciamano');
+  { const sc = m.village.npcs.find(n => n.kind === 'oracolo');
     assert(!sc.shop && !sc.pot && !sc.bnd && !sc.crd && !sc.inn, 'e per ora non vende e non fa niente'); }
   assert(m.village.npcs.filter(n => n.inn).length === 1, "e l'Ostessa in v1.74");
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
@@ -2386,7 +2386,7 @@ function testV174() {
   assert(h.hp === r4.effMaxHp(h), 'al focolare si torna al massimo');
   assert(h.hpDebt === 0, 'e i PV pagati cancellano il debito: non si viene rimborsati due volte');
   const hpPagato = h.hp;
-  // v2.6 — la Cartomante non c'e' piu' (e' diventata lo sciamano, che per ora non fa nulla), quindi
+  // v2.6 — la Cartomante non c'e' piu' (e' diventata l’oracolo, che per ora non fa nulla), quindi
   // `r4.seer` e' null: la carta si riaccende da dove si e', e la regola che conta resta la stessa.
   r4.toggleCard('d', 'juggernaut');
   assert(h.hp === hpPagato, 'e riaccendere la carta non regala i PV gia comprati');
@@ -4831,7 +4831,7 @@ function testV200() {
 }
 
 // ============================================================================================
-// TEST 68 — v2.7: LA STORIA (il risveglio, il villaggio, lo sciamano)
+// TEST 68 — v2.7: LA STORIA (il risveglio, il villaggio, l’oracolo)
 // ============================================================================================
 // Questo e' l'unico test che fa partire una partita VERA, col prologo. Tutti gli altri lo saltano
 // (vedi la nota in cima al file), quindi se il giro della storia si rompe casca solo qui: e' per
@@ -4864,7 +4864,7 @@ function testStoria() {
     assert(seen.size > 100, 'e c e spazio per girarci attorno (' + seen.size + ' tessere)');
   }
 
-  // --- 2) IL GIRO INTERO: risveglio -> villaggio -> sciamano -> ondata 1 ---
+  // --- 2) IL GIRO INTERO: risveglio -> villaggio -> oracolo -> ondata 1 ---
   const r = new Room('sto1'); const p = r.addPlayer('a', conn, 'A', 'guerriero');
   avviaConStoria(r);
   assert(r.phase === C.PHASE_PROLOGO, 'la partita comincia col risveglio, non con un ondata');
@@ -4881,38 +4881,46 @@ function testStoria() {
   p.x = r.faglia.x; p.y = r.faglia.y; r.update(1 / C.TICK_RATE);
   assert(r.phase === C.PHASE_MARKET, 'attraversando si arriva al villaggio');
   assert(r.wave === 0, 'che e ancora l ondata zero: non si e combattuto niente');
-  assert(r.missione === 'sciamano', 'e la missione cambia: trova lo sciamano');
-  assert(r.storia && r.storia.scena === 'arrivo', 'con due righe di benvenuto');
+  assert(r.missione === 'oracolo', 'e la missione cambia: trova l’oracolo');
+  assert(r.storia && r.storia.scena === 'arrivo', 'con le righe di benvenuto');
   for (let i = 0; i < Storia.arrivo.righe.length; i++) r.avanzaStoria('a', false);
 
-  // --- 3) LO SCIAMANO: parla avvicinandosi, e una volta sola ---
-  const sh = r.map.village.npcs.find(n => n.kind === 'sciamano');
-  assert(!!sh, 'nel villaggio c e lo sciamano');
+  // --- 3) L’ORACOLO: parla avvicinandosi, e una volta sola ---
+  const sh = r.map.village.npcs.find(n => n.kind === 'oracolo');
+  assert(!!sh, 'nel villaggio c e l’oracolo');
   p.x = sh.x + 40; p.y = sh.y; r.update(1 / C.TICK_RATE);
-  assert(r.storia && r.storia.scena === 'sciamano', 'avvicinandosi parte il discorso');
-  assert(r.storia.n === Storia.sciamano.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
+  assert(r.storia && r.storia.scena === 'oracolo', 'avvicinandosi parte il discorso');
+  assert(r.storia.n === Storia.oracolo.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
   // il discorso nomina il boss e dice quante ondate: e' il suo mestiere
-  const tutto = Storia.sciamano.righe.map(q => q.t).join(' ');
+  const tutto = Storia.oracolo.righe.map(q => q.t).join(' ');
   assert(tutto.indexOf('AZ') >= 0, 'e nomina il boss');
   assert(/[Vv]enti/.test(tutto), 'e dice quante volte si scende');
   // v2.8 — LA RIVELAZIONE. Non e' un dettaglio di colore: e' il motivo per cui la storia esiste, ed e'
   // anche quello che spiega da dove arrivano i poteri di fine ondata. Se qualcuno riscrive il discorso
   // e la perde per strada, il gioco torna a essere venti ondate senza perche'.
   assert(/divinit|Dio/.test(tutto), 'e dice che dietro l avatar c e una divinita');
-  assert(/schermo/.test(tutto), 'e che quella divinita sta davanti a uno schermo');
+  // v2.9 — la rivelazione non dice piu' la parola "schermo": dice che quel Dio sta guardando ADESSO, ed
+  // e' meglio cosi' (indicare lo schermo e' spiegare la battuta). Ma il PUNTO deve restare: se il
+  // discorso perde il "ti sta guardando" torna a essere una profezia qualunque.
+  assert(/guard/.test(tutto), 'e che quella divinita ti sta guardando in questo momento');
   assert(/poteri/.test(tutto), 'e che e lei a donare i poteri: la rivelazione spiega una REGOLA');
   // ed e' un DIALOGO: parlano in due, se no e' una conferenza
-  const diTu = Storia.sciamano.righe.filter(q => q.chi === 'tu').length;
+  const diTu = Storia.oracolo.righe.filter(q => q.chi === 'tu').length;
   assert(diTu >= 4, 'e l avatar risponde (' + diTu + ' battute sue): e un dialogo, non un monologo');
   // il numero di righe si prende PRIMA del giro: all'ultima `storia` diventa null, e una condizione
   // che rilegge r.storia.n a ogni giro esplode sull'ultima iterazione.
   { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
   assert(r.storia === null, 'finito il discorso');
   assert(r.missione === 'discesa', 'e la missione diventa la discesa');
-  // tornandoci non ricomincia da capo
-  p._nearShm = false; p.x = sh.x + 400; r.update(1 / C.TICK_RATE);
+  // tornandoci non ricomincia da capo: v2.9 — dice le sue quattro righe di congedo (`oracoloAncora`), che
+  // e' una scena come le altre e non piu' una riga sola sparata a un giocatore solo.
+  p._nearOra = false; p.x = sh.x + 400; r.update(1 / C.TICK_RATE);
   p.x = sh.x + 40; r.update(1 / C.TICK_RATE);
-  assert(r.storia === null, 'e tornandoci non lo ripete: una storia detta due volte non e una storia');
+  assert(r.storia && r.storia.scena === 'oracoloAncora', 'e tornandoci non lo ripete: dice il congedo');
+  assert(r.storia.n === Storia.oracoloAncora.righe.length && r.storia.n < Storia.oracolo.righe.length,
+    'ed e piu corto del discorso (' + r.storia.n + ' righe contro ' + Storia.oracolo.righe.length + ')');
+  { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
+  assert(r.storia === null && r.missione === 'discesa', 'finito il congedo la missione resta la discesa');
 
   // --- 4) DAL VILLAGGIO D'APERTURA SI SCENDE, non si torna a un menu che non c'e' ---
   p.x = r.faglia.x; p.y = r.faglia.y; r.update(1 / C.TICK_RATE);
@@ -4956,21 +4964,21 @@ function testStoria() {
   assert(r2.storia === null && r2.phase === C.PHASE_PROLOGO, 'saltando, la voce tace ma si resta nella cella');
   assert(r2.missione === 'faglia', 'e la missione resta');
   p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
-  assert(r2.phase === C.PHASE_MARKET && r2.missione === 'sciamano', 'si arriva al villaggio lo stesso');
+  assert(r2.phase === C.PHASE_MARKET && r2.missione === 'oracolo', 'si arriva al villaggio lo stesso');
   r2.avanzaStoria('a', true);
-  const sh2 = r2.map.village.npcs.find(n => n.kind === 'sciamano');
+  const sh2 = r2.map.village.npcs.find(n => n.kind === 'oracolo');
   p2.x = sh2.x + 40; p2.y = sh2.y; r2.update(1 / C.TICK_RATE);
   r2.avanzaStoria('a', true);
   assert(r2.missione === 'discesa', 'e saltando il discorso la missione cambia lo stesso');
   p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
   assert(r2.wave === 1, 'e si scende lo stesso all ondata 1');
-  // v2.8 — e chi esce SENZA nemmeno parlargli non resta con "trova lo sciamano" appeso per venti ondate
+  // v2.8 — e chi esce SENZA nemmeno parlargli non resta con "trova l’oracolo" appeso per venti ondate
   {
     const r6 = new Room('sto6'); const p6 = r6.addPlayer('a', conn, 'A', 'mago');
     avviaConStoria(r6); r6.avanzaStoria('a', true);
     p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
     r6.avanzaStoria('a', true);
-    assert(r6.missione === 'sciamano', 'appena arrivato la missione e trovare lo sciamano');
+    assert(r6.missione === 'oracolo', 'appena arrivato la missione e trovare l’oracolo');
     p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
     assert(r6.wave === 1 && r6.missione === 'discesa', 'ma uscendo senza parlargli diventa comunque la discesa');
   }
@@ -5002,22 +5010,27 @@ function testStoria() {
 
   // --- 9) IL TESTO: non e' codice, ma ha comunque delle regole ---
   // v2.8 — ogni riga dice CHI parla. La voce del risveglio ha `chi: ''` e non e' una dimenticanza: e'
-  // lo sciamano, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
-  for (const sc of ['prologo', 'arrivo', 'sciamano', 'finale']) {
+  // l’oracolo, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
+  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora', 'finale']) {
     assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
     for (const q of Storia[sc].righe) {
       assert(typeof q.t === 'string' && q.t.length > 0, 'ogni riga di ' + sc + ' ha un testo');
-      assert(['tu', 'sciamano', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
+      assert(['tu', 'oracolo', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
     }
   }
   assert(Storia.prologo.righe.some(q => q.chi === ''), 'nel risveglio parla una voce senza volto');
-  assert(!Storia.prologo.righe.some(q => q.chi === 'sciamano'), 'e non si presenta: e lui, ma non si sa ancora');
+  assert(!Storia.prologo.righe.some(q => q.chi === 'oracolo'), 'e non si presenta: e lui, ma non si sa ancora');
   assert(Storia.arrivo.righe.every(q => q.chi === ''), 'e al villaggio e ancora una voce');
-  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.sciamano.righe).map(q => q.t).filter(t => t.length > 130);
+  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.oracolo.righe).map(q => q.t).filter(t => t.length > 130);
   assert(lunghe.length === 0, 'e nessuna riga e un paragrafo: si leggono a schermo, non su carta (' + lunghe.length + ' troppo lunghe)');
   for (const k in Storia.missioni) { const m = Storia.missioni[k];
     assert(m.t && m.t.length <= 34, 'la missione ' + k + ' sta nel riquadro (' + m.t.length + ' caratteri)'); }
-  ok('la storia v2.7 verificata');
+  // v2.9 — LE PAUSE. Sono le didascalie del copione diventate silenzio. Se sparissero il discorso
+  // continuerebbe a funzionare ma le tre rivelazioni arriverebbero tutte con lo stesso passo.
+  const pause = Storia.oracolo.righe.filter(q => q.p).length;
+  assert(pause >= 5, 'il discorso respira: ' + pause + ' righe aspettano prima di scriversi');
+  assert(!Storia.oracolo.righe.some(q => /^\(/.test(q.t)), 'e nessuna didascalia e stampata a schermo');
+  ok('la storia v2.9 verificata');
 }
 
 testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');

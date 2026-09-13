@@ -6,17 +6,21 @@
  *
  * v2.8 — OGNI RIGA HA IL SUO INTERLOCUTORE. Prima la scena aveva UNA voce sola; adesso sono dialoghi, e
  * `chi` sta sulla riga:
- *     'tu'       — l'avatar: ritratto della classe scelta, nome della classe
- *     'sciamano' — lo sciamano
- *     ''         — la voce senza volto del risveglio (e' lui, ma non si sa ancora)
+ *     'tu'      — l'avatar: ritratto della classe scelta, nome della classe
+ *     'oracolo' — l'oracolo
+ *     ''        — la voce senza volto del risveglio (e' lui, ma non si sa ancora)
  * Nel testo, `{eroe}` diventa il nome della classe di chi sta leggendo: in tre a schermo ognuno si sente
  * nominare la sua.
  *
- * IL REGISTRO: secco, frasi corte, nessuna spiegazione di troppo. Chi parla sa piu' di quello che dice.
- * Se una riga si puo' accorciare, si accorcia; se spiega una cosa che il giocatore vede da solo, si toglie.
+ * v2.9 — LE PAUSE. Una riga puo' avere `p: 1`: prima di cominciare a scriversi aspetta un attimo in
+ * silenzio. Sono le "Pause" e le didascalie del copione (`l'oracolo osserva`, `sorride appena`) — non si
+ * scrivono a schermo, si SENTONO. Una didascalia stampata dice al giocatore cosa dovrebbe provare; un
+ * silenzio di mezzo secondo prima di «Un Dio.» glielo fa provare.
  *
- * IL FILO. La voce del risveglio e lo SCIAMANO sono la stessa persona, e il giocatore lo scopre quando
- * gli parla. E' per questo che la voce non si presenta e non ha ritratto: `chi: ''` e' il punto, non una
+ * IL REGISTRO: secco, frasi corte, nessuna spiegazione di troppo. Chi parla sa piu' di quello che dice.
+ *
+ * IL FILO. La voce del risveglio e l'ORACOLO sono la stessa persona, e il giocatore lo scopre quando gli
+ * parla. E' per questo che la voce non si presenta e non ha ritratto: `chi: ''` e' il punto, non una
  * dimenticanza.
  *
  * LA RIVELAZIONE. Non e' "l'eroe sei tu": e' "sei lo strumento di un Dio, e il Dio e' chi tiene il mouse".
@@ -30,10 +34,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // scorciatoie per scrivere il dialogo senza rumore attorno
-  const TU = (t) => ({ chi: 'tu', t });
-  const SC = (t) => ({ chi: 'sciamano', t });
-  const VO = (t) => ({ chi: '', t });
+  // scorciatoie per scrivere il dialogo senza rumore attorno. Il secondo argomento e' la PAUSA: la riga
+  // aspetta un attimo prima di cominciare a scriversi.
+  const TU = (t, p) => ({ chi: 'tu', t, p: p ? 1 : 0 });
+  const OR = (t, p) => ({ chi: 'oracolo', t, p: p ? 1 : 0 });
+  const VO = (t, p) => ({ chi: '', t, p: p ? 1 : 0 });
 
   const S = {
     // il nome del boss dell'ondata 20 e quante volte si scende. La storia li pronuncia, quindi stanno
@@ -42,72 +47,123 @@
     ONDATE: 20,
 
     // ===================== 1. IL RISVEGLIO =====================
-    // Si apre nella TUA stanza, con un portale acceso in mezzo. Non si spiega niente: uno si sveglia, c'e'
-    // un portale dove ieri c'era il pavimento, e una voce gli dice di attraversarlo.
+    // La TUA stanza, e in mezzo un portale che si apre. Non si spiega niente: uno si sveglia, c'e' un
+    // portale dove ieri c'era il pavimento, e una voce gli dice di attraversarlo.
     prologo: {
       righe: [
         TU('Cos’è quella luce?'),
-        TU('Si è aperto un portale. Nella mia stanza.'),
-        TU('Nella. Mia. Stanza.'),
-        VO('Non aver paura. L’ho aperto io.'),
-        TU('E tu chi saresti?'),
-        VO('Uno che ti aspetta dall’altra parte.'),
-        VO('Attraversa. Ti spiego tutto quando arrivi.'),
-        TU('E se non attraverso?'),
-        VO('Attraversi.'),
+        TU('No…'),
+        TU('C’è un portale. Nella mia stanza.'),
+        VO('Non temere.'),
+        TU('Chi sei?'),
+        VO('Qualcuno che ti sta aspettando.'),
+        TU('Dove?'),
+        VO('Dall’altra parte.'),
+        TU('E perché dovrei attraversarlo?'),
+        VO('Perché è già troppo tardi per tornare indietro.'),
+        TU('Non hai ancora risposto.'),
+        VO('Attraversa. Le risposte sono dall’altra parte.'),
       ],
       // se uno gira per la stanza invece di entrare. Una volta sola: insistere la trasformerebbe in un
       // tutorial, e questa non e' una voce che spiega le cose.
-      sollecito: VO('Il portale. Non la finestra.'),
+      sollecito: VO('Non è la finestra.'),
     },
 
     // ===================== 2. L'ARRIVO AL VILLAGGIO =====================
     arrivo: {
       righe: [
-        VO('Sei passato. Bene.'),
-        VO('Ora trovami. Fila di levante, la casa con le ossa appese.'),
+        VO('Eccoti.'),
+        VO('Ora vieni da me.'),
+        VO('Cerca la casa con le ossa appese alla porta.'),
+        VO('È lì che scoprirai perché sei stato chiamato.'),
       ],
     },
 
-    // ===================== 3. LO SCIAMANO =====================
-    // Il discorso vero, ed e' un dialogo: l'avatar non capisce, e il fatto che non capisca e' giusto —
-    // e' lui il posseduto, non l'informato. Le sue righe servono a scandire, non a fare domande retoriche.
-    sciamano: {
+    // ===================== 3. L'ORACOLO =====================
+    // Il discorso vero, ed e' un DIALOGO: l'avatar non capisce, e il fatto che non capisca e' giusto —
+    // e' lui lo strumento, non l'informato. Le sue battute scandiscono, non spiegano.
+    //
+    // La rivelazione arriva in tre gradini e non in uno: «sei stato scelto» / «da un Dio» / «quel Dio ti
+    // sta guardando in questo momento». Ogni gradino ha la sua pausa, perche' e' il silenzio prima della
+    // frase a farla atterrare — non il punto esclamativo dopo.
+    oracolo: {
       righe: [
-        SC('Ti sei fatto aspettare.'),
-        TU('Mi hai aperto un portale in camera.'),
-        SC('E tu l’hai attraversato. Questo dice di te più di quanto credi.'),
-        SC('Sotto questo villaggio dorme una cosa vecchia di mille anni. Si chiama AZ’GAROTH, e si sta svegliando.'),
-        TU('Cosa volete da me?'),
-        SC('Tu sei stato scelto. Da una divinità.'),
+        OR('Finalmente.'),
+        TU('Sei tu che mi hai trascinato qui?'),
+        OR('Io ho aperto il portale.'),
+        TU('Perché?'),
+        OR('Perché avevamo bisogno di te.'),
+        TU('Per cosa?'),
+        // (l'oracolo lo osserva per qualche istante)
+        OR('Sotto questo villaggio dorme qualcosa.', 1),
+        OR('Qualcosa che non avrebbe mai dovuto svegliarsi.'),
+        OR('Si chiama AZ’GAROTH.'),
+        OR('E si sta svegliando.'),
+        TU('E cosa c’entro io?'),
+        OR('Tutto.'),
         TU('Non capisco.'),
-        SC('Sei lo strumento di un Dio.'),
+        OR('Nemmeno gli altri avrebbero capito.'),
+        OR('Ma tu sei diverso.'),
+        TU('Diverso come?'),
+        OR('Sei stato scelto.'),
+        TU('Da chi?'),
+        // (l'oracolo guarda verso di te — cioe' verso lo schermo)
+        OR('Da qualcuno che non vive in questo mondo.', 1),
+        OR('Un Dio.', 1),
+        TU('Un Dio?'),
+        OR('Sì.'),
+        OR('E ora viene la parte che sarà difficile da accettare.'),
+        TU('Cioè?'),
+        OR('Quel Dio ti sta guardando.'),
+        OR('E ti sta guidando.', 1),
+        TU('Come?'),
+        OR('Attraverso di te.'),
+        OR('Ogni passo che farai…'),
+        OR('ogni nemico che ucciderai…'),
+        OR('ogni potere che otterrai…'),
+        OR('sarà perché lui lo vorrà.'),
+        TU('Ma chi è?'),
+        // (sorride appena)
+        OR('Non lo hai ancora capito?', 1),
+        OR('È quello che tiene gli occhi su di te in questo momento.', 1),
         TU('…'),
-        SC('Al di là del nostro mondo, seduto davanti a uno schermo, c’è qualcuno che ti muove.'),
-        SC('Sì. Dico a te che ci stai guardando.'),
-        TU('Continuo a non capire.'),
-        SC('Capirai. Per ora ti basti questo: sei l’eletto, scelto da un Dio per salvarci tutti.'),
-        TU('Cosa devo fare?'),
-        SC('Làsciati guidare. Ti donerà i poteri che ti servono.'),
-        TU('Ma…'),
-        SC('Ora va’. Attraversa la faglia. Venti volte la terra si aprirà, e in fondo ci sarà lui.'),
-        SC('Compi il destino che la divinità ha scelto per te.'),
+        OR('Non cercare di capire.'),
+        OR('Lascia che ti guidi.'),
+        OR('Avrai bisogno dei suoi poteri per arrivare in fondo.'),
+        TU('In fondo a cosa?'),
+        OR('Alla faglia.'),
+        OR('Attraversala.'),
+        OR('Supera ciò che ti aspetta dall’altra parte.'),
+        OR('E quando avrai attraversato tutte le venti fratture…'),
+        OR('troverai AZ’GAROTH.', 1),
+        TU('E poi?'),
+        OR('Poi scopriremo se il Dio ha scelto bene.'),
       ],
-      // se gli si torna davanti dopo. Una riga sola: un vecchio che ha gia' detto tutto.
-      ancora: SC('Ti ho detto tutto. Adesso tocca a te. A te davvero.'),
+    },
+
+    // se gli si torna davanti dopo. Non e' un riassunto: e' un vecchio che ha gia' detto tutto e che
+    // nell'ultima riga si concede l'unico dubbio di tutto il discorso.
+    oracoloAncora: {
+      righe: [
+        OR('Non hai bisogno di altre risposte.'),
+        OR('Hai il cammino davanti a te.'),
+        OR('Il resto…'),
+        OR('lo decide lui.'),
+        OR('O forse lo decidi tu.', 1),
+      ],
     },
 
     // ===================== 4. L'ULTIMA DISCESA =====================
     // All'inizio dell'ondata 20. Non e' un discorso: e' una riga sola.
     finale: {
-      righe: [SC('È sotto di te. Non sa che esisti, e per ora è l’unico vantaggio che abbiamo.')],
+      righe: [OR('È sotto di te. Non sa che esisti, e per ora è l’unico vantaggio che abbiamo.')],
     },
 
     // ===================== IL MENU DI FINE ONDATA =====================
     // v2.8.1 — Dopo il colpo di scena, la schermata fra un'ondata e l'altra diceva una cosa FALSA:
     // "PUNTI — dove metti quello che hai imparato". Lui non impara niente. Quello che compare li' dentro
     // — forza, costituzione, abilita' — sono DONI di chi tiene il mouse, ed e' esattamente la regola che
-    // lo sciamano ha promesso: «Lasciati guidare. Ti donera' i poteri che ti servono».
+    // l'oracolo ha promesso: «ogni potere che otterrai sara' perche' lui lo vorra'».
     //
     // Queste righe si leggono VENTI VOLTE, quindi sono corte e non fanno battute: una battuta letta venti
     // volte diventa un fastidio. La spiegazione per esteso compare una volta sola, a fine ondata 1, e poi
@@ -135,9 +191,9 @@
     // toglie niente: taglie, prigionieri e tutto il resto continuano a funzionare come sempre. Per questo
     // il riquadro si chiama "missione principale" e non "missione": non e' l'unica cosa da fare.
     missioni: {
-      faglia:   { t: 'Attraversa il portale', d: 'In mezzo alla stanza' },
-      sciamano: { t: 'Trova lo sciamano',     d: 'Villaggio, fila di levante' },
-      discesa:  { t: 'Scendi fino ad AZ’GAROTH', d: 'Venti ondate' },
+      faglia:  { t: 'Attraversa il portale', d: 'In mezzo alla stanza' },
+      oracolo: { t: 'Trova l’oracolo',     d: 'Villaggio, la casa con le ossa appese' },
+      discesa: { t: 'Scendi fino ad AZ’GAROTH', d: 'Venti ondate' },
     },
   };
 
