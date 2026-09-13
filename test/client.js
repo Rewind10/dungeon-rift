@@ -860,6 +860,74 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   for (const lv of [1, 5, 10, 20]) ok(!MG2.generate(31, lv).lit, 'l ondata ' + lv + ' no: li c e la torcia');
   ok(/if \(_lit \? null : this\._fovSagome/.test(src2) || /_lit \? null : this\._fovSagome/.test(src2),
     'e il renderer calcola il campo visivo SOLO quando la mappa non e illuminata');
+
+  // --- 5) v2.5 — LA PATINA VERA ERA LA NEBBIA. In v2.4 avevo tolto la velatura e il villaggio era ancora
+  //     appannato: `_drawFog` stende QUATTORDICI macchie grigio-azzurre sull'inquadratura a ogni
+  //     fotogramma, e quelle nessuno le aveva toccate. Lezione: quando si toglie una cosa, si controlla
+  //     anche quello che NON si e' toccato. Qui il controllo e' che la nebbia sia dietro un `if`.
+  ok(/if \(!this\.map\.lit\) this\._drawFog\(/.test(src2),
+    'la nebbia non entra nel villaggio: e LEI la patina che restava dopo la v2.4');
+  {
+    const iF = src2.indexOf('_drawFog(ctx');
+    const chiama = src2.match(/this\._drawFog\(/g) || [];
+    ok(chiama.length === 1, 'e si chiama da un posto solo (' + chiama.length + '), se no la guardia serve a poco');
+    ok(iF > 0, 'la nebbia esiste ancora: nelle grotte ci va');
+  }
+
+  // --- 5b) v2.5 — I PAESANI NON SONO EROI RICOLORATI. Prima usavano tutti la sagoma del ladro e sembravano
+  //     sette gemelli. Adesso hanno un disegno loro. Due tentativi sbagliati prima di arrivarci:
+  //     un ovale con un pallino di fianco (sassi con la faccia), poi un cerchio con due moncherini dietro
+  //     (Topolino). Quello che fa la differenza dall'alto e' la PROPORZIONE: corpo schiacciato davanti-
+  //     dietro e largo di traverso (le spalle), testa che SPORGE, braccia ai lati con le mani in punta.
+  const R5 = window.Renderer;
+  ok(Array.isArray(R5._PAESANI) && R5._PAESANI.length >= 7, 'ci sono almeno sette tipi di paesano (' + (R5._PAESANI || []).length + ')');
+  for (const tp of R5._PAESANI) ok(!!R5._paesaniPal[tp], 'il tipo ' + tp + ' ha una sua tavolozza');
+  {
+    // ogni tipo deve avere un COLORE DI VESTE diverso: se due sono uguali, da lontano sono lo stesso paesano
+    const vesti = R5._PAESANI.map(t => R5._paesaniPal[t].veste);
+    ok(new Set(vesti).size === vesti.length, 'e nessuno veste come un altro (' + new Set(vesti).size + '/' + vesti.length + ' colori distinti)');
+    // la proporzione delle spalle: larghe di traverso, strette davanti-dietro. E' l'unica cosa che
+    // separa una persona vista dall'alto da un sasso, e sta scritta nei due raggi dell'ellisse del busto.
+    const mB = /g\.ellipse\(-rr \* 0\.08, 0, rr \* ([\d.]+), rr \* ([\d.]+)/.exec(src2);
+    ok(!!mB, 'il busto e disegnato con un ellisse');
+    if (mB) ok(+mB[2] > +mB[1] * 1.5, 'e le spalle sono larghe di traverso (' + mB[2] + ') molto piu che profonde (' + mB[1] + ')');
+    // la testa sporge: il suo centro sta oltre il raggio del busto, se no e' una faccia dentro al corpo
+    const mT = /const hx = rr \* ([\d.]+), hr = rr \* ([\d.]+)/.exec(src2);
+    ok(!!mT, 'la testa ha una posizione dichiarata');
+    if (mT && mB) ok(+mT[1] > +mB[1], 'e sporge davanti alle spalle (hx ' + mT[1] + ' > profondita busto ' + mB[1] + ')');
+    ok(/g\.fillStyle = P\.pelle;\s*\n\s*g\.beginPath\(\); g\.arc\(rr \* 0\.44, 0, rr \* 0\.13/.test(src2),
+      'e in punta alle braccia c e la mano: sono le mani che fanno leggere le braccia');
+  }
+  ok(/this\._ePaesano\(n\.kind\)\) this\._paesano\(/.test(src2), 'e chi e un paesano si disegna col disegno del paesano, non con quello dell eroe');
+  for (const k of ['guerriero', 'ladro', 'mago', 'arciere']) ok(!R5._ePaesano(k), 'l eroe ' + k + ' resta col suo pattern (non toccato)');
+
+  // --- 5c) v2.5 — LE BOTTEGHE DI CONTORNO. Un villaggio con cinque negozi usabili e cinque case non e' un
+  //     villaggio: e' un menu. Le bancarelle servono a riempire, non a essere cliccate — quindi hanno un
+  //     corpo solido (ci si gira attorno) ma NON sono mercanti: niente `kind` da negozio, niente dialogo.
+  {
+    const m5 = MG2.generateMarket(1);
+    const banchi = (m5.props || []).filter(p => p.type === 'bancarella');
+    ok(banchi.length >= 6, 'ci sono almeno sei bancarelle di contorno (' + banchi.length + ')');
+    const mest = new Set(banchi.map(b => b.mest));
+    ok(mest.size === banchi.length, 'e ognuna fa un mestiere diverso (' + [...mest].join(', ') + ')');
+    // la prova che sono DI CONTORNO: non compaiono fra i mercanti, quindi non c'e' niente da cliccare
+    const negozi = new Set((m5.village.npcs || []).map(n => n.kind));
+    for (const b of banchi) ok(!negozi.has(b.mest), 'il banco ' + b.mest + ' non e un mercante: non si puo usare');
+    const cart = (m5.props || []).filter(p => p.type === 'signpost' && p.txt);
+    ok(cart.length >= banchi.length, 'e ognuna ha la sua insegna (' + cart.length + ' insegne)');
+    // ma ingombra: per ogni banco ci deve essere un rettangolo solido sopra, se no ci si passa dentro
+    const senza = banchi.filter(b => !(m5.solids || []).some(s => s.t === 'r' && Math.abs(s.x - b.x) < 2 && Math.abs(s.y - b.y) < 2));
+    ok(senza.length === 0, 'e ognuna ingombra: ci si gira attorno (' + senza.length + ' banchi attraversabili)');
+  }
+
+  // --- 5d) v2.5 — IL MIMIC E' UNA RARITA'. Al 30% per cassa capitava tre volte per ondata e smetteva di
+  //     essere una sorpresa: diventava una tassa. Il conto giusto si fa per ONDATA, non per cassa.
+  ok((C2.MIMIC_PROB || 1) <= 0.10, 'un mimic e raro (' + ((C2.MIMIC_PROB || 0) * 100).toFixed(0) + '% a cassa)');
+  {
+    const casse = 4, p = C2.MIMIC_PROB;                 // la probabilita' che in un'ondata ce ne sia almeno uno
+    const perOndata = 1 - Math.pow(1 - p, casse);
+    ok(perOndata < 0.35, 'cioe meno di un ondata su tre (' + (perOndata * 100).toFixed(0) + '%), non tre a ondata');
+  }
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

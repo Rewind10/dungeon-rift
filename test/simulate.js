@@ -2423,6 +2423,10 @@ function testV175() {
   for (const p of m.props) {
     const tx = (p.x / T) | 0, ty = (p.y / T) | 0;
     if (['torch', 'hanging_lantern', 'glowspot'].indexOf(p.type) >= 0) continue;   // v2.0.1 — luce, non mobili
+    // v2.5 — le BANCARELLE stanno in strada per mestiere: un banco del pane dentro una stanza chiusa non
+    // e' un banco del pane. Che non tappino il passaggio lo prova la misura delle porte piu' sotto, che
+    // tiene conto dei corpi solidi; qui si contano i mobili che in strada NON dovrebbero starci.
+    if (p.type === 'bancarella' || (p.type === 'signpost' && p.txt && p.txt !== 'TAGLIE')) continue;
     if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
     if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
   }
@@ -2452,7 +2456,8 @@ function testV1752() {
   // --- cosa e solido e cosa no ---
   const SOLIDI = ['tavolo', 'bancone', 'incudine', 'alambicco', 'crystal_cluster', 'barrel', 'sack', 'brazier',
                   'candelabra', 'signpost', 'mortaio', 'bonfire', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
-                  'pozzo', 'focolare', 'letto'];   // v2.0 — i tre mobili del villaggio
+                  'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
+                  'bancarella'];                  // v2.5 — e il banco delle botteghe di contorno
   const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot'];
   for (const t of SOLIDI) assert(m.props.some(p => p.type === t), 'nel villaggio c e almeno un "' + t + '"');
   for (const t of PASSANTI) assert(m.props.some(p => p.type === t), 'e almeno un "' + t + '"');

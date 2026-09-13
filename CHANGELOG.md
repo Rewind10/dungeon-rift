@@ -2,6 +2,61 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.5.0] — 2026-09-13 · "La patina vera era la nebbia · bancarelle · sette paesani · mimic raro"
+
+#### 🩶 La patina non era la velatura: era la nebbia
+In v2.4 avevo tolto il velo e dichiarato chiuso il problema. Il villaggio restava **appannato lo stesso**, e
+il motivo stava altrove: `_drawFog` stende **quattordici macchie grigio-azzurre** (`rgba(150,160,185)`) su
+tutta l'inquadratura a **ogni fotogramma**. Nelle grotte ci vogliono, sopra un paese illuminato a fuoco sono
+esattamente la pellicola che si vedeva.
+
+```js
+if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
+```
+
+**La lezione vale piu' della riga: quando si toglie una cosa, si controlla anche quello che NON si e'
+toccato.** Avevo guardato solo il pezzo che stavo cambiando e consegnato meta' del difetto. Il test pretende
+la guardia **e** che `_drawFog` si chiami da un posto solo — con due chiamate la guardia servirebbe a poco.
+
+#### 🧰 Sei bancarelle di contorno
+Cinque negozi usabili e sette case non fanno un villaggio: fanno un menu. Sulle vie ci sono ora **PANE,
+CARNE, PESCE, VASI, TESSUTI, CANDELE** — tendone a righe, banco, la merce del mestiere, due casse ai piedi e
+l'insegna. **Non sono negozi**: non compaiono fra gli `npcs`, non hanno dialogo, non si aprono. Ma
+**ingombrano** (`INGOMBRI.bancarella` 35×15, ruota col verso del banco): ci si gira attorno. Raggiungibilita'
+del villaggio verificata col flood fill a mezza tessera — **99,9%**, invariata.
+
+#### 🧍 Sette tipi di paesano, disegnati da zero
+Prima erano tutti **la sagoma del ladro ricolorata**: una fila di gemelli in tinte diverse. Adesso:
+**paesano** (cintura e sacco), **paesana** (fazzoletto e cesto), **vecchio** (barba e bastone, statura 0,90),
+**bimbo** (palla, statura 0,66), **bottegaio** (grembiule), **monaco** (cappuccio), **minatore** (elmetto con
+lampada e piccone). **Un segno solo per tipo**: a quella dimensione due si sovrappongono e non se ne legge
+piu' nessuno.
+
+**Due tentativi buttati prima di arrivarci.** Un ovale con un pallino di fianco leggeva *sassi con la
+faccia*; un cerchio con due moncherini dietro leggeva *Topolino*. Dall'alto una persona la fa la
+**proporzione**: corpo schiacciato davanti-dietro e largo di traverso (`rx 0.46`, `ry 0.84` — le spalle),
+testa che **sporge** (`hx 0.50` > `rx 0.46`), braccia **ai lati e sopra** il corpo (dietro tornano orecchie)
+e piu' chiare della veste, con la **mano** in punta: due macchie di pelle, e sono loro a far leggere le
+braccia. Passo `sin(t*3.1)` in controtempo, respiro `sin(t*1.6)` al 2%.
+
+**I quattro eroi non sono stati toccati.** Il test verifica che `_ePaesano` dica di no a guerriero, ladro,
+mago e arciere, e che le sette vesti abbiano sette colori distinti.
+
+#### 🪤 Il mimic torna a essere una sorpresa
+`MIMIC_PROB` **0,30 → 0,06**. Il numero che conta e' quello **per ondata**, non per cassa: con quattro casse
+si passa da **76% a 22%** di trovarne almeno uno — da tre a ondata a circa **uno ogni cinque ondate**. Al 76%
+non era una rarita', era una **tassa** sull'aprire le casse, e si smetteva di aprirle.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2108 passati, 0 falliti**.
+- `test/client.js` — nuovi blocchi per la nebbia guardata, i sette paesani (tavolozze distinte, proporzione
+  delle spalle, testa sporgente, mani, eroi non toccati), le bancarelle (sei banchi, sei mestieri, un corpo
+  solido ciascuno, nessuna fra i mercanti) e il mimic (quota per cassa **e** conto per ondata).
+- Controllato anche **quello che non si e' toccato**: mappa di combattimento all'ondata 5, campo visivo a
+  torcia e nebbia delle grotte invariati.
+
+---
+
 ### [2.4.0] — 2026-09-13 · "Via la patina: il villaggio è buio, e la luce la fanno le sorgenti"
 
 #### 🩶 Cos'era la patina

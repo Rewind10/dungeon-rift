@@ -84,6 +84,7 @@ class Room {
     this.pending = 0; this.spawnTimer = 0; this.shopTimer = 0; this.flow = null; this.flowTimer = 0;
     this.bossAlive = false; this.dt = 1 / C.TICK_RATE; this.mode = Waves.MODES.assault;
     this.newMap(1234 + (id.charCodeAt ? id.charCodeAt(0) : 0), 1);
+    this._vaiAlVillaggio = 1;
   }
   get alivePlayers() { const a = []; for (const p of this.players.values()) if (p.connected && !p.dead) a.push(p); return a; }
   // v1.82 — IL MERCENARIO E' UN GIOCATORE PER IL MOTORE (corpo, collisioni, bersaglio dei mostri, morte)
@@ -124,7 +125,7 @@ class Room {
     if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
     else this.spawnMerchant();
   }
-  spawnCrates() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; this.crates.push({ eid: NEXT++, x: c.x, y: c.y, r: 16, mimic: Math.random() < 0.30, opened: false }); } }
+  spawnCrates() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; this.crates.push({ eid: NEXT++, x: c.x, y: c.y, r: 16, mimic: Math.random() < (C.MIMIC_PROB == null ? 0.06 : C.MIMIC_PROB), opened: false }); } }
   // v1.66 — le armi non si raccolgono piu' dalla mappa: saranno disponibili SOLO dal negozio, e l'acquisto
   // e' a sua volta sospeso finche' l'arsenale non viene ripensato attorno alle nuove scuole (melee/magic/
   // ranged). La funzione resta come stub perche' `weaponDrops` e il suo canale di rete restino validi.
@@ -192,6 +193,7 @@ class Room {
     this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
     if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
     this.newMap((Math.random() * 1e9) | 0, da); this.nextWave();
+    if (process.env.DR_VILLAGGIO) { this.wave = 3; this.enterMarket(); }
   }
   // Il personaggio come sarebbe arrivato a quell'ondata: esperienza (quindi livello, punti e scelte in
   // coda), monete e l'equipaggiamento che uno si sarebbe comprato. Le scelte in sospeso si prendono da
@@ -525,8 +527,7 @@ class Room {
     }
   }
   enterMarket() {
-    // v2.0 — il timer anti-AFK da 120 s non c'e' piu': si esce solo dal portale (vedi update()).
-    this.phase = C.PHASE_MARKET;
+    this.phase = C.PHASE_MARKET; this.marketTimer = 120;  // anti-AFK: come il negozio, scatta solo in multiplayer
     this.monsters.length = 0; this.bullets.length = 0; this.pending = 0; this.waveList = [];
     this.newMap((Math.random() * 1e9) | 0, this.wave, true);
     // v2.0 — IL PORTALE AL CENTRO. Nel villaggio l'uscita non e' piu' un quadrato verde in fondo alla

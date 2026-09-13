@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.4.0',
+    VERSION: '2.5.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -29,6 +29,10 @@
     // nascosta altrove (addosso a un elite, o accanto alle casse) e liberarli paga. Non e' obbligatorio:
     // e' una deviazione che si sceglie, e il prezzo e' il tempo che passi a cercare invece che a uccidere.
     // v1.84.1 — quante casse contengono monete invece di un potenziamento a tempo, e quanto danno.
+    // v2.5 — LA CASSA-MIMICA E' RARA. Era il 30%: con tre-cinque casse a ondata voleva dire incontrarne una
+    // quasi ogni volta, e una trappola che scatta sempre non e' una trappola, e' una regola. Al 6% ne
+    // capita una ogni quattro-cinque ondate: abbastanza di rado da fartene dimenticare, che e' il punto.
+    MIMIC_PROB: 0.06,
     CASSA_MONETE_PROB: 0.5, CASSA_MONETE: 22, CASSA_MONETE_ONDATA: 3,
     PRIGIONE_PROB: 0.35,        // quante mappe hanno un recinto
     PRIGIONE_MONETE: 100,       // per testa

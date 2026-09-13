@@ -954,6 +954,67 @@
           g.beginPath(); g.moveTo(-4, -10); g.lineTo(-4, 10); g.stroke();
           g.fillStyle = '#e8e0cc'; g.strokeStyle = '#8b8067'; g.lineWidth = 1.4;              // il cuscino
           this._rr(g, -25, -8, 16, 16, 3); g.fill(); g.stroke(); break; }
+        case 'bancarella': { // v2.5 — la bottega di contorno: banco, tendone a righe, merce, cassette
+          g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
+          const cl = p.col || '#d9a55c', me = p.mest || 'pane';
+          g.fillStyle = 'rgba(0,0,0,.48)'; this._rr(g, -34, -14, 70, 34, 3); g.fill();
+          // il TENDONE, che e' quello che si vede da lontano: due righe chiare e due scure
+          g.fillStyle = '#b8503f'; g.strokeStyle = '#3a1410'; g.lineWidth = 2;
+          this._rr(g, -36, -22, 72, 15, 3); g.fill(); g.stroke();
+          g.fillStyle = '#e8ddc8';
+          for (let i = 0; i < 4; i++) { g.fillRect(-34 + i * 18, -21, 9, 13); }
+          g.fillStyle = 'rgba(0,0,0,.22)'; this._rr(g, -36, -11, 72, 5, 2); g.fill();
+          // il BANCO
+          const bgz = g.createLinearGradient(0, -8, 0, 12);
+          bgz.addColorStop(0, '#8a6238'); bgz.addColorStop(1, '#3e2a15');
+          g.fillStyle = bgz; g.strokeStyle = '#241708'; g.lineWidth = 2.1;
+          this._rr(g, -34, -8, 68, 20, 3); g.fill(); g.stroke();
+          g.fillStyle = 'rgba(255,255,255,.12)'; this._rr(g, -32, -7, 64, 3.5, 2); g.fill();
+          // LA MERCE, e qui cambia il mestiere. Non si tratta di realismo: serve che a colpo d'occhio
+          // due bancarelle vicine non sembrino la stessa bancarella.
+          g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.2;
+          if (me === 'pane') {                       // pagnotte: ovali con il taglio in mezzo
+            for (const [mx, my] of [[-20, 1], [-6, 2], [8, 1], [21, 2]]) {
+              g.fillStyle = cl; g.beginPath(); g.ellipse(mx, my, 7, 4.6, 0.2, 0, 7); g.fill(); g.stroke();
+              g.strokeStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.moveTo(mx - 4, my - 1); g.lineTo(mx + 4, my + 1); g.stroke();
+              g.strokeStyle = 'rgba(0,0,0,.45)';
+            }
+          } else if (me === 'carne') {               // tagli appesi al tendone, e il ceppo sul banco
+            for (const mx of [-22, -8, 6, 20]) {
+              g.strokeStyle = '#6b5a3c'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(mx, -19); g.lineTo(mx, -12); g.stroke();
+              g.fillStyle = cl; g.strokeStyle = '#3a1414'; g.lineWidth = 1.2;
+              g.beginPath(); g.ellipse(mx, -8, 5, 7, 0, 0, 7); g.fill(); g.stroke();
+            }
+            g.fillStyle = '#6b4a28'; g.beginPath(); g.arc(14, 3, 7, 0, 7); g.fill(); g.stroke();
+          } else if (me === 'pesce') {               // pesci in fila, tutti nello stesso verso
+            for (const [mx, my] of [[-20, 0], [-6, 3], [8, 0], [21, 3]]) {
+              g.fillStyle = cl; g.beginPath(); g.ellipse(mx, my, 8, 3.6, -0.15, 0, 7); g.fill(); g.stroke();
+              g.beginPath(); g.moveTo(mx + 7, my); g.lineTo(mx + 12, my - 3); g.lineTo(mx + 12, my + 3); g.closePath(); g.fill(); g.stroke();
+              g.fillStyle = '#1a1a22'; g.beginPath(); g.arc(mx - 5, my - 0.6, 1.1, 0, 7); g.fill();
+            }
+          } else if (me === 'vasi') {                // orci di tre misure
+            for (const [mx, my, rr2] of [[-21, 1, 7], [-5, 2, 5], [9, 1, 8], [23, 2, 5.5]]) {
+              g.fillStyle = cl; g.beginPath(); g.ellipse(mx, my, rr2 * 0.8, rr2, 0, 0, 7); g.fill(); g.stroke();
+              g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(mx, my - rr2 * 0.72, rr2 * 0.42, rr2 * 0.2, 0, 0, 7); g.fill();
+            }
+          } else if (me === 'tessuti') {             // pezze arrotolate, a colori diversi
+            const COL = [cl, '#b06b8a', '#6b9bb0', '#c8a24a'];
+            for (let i = 0; i < 4; i++) {
+              g.fillStyle = COL[i]; this._rr(g, -30 + i * 16, -5, 13, 14, 3); g.fill(); g.stroke();
+              g.fillStyle = 'rgba(255,255,255,.16)'; this._rr(g, -30 + i * 16, -5, 13, 3, 2); g.fill();
+            }
+          } else {                                   // candele: file di steli con la fiammella spenta
+            for (let i = 0; i < 7; i++) {
+              const mx = -27 + i * 9;
+              g.fillStyle = cl; this._rr(g, mx, -6, 4.4, 15, 1.6); g.fill(); g.stroke();
+              g.fillStyle = '#5a4a2e'; g.fillRect(mx + 1.5, -8.5, 1.4, 3);
+            }
+          }
+          // due cassette ai piedi del banco: dicono che la merce arriva e riparte
+          g.fillStyle = '#5a4326'; g.strokeStyle = '#241708'; g.lineWidth = 1.5;
+          this._rr(g, -33, 12, 14, 9, 2); g.fill(); g.stroke();
+          this._rr(g, 19, 12, 14, 9, 2); g.fill(); g.stroke();
+          break; }
         case 'bancone': {  // bancone: piano lungo, bordo chiaro e la fascia scura del davanti
           g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
           g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, -30, -8, 60, 22, 3); g.fill();
@@ -1406,7 +1467,11 @@
       this._drawChains(ctx);
       this._drawParticles(ctx, true); this._drawSwings(ctx); this._drawFlashes(ctx); this._drawPare(ctx); this._drawFloaters(ctx); this._drawLevelUps(ctx, world);
       this._drawDust(ctx, camX, camY, dt); // v1.16 — pulviscolo ambientale (world-space)
-      this._drawFog(ctx, camX, camY, dt); // v1.21 — nebbia volumetrica a strati
+      // v2.5 — LA NEBBIA NON VA NEL VILLAGGIO, ed e' LEI la patina. Sono quattordici macchie grigio-azzurre
+      // (rgba(150,160,185)) stese sull'inquadratura a ogni fotogramma: in una grotta sono nebbia e ci stanno,
+      // in un paese illuminato a fuoco sono una pellicola sporca appoggiata sopra il disegno. Nella v2.4
+      // avevo tolto la velatura e la patina restava: era questa, e non l'avevo guardata.
+      if (!this.map.lit) this._drawFog(ctx, camX, camY, dt); // v1.21 — nebbia volumetrica a strati
       ctx.restore(); this._drawLighting(ctx, world, camX, camY);
       this._drawDarkness(world, camX, camY); // v1.16 — cono torcia + mappa scura (tasto L)
       if (world.bt) { ctx.fillStyle = 'rgba(0,240,200,0.06)'; ctx.fillRect(0, 0, this.w, this.h); ctx.strokeStyle = 'rgba(0,240,200,0.15)'; ctx.lineWidth = 8; ctx.strokeRect(4, 4, this.w - 8, this.h - 8); }
@@ -1862,6 +1927,130 @@
       if (out.fermo) out.face += Math.sin(t * 0.7 + (g.fase || 0) * 9) * 0.8;
       return out;
     },
+    // ===================== v2.5 — I PAESANI =====================
+    // Fino alla v2.4 ogni abitante del villaggio era il LADRO ricolorato: stessa sagoma, stessa posa,
+    // stesso cappuccio, solo tinte diverse. In una strada con dieci persone si vedeva subito — dieci
+    // gemelli travestiti. I mercanti possono permetterselo (sono cinque, distanti, e ognuno ha il suo
+    // banco e il suo alone); i passanti no.
+    //
+    // Questi hanno una sagoma LORO, che non ha niente a che vedere con quella degli eroi: non e' un
+    // eroe ricolorato, e' disegnato da zero — corpo tondo, spalle basse, testa grossa, e per ognuno una
+    // cosa sola che lo distingue da lontano (il cesto, il grembiule, il cappuccio, la gobba, la statura).
+    // La regola e' quella di sempre: dal cielo si legge la SILHOUETTE, non i dettagli.
+    _paesaniPal: {
+      paesano:   { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', capelli: '#4a3a24', extra: '#8a7048' },
+      paesana:   { veste: '#7a4a52', vesteDk: '#42262c', pelle: '#eec49a', capelli: '#5a3a28', extra: '#c8a27a' },
+      vecchio:   { veste: '#57565f', vesteDk: '#2e2d34', pelle: '#d9b48f', capelli: '#d8d4cc', extra: '#6b5a3c' },
+      bimbo:     { veste: '#4f6b52', vesteDk: '#2a3a2c', pelle: '#f0c795', capelli: '#7a5a30', extra: '#9fb07a' },
+      bottegaio: { veste: '#8a5f34', vesteDk: '#4a321a', pelle: '#e3b98c', capelli: '#3a2a18', extra: '#d8cbae' },
+      monaco:    { veste: '#4a4258', vesteDk: '#26222f', pelle: '#d6b48f', capelli: '#2a2530', extra: '#9a8fb5' },
+      minatore:  { veste: '#4a4f5a', vesteDk: '#262a31', pelle: '#d8ac80', capelli: '#3a2f22', extra: '#ffd27a' },
+    },
+    _PAESANI: ['paesano', 'paesana', 'vecchio', 'bimbo', 'bottegaio', 'monaco', 'minatore'],
+    _ePaesano(k) { return this._paesaniPal[k] != null; },
+    // disegnato con lo stesso mestiere di tutto il resto: ombra, base scura, sfumatura, contorno nero
+    // sottile, e un filo di luce sul bordo alto. Il contorno e' quello che lo stacca dal pavimento.
+    _paesano(g, tipo, r, t) {
+      const P = this._paesaniPal[tipo] || this._paesaniPal.paesano;
+      const S = tipo === 'bimbo' ? 0.66 : (tipo === 'vecchio' ? 0.90 : 1);
+      const rr = r * S;
+      const resp = 1 + Math.sin(t * 1.6) * 0.02;
+      const pas = Math.sin(t * 3.1) * 0.5;            // il passo: le braccia vanno in controtempo
+      g.save(); g.scale(resp, resp);
+
+      // COME SI LEGGE UNA PERSONA DALL'ALTO. Non da un ovale: dalla LINEA DELLE SPALLE, larga di traverso
+      // rispetto a dove guardi, con la testa che ci sta sopra e due braccia che escono davanti. Al primo
+      // tentativo avevo fatto un ovale con un pallino di fianco e sembravano sassi con la faccia.
+      // Nel sistema locale si guarda verso +x, quindi le spalle sono lunghe lungo y.
+
+      // Il secondo tentativo era un CERCHIO con due moncherini dietro: leggeva Topolino, corpo tondo e
+      // due orecchie. La differenza fra un sasso e una persona vista dall'alto sta tutta in una cosa:
+      // il corpo e' BASSO e LARGO (spalle di traverso), la testa SPORGE DAVANTI, e le braccia le stanno
+      // ai lati — non dietro. Quindi ellisse schiacciata lungo x, larga lungo y, e testa fuori sagoma.
+
+      // 1) LE SPALLE: schiacciate davanti-dietro, larghe di traverso. E' questa proporzione che fa la persona.
+      const bg = g.createLinearGradient(rr * 0.30, 0, -rr * 0.40, 0);
+      bg.addColorStop(0, P.veste); bg.addColorStop(1, P.vesteDk);
+      g.fillStyle = P.vesteDk; g.strokeStyle = '#07080c'; g.lineWidth = 2.2;
+      g.beginPath(); g.ellipse(-rr * 0.08, 0, rr * 0.46, rr * 0.84, 0, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = bg;
+      g.beginPath(); g.ellipse(-rr * 0.06, 0, rr * 0.36, rr * 0.70, 0, 0, 7); g.fill();
+      // la piega della schiena: una riga sola, ed e' quella che dice "c'e' una stoffa addosso"
+      g.strokeStyle = 'rgba(0,0,0,.30)'; g.lineWidth = 1.3;
+      g.beginPath(); g.moveTo(-rr * 0.30, -rr * 0.40); g.lineTo(-rr * 0.26, rr * 0.40); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1.5;
+      g.beginPath(); g.ellipse(-rr * 0.06, 0, rr * 0.30, rr * 0.62, 0, -1.30, 0.60); g.stroke();
+
+      // 2) LE BRACCIA, SOPRA il corpo (dall'alto le vedi, non stanno sotto) e piu' chiare della veste, se no
+      // si fondono col busto e tornano a leggere come due orecchie. In punta la MANO: due macchie di pelle
+      // grosse come niente, ma sono loro a dire "questa cosa ha le braccia".
+      for (const lato of [-1, 1]) {
+        g.save(); g.translate(-rr * 0.04, lato * rr * 0.56); g.rotate(lato * (0.34 + pas * 0.34));
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 1.6;
+        this._rr(g, -rr * 0.10, -rr * 0.16, rr * 0.62, rr * 0.32, rr * 0.15); g.fill(); g.stroke();
+        g.fillStyle = P.pelle;
+        g.beginPath(); g.arc(rr * 0.44, 0, rr * 0.13, 0, 7); g.fill(); g.stroke();
+        g.restore();
+      }
+
+      // 3) LA TESTA: sporge DAVANTI alle spalle, non ci sta dentro. Capelli calotta, faccia spicchio.
+      const hx = rr * 0.50, hr = rr * 0.40;
+      if (tipo !== 'monaco') {
+        g.fillStyle = P.capelli; g.strokeStyle = '#07080c'; g.lineWidth = 1.9;
+        g.beginPath(); g.arc(hx, 0, hr, 0, 7); g.fill(); g.stroke();
+        g.fillStyle = P.pelle;
+        g.beginPath(); g.arc(hx, 0, hr * 0.84, -1.15, 1.15); g.closePath(); g.fill();
+        g.fillStyle = 'rgba(0,0,0,.35)';                        // il naso: tre pixel, ma guarda avanti
+        g.beginPath(); g.ellipse(hx + hr * 0.62, 0, hr * 0.16, hr * 0.12, 0, 0, 7); g.fill();
+      } else {
+        g.fillStyle = P.veste; g.strokeStyle = '#07080c'; g.lineWidth = 2;
+        g.beginPath(); g.arc(hx - hr * 0.08, 0, hr * 1.12, 0, 7); g.fill(); g.stroke();
+        // dentro il cappuccio non c'e' un buco nero tondo (leggeva ciambella): c'e' un'ombra a spicchio
+        // e dentro l'ombra un filo di faccia. E' quel filo che fa capire che sotto c'e' qualcuno.
+        g.fillStyle = '#0b0a10';
+        g.beginPath(); g.arc(hx + hr * 0.14, 0, hr * 0.74, -1.30, 1.30); g.closePath(); g.fill();
+        g.fillStyle = P.pelle;
+        g.beginPath(); g.ellipse(hx + hr * 0.52, 0, hr * 0.22, hr * 0.30, 0, 0, 7); g.fill();
+      }
+
+      // 4) LA COSA CHE LO DISTINGUE. Una sola per tipo: due non si leggono.
+      g.lineCap = 'round';
+      if (tipo === 'paesana') {
+        g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.6;   // il fazzoletto
+        g.beginPath(); g.arc(hx, 0, hr * 1.04, 1.05, -1.05); g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = '#8a6a38'; g.strokeStyle = '#3a2a12'; g.lineWidth = 1.6; // e il cesto al fianco
+        g.beginPath(); g.ellipse(-rr * 0.10, rr * 0.92, rr * 0.28, rr * 0.21, 0.25, 0, 7); g.fill(); g.stroke();
+      } else if (tipo === 'vecchio') {
+        g.fillStyle = P.capelli; g.strokeStyle = '#07080c'; g.lineWidth = 1.4; // la barba lunga in avanti
+        g.beginPath(); g.ellipse(hx + hr * 0.74, 0, hr * 0.30, hr * 0.50, 0, 0, 7); g.fill(); g.stroke();
+        g.strokeStyle = P.extra; g.lineWidth = 2.8;                            // il bastone
+        g.beginPath(); g.moveTo(rr * 0.34, rr * 0.86); g.lineTo(rr * 0.58, -rr * 0.30); g.stroke();
+      } else if (tipo === 'bottegaio') {
+        g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.5;   // il grembiule bianco
+        this._rr(g, -rr * 0.30, -rr * 0.40, rr * 0.52, rr * 0.80, rr * 0.14); g.fill(); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1.1;
+        g.beginPath(); g.moveTo(rr * 0.06, -rr * 0.30); g.lineTo(rr * 0.06, rr * 0.30); g.stroke();
+      } else if (tipo === 'minatore') {
+        g.fillStyle = '#3a3f49'; g.strokeStyle = '#07080c'; g.lineWidth = 1.8; // l'elmetto
+        g.beginPath(); g.arc(hx, 0, hr * 1.02, 0, 7); g.fill(); g.stroke();
+        g.fillStyle = P.extra;                                                 // e la lampada davanti
+        g.beginPath(); g.arc(hx + hr * 0.80, 0, hr * 0.28, 0, 7); g.fill();
+        g.strokeStyle = '#5a4a2e'; g.lineWidth = 2.4;                          // il piccone in spalla
+        g.beginPath(); g.moveTo(-rr * 0.52, -rr * 0.20); g.lineTo(rr * 0.10, -rr * 0.78); g.stroke();
+        g.strokeStyle = '#8d97a5'; g.lineWidth = 2.8;
+        g.beginPath(); g.moveTo(-rr * 0.06, -rr * 0.60); g.lineTo(rr * 0.26, -rr * 0.88); g.stroke();
+      } else if (tipo === 'bimbo') {
+        g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.3;   // una palla in mano
+        g.beginPath(); g.arc(rr * 0.46, rr * 0.66, rr * 0.22, 0, 7); g.fill(); g.stroke();
+      } else if (tipo === 'paesano') {
+        g.strokeStyle = '#3a2a16'; g.lineWidth = 2.6;                          // la cintura
+        g.beginPath(); g.moveTo(-rr * 0.26, -rr * 0.52); g.lineTo(-rr * 0.22, rr * 0.52); g.stroke();
+        g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.5;   // il sacco in spalla
+        g.beginPath(); g.ellipse(-rr * 0.44, -rr * 0.52, rr * 0.30, rr * 0.24, -0.4, 0, 7); g.fill(); g.stroke();
+      }
+      g.lineCap = 'butt';
+      g.restore();
+    },
     _drawVendor(ctx, n, opts) {
       const o = opts || {}, t = this.time, x = n.x, y = n.y;
       const r = C.PLAYER_RADIUS * (C.VIS_SCALE || 1);
@@ -1881,7 +2070,10 @@
       ctx.rotate(faccia);
       if (n.act === 'martella') ctx.rotate(Math.sin(t * 4.4 + x * 0.02) * 0.17);      // il colpo di martello
       if (n.act === 'fuoco') ctx.rotate(Math.sin(t * 0.9 + x * 0.01) * 0.08);         // si scalda, e dondola
-      if (n.seated) this._vendorSeduto(ctx, n.kind, r, t);
+      // v2.5 — i PAESANI hanno una sagoma loro; i cinque mercanti restano gli eroi ricolorati, che li'
+      // funziona: sono pochi, distanti, ognuno col suo banco e il suo alone.
+      if (this._ePaesano(n.kind)) this._paesano(ctx, n.kind, r, t + x * 0.013);
+      else if (n.seated) this._vendorSeduto(ctx, n.kind, r, t);
       else { this._hero(ctx, base, r, t + (x * 0.013), false, 0, { pal, civile: 1 }); this._vendorTool(ctx, n.kind, r); }
       ctx.restore();
 

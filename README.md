@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.4.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.5.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,27 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.5 (la patina vera, le bancarelle, e la gente che non e' piu' tutta uguale)
+- **🩶 La patina non era la velatura: era la NEBBIA.** In v2.4 il velo era sparito e il villaggio restava
+  appannato lo stesso. `_drawFog` stende **quattordici macchie grigio-azzurre** sull'inquadratura a ogni
+  fotogramma — nelle grotte ci vogliono, nel villaggio no, e nessuno le aveva toccate. Adesso la nebbia sta
+  dietro un `if (!this.map.lit)`. **Quando si toglie una cosa si controlla anche quello che non si e'
+  toccato**: e' l'unico modo di non lasciare in giro meta' del difetto.
+- **🧰 Sei bancarelle di contorno** (pane, carne, pesce, vasi, tessuti, candele), con tendone a righe, banco,
+  la merce del mestiere e la sua insegna. **Non sono negozi**: non si aprono, non hanno dialogo, non sono
+  mercanti. Servono a far sembrare abitata la piazza — ma ingombrano, quindi ci si gira attorno.
+- **🧍 Sette tipi di paesano, disegnati da zero** (paesano, paesana, vecchio, bimbo, bottegaio, monaco,
+  minatore): prima erano tutti la sagoma del ladro ricolorata. Ognuno ha veste, statura e **una cosa sola**
+  che lo distingue da lontano — il cesto, la barba e il bastone, il grembiule, l'elmetto col piccone, la
+  palla, il sacco in spalla, il cappuccio. **I quattro eroi restano col loro pattern, intatto.**
+  *Due tentativi buttati prima di arrivarci*: un ovale con un pallino di fianco (sassi con la faccia), poi
+  un cerchio con due moncherini dietro (Topolino). Dall'alto una persona si legge dalla **proporzione**:
+  corpo schiacciato davanti-dietro e largo di traverso (le spalle), testa che **sporge**, braccia ai lati
+  con le **mani** in punta.
+- **🪤 Il mimic torna a essere una sorpresa**: `MIMIC_PROB` da **30% a 6%** per cassa. Il conto giusto si fa
+  per ondata, non per cassa: con quattro casse si passa da **76% a 22%** di trovarne almeno uno — da tre a
+  ondata a circa uno ogni cinque ondate. Al 30% non era una rarita', era una tassa.
 
 ## 🆕 Novita v2.4 (via la patina: il villaggio e' buio, e la luce la fanno le sorgenti)
 - **🩶 Cos'era la patina.** Dalla v2.2 il villaggio aveva sopra una velatura: un rettangolo semitrasparente
@@ -988,7 +1009,8 @@ Distribuiti come **zone tematiche coerenti** legate ai biomi (Cripta/Lava/Forest
 2. **🖤 Muri a contrasto 0.50** + **ombra MARCATA** muro→pavimento (linea di contatto scura): stacco netto.
 3. **🐀 Animaletti** (ratti, ragni, scarafaggi) che sfrecciano sul pavimento evitando i muri.
 4. **🕯️ Decorazioni a CLUSTER** coerenti (cimitero/ossario/deposito/fungaia/gabbia), **max 3-4 per tipo**; solo le
-   **torce** restano numerose. **Casse scenografiche** + **mimic solo dalle casse** (casse-mima al 30%).
+   **torce** restano numerose. **Casse scenografiche** + **mimic solo dalle casse** (casse-mima al 30%, **dalla
+   v2.5 al 6%**).
 
 ## 🆕 Novita v1.21 (muri quasi neri, nebbia volumetrica & rune pulsanti)
 1. **🖤 Muri MOLTO piu scuri** (quasi neri): la roccia dei muri e scurita ~30% del colore del tema, distinta dal

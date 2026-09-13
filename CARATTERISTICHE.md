@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.4.0`
+**Versione attuale:** `2.5.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -484,6 +484,92 @@ vedeva. Ognuno se la porta dietro, ed e anche il motivo per cui le strade si leg
 *Se un domani si aggiunge una rotta: deve stare sulle strade. Li dentro non c'e nessun controllo sui muri —
 non serve, se la rotta e fatta bene, e costerebbe a ogni fotogramma. Il test lo verifica campionando ogni
 12 px.*
+
+### 🩶 La patina vera era la nebbia *(v2.5)*
+
+Con la v2.4 il velo era sparito e il villaggio restava **appannato lo stesso**. Il difetto non stava dove lo
+cercavo: `_drawFog` stende sull'inquadratura **quattordici macchie grigio-azzurre** (`rgba(150,160,185)`) a
+**ogni fotogramma**, e quelle non le aveva toccate nessuno. Nelle grotte ci vogliono — sono l'aria umida del
+sottosuolo — ma sopra un paese illuminato a fuoco sono esattamente quello che si vedeva: una pellicola.
+
+Adesso la nebbia sta dietro una guardia sola:
+
+```js
+if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
+```
+
+**La lezione vale piu' della riga.** Avevo tolto la velatura e dichiarato chiuso il problema senza guardare
+*che altro* dipingeva sopra la stessa mappa. Quando si rimuove una cosa si controlla anche **quello che non
+si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose: che la guardia ci sia, e che
+`_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
+
+### 🧰 Le bancarelle di contorno *(v2.5)*
+
+Cinque negozi usabili e sette case non fanno un villaggio: fanno un menu con delle stanze attorno. Sulle due
+vie ci sono ora **sei bancarelle** che non si possono usare — e' il loro mestiere non servire a niente.
+
+| Banco | Colore | Merce disegnata |
+|---|---|---|
+| **PANE** | `#d9a55c` | pagnotte e ceste |
+| **CARNE** | `#b04a48` | tagli appesi al telaio |
+| **PESCE** | `#8fb6c8` | pesci in fila sul ghiaccio |
+| **VASI** | `#a4703e` | orci e anfore |
+| **TESSUTI** | `#7a6bb0` | pezze arrotolate |
+| **CANDELE** | `#e8d08a` | candele a file |
+
+Ognuna ha tendone a righe, banco, due casse ai piedi e la sua **insegna**. **Non sono mercanti**: non
+compaiono fra gli `npcs`, non hanno `kind` da negozio, non aprono niente. Ma hanno un **corpo solido**
+(`INGOMBRI.bancarella`, 35×15, che ruota col verso del banco): ci si gira attorno invece di passarci dentro.
+Il test verifica tutte e tre le cose — sei banchi, sei mestieri distinti, e per ognuno un rettangolo solido —
+piu' la **raggiungibilita'** del villaggio col flood fill a mezza tessera, che resta al 99,9%.
+
+### 🧍 I sette paesani *(v2.5)*
+
+Fino alla v2.4 ogni abitante era **la sagoma del ladro ricolorata**: da lontano il villaggio era una fila di
+gemelli in tinte diverse. Adesso ci sono **sette tipi**, disegnati da zero, ognuno con veste, statura e **una
+cosa sola** che lo distingue.
+
+| Tipo | Statura | Il segno |
+|---|---|---|
+| **paesano** | piena | cintura e sacco in spalla |
+| **paesana** | piena | fazzoletto in testa, cesto al fianco |
+| **vecchio** | 0,90 | barba lunga in avanti, bastone |
+| **bimbo** | 0,66 | una palla in mano |
+| **bottegaio** | piena | grembiule chiaro |
+| **monaco** | piena | cappuccio, e dentro un filo di faccia |
+| **minatore** | piena | elmetto con lampada, piccone in spalla |
+
+**Una sola per tipo, e non e' pigrizia.** A quella dimensione due segni si sovrappongono e non se ne legge
+piu' nessuno: si riconosce la silhouette, non i dettagli.
+
+**Due tentativi buttati prima di trovarla.** Il primo era un ovale con un pallino di fianco: leggeva *sassi
+con la faccia*. Il secondo un cerchio con due moncherini dietro: leggeva *Topolino*, corpo tondo e due
+orecchie. Dall'alto una persona si legge dalla **proporzione**, non dai pezzi:
+
+- il **corpo e' schiacciato** davanti-dietro e **largo di traverso** — sono le spalle (`rx 0.46`, `ry 0.84`);
+- la **testa sporge** davanti alle spalle (`hx 0.50` > `rx 0.46`), non ci sta dentro;
+- le **braccia stanno ai lati e sopra** il corpo, non dietro, e sono **piu' chiare** della veste, se no si
+  rifondono col busto e tornano a sembrare orecchie;
+- in punta a ogni braccio c'e' la **mano**: due macchie di pelle grandi come niente, e sono loro a far
+  leggere le braccia come braccia.
+
+Il passo (`Math.sin(t * 3.1)`) fa oscillare le braccia in controtempo, il respiro (`Math.sin(t * 1.6)`)
+scala del 2%. **I quattro eroi non sono stati toccati**: il test verifica che `_ePaesano` dica di no a
+guerriero, ladro, mago e arciere, e che i sette colori di veste siano tutti diversi fra loro.
+
+### 🪤 Il mimic e' una rarita' *(v2.5)*
+
+`MIMIC_PROB` scende da **0,30 a 0,06** per cassa. Il numero che conta non e' quello: e' **la probabilita' per
+ondata**, perche' le casse si aprono a gruppi.
+
+| | per cassa | almeno uno su 4 casse |
+|---|---|---|
+| **prima** | 30% | **76%** — tre a ondata |
+| **adesso** | 6% | **22%** — circa uno ogni cinque ondate |
+
+Al 76% il mimic non era una sorpresa: era **una tassa** sull'aprire le casse, e si smetteva di aprirle. Una
+trappola funziona quando e' rara abbastanza da farsi dimenticare. Il test controlla la quota per cassa **e**
+rifa' il conto per ondata, perche' e' li' che al primo colpo il numero sembrava ragionevole e non lo era.
 
 ### 🌀 Il portale, e niente timer
 
@@ -1607,7 +1693,8 @@ pavimento (linea di contatto scura) per uno **stacco** netto. Piccoli **animalet
 sfrecciano sul pavimento evitando i muri. Le **decorazioni** sono ora a **cluster coerenti** (cimitero, ossario,
 deposito, fungaia, gabbia) con **max 3-4 istanze per tipo** — solo le **torce** ai muri restano numerose. Aggiunte
 **casse scenografiche**: circa il **30% delle casse** può rivelarsi un **mimic** (unica fonte di mimic, insieme alla
-modalità Tesoro). Tutto in **Canvas 2D puro, zero dipendenze**.
+modalità Tesoro) — **dalla v2.5 la quota è scesa al 6%**, vedi *Il mimic è una rarità*. Tutto in **Canvas 2D puro,
+zero dipendenze**.
 
 ## 🌫️ Muri scuri, nebbia & rune *(novita v1.21)*
 

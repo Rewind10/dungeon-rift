@@ -981,9 +981,11 @@
     pozzo: { c: 25 }, focolare: { c: 20 }, letto: { r: [31, 16] },
     bancone: { r: [32, 11] }, credenza: { r: [27, 12] }, scaffale: { r: [25, 13] },
     rastrelliera: { r: [23, 8] }, aiuola: { r: [23, 19] }, cratebox: { r: [12, 12] },
+    // v2.5 — la bancarella e' un banco: ci sbatti contro come contro tutti gli altri
+    bancarella: { r: [35, 15] },
   };
   // questi quattro il renderer li gira di 90 gradi quando il prop ha r > 0.5: l'ingombro deve girare con loro
-  const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1, letto: 1 };
+  const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1, letto: 1, bancarella: 1 };
   // il corpo di una persona: piu' stretto della sagoma disegnata, cosi' ci si passa accanto senza incastri
   const CORPO = 14;
 
@@ -1123,10 +1125,40 @@
       if (k % 4 === 2) M('scaffale', cx - spec * 2.2, sopra ? r.y0 + 0.6 : r.y1 - 0.6, 0.8, { r: 0 });
       if (k % 5 === 3) P('tappeto', cx - spec * 1.6, cy + (sopra ? 1.3 : -1.3), 1, { col: '#6b4630' });
       // e la gente attorno al fuoco: uno sempre, un secondo nelle case piu' larghe
-      abitanti.push({ x: cx + spec * 1.4, y: cy + 0.15, kind: 'patron', face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
-      if ((r.x1 - r.x0) >= 6) abitanti.push({ x: tx, y: cy + (k % 2 ? 0.85 : -0.85), kind: 'patron', face: spec > 0 ? Math.PI : 0, act: k % 3 === 0 ? 'martella' : 'rimesta' });
+      // v2.5 — OGNUNO HA LA SUA FACCIA. Prima erano tutti `patron`, cioe' il ladro ricolorato: dieci
+      // gemelli travestiti. Adesso il tipo si sceglie dall'indice della casa — non a caso, cosi' il
+      // villaggio e' sempre lo stesso e ogni porta ha i suoi abitanti.
+      const ALFUOCO = ['vecchio', 'paesana', 'paesano', 'monaco', 'vecchio', 'paesana', 'paesano'];
+      const ALLAVORO = ['bottegaio', 'paesano', 'paesana', 'bimbo', 'minatore', 'bottegaio', 'paesana'];
+      abitanti.push({ x: cx + spec * 1.4, y: cy + 0.15, kind: ALFUOCO[k % ALFUOCO.length], face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
+      if ((r.x1 - r.x0) >= 6) abitanti.push({ x: tx, y: cy + (k % 2 ? 0.85 : -0.85), kind: ALLAVORO[k % ALLAVORO.length], face: spec > 0 ? Math.PI : 0, act: k % 3 === 0 ? 'martella' : 'rimesta' });
     };
     { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
+    // ===================== v2.5 — LE BOTTEGHE DI CONTORNO =====================
+    // Un villaggio con cinque negozi e cinque soli e' un centro commerciale, non un paese. Queste sono
+    // BANCARELLE: fornaio, macellaio, pescivendolo, vasaio, tessitore, candelaio. Non si comprano — non
+    // hanno mercante, non hanno alone, non succede niente ad avvicinarsi — e proprio per questo dicono
+    // che il paese vive anche quando tu non ci sei.
+    //
+    // Sono PROPS, non stanze: si appoggiano al muro lungo le strade che gia' esistono, quindi non
+    // rubano una tessera alla pianta e non c'e' niente da ricollegare. Ognuna ha il suo colore di merce
+    // e il suo cartello, ed e' quello a dire il mestiere da lontano.
+    {
+      const BANCHI = [
+        // [x, y, verso, mestiere, colore della merce, cartello]
+        [7.0,  13.7, 0, 'pane',    '#d9a55c', 'PANE'],
+        [15.0, 13.7, 0, 'carne',   '#b04a48', 'CARNE'],
+        [29.0, 13.7, 0, 'pesce',   '#8fb6c8', 'PESCE'],
+        [44.5, 13.7, 0, 'vasi',    '#a4703e', 'VASI'],
+        [12.5, 28.4, 1, 'tessuti', '#7a6bb0', 'TESSUTI'],
+        [32.5, 28.4, 1, 'candele', '#e8d08a', 'CANDELE'],
+      ];
+      for (const [bx, by, verso, mest, col, txt] of BANCHI) {
+        P('bancarella', bx, by, 1, { col, mest, r: verso });
+        P('signpost', bx + 1.35, by - (verso ? 0.55 : -0.55), 0.82, { txt });
+      }
+    }
+
 
 
     // v2.0.2 — QUI C'ERANO LE TORCE. Nella v2.0.1 ne avevo messe 57 a muro piu' bracieri e lanterne per
@@ -1157,16 +1189,16 @@
         // delle case li ha gia' messi arredaCasa(), uno per focolare. Non parlano e non vendono: si
         // muovono un poco sul posto, ed e' quello che distingue un villaggio da un plastico.
         const extras = [
-          { x: 8, y: 7.6, kind: 'patron', face: 0 },
-          { x: 10.3, y: 7.6, kind: 'patron', face: Math.PI },
-          { x: 12.4, y: 9.8, kind: 'patron', face: 0 },
-          { x: 14.7, y: 9.8, kind: 'patron', face: Math.PI },
-          { x: 13.4, y: 6.3, kind: 'patron', face: 1.9 },
-          { x: 24.6, y: 16.4, kind: 'patron', face: 0.6, act: 'guarda' },
-          { x: 30.6, y: 22.4, kind: 'patron', face: 3.4 },
-          { x: 19.4, y: 28, kind: 'patron', face: 0, act: 'cammina' },
-          { x: 43.6, y: 28, kind: 'patron', face: Math.PI, act: 'cammina' },
-          { x: 35.4, y: 14.2, kind: 'patron', face: 1.4 },
+          { x: 8, y: 7.6, kind: 'paesano', face: 0 },
+          { x: 10.3, y: 7.6, kind: 'minatore', face: Math.PI },
+          { x: 12.4, y: 9.8, kind: 'bottegaio', face: 0 },
+          { x: 14.7, y: 9.8, kind: 'paesana', face: Math.PI },
+          { x: 13.4, y: 6.3, kind: 'vecchio', face: 1.9 },
+          { x: 24.6, y: 16.4, kind: 'monaco', face: 0.6, act: 'guarda' },
+          { x: 30.6, y: 22.4, kind: 'paesana', face: 3.4 },
+          { x: 19.4, y: 28, kind: 'bimbo', face: 0, act: 'cammina' },
+          { x: 43.6, y: 28, kind: 'paesano', face: Math.PI, act: 'cammina' },
+          { x: 35.4, y: 14.2, kind: 'bottegaio', face: 1.4 },
         ].concat(abitanti).map(e => ({ x: e.x * TILE + TILE / 2, y: e.y * TILE + TILE / 2, kind: e.kind, seated: e.seated || 0, face: e.face || 0, act: e.act || '', name: '', sub: '' }));
       // ===================== v2.3 — I GIROVAGHI =====================
       // Gli `extras` di sopra sono gente FERMA: ognuno al suo posto, con un mestiere in corso. Dava vita
@@ -1183,27 +1215,28 @@
       // posizioni, che qui non esistono: esiste una formula. Un corpo fermo sotto una persona che cammina
       // sarebbe peggio di nessun corpo — ci sbatteresti contro il vuoto. Sono scenografia, e ci si passa
       // attraverso; i mercanti e la gente ferma il corpo ce l'hanno, come prima.
-      const R = (pts, vel, fase, act, anello) => ({
+      // v2.5 — ognuno ha la sua faccia: il tipo lo passa chi definisce la rotta, e sono tutti diversi
+      const R = (pts, vel, fase, act, anello, tipo) => ({
         pts: pts.map(p => [p[0] * TILE + TILE / 2, p[1] * TILE + TILE / 2]),
-        vel: vel * TILE, fase, kind: 'patron', act: act || '', anello: anello ? 1 : 0,
+        vel: vel * TILE, fase, kind: tipo, act: act || '', anello: anello ? 1 : 0,
       });
       const girovaghi = [
         // la VIA ALTA, due corsie in versi opposti: e' la strada delle botteghe, la piu' battuta
-        R([[6, 13.6], [50, 13.6]], 1.15, 0.00, 'cammina'),
-        R([[50, 14.4], [6, 14.4]], 0.95, 0.35, 'cammina'),
-        R([[14, 14.4], [38, 14.4]], 1.30, 0.62, 'cammina'),
+        R([[6, 13.6], [50, 13.6]], 1.15, 0.00, 'cammina', 0, 'paesano'),
+        R([[50, 14.4], [6, 14.4]], 0.95, 0.35, 'cammina', 0, 'paesana'),
+        R([[14, 14.4], [38, 14.4]], 1.30, 0.62, 'cammina', 0, 'minatore'),
         // la VIA BASSA, davanti alle case
-        R([[7, 27.6], [49, 27.6]], 1.05, 0.18, 'cammina'),
-        R([[49, 28.4], [7, 28.4]], 1.22, 0.74, 'cammina'),
+        R([[7, 27.6], [49, 27.6]], 1.05, 0.18, 'cammina', 0, 'bottegaio'),
+        R([[49, 28.4], [7, 28.4]], 1.22, 0.74, 'cammina', 0, 'paesana'),
         // la VIA MAESTRA: solo la corsia di ponente. Quella di levante passerebbe dentro il portale,
         // e uno che entra nella faglia e ne esce come se niente fosse rovina il posto.
-        R([[25.6, 14], [25.6, 28]], 1.00, 0.50, 'cammina'),
+        R([[25.6, 14], [25.6, 28]], 1.00, 0.50, 'cammina', 0, 'monaco'),
         // e il giro della PIAZZA, attorno al portale: un anello, non un avanti e indietro
-        R([[23, 16], [31, 16], [31, 23], [23, 23]], 0.85, 0.00, 'cammina', 1),
-        R([[31, 23], [23, 23], [23, 16], [31, 16]], 0.70, 0.30, 'cammina', 1),
+        R([[23, 16], [31, 16], [31, 23], [23, 23]], 0.85, 0.00, 'cammina', 1, 'vecchio'),
+        R([[31, 23], [23, 23], [23, 16], [31, 16]], 0.70, 0.30, 'cammina', 1, 'paesano'),
         // due che vanno e vengono dalle botteghe: il vicolo della fucina e quello della gilda
-        R([[18.5, 19.5], [20.5, 19.5]], 0.55, 0.10, 'cammina'),
-        R([[34.5, 19.5], [36.5, 19.5]], 0.50, 0.66, 'cammina'),
+        R([[18.5, 19.5], [20.5, 19.5]], 0.55, 0.10, 'cammina', 0, 'bimbo'),
+        R([[34.5, 19.5], [36.5, 19.5]], 0.50, 0.66, 'cammina', 0, 'minatore'),
       ];
         const sm = npcs.find(n => n.shop) || npcs[0];
       return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, girovaghi, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
