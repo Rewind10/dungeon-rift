@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.5.0',
+    VERSION: '2.6.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -84,6 +84,12 @@
     // villaggio si e' acceso tutto.
     VILL_LUCE: 1.45,     // raggio x1,45 = area x2,1: una sorgente illumina il doppio di prima
     VILL_EROE: 130,      // e il cerchietto che ti porti dietro, per non essere ciechi fra una luce e l'altra
+    // v2.6 — LA PIAZZA E' CHIARA, IL RESTO NO. Non e' una luce in piu' appoggiata sopra: e' che il buio
+    // di base, dentro il rettangolo della piazza, vale meno. Cosi' la piazza si legge tutta — banchi,
+    // gente, insegne — e appena ne esci torni a cercare i fuochi, che era il punto del villaggio buio.
+    // Il bordo non e' un taglio: sfuma per VILL_PZ_ORLO tessere oltre il rettangolo.
+    VILL_PIAZZA: 0.60,   // quanto resta del buio dentro la piazza (0 = giorno pieno, VILL_BUIO = come fuori)
+    VILL_PZ_ORLO: 1.4,   // e in quante tessere si passa dall'uno all'altro
     GAZE_WEAKEN_MULT: 0.7, GAZE_SLOW_MULT: 0.72, GAZE_SUNDER_MULT: 1.32,
     // v1.81 — RAGNATELA: quanto rallenta chi ci sta dentro, e per quanto il rallentamento resta addosso
     // dopo esserne usciti (breve: la tela e' un posto, non una maledizione che ti porti dietro).

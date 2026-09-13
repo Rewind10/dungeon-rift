@@ -2,6 +2,110 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.6.0] — 2026-09-13 · "Il villaggio rifatto: due file di case, la piazza di terra, il portale nella casa delle guardie"
+
+#### 🏘️ La pianta: due file che si guardano
+La pianta della v2.0 era una sala con delle stanze appese dove capitava: si leggeva come un livello, non
+come un paese. Questa e' costruita sull'unica cosa che rende un villaggio riconoscibile dall'alto: **due
+file di case** e in mezzo lo spazio comune.
+
+```
+ x:  0..2   rocce          3..16  fila di PONENTE      17..19  via di ponente
+    20..39  lo spiazzo (e dentro, la PIAZZA di terra)  40..42  via di levante
+    43..56  fila di LEVANTE                            57..59  rocce
+```
+
+**60x46** (era 56x40). Cinque edifici per fila, tre case nello spiazzo, tredici in tutto: la casa del
+portale, cinque botteghe, sette case. Le due vie lunghe corrono davanti alle porte, la via alta e la via
+bassa le chiudono, lo spiazzo in mezzo e' tutt'uno con loro.
+
+**Ogni stanza dichiara la sua PORTA** (tessera + lato). Prima la porta si indovinava dalla lista dei varchi
+con un confronto di coordinate, e bastava spostare una stanza per far arredare una casa **col letto sulla
+soglia**. Adesso la porta e' un dato della stanza: i varchi si generano da li' e l'arredamento sa da che
+parte si entra senza doverlo dedurre.
+
+#### 🪨 Fuori e' la roccia delle grotte, dentro no
+Il villaggio aveva una tavolozza sua — pietra calda — e si vedeva: una sala beige con dentro delle case,
+mentre tutto il resto del gioco e' roccia fredda. Adesso il tema e' quello della cripta e la cottura e' la
+**stessa delle ondate** (`_bakeCaverna`): massi tondi, ombre proiettate, contrasto vero.
+
+Il `muri` del villaggio dice di che cosa e' fatto ogni muro: **2 = concio** per le pareti delle case,
+**0 = roccia di grotta** per il perimetro e per la massa in cui il paese e' scavato. Il giro esterno non ha
+un solo concio — fuori dal paese c'e' la montagna.
+
+**Dentro le case il pavimento resta quello di prima**: assi, lastre, terra. E' li' che si sta al caldo.
+
+#### 🟫 La piazza e' terra battuta, e ha il bordo sfrangiato
+Il primo battuto era una tinta al 58% con dieci trattini scuri sopra: sotto la luce diventava una lastra di
+grigio uniforme — la stessa cosa che chiamavamo patina, perche' **mancava il nero**. Adesso ha chiazze piu'
+scure, **ghiaia chiara E scura** (solo scura e' fuliggine) e ogni tanto un solco.
+
+E il bordo non e' dritto: era un rettangolo pieno e da lassu' si leggeva come un **tappeto srotolato sulla
+roccia**. Una piazza si consuma dove ci si cammina, quindi il giro si allarga di una tessera e si copre a
+chiazze — piena dentro, sfrangiata sull'orlo, qualche macchia fuori.
+
+Attorno: **dodici torce** (agli angoli e a meta' di ogni lato) e **dodici bancarelle** (pane, carne, pesce,
+frutta, vasi, tessuti, candele, formaggi, spezie, pellami, ferro, vino), ognuna col suo disegno e il tendone
+tinto del colore della merce — con dodici banchi in giro alla piazza un tendone rosso uguale per tutti li
+faceva leggere come dodici copie.
+
+#### 🌀 Il portale nella casa delle guardie
+Stava in mezzo alla piazza, e uno spiazzo con un buco viola al centro non e' una piazza: e' una sala del
+portale con delle case attorno. Adesso e' nella **casa del portale**, la prima della fila di ponente, con
+**due guardie sulla soglia** — un ottavo tipo di paesano, elmo con la cresta, fessura per gli occhi, lancia
+piantata a terra. Dallo spawn sono una quindicina di tessere: tre secondi e mezzo, non un bottone sotto i
+piedi.
+
+#### 💡 Piazza chiara, resto buio
+`VILL_PIAZZA: 0.60` e `VILL_PZ_ORLO: 1.4`. Dentro il rettangolo della piazza il buio di base vale meno, e
+fra i due si passa sfumando per qualche tessera. **Non e' una luce appoggiata sopra** — quella sarebbe di
+nuovo una patina — e' buio che si toglie. Ed e' un ovale, non un rettangolo: un alone quadrato con gli
+spigoli si legge come una finestra.
+
+Il falo' e' sceso da **430 a 340** di raggio (x1,45 = 624 → 493 px). Con la vecchia sala calda era la luce
+della stanza; sul pavimento freddo della grotta era diventato un alone bianco largo mezzo schermo.
+
+#### 🧿 La Cartomante e' diventata lo Sciamano
+Per ora non fa nulla: niente `crd`, quindi il server non gli attacca nemmeno il richiamo di prossimita'. Le
+sue carte erano spente da tempo (`CARTOMANTE_ATTIVA`), quindi non si perde niente — cambia chi abita
+l'antro. Verderame invece di viola, bastone con le ossa invece del ventaglio di carte, ciotola dei fumi sul
+banco invece della sfera.
+
+#### 🩶 E la patina, stavolta davvero
+Non era uno strato di troppo: era uno **SFASAMENTO**. Il buio si bucava con un raggio e il bagliore caldo si
+disegnava con un ALTRO — l'alone dell'eroe usciva a 190x1,45 = **275 px** dentro un buco di **130**. Quei
+145 px di differenza sono luce appoggiata sul buio, cioe' esattamente una patina, e ti seguiva perche'
+l'eroe sei tu.
+
+**Il rimedio non e' limare un numero: e' che i due passaggi leggano LA STESSA LISTA.** Le sorgenti del
+villaggio si dichiarano una volta sola — `[x, y, raggio, colore, alfa, forza]` — si bucano con quel raggio e
+si accendono con lo stesso. Nessun bagliore senza il suo buco, nessun buco piu' piccolo del suo bagliore.
+
+Piu' due colpevoli minori, trovati guardando **quello che non avevo toccato**: la **cottura piatta** del
+villaggio (un motivo ripetuto sotto tutto, senza nero e senza contrasto) e la **fascia viola della faglia**,
+spenta a schermo dalla v2.1 ma ancora **cotta** sui bordi della mappa.
+
+#### 🐛 Corretti per strada
+- Nelle case basse quattro tessere il conto "centro meno 1,8" finiva nella riga di muro: il mobile spuntava
+  dentro la stanza dal lato sbagliato e **tappava il passaggio** — una casa intera irraggiungibile. Adesso
+  chi non ci sta, non ci va, e le case piccole si arredano con meno roba.
+- Fra il braciere e il tavolo della taverna restava una **tasca larga otto pixel**: irraggiungibile,
+  invisibile, e il flood fill la trovava ogni volta. Due candelabri fanno la stessa luce e ingombrano un
+  terzo.
+- Le porte a settentrione e mezzogiorno erano larghe **una tessera sola**: 48 px contro un personaggio largo
+  35 lasciavano sei pixel per parte. Adesso sono due come tutte le altre.
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2155 passati, 0 falliti**. Flood fill a mezza tessera coi corpi solidi: **nessuna
+  zona isolata**, tutte e tredici le stanze raggiungibili, ogni mercante avvicinabile.
+- `test/client.js` — nuovi blocchi per la lista unica delle sorgenti, la cottura del villaggio, i tipi di
+  muro (conci per le case, roccia sul perimetro), il pavimento (terra in piazza, assi nelle case, grotta
+  nello spiazzo), la piazza chiara, la guardia, lo sciamano e i dodici banchi.
+- Controllato anche **quello che non si e' toccato**: mappa di combattimento all'ondata 5, campo visivo a
+  torcia, ombre dei muri e nebbia delle grotte invariati.
+
+---
+
 ### [2.5.0] — 2026-09-13 · "La patina vera era la nebbia · bancarelle · sette paesani · mimic raro"
 
 #### 🩶 La patina non era la velatura: era la nebbia

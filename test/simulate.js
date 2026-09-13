@@ -727,8 +727,21 @@ function testV152() {
   // v2.0 — al centro del villaggio adesso c'e' IL PORTALE, non il falo': il falo' e' uno dei due fuochi
   // della piazza (l'altro e' il pozzo, che fuoco non e'), e sta di lato perche' il centro serve all'uscita.
   const pw = { x: room.map.portale.x * T + T / 2, y: room.map.portale.y * T + T / 2 };
-  assert(MU.dist(pw.x, pw.y, cxw, cyw) < T * 3, 'il portale sta al centro del villaggio');
-  assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, pw.x, pw.y) < T * 6, 'e il falo e nella piazza, di fianco');
+  // v2.6 — IL PORTALE NON STA PIU' AL CENTRO. Stava in mezzo alla piazza, e una piazza con un buco viola
+  // nel mezzo non e' una piazza: e' una sala del portale con delle case attorno. Adesso e' dentro la CASA
+  // DEL PORTALE, la prima della fila di ponente, con due guardie sulla soglia. Quello che il test deve
+  // pretendere non e' piu' "sta al centro" ma "sta DENTRO la sua stanza", che e' la cosa che conta.
+  { const V = MapGen.VILLAGE, st = V.rooms.find(r => r.kind === 'portale');
+    assert(!!st, 'il villaggio ha una casa del portale');
+    assert(room.map.portale.x >= st.x0 && room.map.portale.x <= st.x1 + 1 &&
+           room.map.portale.y >= st.y0 && room.map.portale.y <= st.y1 + 1, 'e la faglia sta dentro quella casa');
+    assert(MU.dist(pw.x, pw.y, cxw, cyw) > T * 8, 'e quindi NON e piu al centro del villaggio');
+    const gd = room.map.village.extras.filter(e => e.kind === 'guardia');
+    assert(gd.length === 2, 'due guardie, non una e non tre (ne ho ' + gd.length + ')');
+    const soglia = { x: st.porta[0] * T + T / 2, y: st.porta[1] * T + T / 2 };
+    for (const q of gd) assert(MU.dist(q.x, q.y, soglia.x, soglia.y) < T * 3.5, 'e stanno sulla soglia, non sparse per il paese');
+  }
+  assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, cxw, cyw) < T * 6, 'il falo invece resta in mezzo alla piazza, che e il centro del paese');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, pw.x, pw.y) < T * 24, 'la fucina si raggiunge dalla piazza');
   // acquisto: serve essere vicini al fabbro
   p.coins = 100000; p.x = room.map.spawn.x; p.y = room.map.spawn.y;
@@ -785,7 +798,12 @@ function testV153() {
   // v2.0 — il villaggio e' 56x40 invece di 34x26: le distanze sono cresciute con lui. Il limite qui non
   // e' un gusto, e' il tempo: 22 tile sono ~5 secondi di cammino, e per una sosta e' il massimo sopportabile.
   assert(dSmith <= 24, 'il fabbro e a una traversata dallo spawn (' + dSmith.toFixed(1) + ' tile)');
-  assert(dExit <= 16, 'il portale EXIT e in vista dallo spawn (' + dExit.toFixed(1) + ' tile)');
+  // v2.6 — il portale non e' piu' sotto i piedi: sta nella casa delle guardie, in fondo alla via di
+  // ponente. Il limite non e' un gusto, e' TEMPO: 20 tessere sono meno di cinque secondi di cammino, e
+  // per una sosta e' quello che si puo' chiedere. Sotto le 16 ci si tornerebbe senza attraversare niente,
+  // e allora tanto valeva lasciarlo in mezzo alla piazza.
+  assert(dExit <= 20, 'il portale e a pochi secondi dallo spawn (' + dExit.toFixed(1) + ' tile)');
+  assert(dExit >= 8, 'ma non ci si atterra sopra (' + dExit.toFixed(1) + ' tile)');
   // v1.57 — si compare dentro la sala e si esce dal varco a sud: il portale e vicino, i banchi attorno
   // la tile EXIT e' stata spostata NELLA GRIGLIA (il client disegna il portale da li)
   // v2.0 — NON C'E' PIU' UNA TESSERA T_EXIT. L'uscita del villaggio e' la FAGLIA, lo stesso portale che
@@ -845,11 +863,33 @@ function testV157() {
   const botteghe = V.rooms.filter(r => r.kind === 'bottega'), case_ = V.rooms.filter(r => r.kind === 'casa');
   assert(botteghe.length === 5, 'cinque botteghe, una per mestiere (' + botteghe.length + ')');
   assert(case_.length >= 6, 'e le case degli abitanti (' + case_.length + ')');
-  assert(V.rooms.every(r => r.kind === 'bottega' || r.kind === 'casa'), 'ogni stanza dice cosa e');
+  // v2.6 — e una terza specie: la CASA DEL PORTALE, che non e' ne' una bottega ne' un'abitazione
+  assert(V.rooms.filter(r => r.kind === 'portale').length === 1, 'e una casa del portale, una sola');
+  assert(V.rooms.every(r => r.kind === 'bottega' || r.kind === 'casa' || r.kind === 'portale'), 'ogni stanza dice cosa e');
+  // v2.6 — DUE FILE CHE SI GUARDANO. E' questa la cosa che fa leggere un paese dall'alto, e se qualcuno
+  // sparpaglia di nuovo le stanze il test deve accorgersene: ogni stanza dei lati sta tutta a ponente o
+  // tutta a levante dello spiazzo, e ce ne sono almeno quattro per parte.
+  { // si contano le stanze per COLONNA: una fila e' un gruppo di edifici che condividono lo stesso x0.
+    // Le tre case dello spiazzo (una a settentrione, due a mezzogiorno) stanno per conto loro e non
+    // devono falsare il conto — per questo si guarda la colonna e non "sta a destra o a sinistra".
+    const perColonna = {};
+    for (const r of V.rooms) (perColonna[r.x0] = perColonna[r.x0] || []).push(r);
+    const file = Object.keys(perColonna).map(k => perColonna[k]).filter(a => a.length >= 4)
+      .sort((a, b) => a[0].x0 - b[0].x0);
+    assert(file.length === 2, 'ci sono DUE file di edifici, non una sala con le stanze sparse (' + file.length + ')');
+    assert(file[0][0].x1 < V.piazza.x0, 'la prima fila sta a ponente della piazza');
+    assert(file[1][0].x0 > V.piazza.x1, 'la seconda a levante');
+    assert(file[0].length >= 4 && file[1].length >= 4, 'e ognuna ha almeno quattro edifici (' + file[0].length + ' e ' + file[1].length + ')');
+  }
 
   // --- si SCAVA: pavimento SOLO dentro piazza, stanze e corridoi; e li' dentro mai roccia ---
   const inRett = (x, y, L) => x >= L[0] && x <= L[2] && y >= L[1] && y <= L[3];
-  const inLink = (x, y) => V.links.some(L => inRett(x, y, L)) || V.strade.some(S => inRett(x, y, S));
+  // v2.6 — LE PORTE NON SONO PIU' UNA LISTA A PARTE. Ogni stanza dichiara la sua (tessera + lato) e i
+  // varchi si generano da li': prima bastava spostare una stanza e dimenticare la riga corrispondente
+  // nell'elenco dei varchi per murarla dentro. Qui si ricostruiscono con la stessa regola del generatore.
+  const VARCHI = V.rooms.map(r => { const [px, py, lato] = r.porta;
+    return lato === 'n' ? [px, py - 1, px + 1, py] : (lato === 's' ? [px, py, px + 1, py + 1] : [px, py, px, py + 1]); });
+  const inLink = (x, y) => VARCHI.some(L => inRett(x, y, L)) || V.strade.some(S => inRett(x, y, S));
   let stray = 0, vuoti = 0, area = 0;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const dovuto = dentro(x, y, V.piazza) || V.rooms.some(r => dentro(x, y, r)) || inLink(x, y);
@@ -862,16 +902,26 @@ function testV157() {
   // --- ogni stanza tocca la piazza: dallo spawn si arriva OVUNQUE, portale compreso ---
   // v2.0 — il portale non e' piu' in fondo a un corridoio: e' nel mezzo della piazza, e si vede da
   // qualunque strada. E' la prima cosa che vedi arrivando e l'ultima che tocchi andando via.
-  assert(isFloor(m.portale.x, m.portale.y), 'il portale poggia sul pavimento della piazza');
-  assert(dentro(m.portale.x, m.portale.y, V.piazza), 'e sta DENTRO la piazza');
-  assert(Math.abs(m.portale.x - (V.piazza.x0 + V.piazza.x1) / 2) <= 0.5 &&
-         Math.abs(m.portale.y - (V.piazza.y0 + V.piazza.y1) / 2) <= 0.5, 'anzi: nel suo centro esatto');
+  // v2.6 — IL PORTALE E' DENTRO LA SUA CASA, non piu' in mezzo alla piazza (una piazza con un buco viola
+  // al centro e' una sala del portale con delle case attorno, non una piazza).
+  const stanzaP = V.rooms.find(r => r.kind === 'portale');
+  assert(isFloor(Math.floor(m.portale.x), Math.floor(m.portale.y)), 'il portale poggia sul pavimento');
+  assert(dentro(Math.floor(m.portale.x), Math.floor(m.portale.y), stanzaP), 'e sta DENTRO la casa del portale');
+  assert(!dentro(Math.floor(m.portale.x), Math.floor(m.portale.y), V.piazza), 'e NON in mezzo alla piazza');
+  assert(Math.abs(m.portale.x - (stanzaP.x0 + stanzaP.x1 + 1) / 2) <= 0.6 &&
+         Math.abs(m.portale.y - (stanzaP.y0 + stanzaP.y1 + 1) / 2) <= 0.6, 'anzi: nel centro di quella stanza');
+  // e le due guardie stanno sulla soglia, una per lato
+  { const gd = m.village.extras.filter(e => e.kind === 'guardia');
+    assert(gd.length === 2, 'due guardie all ingresso (' + gd.length + ')');
+    const sx2 = stanzaP.porta[0] * T + T / 2, sy2 = stanzaP.porta[1] * T + T / 2;
+    assert(gd.every(q => Math.hypot(q.x - sx2, q.y - sy2) < T * 3.5), 'e stanno sulla soglia');
+    assert(Math.sign(gd[0].y - sy2) !== Math.sign(gd[1].y - sy2), 'una per lato della porta, non tutte e due dalla stessa parte'); }
   const seen = new Set(), q = [[(m.spawn.x / T) | 0, (m.spawn.y / T) | 0]];
   while (q.length) { const [x, y] = q.pop(); const k = y * m.w + x;
     if (seen.has(k) || x < 0 || y < 0 || x >= m.w || y >= m.h || !isFloor(x, y)) continue;
     seen.add(k); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
   assert(seen.size === area, 'dallo spawn si raggiunge ogni angolo del villaggio (' + seen.size + '/' + area + ')');
-  assert(seen.has(m.exit.y * m.w + m.exit.x), 'dallo spawn si raggiunge il portale a piedi');
+  assert(seen.has(Math.floor(m.exit.y) * m.w + Math.floor(m.exit.x)), 'dallo spawn si raggiunge il portale a piedi');
   for (const r of V.rooms) {
     const cx = (r.x0 + r.x1) >> 1, cy = (r.y0 + r.y1) >> 1;
     assert(seen.has(cy * m.w + cx), 'la stanza ' + r.id + ' e collegata alla piazza');
@@ -881,7 +931,7 @@ function testV157() {
   // 35 lasciava sei pixel per parte: ci si passava a pelo, sfregando lo stipite.
   const rettangoli = [{ id: 'piazza', x0: V.piazza.x0, y0: V.piazza.y0, x1: V.piazza.x1, y1: V.piazza.y1 }].concat(V.rooms);
   let stretta = '';
-  for (const L of V.links) for (const r of rettangoli) {
+  for (const L of VARCHI) for (const r of rettangoli) {
     let bordo = 0;
     for (let y = L[1]; y <= L[3]; y++) for (let x = L[0]; x <= L[2]; x++)
       for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -893,9 +943,18 @@ function testV157() {
   assert(stretta === '', 'ogni porta e larga almeno due tile:' + (stretta || ' tutte ok'));
   // v2.0 — la VIA MAESTRA: quella che taglia il villaggio da nord a sud passando per la piazza. E' la
   // strada, non una porta: deve essere larga almeno quattro tessere, o due che si incrociano si toccano.
-  const maestra = V.strade.reduce((a, b) => ((b[3] - b[1]) > (a[3] - a[1]) ? b : a));
-  assert(maestra[2] - maestra[0] + 1 >= 4, 'la via maestra e larga almeno quattro tile (' + (maestra[2] - maestra[0] + 1) + ')');
-  assert(maestra[1] <= V.piazza.y0 && maestra[3] >= V.piazza.y1, 'e attraversa il villaggio da parte a parte, piazza compresa');
+  // v2.6 — la via maestra unica non c'e' piu': ci sono DUE VIE LUNGHE, una davanti a ciascuna fila, e
+  // corrono da un capo all'altro del paese. Sono quelle a rendere le file percorribili: se una si
+  // accorcia, meta' delle porte finisce in fondo a un vicolo cieco.
+  const lunghe = V.strade.filter(S => (S[3] - S[1]) >= V.h * 0.7);
+  assert(lunghe.length === 2, 'due vie lunghe, una per fila (' + lunghe.length + ')');
+  for (const L of lunghe) assert(L[2] - L[0] + 1 >= 3, 'e ognuna e larga almeno tre tile (' + (L[2] - L[0] + 1) + ')');
+  assert(lunghe[0][2] < V.piazza.x0 && lunghe[1][0] > V.piazza.x1, 'una a ponente e una a levante della piazza');
+  // e ogni porta dei lati si apre su una di quelle due
+  for (const r of V.rooms) { const [px, py, lato] = r.porta; if (lato === 'n' || lato === 's') continue;
+    const vicino = lato === 'e' ? px + 1 : px - 1;
+    assert(lunghe.some(L => vicino >= L[0] && vicino <= L[2] && py >= L[1] && py <= L[3]),
+      'la porta di ' + r.id + ' si apre su una via lunga'); }
 
   // --- il falo' sta nella piazza, ed e' l'unica sorgente di luce dichiarata ---
   assert(!!m.village.fire, 'il falo e esposto nella mappa (e la sorgente di luce)');
@@ -913,7 +972,14 @@ function testV157() {
   assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
   assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende equipaggiamento: il fabbro');
   assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
-  assert(m.village.npcs.filter(n => n.crd).length === 1, 'la Cartomante ha aperto in v1.73');
+  // v2.6 — LA CARTOMANTE E' DIVENTATA LO SCIAMANO, e per ora non fa nulla: niente `crd`, quindi il
+  // server non gli attacca nemmeno il richiamo di prossimita'. Le sue carte erano gia' spente
+  // (CARTOMANTE_ATTIVA), quindi non si e' perso niente: e' cambiato chi abita l'antro.
+  assert(m.village.npcs.filter(n => n.crd).length === 0, 'la cartomante non c e piu');
+  assert(m.village.npcs.filter(n => n.kind === 'sciamano').length === 1, 'al suo posto c e lo sciamano');
+  assert(m.village.npcs.every(n => n.kind !== 'seer'), 'e di cartomanti non ne resta traccia');
+  { const sc = m.village.npcs.find(n => n.kind === 'sciamano');
+    assert(!sc.shop && !sc.pot && !sc.bnd && !sc.crd && !sc.inn, 'e per ora non vende e non fa niente'); }
   assert(m.village.npcs.filter(n => n.inn).length === 1, "e l'Ostessa in v1.74");
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
@@ -2304,7 +2370,9 @@ function testV174() {
   assert(h.hp === r4.effMaxHp(h), 'al focolare si torna al massimo');
   assert(h.hpDebt === 0, 'e i PV pagati cancellano il debito: non si viene rimborsati due volte');
   const hpPagato = h.hp;
-  h.x = r4.seer.x; h.y = r4.seer.y; r4.toggleCard('d', 'juggernaut');
+  // v2.6 — la Cartomante non c'e' piu' (e' diventata lo sciamano, che per ora non fa nulla), quindi
+  // `r4.seer` e' null: la carta si riaccende da dove si e', e la regola che conta resta la stessa.
+  r4.toggleCard('d', 'juggernaut');
   assert(h.hp === hpPagato, 'e riaccendere la carta non regala i PV gia comprati');
 
   // --- 5) cio' che arriva al client ---
@@ -2418,21 +2486,32 @@ function testV175() {
   // --- l'arredo sta ORDINATO nella sua stanza, non sparso a caso ---
   const V = MapGen.VILLAGE;
   const dentro = (x, y, r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
-  const inLink2 = (x, y) => V.links.concat(V.strade).some(L => x >= L[0] && x <= L[2] && y >= L[1] && y <= L[3]);
+  // v2.6 — i varchi escono dalla porta dichiarata da ogni stanza, non piu' da un elenco a parte
+  const VARCHI2 = V.rooms.map(r => { const [px, py, lato] = r.porta;
+    return lato === 'n' ? [px, py - 1, px + 1, py] : (lato === 's' ? [px, py, px + 1, py + 1] : [px, py, px, py + 1]); });
+  const inLink2 = (x, y) => VARCHI2.concat(V.strade).some(L => x >= L[0] && x <= L[2] && y >= L[1] && y <= L[3]);
   let sparsi = 0, inCorridoio = 0;
   for (const p of m.props) {
     const tx = (p.x / T) | 0, ty = (p.y / T) | 0;
     if (['torch', 'hanging_lantern', 'glowspot'].indexOf(p.type) >= 0) continue;   // v2.0.1 — luce, non mobili
+    // v2.6 — e nemmeno ragnatele e sassi sono mobili: si attraversano, e stanno agli sbocchi delle vie
+    // proprio perche' il paese e' SCAVATO. La regola qui e' 'niente mobili in mezzo alla strada'.
+    if (p.type === 'web' || p.type === 'rock') continue;
     // v2.5 — le BANCARELLE stanno in strada per mestiere: un banco del pane dentro una stanza chiusa non
     // e' un banco del pane. Che non tappino il passaggio lo prova la misura delle porte piu' sotto, che
     // tiene conto dei corpi solidi; qui si contano i mobili che in strada NON dovrebbero starci.
     if (p.type === 'bancarella' || (p.type === 'signpost' && p.txt && p.txt !== 'TAGLIE')) continue;
+    // v2.6 — e i bracieri del giro della piazza: stanno a meno di due tessere dal battuto, e sono la luce
+    if (p.type === 'brazier' && tx >= V.piazza.x0 - 2 && tx <= V.piazza.x1 + 2 && ty >= V.piazza.y0 - 2 && ty <= V.piazza.y1 + 2) continue;
     if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
     if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
   }
   assert(sparsi === 0, 'ogni mobile sta in una stanza, nella piazza o lungo un corridoio (' + sparsi + ' fuori posto)');
   // v2.0.1 — le TORCE e le LANTERNE stanno per le strade apposta: sono la luce del villaggio, e non
   // ingombrano niente (la torcia e' a muro, la lanterna sul soffitto). Sopra si contano solo i MOBILI.
+  // v2.6 — le TORCE della piazza stanno nello spiazzo, appena fuori dal battuto: e' il loro posto, sono
+  // il giro di luce attorno alla piazza. Ingombrano poco (un braciere e' 12 px di raggio) e si contano a
+  // parte; la regola vera — che per le strade ci si passi — la prova il flood fill coi corpi solidi.
   assert(inCorridoio <= 2, 'e per le strade si passa: niente mobili in mezzo (' + inCorridoio + ')');
 
   // --- le persone: il mercante e' un EROE ricolorato e disarmato, non piu' un ritratto frontale ---
@@ -2510,8 +2589,11 @@ function testV1752() {
   // cassa piantata davanti alla porta da un tavolo che sta due tile dentro la stanza: escono lo stesso
   // numero. Quello che conta e la LUCE, cioe quanto passaggio libero resta davvero attraversando.
   const V2 = MapGen.VILLAGE;
+  // v2.6 — i varchi si ricostruiscono dalla porta dichiarata da ogni stanza (non c'e' piu' un elenco)
+  const VARCHI3 = V2.rooms.map(rr => { const [px, py, lato] = rr.porta;
+    return lato === 'n' ? [px, py - 1, px + 1, py] : (lato === 's' ? [px, py, px + 1, py + 1] : [px, py, px, py + 1]); });
   let stretta2 = '';
-  for (const L of V2.links) {
+  for (const L of VARCHI3) {
     const cx = ((L[0] + L[2]) / 2 + 0.5) * T, cy = ((L[1] + L[3]) / 2 + 0.5) * T;
     const misura = (vert) => { let tot = 0;
       for (let d = -160; d <= 160; d += 2) { const x = vert ? cx + d : cx, y = vert ? cy : cy + d;
@@ -4596,28 +4678,35 @@ function testV200() {
   const dt = 1 / C.TICK_RATE;
 
   // --- 1) LA PIANTA ---
-  assert(m.w === 56 && m.h === 40, 'il villaggio e 56x40 (' + m.w + 'x' + m.h + ')');
+  // v2.6 — il villaggio e' cresciuto per fare posto alle due file: 60x46 invece di 56x40
+  assert(m.w === 60 && m.h === 46, 'il villaggio e 60x46 (' + m.w + 'x' + m.h + ')');
   assert(V.rooms.filter(r => r.kind === 'bottega').length === 5, 'cinque botteghe');
   assert(V.rooms.filter(r => r.kind === 'casa').length >= 6, 'e almeno sei case abitate');
   const grandi = ['taverna', 'erbe', 'fucina'];
   for (const id of grandi) { const r = V.rooms.find(q => q.id === id);
-    assert((r.x1 - r.x0) >= 10 && (r.y1 - r.y0) >= 8, 'la bottega ' + id + ' e grande (' + (r.x1 - r.x0 + 1) + 'x' + (r.y1 - r.y0 + 1) + ')'); }
+    assert((r.x1 - r.x0) >= 10 && (r.y1 - r.y0) >= 7, 'la bottega ' + id + ' e grande (' + (r.x1 - r.x0 + 1) + 'x' + (r.y1 - r.y0 + 1) + ')'); }
   // nessuna stanza si sovrappone a un'altra: due case nello stesso posto sarebbero una casa sola
   for (let i = 0; i < V.rooms.length; i++) for (let j = i + 1; j < V.rooms.length; j++) {
     const a = V.rooms[i], b = V.rooms[j];
     assert(a.x1 < b.x0 - 0 || b.x1 < a.x0 || a.y1 < b.y0 || b.y1 < a.y0, a.id + ' e ' + b.id + ' non si sovrappongono');
   }
 
-  // --- 2) IL PORTALE STA NEL MEZZO ---
+  // --- 2) IL PORTALE STA NELLA SUA CASA, con due guardie sulla soglia (v2.6) ---
+  const stP = V.rooms.find(r => r.kind === 'portale');
+  assert(!!stP, 'c e la casa del portale');
+  assert(Math.abs(m.portale.x - (stP.x0 + stP.x1 + 1) / 2) <= 0.6 &&
+         Math.abs(m.portale.y - (stP.y0 + stP.y1 + 1) / 2) <= 0.6, 'il portale e nel centro di quella stanza');
+  assert(m.grid[Math.floor(m.portale.y) * m.w + Math.floor(m.portale.x)] === C.T_FLOOR, 'e ci si cammina sopra');
   const pcx = (V.piazza.x0 + V.piazza.x1) / 2, pcy = (V.piazza.y0 + V.piazza.y1) / 2;
-  assert(Math.abs(m.portale.x - pcx) <= 0.5 && Math.abs(m.portale.y - pcy) <= 0.5, 'il portale e nel centro esatto della piazza');
-  assert(m.grid[m.portale.y * m.w + m.portale.x] === C.T_FLOOR, 'e ci si cammina sopra');
+  assert(Math.hypot(m.portale.x - pcx, m.portale.y - pcy) > 8, 'e NON e piu in mezzo alla piazza');
   let nExit = 0; for (const v of m.grid) if (v === C.T_EXIT) nExit++;
   assert(nExit === 0, 'nessuna tessera EXIT: l uscita e la faglia, non un quadrato verde');
   // la partenza NON e' addosso al portale: se no si esce appena arrivati
   const dSpawn = MU.dist(m.spawn.x, m.spawn.y, m.portale.x * T + T / 2, m.portale.y * T + T / 2);
   assert(dSpawn > (C.FAGLIA_RAGGIO || 46) + C.PLAYER_RADIUS + 40, 'e si nasce fuori dalla sua bocca (' + dSpawn.toFixed(0) + ' px)');
-  assert(dSpawn < T * 8, 'ma lo si vede appena arrivati (' + (dSpawn / T).toFixed(1) + ' tile)');
+  // v2.6 — "lo si vede appena arrivati" non vale piu': adesso e' dentro una casa, e ci si va. Resta il
+  // vincolo che conta, cioe' il TEMPO: venti tessere sono meno di cinque secondi di cammino.
+  assert(dSpawn < T * 20, 'ma ci si arriva in pochi secondi (' + (dSpawn / T).toFixed(1) + ' tile)');
 
   // --- 3) LE CASE SONO CASE: focolare al centro, letto, gente dentro ---
   const dentro = (o, r) => { const x = o.x / T - 0.5, y = o.y / T - 0.5; return x >= r.x0 - 0.6 && x <= r.x1 + 0.6 && y >= r.y0 - 0.6 && y <= r.y1 + 0.6; };
@@ -4711,7 +4800,7 @@ function testV200() {
   const room = new Room('v200'); const p = room.addPlayer('a', { send() {} }, 'A', 'guerriero');
   room.startGame(); room.wave = 3; room.enterMarket();
   assert(room.phase === C.PHASE_MARKET, 'si entra nel villaggio');
-  assert(room.map.w === 56, 'ed e la mappa nuova');
+  assert(room.map.w === 60 && room.map.h === 46, 'ed e la mappa nuova');
   assert(!!room.faglia, 'la faglia e aperta');
   const fx = room.map.portale.x * T + T / 2, fy = room.map.portale.y * T + T / 2;
   assert(MU.dist(room.faglia.x, room.faglia.y, fx, fy) < 2, 'e sta nel centro della piazza');

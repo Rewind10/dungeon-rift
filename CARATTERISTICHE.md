@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.5.0`
+**Versione attuale:** `2.6.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -327,7 +327,106 @@ verra' aggiunta domani.
 
 ---
 
-## 🏘️ IL VILLAGGIO SOTTERRANEO *(v2.0 — la sosta fra un'ondata e l'altra)*
+## 🏘️ IL VILLAGGIO SOTTERRANEO *(pianta rifatta in v2.6)*
+
+> La sezione che segue descrive la pianta della **v2.0** ed e' **superata**: la trovi qui sotto perche' il
+> ragionamento sulle porte e sulle strade vale ancora. La pianta viva e' questa.
+
+Fino alla v2.5 il villaggio era 56x40: una sala grande con le stanze appese dove capitava. Si leggeva come
+un **livello**, non come un paese. La v2.6 lo ricostruisce su un'idea sola — quella che rende un villaggio
+riconoscibile a colpo d'occhio dall'alto: **due file di case che si guardano**, e in mezzo lo spazio comune.
+
+```
+ x:  0..2   rocce          3..16  fila di PONENTE      17..19  via di ponente
+    20..39  lo spiazzo (e dentro, la PIAZZA di terra)  40..42  via di levante
+    43..56  fila di LEVANTE                            57..59  rocce
+```
+
+**60x46 tessere**, tredici edifici:
+
+| Dove | Cosa |
+|---|---|
+| **Fila di ponente** | casa del portale · **osteria** · **fucina** · due case |
+| **Fila di levante** | **erboristeria** · **antro dello sciamano** · **gilda** · due case |
+| **Nello spiazzo** | una casa a settentrione, due a mezzogiorno |
+| **Al centro** | la **piazza**: 16x18 di terra battuta, il falo' nel mezzo, il pozzo di fianco |
+| **Attorno alla piazza** | **dodici torce** e **dodici bancarelle**, alternate, girate verso il centro |
+| **Le strade** | le due **vie lunghe** davanti alle porte delle file, la via alta e la via bassa a chiudere |
+| **Oltre** | la roccia delle grotte, e poi il nero: non c'e' un bordo mappa, c'e' la montagna |
+
+### 🪨 Fuori e' grotta, dentro e' casa
+
+Il villaggio aveva una tavolozza sua — pietra calda — e si vedeva: una **sala beige** con dentro delle case,
+mentre tutto il resto del gioco e' roccia fredda. Adesso il tema e' quello della **cripta** e la cottura e'
+la **stessa delle ondate** (`_bakeCaverna`): massi tondi, ombre proiettate, contrasto vero.
+
+Il `muri` del villaggio non e' la griglia — la griglia dice solo passa/non passa — dice **di che cosa** e'
+fatto ogni muro, e lo legge solo chi disegna:
+
+- **2 = concio**, pietra squadrata: le pareti delle case;
+- **0 = roccia di grotta**: il perimetro del paese e la massa in cui e' scavato.
+
+Il giro esterno non ha **un solo concio**: fuori dal villaggio c'e' la montagna, non una cinta muraria. E
+**dentro le case il pavimento resta quello di prima** — assi, lastre, terra: e' li' che si sta al caldo.
+
+### 🟫 La piazza: terra battuta, col bordo sfrangiato
+
+Il primo battuto era una tinta al 58% con dieci trattini scuri sopra. Sotto la luce diventava una **lastra
+di grigio uniforme** — la stessa cosa che chiamavamo patina, perche' **mancava il nero**. Il battuto ha
+bisogno di tre cose: chiazze piu' scure (la terra non e' omogenea), **ghiaia chiara E scura** (solo scura e'
+fuliggine) e un solco ogni tanto.
+
+E il bordo non e' dritto. Era un rettangolo pieno, e da lassu' si leggeva come un **tappeto srotolato sulla
+roccia**: una piazza si consuma dove ci si cammina. Il giro si allarga di una tessera e si copre in modo
+irregolare — piena dentro, a chiazze sull'orlo, qualche macchia fuori.
+
+### 🌀 Il portale sta nella casa delle guardie
+
+Stava **in mezzo alla piazza**, ed era il difetto piu' grosso della vecchia pianta: uno spiazzo con un buco
+viola nel centro non e' una piazza, e' una **sala del portale con delle case attorno**. Adesso e' dentro la
+casa del portale, la prima della fila di ponente, con **due guardie sulla soglia** — elmo con la cresta,
+fessura per gli occhi, lancia piantata a terra; scenografia, non mercanti.
+
+Dallo spawn sono **una quindicina di tessere**, tre secondi e mezzo di cammino. Il vincolo del test non e'
+un gusto ma il tempo: sotto le 8 tessere ci si atterrerebbe sopra, sopra le 20 diventerebbe una tassa.
+
+### 💡 Piazza chiara, resto buio
+
+`VILL_PIAZZA: 0.60` · `VILL_PZ_ORLO: 1.4`. Dentro il rettangolo della piazza il buio di base vale meno, e
+fra i due si passa **sfumando** per qualche tessera. **Non e' una luce appoggiata sopra** — quella sarebbe
+di nuovo una patina — e' buio che si toglie, con lo stesso `destination-out` delle sorgenti. Ed e' un
+**ovale**, non un rettangolo: un alone quadrato con gli spigoli si legge come una finestra.
+
+Il falo' e' sceso da **430 a 340** di raggio. Con la vecchia sala calda era la luce della stanza; sul
+pavimento freddo della grotta era diventato un alone bianco largo mezzo schermo.
+
+### 🚪 La porta e' un DATO della stanza, non una deduzione
+
+Ogni stanza dichiara `porta: [tessera x, tessera y, lato]` e i varchi si generano da li'. Prima la porta si
+indovinava confrontando le coordinate dei varchi con quelle della stanza, e **bastava spostare una stanza**
+per far arredare una casa **col letto sulla soglia**. Adesso l'arredamento sa da che parte si entra senza
+doverlo dedurre — e ogni varco e' largo **due tessere**, sempre.
+
+### 🩶 La patina era uno SFASAMENTO
+
+Il buio si bucava con un raggio e il bagliore caldo si disegnava con un **altro**: l'alone dell'eroe usciva
+a 190x1,45 = **275 px** dentro un buco di **130**. Quei 145 px di differenza sono luce appoggiata sul buio,
+cioe' esattamente una patina — e ti seguiva, perche' l'eroe sei tu.
+
+**Il rimedio non e' limare un numero: e' che i due passaggi leggano LA STESSA LISTA.** Le sorgenti del
+villaggio si dichiarano una volta sola — `[x, y, raggio, colore, alfa, forza]` — si bucano con quel raggio e
+si accendono con lo stesso. *Nessun bagliore senza il suo buco, nessun buco piu' piccolo del suo bagliore*,
+e il test verifica proprio questo.
+
+Piu' due colpevoli minori, trovati guardando **quello che non avevo toccato**: la cottura piatta del
+villaggio e la fascia viola della faglia, spenta a schermo dalla v2.1 ma ancora **cotta** sui bordi.
+
+**Misurato**: 5880 posizioni libere a mezza tessera, **zero isolate** coi mobili al loro posto. Tutte e
+tredici le stanze raggiungibili, ogni mercante avvicinabile, il portale compreso.
+
+---
+
+## 🏘️ LA VECCHIA PIANTA *(v2.0 — superata dalla v2.6, tenuta per il ragionamento)*
 
 Fino alla v1.99 la sosta era una **Sala dei Mercanti**: 34x26 tessere, cinque stanze attorno a una piazza.
 Funzionava, ma non era un posto: era un menu con dei muri. Adesso e' un **villaggio di nani scavato nella

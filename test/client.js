@@ -928,6 +928,82 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
     const perOndata = 1 - Math.pow(1 - p, casse);
     ok(perOndata < 0.35, 'cioe meno di un ondata su tre (' + (perOndata * 100).toFixed(0) + '%), non tre a ondata');
   }
+
+  // --- 6) v2.6 — LA PATINA ERA UNO SFASAMENTO. Dopo la v2.5 il villaggio era ancora velato, e stavolta
+  //     non era uno strato di troppo: il buio si bucava con un raggio e il bagliore caldo si disegnava
+  //     con un ALTRO. L'alone dell'eroe usciva a 190x1,45 = 275 px dentro un buco di 130: quei 145 px di
+  //     differenza sono luce appoggiata sul buio, cioe' una patina, e ti seguiva perche' l'eroe sei tu.
+  //     Il rimedio non e' limare un numero: e' che i due passaggi leggano LA STESSA LISTA.
+  ok(/const VS = this\._villSrc \|\| \(this\._villSrc = \[\]\); VS\.length = 0;/.test(src2),
+    'le sorgenti del villaggio si dichiarano in una lista sola');
+  ok(/for \(const s of VS\) buco\(s\[0\], s\[1\], s\[2\], s\[5\]\);/.test(src2),
+    'e il buio si buca leggendo quella');
+  ok(/if \(_lit\) \{ for \(const s of this\._villSrc\) light\(s\[0\], s\[1\], s\[2\], s\[3\], s\[4\]\); \}/.test(src2),
+    'e la luce calda si accende leggendo la stessa, con gli stessi raggi: nessun bagliore senza il suo buco');
+  { // e la riga con l'alone da 190 vive solo nel ramo delle GROTTE, dopo l'else
+    const iL = src2.indexOf("if (_lit) { for (const s of this._villSrc) light(");
+    const i190 = src2.indexOf("light(p.x, p.y, 190,");
+    ok(iL > 0 && i190 > iL, 'e l alone da 190 resta nel ramo delle grotte, dopo l else');
+  }
+
+  // --- 6b) v2.6 — LA COTTURA. Il villaggio passa dalla stessa cottura delle grotte: pavimento di roccia,
+  //     massi tondi, ombre proiettate. La cottura piatta era una tinta uniforme senza nero, ed e'
+  //     esattamente quello che si vedeva come pellicola. I pavimenti delle stanze restano dipinti sopra.
+  ok(/const _nuova = true;/.test(src2), 'anche il villaggio si cuoce come una grotta');
+  ok(/if \(!m\.lit\) \{ const M = \(C\.EDGE_MARGIN/.test(src2),
+    'e la fascia viola della faglia non si cuoce sul villaggio: li non c e nessuna faglia ai bordi');
+  { const MG3 = window.GAME.MapGen, mv = MG3.generateMarket(7);
+    ok(!!mv.muri, 'il villaggio dichiara il TIPO dei suoi muri');
+    const t2 = new Set(Array.from(mv.muri)); t2.delete(0);
+    ok(t2.size === 1 && t2.has(2), 'conci per le case (2), roccia di grotta per tutto il resto (0)');
+    let conci = 0, roccia = 0;
+    for (let i = 0; i < mv.muri.length; i++) if (mv.grid[i] === C2.T_WALL) { if (mv.muri[i] === 2) conci++; else roccia++; }
+    ok(roccia > conci, 'e la roccia e piu dei conci: il paese e SCAVATO, non costruito (' + roccia + ' contro ' + conci + ')');
+    // il perimetro esterno non e' mai concio: e' la montagna
+    let bordoConcio = 0;
+    for (let x = 0; x < mv.w; x++) { if (mv.muri[x] === 2) bordoConcio++; if (mv.muri[(mv.h - 1) * mv.w + x] === 2) bordoConcio++; }
+    for (let y = 0; y < mv.h; y++) { if (mv.muri[y * mv.w] === 2) bordoConcio++; if (mv.muri[y * mv.w + mv.w - 1] === 2) bordoConcio++; }
+    ok(bordoConcio === 0, 'il giro esterno e tutto roccia di grotta (' + bordoConcio + ' conci sul bordo)');
+    // il pavimento: la piazza e' TERRA, le stanze tengono il loro, lo spiazzo non e' dipinto (resta grotta)
+    const pav = mv.floors;
+    ok(pav.filter(f => f.kind === 'terra').length >= 1, 'la piazza e terra battuta');
+    const pz2 = pav.find(f => f.kind === 'terra');
+    ok(pz2.x0 === mv.piazza.x0 && pz2.y1 === mv.piazza.y1, 'e il battuto copre esattamente la piazza');
+    ok(pav.some(f => f.kind === 'legno'), 'dentro le case il pavimento resta quello di prima (assi)');
+    // lo spiazzo attorno alla piazza NON ha un pavimento dichiarato: li si vede la roccia cotta
+    const coperto = (x, y) => pav.some(f => x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1);
+    ok(!coperto(mv.piazza.x0 - 3, mv.piazza.y0 - 3), 'e fuori dalla piazza il pavimento e quello della grotta');
+  }
+  ok((C2.VILL_PIAZZA || 1) < (C2.VILL_BUIO || 1), 'nella piazza il buio vale meno che fuori: piazza chiara, resto buio');
+  ok((C2.VILL_PZ_ORLO || 0) > 0, 'e il passaggio fra i due sfuma invece di tagliare');
+
+  // --- 6c) v2.6 — LA GUARDIA e LO SCIAMANO. Due figure nuove, e nessuna delle due e' un eroe ricolorato.
+  ok(R5._PAESANI.indexOf('guardia') >= 0, 'la guardia e un paesano, col suo disegno');
+  ok(!!R5._paesaniPal.guardia, 'e la sua tavolozza');
+  ok(!/seer:/.test(src2), 'della cartomante non resta traccia nel renderer');
+  ok(/sciamano:/.test(src2), 'al suo posto c e lo sciamano');
+  ok(/_vendorBase: \{[^}]*sciamano: 'mago'/.test(src2), 'lo sciamano ha la sua base');
+  ok(/kind === 'sciamano'/.test(src2), 'e i suoi attrezzi: bastone, ossa, ciotola dei fumi');
+
+  // --- 6d) v2.6 — I DODICI BANCHI. Ogni mestiere ha il suo disegno: chi arrivava al ramo finale senza
+  //     un caso suo vendeva candele, e con dodici banchi me ne sarei accorto tardi.
+  { const MG4 = window.GAME.MapGen, mv2 = MG4.generateMarket(3);
+    const banchi = mv2.props.filter(p => p.type === 'bancarella');
+    ok(banchi.length >= 10, 'attorno alla piazza ci sono almeno dieci banchi (' + banchi.length + ')');
+    const mest = banchi.map(b => b.mest);
+    ok(new Set(mest).size === mest.length, 'e nessun mestiere si ripete');
+    for (const b of banchi) ok(new RegExp("me === '" + b.mest + "'").test(src2) || b.mest === 'vino',
+      'il banco ' + b.mest + ' ha il suo disegno, non quello di ripiego');
+    // e stanno TUTTI attorno alla piazza, non sparsi per il paese
+    const PZ3 = mv2.piazza, T3 = C2.TILE;
+    let lontani = 0;
+    for (const b of banchi) { const tx = b.x / T3 - 0.5, ty = b.y / T3 - 0.5;
+      if (tx < PZ3.x0 - 3 || tx > PZ3.x1 + 3 || ty < PZ3.y0 - 3 || ty > PZ3.y1 + 3) lontani++; }
+    ok(lontani === 0, 'e fanno il giro della piazza (' + lontani + ' fuori dal giro)');
+    const torce = mv2.props.filter(p => p.type === 'brazier' && Math.abs(p.x / T3 - 0.5 - (PZ3.x0 + PZ3.x1) / 2) <= (PZ3.x1 - PZ3.x0) / 2 + 2
+      && Math.abs(p.y / T3 - 0.5 - (PZ3.y0 + PZ3.y1) / 2) <= (PZ3.y1 - PZ3.y0) / 2 + 2);
+    ok(torce.length >= 8, 'e le torce fanno il giro con loro (' + torce.length + ')');
+  }
 })();
 
 console.log('=================================================='); console.log(fails ? '  CLIENT: ' + fails + ' FALLITI' : '  CLIENT: tutti i controlli passati'); console.log('==================================================');

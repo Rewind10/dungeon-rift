@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.5.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.6.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,36 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.6 (il villaggio rifatto: due file di case, una piazza di terra, il portale nella casa delle guardie)
+- **🏘️ PIANTA NUOVA — due file di edifici e lo spiazzo in mezzo.** La pianta della v2.0 era una sala con
+  delle stanze appese dove capitava: si leggeva come un livello, non come un paese. Adesso il villaggio e'
+  **60x46** ed e' costruito sull'unica cosa che lo rende riconoscibile dall'alto: **due file di case che si
+  guardano**, le vie lunghe davanti alle porte, e in mezzo lo spazio comune. Cinque edifici per fila, tre
+  case nello spiazzo (una a settentrione, due a mezzogiorno), tredici in tutto.
+- **🪨 Fuori si cammina sulla ROCCIA DELLE GROTTE.** Il villaggio aveva una tavolozza sua — pietra calda — e
+  si vedeva: una sala beige con dentro delle case, mentre tutto il resto del gioco e' roccia fredda. Adesso
+  fuori dalle case il pavimento e la roccia sono quelli della cripta, cotti dalla **stessa cottura**
+  (`_bakeCaverna`): massi tondi, ombre proiettate, contrasto vero. **Il perimetro del paese e' cinto dalle
+  stesse rocce**, e le pareti delle case restano conci di pietra squadrata — perche' il paese e' *scavato*,
+  non costruito. **Dentro le case il pavimento resta quello di prima**: assi, lastre, terra.
+- **🟫 La piazza e' TERRA BATTUTA**, non un giardino: chiazze, ghiaia chiara e scura, qualche solco, e il
+  **bordo sfrangiato** — una piazza si consuma dove ci si cammina, e un rettangolo pieno si leggeva come un
+  tappeto srotolato sulla roccia. Attorno, il **giro di dodici torce** e **dodici bancarelle**.
+- **🌀 Il portale non e' piu' in mezzo alla piazza**: sta nella **casa del portale**, la prima della fila di
+  ponente, con **due guardie sulla soglia**. Uno spiazzo con un buco viola nel mezzo non e' una piazza.
+- **💡 Piazza chiara, resto buio** (`VILL_PIAZZA`, `VILL_PZ_ORLO`): dentro il rettangolo della piazza il
+  buio vale meno, e fra i due si passa sfumando. Non e' una luce appoggiata sopra — quella sarebbe di nuovo
+  una patina — e' buio che si toglie.
+- **🧿 La Cartomante e' diventata lo SCIAMANO** (per ora non fa nulla). Le sue carte erano spente da tempo,
+  quindi non si perde niente: cambia chi abita l'antro, e non e' piu' un mago viola col ventaglio di carte
+  ma verderame, ossa e ciotola dei fumi.
+- **🩶 E la patina, davvero.** Non era uno strato di troppo: era uno **sfasamento**. Il buio si bucava con un
+  raggio e il bagliore caldo si disegnava con un altro — l'alone dell'eroe usciva a 275 px dentro un buco di
+  130, e quei 145 px di differenza sono luce appoggiata sul buio. Adesso i due passaggi leggono **la stessa
+  lista di sorgenti**: nessun bagliore senza il suo buco, nessun buco piu' piccolo del suo bagliore. Piu' due
+  colpevoli minori: la **cottura piatta** del villaggio (una tinta uniforme senza nero) e la **fascia viola
+  della faglia** cotta anche sui bordi del paese.
 
 ## 🆕 Novita v2.5 (la patina vera, le bancarelle, e la gente che non e' piu' tutta uguale)
 - **🩶 La patina non era la velatura: era la NEBBIA.** In v2.4 il velo era sparito e il villaggio restava

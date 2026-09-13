@@ -563,8 +563,15 @@
       const floorPat = g.createPattern(floorTex, 'repeat'), wallPat = g.createPattern(wallTex, 'repeat');
       // pavimento ovunque (sotto ai muri), poi roccia-muro sopra le celle muro
       // v1.76 — le mappe di COMBATTIMENTO passano dalla cottura nuova (caverna dipinta). Il
-      // villaggio (m.market) tiene la sua, che e' fatta apposta per le micro-stanze.
-      const _nuova = !m.market;
+      // villaggio (m.market) teneva la sua, piatta: un motivo di roccia ripetuto sotto tutto e un
+      // rettangolo di pietra sopra ogni tessera-muro.
+      // v2.6 — ADESSO CI PASSA ANCHE IL VILLAGGIO, ed e' questa la riga che ha tolto la patina. Il
+      // paese e' scavato nella stessa roccia delle grotte, quindi va cotto allo stesso modo: pavimento
+      // di grotta, massi tondi, ombre proiettate vere. La cottura piatta non era solo un'altra grafica —
+      // era una tinta uniforme senza nero e senza contrasto, ed e' esattamente quello che si vedeva come
+      // pellicola. I pavimenti delle stanze si dipingono sopra come sempre, quindi dentro le case non
+      // cambia niente: le assi restano assi.
+      const _nuova = true;
       if (_nuova) this._bakeCaverna(g, m, T, th);
       else { g.fillStyle = floorPat; g.fillRect(0, 0, cv.width, cv.height); }
       // v1.97.1 — QUESTA RIGA VA DOPO L'ELSE, e la prima volta l'avevo messa in mezzo: l'else di
@@ -576,17 +583,61 @@
       // la fucina la pietra bruciata, l'antro il suo colore. Senza questo le sei stanze sarebbero sei
       // scatole con lo stesso fondo, e la pianta non si leggerebbe.
       for (const f of (m.floors || [])) {
-        for (let y = f.y0; y <= f.y1; y++) for (let x = f.x0; x <= f.x1; x++) {
+        // v2.6 — LA TERRA NON HA IL BORDO DRITTO. Il primo battuto era un rettangolo pieno, e da lassu'
+        // si leggeva come un tappeto srotolato sulla roccia: una piazza si consuma dove ci si cammina,
+        // quindi il bordo va SFRANGIATO e un po' di terra va anche oltre. Qui si allarga il giro di una
+        // tessera e si copre in modo irregolare: piena dentro, a chiazze sull'orlo, qualche macchia fuori.
+        const terra = f.kind === 'terra';
+        const y0 = f.y0 - (terra ? 1 : 0), y1 = f.y1 + (terra ? 1 : 0);
+        const x0 = f.x0 - (terra ? 1 : 0), x1 = f.x1 + (terra ? 1 : 0);
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          if (x < 0 || y < 0 || x >= m.w || y >= m.h) continue;
           if (m.grid[y * m.w + x] === C.T_WALL) continue;
           const px = x * T, py = y * T;
-          g.fillStyle = f.col; g.fillRect(px, py, T, T);
+          if (terra) {
+            // quanto e' lontano dal bordo: 0 fuori, 1 sull'orlo, 2 dentro
+            const d = Math.min(x - f.x0, f.x1 - x, y - f.y0, f.y1 - y);
+            const hb = (a) => { let v = (px * 40503 ^ py * 12289 ^ a * 6151) >>> 0; v = (v ^ (v >>> 11)) >>> 0; return (v % 1000) / 1000; };
+            g.save(); g.beginPath();
+            if (d >= 1) { g.rect(px, py, T, T); }
+            else {
+              // sull'orlo (d===0) e fuori (d<0) si copre a chiazze, sempre meno mano a mano che si esce
+              const n = d === 0 ? 5 : 2, sc = d === 0 ? 0.42 : 0.24;
+              for (let i = 0; i < n; i++) { const cx2 = px + hb(i * 3 + 1) * T, cy2 = py + hb(i * 3 + 2) * T;
+                g.moveTo(cx2 + T * sc, cy2); g.arc(cx2, cy2, T * sc * (0.6 + hb(i * 3 + 3) * 0.7), 0, 7); }
+            }
+            g.clip();
+            g.fillStyle = f.col; g.fillRect(px, py, T, T);
+          } else {
+            g.fillStyle = f.col; g.fillRect(px, py, T, T);
+          }
           if (f.kind === 'lastre') {  // lastroni squadrati: la piazza e le stanze in pietra
             g.strokeStyle = 'rgba(0,0,0,.24)'; g.lineWidth = 1.4; g.strokeRect(px + 1.5, py + 1.5, T - 3, T - 3);
             g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1; g.strokeRect(px + 2.5, py + 2.5, T - 5, T - 5);
-          } else if (f.kind === 'terra') {   // battuto: nessuna geometria, solo grana
-            for (let i = 0; i < 10; i++) { g.fillStyle = 'rgba(0,0,0,' + (0.05 + Math.random() * 0.07).toFixed(3) + ')';
-              g.fillRect(px + Math.random() * T, py + Math.random() * T, 3, 2); }
+          } else if (f.kind === 'terra') {
+            // v2.6 — TERRA BATTUTA VERA. Prima erano dieci trattini scuri su una tinta al 58%: sotto la
+            // luce della piazza quella tinta diventava una lastra di grigio uniforme, ed e' la stessa
+            // cosa che chiamavamo patina — manca il NERO. Il battuto ha bisogno di tre cose: chiazze piu'
+            // scure (la terra non e' omogenea), ghiaia (punti chiari e punti scuri, non solo scuri) e un
+            // solco ogni tanto. Costa una volta sola, in cottura.
+            const hs = (a, b) => { let v = (px * 73856093 ^ py * 19349663 ^ a * 83492791 ^ b * 2654435761) >>> 0;
+              v = (v ^ (v >>> 13)) >>> 0; return (v % 10000) / 10000; };
+            for (let i = 0; i < 3; i++) {                       // le chiazze
+              const cx2 = px + hs(i, 1) * T, cy2 = py + hs(i, 2) * T, rr2 = T * (0.16 + hs(i, 3) * 0.24);
+              g.fillStyle = 'rgba(0,0,0,' + (0.07 + hs(i, 4) * 0.10).toFixed(3) + ')';
+              g.beginPath(); g.ellipse(cx2, cy2, rr2, rr2 * 0.72, hs(i, 5) * 3, 0, 7); g.fill();
+            }
+            for (let i = 0; i < 16; i++) {                      // la ghiaia: chiara E scura, se no e' fuliggine
+              const gx = px + hs(i, 6) * T, gy = py + hs(i, 7) * T, gr2 = 0.9 + hs(i, 8) * 1.5;
+              g.fillStyle = hs(i, 9) > 0.55 ? 'rgba(214,198,170,.22)' : 'rgba(0,0,0,.30)';
+              g.beginPath(); g.arc(gx, gy, gr2, 0, 7); g.fill();
+            }
+            if (hs(0, 11) > 0.62) {                             // e ogni tanto un solco
+              g.strokeStyle = 'rgba(0,0,0,.20)'; g.lineWidth = 2.2;
+              g.beginPath(); g.moveTo(px, py + hs(0, 12) * T); g.lineTo(px + T, py + hs(0, 13) * T); g.stroke();
+            }
           }
+          if (terra) g.restore();   // il ritaglio della frangia vale per la tessera, non per tutta la cottura
         }
         // il LEGNO va disegnato sulla stanza intera, non tile per tile: assi lunghe che l'attraversano,
         // con le giunzioni sfalsate. Fatto a mattoncini sembrava un muro appoggiato per terra.
@@ -693,7 +744,11 @@
       this.torches = []; this.campfires = []; this.glows = []; this.bigLight = null;
       for (const p of (m.props || [])) {
         if (p.type === 'stall') { this._bakeStall(g, p); continue; }     // v1.57 — banchetto del mercante
-        if (p.type === 'bonfire') { this.campfires.push({ x: p.x, y: p.y - 4 }); this.bigLight = { x: p.x, y: p.y - 4, r: 430 }; this._bakeBonfire(g, p); continue; }  // v1.57 — falo': unica sorgente della sala
+        if (p.type === 'bonfire') { this.campfires.push({ x: p.x, y: p.y - 4 }); this.bigLight = { x: p.x, y: p.y - 4, r: 340 }; this._bakeBonfire(g, p); continue; }
+        // v2.6 — il falo' era a 430 (x1,45 = 624 px): con la vecchia sala calda era la luce della
+        // stanza, sul pavimento freddo della grotta e' diventato un alone bianco largo mezzo schermo —
+        // e quella e' la patina che si vedeva ancora. A 340 illumina la PIAZZA e si spegne prima delle
+        // vie, che e' quello che deve fare un fuoco acceso in mezzo a uno spiazzo.
         if (p.type === 'torch') { this.torches.push(p); continue; }
         if (p.type === 'camp') { this.campfires.push(p); this._bakeCamp(g, p); continue; }
         // v2.0 — il focolare di casa: la pietra e le braci si cuociono, la fiamma no. E' viva, e con lei
@@ -719,7 +774,10 @@
       // Quattro sfumature, una per lato, che partono dalla roccia del bordo e sfumano verso l'interno; negli
       // angoli si sovrappongono e quindi il viola e' piu' carico — esattamente dove la faglia morde il doppio.
       // Essendo cotta qui dentro, a schermo non costa niente: e' gia' dentro l'immagine di sfondo.
-      { const M = (C.EDGE_MARGIN || 3) * T, x1 = m.w * T, y1 = m.h * T;
+      // v2.6 — nel VILLAGGIO no. La fascia viola e' il segno di un pericolo che li' non esiste, ed e'
+      // gia' spenta a schermo dalla v2.1 (_drawEdgeVignette) — ma questa e' COTTA nella mappa, quindi
+      // restava: un velo viola largo due tessere tutto attorno al paese. Un altro pezzo di patina.
+      if (!m.lit) { const M = (C.EDGE_MARGIN || 3) * T, x1 = m.w * T, y1 = m.h * T;
         const stops = (q) => { q.addColorStop(0, 'rgba(122,40,196,0.26)'); q.addColorStop(0.32, 'rgba(122,40,196,0.05)'); q.addColorStop(1, 'rgba(122,40,196,0)'); return q; };
         const d = 2 * T + M;
         g.fillStyle = stops(g.createLinearGradient(0, 0, d, 0)); g.fillRect(0, 0, d, y1);
@@ -800,7 +858,7 @@
         smith:     { cloth: '#8a3b2a', cloth2: '#e8d9b0', accent: '#ffb14a' },
         herbalist: { cloth: '#3f6b34', cloth2: '#dfe8b0', accent: '#9fe06a' },
         innkeeper: { cloth: '#8a6a2a', cloth2: '#e8dcb0', accent: '#ffd97a' },
-        seer:      { cloth: '#553a7a', cloth2: '#ddd0f0', accent: '#c9a0ff' },
+        sciamano:  { cloth: '#2f5a52', cloth2: '#cfe6df', accent: '#7fd6c0' },
         crier:     { cloth: '#6b3a3a', cloth2: '#e8c9b0', accent: '#ff9a8a' },
       };
       const c = PAL[p.kind] || PAL.crier;
@@ -822,10 +880,12 @@
         g.strokeStyle = '#4e7a3c'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(22, 2); g.lineTo(20 + i * 4, -10); g.stroke(); } }
       else if (p.kind === 'innkeeper') { for (const dx of [-16, -4, 8]) { g.fillStyle = '#c9a35a'; this._rr(g, dx, -8, 9, 12, 2); g.fill(); g.fillStyle = '#f0e2b8'; g.fillRect(dx + 1, -8, 7, 3); }
         g.fillStyle = '#6b4d2c'; this._rr(g, 20, -10, 12, 14, 3); g.fill(); }
-      else if (p.kind === 'seer') { g.fillStyle = '#1a1428'; g.beginPath(); g.arc(0, -2, 11, 0, 7); g.fill();
-        const og = g.createRadialGradient(-3, -6, 1, 0, -2, 12); og.addColorStop(0, '#e6d0ff'); og.addColorStop(1, 'rgba(150,90,220,.15)');
-        g.fillStyle = og; g.beginPath(); g.arc(0, -2, 10, 0, 7); g.fill();
-        g.fillStyle = '#d9c8a0'; for (const [dx, rr] of [[-22, -0.3], [-15, 0.25]]) { g.save(); g.translate(dx, 0); g.rotate(rr); this._rr(g, -4, -7, 8, 12, 1); g.fill(); g.restore(); } }
+      else if (p.kind === 'sciamano') {  // v2.6 — sul banco dello sciamano: la ciotola dei fumi e le ossa
+        g.fillStyle = '#2a3a35'; g.beginPath(); g.ellipse(0, -1, 11, 6, 0, 0, 7); g.fill();
+        const og = g.createRadialGradient(-2, -4, 1, 0, -2, 13); og.addColorStop(0, 'rgba(127,214,192,.85)'); og.addColorStop(1, 'rgba(60,140,120,.12)');
+        g.fillStyle = og; g.beginPath(); g.arc(0, -4, 12, 0, 7); g.fill();
+        g.fillStyle = '#e8e0cc'; for (const [dx, rr] of [[-22, -0.4], [-15, 0.3]]) { g.save(); g.translate(dx, 0); g.rotate(rr); this._rr(g, -1.6, -8, 3.2, 13, 1.4); g.fill(); g.restore(); }
+        g.fillStyle = '#8a6a38'; g.beginPath(); g.arc(17, -2, 5, 0, 7); g.fill(); }
       else { g.fillStyle = '#d9c8a0'; g.strokeStyle = '#8a7a55'; g.lineWidth = 1.5; this._rr(g, -20, -8, 14, 11, 1); g.fill(); g.stroke();
         g.fillStyle = '#b8862a'; g.beginPath(); g.arc(2, -2, 5, 0, 7); g.fill(); g.fillStyle = '#8f959f'; g.beginPath(); g.arc(14, -1, 4, 0, 7); g.fill(); }
       g.restore();
@@ -958,8 +1018,11 @@
           g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
           const cl = p.col || '#d9a55c', me = p.mest || 'pane';
           g.fillStyle = 'rgba(0,0,0,.48)'; this._rr(g, -34, -14, 70, 34, 3); g.fill();
-          // il TENDONE, che e' quello che si vede da lontano: due righe chiare e due scure
-          g.fillStyle = '#b8503f'; g.strokeStyle = '#3a1410'; g.lineWidth = 2;
+          // il TENDONE, che e' quello che si vede da lontano: due righe chiare e due scure.
+          // v2.6 — la riga scura prende il colore della MERCE. Con dodici banchi in giro alla piazza un
+          // tendone rosso uguale per tutti li faceva leggere come dodici copie: da lassu' il tendone e'
+          // quasi tutto quello che si vede, quindi e' li' che deve stare la differenza.
+          g.fillStyle = _darkenHex(cl, 0.62); g.strokeStyle = '#2a1210'; g.lineWidth = 2;
           this._rr(g, -36, -22, 72, 15, 3); g.fill(); g.stroke();
           g.fillStyle = '#e8ddc8';
           for (let i = 0; i < 4; i++) { g.fillRect(-34 + i * 18, -21, 9, 13); }
@@ -1003,12 +1066,55 @@
               g.fillStyle = COL[i]; this._rr(g, -30 + i * 16, -5, 13, 14, 3); g.fill(); g.stroke();
               g.fillStyle = 'rgba(255,255,255,.16)'; this._rr(g, -30 + i * 16, -5, 13, 3, 2); g.fill();
             }
-          } else {                                   // candele: file di steli con la fiammella spenta
+          } else if (me === 'candele') {             // candele: file di steli con la fiammella spenta
             for (let i = 0; i < 7; i++) {
               const mx = -27 + i * 9;
               g.fillStyle = cl; this._rr(g, mx, -6, 4.4, 15, 1.6); g.fill(); g.stroke();
               g.fillStyle = '#5a4a2e'; g.fillRect(mx + 1.5, -8.5, 1.4, 3);
             }
+          // v2.6 — SEI MESTIERI NUOVI. Il ramo finale non e' piu' "candele o quello che capita": chi
+          // arrivava qui senza il suo caso vendeva candele, e con dodici banchi l'avrei scoperto tardi.
+          } else if (me === 'frutta') {              // ceste colme: tre mucchi di tondi
+            for (const [mx, my] of [[-22, 2], [0, 2], [22, 2]]) {
+              g.fillStyle = '#6b4a28'; g.beginPath(); g.ellipse(mx, my + 3, 11, 6, 0, 0, 7); g.fill(); g.stroke();
+              for (const [ox, oy] of [[-5, -2], [0, -4], [5, -2], [-2, 1], [3, 1]]) {
+                g.fillStyle = cl; g.beginPath(); g.arc(mx + ox, my + oy, 3.2, 0, 7); g.fill(); g.stroke();
+              }
+            }
+          } else if (me === 'formaggi') {            // forme intere e uno spicchio tagliato
+            for (const [mx, rr2] of [[-22, 9], [-2, 7], [17, 8]]) {
+              g.fillStyle = cl; g.beginPath(); g.arc(mx, 2, rr2, 0, 7); g.fill(); g.stroke();
+              g.fillStyle = 'rgba(0,0,0,.18)';
+              for (const [ox, oy] of [[-3, -2], [2, 1], [0, 4]]) { g.beginPath(); g.arc(mx + ox, 2 + oy, 1.5, 0, 7); g.fill(); }
+            }
+            g.fillStyle = cl; g.beginPath(); g.moveTo(30, 2); g.lineTo(30, -6); g.lineTo(24, 5); g.closePath(); g.fill(); g.stroke();
+          } else if (me === 'spezie') {              // sacchi aperti con il cono di polvere colorata
+            const COL = [cl, '#c8a24a', '#7a3a2a', '#5a6b3a'];
+            for (let i = 0; i < 4; i++) {
+              const mx = -24 + i * 16;
+              g.fillStyle = '#8a7048'; g.beginPath(); g.ellipse(mx, 4, 7, 5, 0, 0, 7); g.fill(); g.stroke();
+              g.fillStyle = COL[i]; g.beginPath(); g.moveTo(mx - 6, 1); g.lineTo(mx, -7); g.lineTo(mx + 6, 1); g.closePath(); g.fill(); g.stroke();
+            }
+          } else if (me === 'pellami') {             // pelli stese sul banco e una appesa al tendone
+            for (const [mx, my] of [[-20, 1], [4, 2]]) {
+              g.fillStyle = cl; g.beginPath();
+              g.moveTo(mx - 11, my); g.quadraticCurveTo(mx - 6, my - 9, mx + 2, my - 6);
+              g.quadraticCurveTo(mx + 12, my - 4, mx + 10, my + 5);
+              g.quadraticCurveTo(mx, my + 10, mx - 11, my); g.fill(); g.stroke();
+            }
+            g.fillStyle = _darkenHex(cl, 0.8); this._rr(g, 20, -18, 13, 22, 3); g.fill(); g.stroke();
+          } else if (me === 'ferro') {               // ferramenta: chiodi, un ferro di cavallo, una lama
+            g.fillStyle = cl;
+            for (let i = 0; i < 6; i++) { const mx = -30 + i * 6; this._rr(g, mx, -2, 2, 11, 1); g.fill(); g.stroke(); }
+            g.strokeStyle = cl; g.lineWidth = 3.2; g.beginPath(); g.arc(8, 3, 7, Math.PI * 0.15, Math.PI * 0.85, true); g.stroke();
+            g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.2;
+            g.fillStyle = cl; g.beginPath(); g.moveTo(22, -6); g.lineTo(31, 0); g.lineTo(22, 6); g.closePath(); g.fill(); g.stroke();
+          } else {                                   // vino: botticelle in fila e due boccali
+            for (const mx of [-24, -6, 12]) {
+              g.fillStyle = cl; this._rr(g, mx, -6, 15, 15, 4); g.fill(); g.stroke();
+              g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(mx, -2, 15, 2.4); g.fillRect(mx, 3, 15, 2.4);
+            }
+            g.fillStyle = '#cbbfa4'; g.beginPath(); g.arc(29, 3, 4.2, 0, 7); g.fill(); g.stroke();
           }
           // due cassette ai piedi del banco: dicono che la merce arriva e riparte
           g.fillStyle = '#5a4326'; g.strokeStyle = '#241708'; g.lineWidth = 1.5;
@@ -1560,13 +1666,15 @@
     // degli eroi invece e' gia' tarata per la lettura a picco — ed e' l'unico disegno del gioco che sia
     // stato limato fino a convincere. Riusarlo costa niente e tiene insieme lo stile: se un domani un
     // eroe cambia, i mercanti cambiano con lui.
-    _vendorBase: { smith: 'guerriero', crier: 'guerriero', innkeeper: 'ladro', herbalist: 'mago', seer: 'mago', patron: 'ladro' },
+    // v2.6 — `sciamano` ha preso il posto di `seer`. La cartomante era un mago viola col ventaglio di
+    // carte; lo sciamano e' un'altra cosa — verderame, ossa, pelli — e si vede da lontano che non e' lei.
+    _vendorBase: { smith: 'guerriero', crier: 'guerriero', innkeeper: 'ladro', herbalist: 'mago', sciamano: 'mago', patron: 'ladro' },
     _vendorPal: {
       smith:     { cloth: '#8a5a2c', clothDk: '#4a2f14', steelDk: '#4a4038', pelo: '#5a4026', skin: '#e0b183', trim: '#ffb14a' },
       crier:     { cloth: '#6b5a72', clothDk: '#33303f', steelDk: '#5a6070', pelo: '#4a4050', skin: '#e0b48f', trim: '#ff9a8a' },
       innkeeper: { cloth: '#b8863c', clothDk: '#6b4a1c', skin: '#f0c795', wood: '#8a6534', trim: '#ffd97a' },
       herbalist: { body: '#3f6b34', bodyDk: '#1f3a1b', accent: '#9fe06a', orlo: 'rgba(159,224,106,.8)', skin: '#e3c396', trim: '#9fe06a' },
-      seer:      { body: '#5a4780', bodyDk: '#2b1f3f', accent: '#c9a0ff', orlo: 'rgba(201,160,255,.8)', skin: '#dcc4ea', trim: '#c9a0ff' },
+      sciamano:  { body: '#3f6b60', bodyDk: '#1c332e', accent: '#7fd6c0', orlo: 'rgba(127,214,192,.8)', skin: '#d6b48f', trim: '#7fd6c0' },
       patron:    { cloth: '#a08a68', clothDk: '#6b5940', body: '#a08a68', bodyDk: '#6b5940', pelo: '#63513a', skin: '#e6c79c', wood: '#7a5a34', trim: '#e8d9b0' },
     },
     _vendorTool(ctx, kind, r) {
@@ -1581,10 +1689,13 @@
         ctx.strokeStyle = '#4e7a3c'; ctx.lineWidth = 1.6;
         for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(-4, 2); ctx.quadraticCurveTo(2, -2 + k, 7, -6 + k * 3); ctx.stroke(); }
         ctx.fillStyle = '#9fe06a'; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.ellipse(7, -6 + k * 3, 2.2, 3.2, k * 0.4, 0, 7); ctx.fill(); }
-      } else if (kind === 'seer') {                 // ventaglio di carte
-        for (let k = -1; k <= 1; k++) { ctx.save(); ctx.rotate(k * 0.32);
-          ctx.fillStyle = '#efe6ff'; ctx.strokeStyle = '#5a4780'; ctx.lineWidth = 1.2; this._rr(ctx, 0, -5, 7, 10, 1.5); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = '#c9a0ff'; ctx.beginPath(); ctx.arc(3.5, 0, 1.6, 0, 7); ctx.fill(); ctx.restore(); }
+      } else if (kind === 'sciamano') {             // v2.6 — il bastone con le ossa e le piume appese
+        ctx.strokeStyle = '#6b5436'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(3, -12); ctx.stroke();
+        ctx.fillStyle = '#e8e0cc'; ctx.strokeStyle = '#3a3428'; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.arc(4, -14, 4.2, 0, 7); ctx.fill(); ctx.stroke();       // il teschietto in cima
+        ctx.fillStyle = '#2a2620'; ctx.beginPath(); ctx.arc(5.4, -14.8, 1.1, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#7fd6c0'; ctx.lineWidth = 1.4;
+        for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(1, -6); ctx.quadraticCurveTo(-3 + k, -2, -5 + k * 2, 3); ctx.stroke(); }
       } else if (kind === 'crier') {                // registro delle taglie
         ctx.fillStyle = '#e8dcc0'; ctx.strokeStyle = '#6b5024'; ctx.lineWidth = 1.4; this._rr(ctx, -4, -7, 12, 14, 1.5); ctx.fill(); ctx.stroke();
         ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
@@ -1945,8 +2056,11 @@
       bottegaio: { veste: '#8a5f34', vesteDk: '#4a321a', pelle: '#e3b98c', capelli: '#3a2a18', extra: '#d8cbae' },
       monaco:    { veste: '#4a4258', vesteDk: '#26222f', pelle: '#d6b48f', capelli: '#2a2530', extra: '#9a8fb5' },
       minatore:  { veste: '#4a4f5a', vesteDk: '#262a31', pelle: '#d8ac80', capelli: '#3a2f22', extra: '#ffd27a' },
+      // v2.6 — LA GUARDIA della casa del portale. E' l'unica che non fa niente per mestiere: sta ferma
+      // sulla soglia, e il fatto che stia ferma e' il suo mestiere. Grigio ferro, cotta scura, lancia.
+      guardia:   { veste: '#3f4653', vesteDk: '#1e242e', pelle: '#dcb289', capelli: '#2c2a2e', extra: '#9aa6b5' },
     },
-    _PAESANI: ['paesano', 'paesana', 'vecchio', 'bimbo', 'bottegaio', 'monaco', 'minatore'],
+    _PAESANI: ['paesano', 'paesana', 'vecchio', 'bimbo', 'bottegaio', 'monaco', 'minatore', 'guardia'],
     _ePaesano(k) { return this._paesaniPal[k] != null; },
     // disegnato con lo stesso mestiere di tutto il resto: ombra, base scura, sfumatura, contorno nero
     // sottile, e un filo di luce sul bordo alto. Il contorno e' quello che lo stacca dal pavimento.
@@ -2039,6 +2153,18 @@
         g.beginPath(); g.moveTo(-rr * 0.52, -rr * 0.20); g.lineTo(rr * 0.10, -rr * 0.78); g.stroke();
         g.strokeStyle = '#8d97a5'; g.lineWidth = 2.8;
         g.beginPath(); g.moveTo(-rr * 0.06, -rr * 0.60); g.lineTo(rr * 0.26, -rr * 0.88); g.stroke();
+      } else if (tipo === 'guardia') {
+        g.fillStyle = '#4a515e'; g.strokeStyle = '#07080c'; g.lineWidth = 1.8;  // l'elmo, con la cresta
+        g.beginPath(); g.arc(hx, 0, hr * 1.06, 0, 7); g.fill(); g.stroke();
+        g.fillStyle = '#8e2f3a';
+        g.beginPath(); g.ellipse(hx - hr * 0.15, 0, hr * 0.34, hr * 1.05, 0, 0, 7); g.fill();
+        g.fillStyle = '#1a1d24';                                               // la fessura per gli occhi
+        g.beginPath(); g.ellipse(hx + hr * 0.66, 0, hr * 0.20, hr * 0.46, 0, 0, 7); g.fill();
+        g.strokeStyle = '#5a4630'; g.lineWidth = 2.6;                          // la lancia, piantata a terra
+        g.beginPath(); g.moveTo(-rr * 0.14, rr * 1.02); g.lineTo(rr * 0.30, -rr * 1.18); g.stroke();
+        g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.2;
+        g.beginPath(); g.moveTo(rr * 0.30, -rr * 1.52); g.lineTo(rr * 0.48, -rr * 1.10);
+        g.lineTo(rr * 0.16, -rr * 1.10); g.closePath(); g.fill(); g.stroke();
       } else if (tipo === 'bimbo') {
         g.fillStyle = P.extra; g.strokeStyle = '#07080c'; g.lineWidth = 1.3;   // una palla in mano
         g.beginPath(); g.arc(rr * 0.46, rr * 0.66, rr * 0.22, 0, 7); g.fill(); g.stroke();
@@ -2742,6 +2868,29 @@
         vg.clearRect(-M, -M, this.w + M * 2, this.h + M * 2);
         vg.fillStyle = 'rgba(3,4,9,' + B.toFixed(3) + ')'; vg.fillRect(-M, -M, this.w + M * 2, this.h + M * 2);
         vg.globalCompositeOperation = 'destination-out';
+        // v2.6 — LA PIAZZA E' CHIARA. Non con una luce in piu' appoggiata sopra — quella tornerebbe a
+        // essere una patina — ma togliendo buio: dentro il rettangolo della piazza il velo vale
+        // VILL_PIAZZA invece di VILL_BUIO, e fra i due si passa sfumando per qualche tessera, cosi' il
+        // bordo non e' un taglio. E' un ovale e non un rettangolo apposta: un alone quadrato con gli
+        // spigoli si legge come una finestra, non come uno spiazzo illuminato.
+        {
+          const pz = this.map.piazza, T2 = this.map.tile || 48;
+          const PB = C.VILL_PIAZZA == null ? 0.34 : C.VILL_PIAZZA;
+          if (pz && PB < B) {
+            const ORLO = (C.VILL_PZ_ORLO || 3) * T2;
+            const cx2 = ((pz.x0 + pz.x1 + 1) / 2) * T2 - camX, cy2 = ((pz.y0 + pz.y1 + 1) / 2) * T2 - camY;
+            const rx = ((pz.x1 - pz.x0 + 1) / 2) * T2, ry = ((pz.y1 - pz.y0 + 1) / 2) * T2;
+            const RX = rx + ORLO, RY = ry + ORLO, A = 1 - PB / B;
+            const gp = this._grad('vpz|' + Math.round(RX) + '|' + Math.round(rx) + '|' + A.toFixed(2), () => {
+              const q = vg.createRadialGradient(0, 0, 0, 0, 0, RX);
+              q.addColorStop(0, 'rgba(0,0,0,' + A.toFixed(3) + ')');
+              q.addColorStop(Math.max(0.05, Math.min(0.95, rx / RX)), 'rgba(0,0,0,' + A.toFixed(3) + ')');
+              q.addColorStop(1, 'rgba(0,0,0,0)'); return q;
+            });
+            vg.save(); vg.translate(cx2, cy2); vg.scale(1, RY / RX);
+            vg.fillStyle = gp; vg.beginPath(); vg.arc(0, 0, RX, 0, 7); vg.fill(); vg.restore();
+          }
+        }
         // ogni sorgente scava il suo buco. La sfumatura si costruisce una volta per raggio e si riusa
         // (regola della v1.64): i raggi in gioco sono cinque o sei, quindi la cache basta e avanza.
         const buco = (wx, wy, rad, forza) => {
@@ -2757,14 +2906,27 @@
           });
           vg.fillStyle = gr; vg.translate(x, y); vg.beginPath(); vg.arc(0, 0, R, 0, 7); vg.fill(); vg.translate(-x, -y);
         };
-        if (this.bigLight) buco(this.bigLight.x, this.bigLight.y, this.bigLight.r, 1);       // il falo' della piazza
-        for (const cf of this.campfires) buco(cf.fx || cf.x, cf.fy || cf.y, 200, 1);          // focolari delle case
-        for (const tc of this.torches) buco(tc.x, tc.y, 120, 0.96);                           // bracieri e candelabri
-        for (const gl of (this.glows || [])) buco(gl.x, gl.y, gl.rad || 100, 0.92);           // gli aloni dei mercanti
-        { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) buco(gl2[i], gl2[i + 1] - 6, 104, 0.88); }
-        if (world.fg) buco(world.fg.x, world.fg.y, 220, 1);                                   // il portale in piazza
-        // e il cerchietto che ci si porta dietro: senza, fra una luce e l'altra si cammina alla cieca
-        { const RE = C.VILL_EROE || 130; for (const p of world.players) if (!p.d) buco(p.x, p.y, RE / K, 0.98); }
+        // v2.6 — LA PATINA CHE RESTAVA. Dopo la v2.5 il villaggio era ancora velato, e stavolta non era
+        // uno strato in piu': era uno SFASAMENTO. Il buio si buca qui con un raggio, e il bagliore caldo
+        // si disegnava piu' sotto con un altro — l'alone dell'eroe usciva a 190x1,45 = 275 px dentro un
+        // buco di 130. Quei 145 px di differenza sono luce appoggiata sul buio invece che dentro un buco:
+        // esattamente una patina, e ti seguiva perche' l'eroe sei tu.
+        //
+        // Il rimedio non e' limare un numero: e' che i due passaggi leggano LA STESSA LISTA. Le sorgenti
+        // del villaggio si dichiarano una volta sola qui sotto — [x, y, raggio, colore, alfa, forza] — si
+        // bucano con quel raggio e piu' avanti si accendono con lo stesso. Nessun bagliore senza il suo
+        // buco, nessun buco piu' piccolo del suo bagliore. Il test verifica proprio questo.
+        const VS = this._villSrc || (this._villSrc = []); VS.length = 0;
+        const HR = C.VILL_EROE || 130;
+        if (this.bigLight) VS.push([this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff8a2b', 0.58, 0.94]);
+        for (const cf of this.campfires) VS.push([cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55, 1]);
+        for (const tc of this.torches) VS.push([tc.x, tc.y, 120, '#ff9a3b', 0.5, 0.96]);
+        for (const gl of (this.glows || [])) VS.push([gl.x, gl.y, gl.rad || 100, gl.col, gl.a, 0.92]);
+        { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) VS.push([gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46, 0.88]); }
+        if (world.fg) VS.push([world.fg.x, world.fg.y, 220, '#9a5cff', 0.55, 1]);
+        // il cerchietto che ci si porta dietro: senza, fra una luce e l'altra si cammina alla cieca
+        for (const p of world.players) if (!p.d) VS.push([p.x, p.y, HR / K, (HERO[p.h] || HERO.guerriero).accent || '#8bd6ff', 0.26, 0.98]);
+        for (const s of VS) buco(s[0], s[1], s[2], s[5]);
         vg.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = 'source-over';
         const _sfv = C.FOV_SFUMA || 0;
@@ -2785,7 +2947,13 @@
          un posto solo, cosi' il colore caldo cresce insieme al buco scavato nel buio: se crescesse solo il
          buco, resterebbe un alone grigio con un puntino caldo in mezzo. Fuori dal villaggio vale 1. */
       const KL = this.map.lit ? (C.VILL_LUCE || 2) : 1;
-      const light = (wx, wy, rad0, color, a) => { const rad = rad0 * KL; const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); }; if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      const light = (wx, wy, rad0, color, a) => { const rad = rad0 * KL; const x = wx - camX, y = wy - camY; if (x < -rad || y < -rad || x > this.w + rad || y > this.h + rad) return; const R = Math.round(rad); const gr = this._grad('li|' + color + '|' + R, () => { const q = g.createRadialGradient(0, 0, 0, 0, 0, R); q.addColorStop(0, color); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); g.globalAlpha = a; g.fillStyle = gr; g.translate(x, y); g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.translate(-x, -y); };
+      // v2.6 — nel villaggio si accende ESATTAMENTE quello che si e' bucato, con gli stessi raggi. La
+      // lista lunga qui sotto e' quella delle grotte, dove il velo e' il campo visivo e il ritaglio tiene
+      // ogni bagliore dentro la visuale; li' non c'e' niente da tenere in riga.
+      if (_lit) { for (const s of this._villSrc) light(s[0], s[1], s[2], s[3], s[4]); } else {
+      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.guerriero; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();
     },
