@@ -81,7 +81,11 @@
   function entra(room) {
     A.resume();
     const name = $('nameInput').value.trim() || 'Eroe';
-    G.meHero = HUD.selectedHero;
+    // v2.11.3 — RIPRENDENDO comanda il SALVATAGGIO, non la casella selezionata nel menu. Qui c'era
+    // `G.meHero = HUD.selectedHero` secco, e cancellava la classe appena letta dal salvataggio: entravi
+    // come guerriero, il server ti rifaceva ladro, e il client restava convinto di essere un guerriero —
+    // barra delle abilita' e ritratto nei dialoghi compresi.
+    G.meHero = (G.riprendiDati && G.riprendiDati.heroId) || HUD.selectedHero;
     $('menuMsg').textContent = G.provaOnda ? ('Prova dall\u2019ondata ' + G.provaOnda + '\u2026') : 'Connessione\u2026';
     Net.connect(name, G.meHero, room);
   }

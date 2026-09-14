@@ -1216,6 +1216,10 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(/localStorage\.setItem\(SV\.CHIAVE/.test(srcM), 'il pacchetto si tiene nel browser');
   ok(/catch \(_\) \{ return null; \}/.test(srcM), 'e le letture sono protette: localStorage SOLLEVA in finestra anonima');
   ok(/Net\.riprendi\(G\.riprendiDati\)/.test(srcM), 'e riprendere lo rimanda al server');
+  // v2.11.3 — riprendendo comanda il SALVATAGGIO, non la casella selezionata nel menu: qui c'era
+  // `G.meHero = HUD.selectedHero` secco, e cancellava la classe appena letta dal salvataggio.
+  ok(/G\.meHero = \(G\.riprendiDati && G\.riprendiDati\.heroId\) \|\| HUD\.selectedHero;/.test(srcM),
+    'e la classe la decide il salvataggio, non la casella rimasta selezionata nel menu');
   ok(!/removeItem\(SV\.CHIAVE/.test(srcM), 'e NESSUNO lo cancella: morire non toglie il salvataggio, e il punto di averlo');
   const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
   ok(/_renderSalva\(/.test(srcH), 'l HUD disegna il pulsante del salvataggio');

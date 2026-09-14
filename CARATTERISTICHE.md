@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.11.2`
+**Versione attuale:** `2.11.3`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1096,6 +1096,22 @@ Formato sbagliato, classe che non esiste, livello impossibile: si rifiuta e la p
 caricamento a meta' produce un personaggio impossibile, che e' molto peggio di un *«non si puo'»*. I numeri
 ritoccati a mano si stringono nei loro limiti — non e' antifrode (e' un gioco in singolo: chi vuole barare
 apre la console e bara), e' che un salvataggio corrotto non deve poter mandare per aria il server.
+
+### 🎭 Riprendendo comanda il salvataggio, non il menu *(v2.11.3)*
+
+Segnalato giocando: *«ho salvato come ladro, ho riaperto col guerriero selezionato, ho premuto RIPRENDI ed
+ero ladro ma con la skin del guerriero»*. Due difetti diversi, tutti e due veri.
+
+**1. La skin — il server.** Nome ed eroe viaggiano nello snapshot **una volta sola** (`p._sent`), perche' in
+partita non cambiano mai: e' l'ottimizzazione dello "snapshot magro". Ma **riprendere e' l'unico momento in
+cui la classe cambia sotto i piedi del client**: sei entrato guerriero e il salvataggio ti rifa' ladro.
+Senza riabbassare quella bandiera il client non lo sa e continua a disegnare la classe vecchia — ladro nei
+numeri, guerriero a vedersi. `riprendi()` adesso fa `p._sent = 0`, e lo snapshot dopo glielo ridice.
+
+**2. La barra delle abilita' e il ritratto — il client.** In `entra()` c'era `G.meHero = HUD.selectedHero`
+secco, e cancellava la classe appena letta dal salvataggio: il client restava convinto di essere un
+guerriero anche per la barra dei tasti e per il ritratto nei dialoghi. Adesso, riprendendo, comanda il
+salvataggio.
 
 ### ⚠️ Il prezzo di tenerlo nel browser
 

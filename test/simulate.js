@@ -5031,6 +5031,31 @@ function testSalvataggio() {
   assert(r2.effMaxHp(q) === hpPrima, 'compreso il massimo dei PV (' + r2.effMaxHp(q) + ')');
   assert(q.hp === r2.effMaxHp(q), 'e si riprende in forma: la sosta serviva a quello');
 
+  // --- 1-bis) LA SKIN: il client deve IMPARARE la classe nuova -------------------------------------
+  // v2.11.3 — Segnalato giocando: salvi da ladro, riapri col guerriero selezionato nel menu, riprendi, e
+  // ti ritrovi ladro nei numeri ma col guerriero a vedersi.
+  //
+  // Nome ed eroe viaggiano nello snapshot UNA VOLTA SOLA (`p._sent`), perche' in partita non cambiano
+  // mai. Riprendere e' l'unico momento in cui la classe CAMBIA sotto i piedi del client: senza
+  // riabbassare quella bandiera il client resta con la classe vecchia e disegna il personaggio sbagliato.
+  {
+    const ou = []; const cn = { send(t) { ou.push(JSON.parse(t)); } };
+    const ra = new Room('skin'); const pa = ra.addPlayer('a', cn, 'A', 'ladro');
+    ra.startGame(10, true); ra.wave = 9; ra.enterMarket();
+    pa.coins = 200; pa.x = ra.innkeeper.x; pa.y = ra.innkeeper.y;
+    ou.length = 0; ra.salvaAllOstessa('a');
+    const sa = ou.find(m => m.t === C.MSG.SALVATO);
+    // si entra come GUERRIERO, com'era rimasta la selezione nel menu
+    const rb = new Room('skin2'); const qb = rb.addPlayer('a', { send() {} }, 'A', 'guerriero');
+    const prima = (rb.snapshot(true).players.find(x => x.i === 'a') || {}).h;
+    assert(prima === 'guerriero', 'il client ha gia in cache la classe con cui e entrato (' + prima + ')');
+    rb.riprendi('a', sa.dati);
+    assert(qb.heroId === 'ladro', 'il server lo rifa ladro');
+    const dopo = rb.snapshot(true).players.find(x => x.i === 'a') || {};
+    assert(dopo.h === 'ladro', 'e lo snapshot successivo glielo RIDICE, se no resta la skin sbagliata (h=' + dopo.h + ')');
+    assert(dopo.n === 'A', 'e col nome, che viaggia insieme');
+  }
+
   // --- 2) SI RIPARTE DAL VILLAGGIO di quell ondata, e NON in modalita di prova ---
   assert(r2.phase === C.PHASE_MARKET && !!r2.map.village, 'si riapre nel villaggio, dove avevi salvato');
   assert(r2.wave === 11, 'dell ondata giusta (' + r2.wave + ')');

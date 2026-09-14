@@ -2,6 +2,55 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.11.3] — 2026-09-14 · "Salvato da ladro, ripreso con la skin del guerriero"
+
+#### 🐛 Il bug, segnalato giocando
+*«Ho salvato la partita come ladro. Sono uscito e al riavvio ho trovato il pulsante RIPRENDI. Nel menu
+avevo preselezionato il guerriero e quando ho cliccato ero col ladro ma con la skin del guerriero.»*
+
+Riprodotto al primo tentativo. Ed erano **due** difetti diversi, tutti e due miei.
+
+#### 1. La skin — lo snapshot magro
+Nome ed eroe viaggiano nello snapshot **una volta sola**:
+
+```js
+const nuovo = !slim || !p._sent; if (slim) p._sent = 1;
+...
+if (nuovo) { o.n = p.name; o.h = p.heroId; }   // nome ed eroe: immutabili in partita
+```
+
+Il commento diceva la verita' — *in partita* non cambiano mai — ma **riprendere e' l'unico momento in cui
+la classe cambia sotto i piedi del client**: entri come guerriero dal menu, e il salvataggio ti rifa'
+ladro. Il client aveva gia' ricevuto `h: 'guerriero'` e messo in cache, e nessuno gliel'ha piu' detto.
+Risultato: ladro nei numeri, guerriero a vedersi.
+
+`riprendi()` adesso rimette `p._sent = 0` dopo aver applicato il salvataggio, e lo snapshot successivo
+ridice nome ed eroe. Il client, ricevendo di nuovo la parte piena, **sostituisce** la voce in cache.
+
+#### 2. La barra delle abilita' e il ritratto — il client
+In `entra()`:
+
+```js
+G.meHero = HUD.selectedHero;      // <-- cancellava quello letto dal salvataggio
+```
+
+Sul pulsante RIPRENDI avevo gia' scritto `G.meHero = d.heroId`, e due righe dopo `entra()` lo sovrascriveva
+con la casella rimasta selezionata nel menu. Il client restava convinto di essere un guerriero anche per la
+barra dei tasti e per il ritratto nei dialoghi. Adesso, **riprendendo comanda il salvataggio**.
+
+#### ✅ Verifiche
+- **Riprodotto prima di correggere**, e riprovato **togliendo** la correzione: senza, lo snapshot
+  successivo alla ripresa non contiene la classe (*«il client vede: niente, resta guerriero»*).
+- `test/simulate.js` — blocco nuovo dentro il TEST 70: si salva da **ladro**, si entra da **guerriero**, si
+  verifica che la cache del client contenga guerriero *prima*, e che lo snapshot dopo la ripresa **ridica**
+  `h: 'ladro'` col nome. **2470 passati, 0 falliti.**
+- `test/client.js` — che la classe la decida il salvataggio e non la casella del menu.
+- **Nel browser, il suo scenario esatto** — salvataggio da ladro in tasca, pagina riaperta, guerriero
+  selezionato nel menu, RIPRENDI: il client disegna `ladro` e la barra mostra **🏹 Arco**, non la spada.
+  Zero errori in console.
+
+---
+
 ### [2.11.2] — 2026-09-14 · "Ricontrollato il bug delle abilita', e saltato fuori un difetto vero"
 
 #### ❓ La domanda: «sei sicuro di aver sistemato il bug delle abilita'?»

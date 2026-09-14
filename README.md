@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.11.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.11.3 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.11.3 (riprendendo comanda il salvataggio, non il menu)
+- **🎭 SALVATO DA LADRO, RIPRESO CON LA SKIN DEL GUERRIERO.** Segnalato giocando, e riprodotto. Erano
+  **due** difetti diversi:
+  - **La skin (server).** Nome ed eroe viaggiano nello snapshot **una volta sola** (`p._sent`), perche' in
+    partita non cambiano mai. Ma riprendere e' l'unico momento in cui la classe **cambia sotto i piedi del
+    client**: senza riabbassare quella bandiera il client resta con la classe vecchia e disegna il
+    personaggio sbagliato. Adesso `riprendi()` la riabbassa.
+  - **La barra delle abilita' e il ritratto (client).** In `entra()` c'era `G.meHero = HUD.selectedHero`
+    secco, e cancellava la classe appena letta dal salvataggio.
+- **🧪 Riprodotto prima di correggere**, e riprovato togliendo la correzione: senza, lo snapshot successivo
+  alla ripresa **non contiene la classe** e il client resta guerriero.
 
 ## 🆕 Novita v2.11.2 (ricontrollato il bug delle abilita', e trovato un difetto vero)
 - **✅ Le abilita' di 8 e 14 arrivano davvero.** Ricontrollato su richiesta, e stavolta per la **strada

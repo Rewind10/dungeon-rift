@@ -1426,6 +1426,12 @@ class Room {
     this.startGame(1, true);                       // pulizia completa, senza prologo e senza prova
     if (!Salva.applica(p, dati)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'riprendi_no' } }); return; }
     p.hero = H[p.heroId] || p.hero; p.maxHp = p.hero.hp;
+    // v2.11.3 — IL BUG DELLA SKIN. Nome ed eroe viaggiano nello snapshot UNA VOLTA SOLA, perche' in
+    // partita non cambiano mai: `p._sent` e' la bandiera che dice "gliel'ho gia' detto". Ma riprendere una
+    // partita e' l'unico momento in cui la classe CAMBIA sotto i piedi del client — sei entrato come
+    // guerriero dal menu e il salvataggio ti rifa' ladro. Senza riabbassare la bandiera il client resta
+    // con la classe vecchia e disegna il personaggio sbagliato: ladro nei numeri, guerriero a vedersi.
+    p._sent = 0;
     this._recomputeGear(p); this._recomputeBoons(p);
     p.hp = this.effMaxHp(p); p.hpDebt = 0;          // si riprende in forma: la sosta e' servita a quello
     p.dead = false; p.down = false;
