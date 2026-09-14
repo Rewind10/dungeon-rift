@@ -1177,6 +1177,24 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
   ok(Math.round(dist()) === 200, 'riaccendendolo il mirino rientra subito (' + Math.round(dist()) + 'px)');
 })();
 
+// --- v2.11.2 — LA CARTA CLICCATA MENTRE IL PANNELLO SI CHIUDE -------------------------------------
+// `hideShop()` azzera `_boons`. Se il pannello si chiude nello stesso fotogramma in cui clicchi una carta
+// — cambia la fase: parte l'ondata, o si va al villaggio — il gestore del clic scriveva su `null` e
+// sollevava: la scelta arrivava al server ma il pannello NON si ridisegnava, e a schermo restava la carta
+// come se il clic non fosse mai avvenuto. Visto in un controllo nel browser, non immaginato.
+(function () {
+  const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+  ok(/if \(this\._boons\) this\._boons\.picked = true;/.test(srcH), 'il clic su una carta regge anche se il pannello si e appena chiuso');
+  ok(/if \(this\._rank\) this\._rank\.picked = true;/.test(srcH), 'e lo stesso vale per la carta di rango');
+  // e la prova vera: si sceglie, poi si chiude il pannello, poi si riclicca la stessa carta
+  HUD.setBoons({ tier: 'rare', boons: [{ id: 'ab_carica', name: 'Carica', icon: '\u26A1', rarity: 'rare', desc: 'x', owned: 0, max: 1 }], abil: 1, slot: 'q' }, () => {});
+  HUD.hideShop();
+  let esploso = false;
+  try { const row = document.getElementById('boonCards'); const c = row.children[0]; if (c && c.onclick) c.onclick(); }
+  catch (_) { esploso = true; }
+  ok(!esploso, 'e non solleva nemmeno provandoci davvero');
+})();
+
 // --- v2.11 — IL SALVATAGGIO, lato interfaccia ------------------------------------------------------
 (function () {
   const SV = window.GAME.Salvataggio;

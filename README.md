@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.11.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.11.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,22 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.11.2 (ricontrollato il bug delle abilita', e trovato un difetto vero)
+- **✅ Le abilita' di 8 e 14 arrivano davvero.** Ricontrollato su richiesta, e stavolta per la **strada
+  vera**: ondata giocata fino in fondo (mostri uccisi, faglia attraversata, negozio raggiunto dal gioco) e
+  poi si guarda cosa riceve il client. Al livello 8 arriva l'abilita' del tasto Q. E nel browser: il
+  pannello disegna le due carte, il clic manda `pick_boon`, e finche' non scegli PROSSIMA MAPPA resta
+  spento con scritto *«Hai un'abilita' da scegliere nella sezione ABILITA'»*.
+- **🔍 Il controllo nel browser della v2.9.4 non verificava niente.** Chiamava `HUD.offerBoon`, che **non
+  esiste** (la funzione vera e' `setBoons`), dentro un `if` che rendeva la chiamata un buco nel vuoto. Il
+  server era giusto, ma quando avevo scritto "verificato" il **client non era mai stato provato**.
+- **🐛 E cosi' e' saltato fuori un difetto vero.** Cliccando una carta **nello stesso fotogramma** in cui il
+  pannello si chiude (cambia la fase), il gestore scriveva su `null` e sollevava: la scelta arrivava al
+  server ma il pannello non si ridisegnava, e a schermo restava la carta come se il clic non fosse
+  avvenuto. Corretto.
+- **🧪 Il test nuovo fallisce sul codice vecchio** — verificato rimettendolo: *«offre: niente»* ai livelli
+  8 e 14. Un test che non fallisce sul bug che dovrebbe prendere non serve a niente.
 
 ## 🆕 Novita v2.11.1 (due correzioni al mirino)
 - **🐛 NEL VILLAGGIO NON SI CLICCAVA PIU'.** Col pointer lock il cursore **non esiste**, e nel villaggio il

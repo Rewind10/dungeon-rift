@@ -228,7 +228,7 @@
           + '<div class="icon">' + (c.icon || '★') + '</div><div class="nm">' + esc(c.name) + '</div>'
           + '<div class="ds">' + esc(c.desc) + '</div>'
           + (c.abilita ? '<div class="ab">' + esc(c.abilita) + '</div>' : '');
-        el.onclick = () => { if (this._pickRank) this._pickRank(c.id); this._rank.picked = true; this._render(); };
+        el.onclick = () => { if (this._pickRank) this._pickRank(c.id); if (this._rank) this._rank.picked = true; this._render(); };
         row.appendChild(el);
       });
     },
@@ -354,7 +354,11 @@
           const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = r.color;
           const chi = b.hero && b.hero !== '*' ? 'DELLA TUA CLASSE' : 'PER TUTTI';
           el.innerHTML = `<span class="rar" style="color:${r.color}">${r.name}</span><div class="icon">${b.icon}</div><div class="nm">${b.name}</div><div class="ds">${b.desc}</div><div class="own">${chi}</div>`;
-          el.onclick = () => { if (this._pick) this._pick(b.id); this._boons.picked = true; this._render(); };
+          // v2.11.2 — `if (this._boons)` non e' pignoleria. `hideShop()` azzera `_boons`, e se il pannello si
+          // chiude nello stesso fotogramma in cui clicchi (cambia la fase: parte l'ondata, o si va al
+          // villaggio) questa riga tirava un'eccezione: la scelta arrivava al server ma il pannello NON si
+          // ridisegnava, e a schermo restava la carta come se il clic non fosse mai avvenuto.
+          el.onclick = () => { if (this._pick) this._pick(b.id); if (this._boons) this._boons.picked = true; this._render(); };
           brow.appendChild(el);
         });
       } else if (this._boons && this._boons.boons && !this._boons.boons.length) {

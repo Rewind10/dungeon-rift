@@ -2,6 +2,64 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.11.2] — 2026-09-14 · "Ricontrollato il bug delle abilita', e saltato fuori un difetto vero"
+
+#### ❓ La domanda: «sei sicuro di aver sistemato il bug delle abilita'?»
+Risposta onesta: il **server** era a posto, il **client** non era mai stato provato — e l'avevo scritto
+come verificato.
+
+#### 🔍 Il controllo nel browser della v2.9.4 era un buco nel vuoto
+Diceva:
+
+```js
+if (window.HUD && window.HUD.offerBoon) window.HUD.offerBoon(payload);
+```
+
+**`HUD.offerBoon` non esiste.** La funzione vera e' `setBoons(data, onPick)`. Quel mio stesso `if` —
+scritto per prudenza — ha reso la chiamata un no-op, e il *«CARICA»* che avevo trovato a schermo veniva
+dalla **barra delle abilita' in basso** (il personaggio in modalita' di prova ce l'aveva gia'), non dal
+pannello. Il controllo passava senza toccare niente.
+
+#### ✅ Cosa e' stato riprovato, e come
+- **Server, per la strada vera**: ondata **giocata** fino in fondo — mostri uccisi con `killMonster` (la
+  porta vera: quella che conta i morti, chiude l'ondata e apre la faglia), faglia attraversata, negozio
+  raggiunto dal gioco da solo. Al livello 8 il client riceve `ATTIVA-q`. Al 3, la passiva.
+- **Client, dal punto d'ingresso vero** (`Net.onOfferBoon`, quello che chiama `net.js`): il pannello
+  disegna le due carte — *Raro ⚡ Carica* e *Raro 📣 Grido di Guerra* — e cliccando quella giusta parte
+  `{"t":"pick_boon","id":"ab_carica"}`.
+- **E non si puo' saltarla**: finche' la scelta e' in sospeso il pulsante PROSSIMA MAPPA e' **spento**, la
+  linguetta ha il pallino, e sotto c'e' scritto *«Hai un'abilita' da scegliere nella sezione ABILITA'»*.
+
+#### 🐛 Il difetto vero, trovato guardando
+`hideShop()` azzera `_boons`. Cliccando una carta **nello stesso fotogramma** in cui il pannello si chiude
+— cambia la fase: parte l'ondata, o si va al villaggio — questa riga
+
+```js
+el.onclick = () => { if (this._pick) this._pick(b.id); this._boons.picked = true; this._render(); };
+```
+
+scriveva su `null` e **sollevava**. La scelta arrivava al server, ma il pannello non si ridisegnava: a
+schermo restava la carta **come se il clic non fosse mai avvenuto**. Una guardia (`if (this._boons)`), e lo
+stesso per la carta di rango.
+
+#### 🧪 Il buco che il TEST 69 aveva
+Chiamava `_inviaPannello` **a mano**. Provare quella funzione dimostra che *quella funzione* e' giusta, non
+che il gioco ci passi davvero — la stessa distinzione che con le guardie del villaggio era costata una
+versione buttata. Adesso c'e' anche il blocco che **gioca l'ondata**.
+
+E perche' isolasse davvero il bug, il personaggio deve aver **gia' preso** le passive dei livelli
+precedenti, come chiunque giochi: se restassero in coda terrebbero acceso il vecchio controllo e il
+pannello si aprirebbe lo stesso, **per il motivo sbagliato** — cioe' il test passerebbe su codice rotto.
+Sistemato: col codice vecchio dice *«offre: niente»* ai livelli 8 e 14. **Verificato rimettendolo.**
+
+#### ✅ Verifiche
+- `test/simulate.js` — **2465 passati**, restano i 2 ballerini noti del mercenario.
+- `test/client.js` — le due guardie, e una prova che chiude il pannello e poi **riclicca davvero** la carta
+  per vedere che non sollevi. *(2 fallimenti attesi sull'audio.)*
+- **Nel browser** — pannello, carte, clic e messaggio al server, tutto letto e non dedotto.
+
+---
+
 ### [2.11.1] — 2026-09-13 · "Nel villaggio il mirino si toglie di mezzo"
 
 #### 🐛 Col pointer lock nel villaggio non si cliccava piu'

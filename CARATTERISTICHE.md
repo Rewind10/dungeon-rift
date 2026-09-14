@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.11.1`
+**Versione attuale:** `2.11.2`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -90,6 +90,29 @@ giocatore non veniva mostrata mai. Il TEST 69 invece decodifica il JSON che il s
 esattamente come farebbe il browser, e poi "clicca" su cio' che gli e' stato offerto: percorre le
 quattordici ondate di una run per tutte e tre le classi e verifica **dove** ogni scelta compare.
 Rimettendo il codice vecchio, fallisce con quattordici errori.
+
+### 🧪 …e poi la STRADA VERA *(v2.11.2)*
+
+Il test qui sopra aveva comunque un buco: chiamava `_inviaPannello` **a mano**. Provare quella funzione
+dimostra che *quella funzione* e' giusta, non che il gioco ci passi davvero — la stessa distinzione che con
+le guardie del villaggio era costata una versione buttata.
+
+Adesso c'e' anche un blocco che **gioca l'ondata**: si ammazzano i mostri con `killMonster` (la porta vera,
+quella che conta i morti, chiude l'ondata e apre la faglia), si attraversa la faglia, e il gioco arriva al
+negozio da solo. Poi si guarda cosa ha ricevuto il client.
+
+Perche' isoli davvero il bug, il personaggio deve aver **gia' preso** le passive dei livelli precedenti —
+come chiunque giochi. Se restassero in coda terrebbero acceso il vecchio controllo
+(`scaglioniDovuti.length > 0`) e il pannello si aprirebbe lo stesso, **per il motivo sbagliato**: il test
+passerebbe su codice rotto. Con il codice vecchio, adesso, dice *«offre: niente»* ai livelli 8 e 14.
+
+### 🖱️ E il clic mentre il pannello si chiude *(v2.11.2)*
+
+`hideShop()` azzera `_boons`. Se il pannello si chiudeva **nello stesso fotogramma** in cui cliccavi una
+carta — cambia la fase: parte l'ondata, o si va al villaggio — il gestore del clic scriveva su `null` e
+sollevava un'eccezione: la scelta **arrivava al server**, ma il pannello non si ridisegnava e a schermo
+restava la carta come se il clic non fosse mai avvenuto. Trovato guardando davvero il browser, non
+immaginato. Una riga di guardia, e un controllo che prova a rifarlo.
 
 ### La curva dell'esperienza *(ritarata in v1.79.1)*
 Cumulata al livello 15: **9.470**. La taratura viene dall'esperienza che i mostri di un'ondata mettono

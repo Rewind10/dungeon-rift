@@ -4942,6 +4942,43 @@ function testSceltePannello() {
     assert(!!ctx.p.spec && !!ctx.p.abil.e, 'e il personaggio finisce con tutte e due (spec ' + ctx.p.spec + ', E ' + ctx.p.abil.e + ')');
   }
 
+  // --- 3-bis) LA STRADA VERA: un'ondata GIOCATA, non `_inviaPannello` chiamato a mano -----------------
+  // v2.11.2 — E' il buco che questo test aveva. Chiamare la funzione che manda il pannello prova che
+  // QUELLA funzione e' giusta; non prova che il gioco ci passi davvero. Qui invece l'ondata si gioca fino
+  // in fondo — si ammazza tutto, si attraversa la faglia, il gioco arriva al negozio da solo — e si guarda
+  // cosa riceve il client. E' la stessa distinzione che con le guardie del villaggio era costata cara.
+  {
+    const dt = 1 / C.TICK_RATE;
+    for (const [liv, atteso] of [[8, 'attiva'], [14, 'attiva']]) {
+      const ric = [];
+      const cn = { send(t) { const m = JSON.parse(t); if (m.t === C.MSG.OFFER_BOON) ric.push(m); } };
+      const rr = new Room('vera' + liv); const pp = rr.addPlayer('a', cn, 'A', 'guerriero');
+      rr.startGame(1, true);
+      const soglia = Lv.xpForLevel(liv);
+      rr.addXp(pp, Math.max(0, soglia - 30 - pp.xpPool));
+      // le passive dei livelli precedenti le ha GIA' prese, come chiunque giochi davvero. E' la
+      // condizione che isola il bug: se restassero in coda terrebbero acceso il vecchio controllo
+      // (`scaglioniDovuti.length > 0`) e il pannello si aprirebbe lo stesso, per il motivo sbagliato.
+      pp.scaglioniDovuti = [];
+      ric.length = 0;
+      let giri = 0;
+      while (rr.phase !== C.PHASE_SHOP && giri++ < C.TICK_RATE * 400) {
+        // si ammazza tutto passando dalla porta vera (`killMonster`): e' quella che conta i morti, chiude
+        // l'ondata e apre la faglia. Mettere `hp = 0` e basta lascerebbe l'ondata aperta per sempre.
+        for (const mo of rr.monsters) if (!mo.dead) { mo.hp = 0; rr.killMonster(mo, pp); }
+        pp.hp = rr.effMaxHp(pp);
+        if (pp.xpPool < soglia + 1) rr.addXp(pp, soglia + 1 - pp.xpPool);
+        rr.setInput('a', { mx: 0, my: 0, aim: 0 });
+        rr.update(dt);
+        if (rr.faglia && rr.phase === C.PHASE_CLEARED) { pp.x = rr.faglia.x; pp.y = rr.faglia.y; }
+      }
+      assert(rr.phase === C.PHASE_SHOP, 'livello ' + liv + ': l ondata giocata arriva al negozio (' + rr.phase + ')');
+      const ultima = ric[ric.length - 1] || {};
+      const che = ultima.abil ? 'attiva' : ((ultima.boons || []).length ? 'passiva' : 'niente');
+      assert(che === atteso, 'e finendo l ondata al livello ' + liv + ' il pannello offre una ' + atteso + ' (offre: ' + che + ')');
+    }
+  }
+
   // --- 4) CHI NON SCEGLIE NON PERDE NIENTE: la coda sopravvive all ondata ---
   // se uno chiude il pannello senza scegliere, la scelta deve ripresentarsi la volta dopo.
   {
