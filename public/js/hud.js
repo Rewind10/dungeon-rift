@@ -204,7 +204,8 @@
     killfeed(text) { const kf = $('centerFeed') || $('killfeed'); const el = document.createElement('div'); el.className = 'cf-item'; el.innerHTML = text; kf.appendChild(el); void el.offsetWidth; el.classList.add('show'); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600); while (kf.children.length > 4) kf.removeChild(kf.firstChild); },
     // NEGOZIO (statistiche XP) + BOON
     showShop() { $('upgradeScreen').classList.remove('hidden'); this.mostraSezione(this._sez || 'riepilogo'); this._render(); },
-    setStats(data, onBuy, onReady) { this._stats = data; this._buy = onBuy; this._ready = onReady; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    setStats(data, onBuy, onReady, onEquip) { this._stats = data; this._buy = onBuy; this._ready = onReady; if (onEquip) this._equipaggia = onEquip;
+      if (data) { this._heroId = data.heroId || this._heroId; this._spec = data.spec || 0; } if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
     // v1.69 — CARTE DI RANGO. Stesso pannello dei boon, mazzo diverso: qui si sceglie cio' che rende
     // la classe *tua*, non un potenziamento generico. Al rango V le carte sono due e piu' grandi:
     // e' un bivio, non una scelta fra tre pari.
@@ -302,18 +303,25 @@
         wrap.appendChild(box);
       });
     },
-    setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
+    // v2.13 — il pannello di fine ondata non ha piu' un negozio dentro (SHOP_GEAR_ENABLED e' spento e
+    // resta spento: il fabbro e' uno, al villaggio). Questa resta per non rompere il richiamo dal server
+    // se qualcuno lo riaccende, ma non disegna piu' niente qui: si limita a tenere il dato.
+    setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; },
     // ===== v1.79 — IL MENU A SEZIONI ========================================================
     // Il pannello di fine ondata non e' piu' una colonna sola con tutto dentro: sono quattro sezioni con
     // una barra in basso. `_sez` e' quella aperta; il riepilogo e' la sezione di default perche' e' quella
     // che risponde alla domanda che il giocatore ha appena finito di farsi ("com'e' andata?").
+    // v2.13 — le linguette sono due e stanno nella colonna di sinistra: PERSONAGGIO e ABILITA'. Il
+    // riepilogo dell'ondata non e' piu' una scheda (e' finito sotto le statistiche, dov'e' il suo posto:
+    // "com'e' andata" e "come sono messo" sono la stessa domanda) e il villaggio e' un pulsante in fondo.
     mostraSezione(nome) {
+      if (nome !== 'abilita') nome = 'personaggio';
       this._sez = nome;
-      const mappa = { riepilogo: 'secRiepilogo', personaggio: 'secPersonaggio', abilita: 'secAbilita' };
+      const mappa = { personaggio: 'paneStat', abilita: 'paneAbil' };
       for (const k in mappa) { const el = $(mappa[k]); if (el) el.classList.toggle('hidden', k !== nome); }
-      const tabs = { riepilogo: 'tabRiepilogo', personaggio: 'tabPersonaggio', abilita: 'tabAbilita' };
+      const tabs = { personaggio: 'tabPersonaggio', abilita: 'tabAbilita' };
       for (const k in tabs) { const el = $(tabs[k]); if (el) el.classList.toggle('on', k === nome); }
-      const inner = document.querySelector('.upgrade-inner'); if (inner && inner.scrollTop !== undefined) inner.scrollTop = 0;
+      const sx = document.querySelector('.col-sx'); if (sx) sx.scrollTop = 0;
     },
     // C'e' una scelta in sospeso? Finche' c'e', la mappa successiva non parte: uno scaglione saltato per
     // distrazione non si recupera piu'.
@@ -327,7 +335,10 @@
       this._renderAbilita();
       this._renderPersonaggio();
       this._renderRiepilogo();
+      this._renderBaule();
+      this._renderAddosso();
       this._aggiornaBarra();
+      this._avviaRitratto();
     },
     _aggiornaBarra() {
       const sosp = this._scelteInSospeso();
@@ -339,25 +350,31 @@
         btn.textContent = this._pronto ? '⏳  IN ATTESA DEGLI ALTRI' : '▶  PROSSIMA MAPPA';
       }
       if (nota) {
-        nota.innerHTML = sosp === 'spec' ? 'Scegli prima la tua <b>specializzazione</b> nella sezione ABILITÀ.'
-          : sosp === 'abilita' ? 'Hai un\'<b>abilità da scegliere</b> nella sezione ABILITÀ.'
+        // v2.13 — «nella sezione ABILITA'» non e' piu' vero: la scelta in sospeso non sta in una scheda,
+        // sta nella banda in cima alla schermata, sotto gli occhi. E la coda «puoi passare dal villaggio»
+        // e' sparita: il villaggio e' un pulsante a due centimetri da qui, ridirlo a parole e' rumore.
+        nota.innerHTML = sosp === 'spec' ? 'Scegli prima la tua <b>specializzazione</b>, l\u00ec in cima.'
+          : sosp === 'abilita' ? 'Hai un\'<b>abilità da scegliere</b>, l\u00ec in cima.'
           : (this._pronto ? 'Aspettiamo gli altri giocatori.'
-            : ((window.GAME.Storia && window.GAME.Storia.menu && window.GAME.Storia.menu.riparti) || 'Quando sei pronto, rimandalo giù.')
-              + ' <span style="opacity:.7">Puoi passare dal villaggio prima di ripartire.</span>');
+            : ((window.GAME.Storia && window.GAME.Storia.menu && window.GAME.Storia.menu.riparti) || 'Quando sei pronto, rimandalo giù.'));
       }
-      const vil = $('tabVillaggio');
-      if (vil) { const ultima = this._stats && this._stats.wave >= (window.GAME.Constants.FINAL_WAVE || 20); vil.classList.toggle('off', !!ultima); }
+      // v2.13 — il villaggio e' un pulsante, non una linguetta. All'ultima ondata non c'e' piu' villaggio
+      // dove andare: si spegne invece di sparire, cosi' chi lo cercava capisce che c'era ed e' finito.
+      const vil = $('villaggioBtn');
+      if (vil) {
+        const ultima = this._stats && this._stats.wave >= (window.GAME.Constants.FINAL_WAVE || 20);
+        vil.classList.toggle('off', !!ultima); vil.disabled = !!ultima;
+        vil.title = ultima ? 'L\'ultima ondata non passa piu\' dal villaggio' : 'Fabbro, Ostessa, Erborista, Banditore e Cartomante';
+      }
     },
     _renderRiepilogo() {
       // v2.8.1 — LE RIGHE DEL DONO. Dopo il colpo di scena questa schermata diceva una cosa falsa: lui
       // non impara niente, riceve. Il testo sta in shared/storia.js come tutto il resto del parlato, e
       // da qui si limita ad atterrare negli elementi giusti. Il PATTO — la spiegazione per esteso —
       // compare solo a fine ondata 1: letta venti volte sarebbe rumore.
+      // v2.13 — la riga "da qui puoi guardare il personaggio, le abilita', il villaggio..." e' sparita
+      // insieme alle linguette che elencava. Adesso si vede tutto insieme: non c'e' piu' niente da spiegare.
       this._righeDono();
-      const nota = $('riepilogoNota'); if (!nota) return;
-      const w = this._stats ? this._stats.wave : 0;
-      nota.innerHTML = 'Da qui puoi guardare il <b>personaggio</b>, spendere i punti, controllare le <b>abilità</b> e passare dal <b>villaggio</b>. '
-        + 'La mappa ' + (w ? (w + 1) : 'successiva') + ' parte solo col pulsante in fondo.';
     },
     // ---- SEZIONE ABILITA': la scelta in sospeso, poi quello che hai gia' preso ----
     _renderAbilita() {
@@ -369,6 +386,11 @@
       const na = $('notaAbilita');
       const aperta = !!(this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked);
       if (na) na.classList.toggle('hidden', !aperta);
+      // v2.13 — LA BANDA IN CIMA. Compare solo se c'e' davvero qualcosa da scegliere, e prende tutta la
+      // larghezza: tre carte da leggere e confrontare non stanno in una colonna laterale, e una scelta in
+      // sospeso non e' una scheda fra le altre — e' la cosa da fare adesso.
+      const rk = !!(this._rank && this._rank.cards && this._rank.cards.length && !this._rank.picked);
+      const banda = $('sceltaBanda'); if (banda) banda.classList.toggle('hidden', !(aperta || rk));
       if (aperta) {
         $('boonSection').classList.remove('hidden');
         const rar = RAR[this._boons.tier] || {};
@@ -449,13 +471,8 @@
     },
     // ---- SEZIONE PERSONAGGIO: punti, statistiche, inventario ----
     _renderPersonaggio() {
-      const gsec = $('gearSection');
-      if (gsec) gsec.classList.toggle('hidden', !(this._gear && this._gear.slots && this._gear.slots.length));
-      if (this._gear && this._gear.slots) {
-        $('shopCoins').textContent = this._gear.coins;
-        this._gearSlots($('gearCards'), this._gear, (id) => { if (this._buyGear) this._buyGear(id); });
-      }
       if (!this._stats) return;
+      this._renderDerivate(this._stats.inv && this._stats.inv.derivate);
       $('shopXp').textContent = this._stats.points != null ? this._stats.points : this._stats.xp;
       const sl = $('shopLevel'); if (sl) sl.textContent = (this._stats.level || 1) + (this._stats.cap ? ' (max)' : '');
       const sr = $('shopRank'); if (sr) sr.textContent = this._stats.rankName || '';
@@ -472,25 +489,125 @@
         el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
         cont.appendChild(el);
       });
-      this._renderInventario(this._stats.inv);
     },
-    _renderInventario(inv) {
-      const cont = $('inventario'); if (!cont) return;
-      if (!inv) { cont.innerHTML = ''; return; }
-      let html = '';
-      html += `<div class="inv-r"><span class="ic">❤️</span><span class="sl">Salute</span><span class="nm">${inv.hp} / ${inv.hpMax} PV</span><span class="ds">${'❤'.repeat(Math.max(0, inv.vite))} ${inv.vite} vite · 🪙 ${inv.monete}</span></div>`;
-      // la riga "in mano" compare SOLO se stai impugnando un'arma raccolta a terra: se no ripeterebbe
-      // parola per parola la riga dell'arma dell'equipaggiamento, due righe sotto.
-      if (inv.arma.livello) {
-        const pips = '●'.repeat(inv.arma.livello) + '○'.repeat(Math.max(0, 3 - inv.arma.livello));
-        html += `<div class="inv-r"><span class="ic">${inv.arma.evo ? '★' : '🏹'}</span><span class="sl">In mano</span><span class="nm">${esc(inv.arma.nome)}</span><span class="ds">${pips}</span></div>`;
-      }
-      for (const g of inv.gear || [])
-        html += `<div class="inv-r"><span class="ic">${g.icona}</span><span class="sl">${esc(g.slotName)}</span><span class="nm" style="color:${g.colore}">${esc(g.nome)}</span><span class="ds">${esc(g.desc || '')}</span></div>`;
-      html += '<div class="inv-belt">' + (inv.belt || []).map((b, i) => b
-        ? `<span class="pz">${b.icona} ${esc(b.nome)} <b>${b.n}/${b.max}</b></span>`
-        : `<span class="pz vuoto">slot ${i + 1} vuoto</span>`).join('') + '</div>';
-      cont.innerHTML = html;
+    // v2.13 — LE TRE DERIVATE (piu' il passo). Forza, Costituzione, Intelligenza e Destrezza si
+    // spendevano alla cieca: il pannello diceva quanti punti avevi messo, mai che effetto avevano. Questi
+    // sono i numeri che il motore usa davvero, calcolati dal server con le sue funzioni — non una
+    // ricostruzione fatta qui, che il giorno di una ritaratura direbbe una cosa e il gioco un'altra.
+    _renderDerivate(d) {
+      const box = $('derivate'); if (!box) return;
+      if (!d) { box.innerHTML = ''; return; }
+      const v = [['⚔️', d.danno, 'danno per colpo'], ['🛡️', d.armatura + '%', 'danni assorbiti'],
+                 ['⏱', d.cadenza + '/s', 'cadenza'], ['👟', d.passo, 'passo']];
+      box.innerHTML = v.map(x => '<div class="dv"><span class="ic">' + x[0] + '</span><b>' + x[1] + '</b><i>' + x[2] + '</i></div>').join('');
+    },
+    // ============================================================================================
+    // v2.13 — IL CENTRO E LA DESTRA
+    // ============================================================================================
+    // Prima c'era `_renderInventario`: un elenco di righe di testo dentro la scheda PERSONAGGIO, una
+    // riga per slot, con nome e descrizione. Diceva tutto e non faceva vedere niente — e soprattutto
+    // mostrava solo cio' che avevi ADDOSSO. Quello che possedevi e non indossavi (`p.owned`, il baule)
+    // non compariva da nessuna parte se non andando dal fabbro, dall'altra parte del villaggio.
+    //
+    // Adesso sono due cose distinte e in due posti distinti: al CENTRO cio' che porti, a DESTRA cio'
+    // che hai. Ed e' la destra a essere cliccabile, perche' e' li' che c'e' una decisione da prendere.
+
+    // ---- CENTRO: gli slot addosso, sotto il ritratto ----
+    _renderAddosso() {
+      const box = $('slotAddosso'); if (!box) return;
+      const inv = this._stats && this._stats.inv;
+      if (!inv) { box.innerHTML = ''; return; }
+      box.innerHTML = (inv.gear || []).map(g =>
+        '<div class="sa" style="--c:' + g.colore + '" title="' + esc(g.nome) + (g.desc ? ' — ' + esc(g.desc) : '') + '">'
+        + '<span class="ic">' + g.icona + '</span>'
+        + '<span class="tx"><b>' + esc(g.nome) + '</b><i>' + esc(g.slotName) + '</i></span></div>').join('');
+      const belt = $('beltAddosso');
+      if (belt) belt.innerHTML = '<div class="sa-belt">' + (inv.belt || []).map((b, i) => b
+        ? '<span class="pz" title="' + esc(b.nome) + '">' + b.icona + ' <b>' + b.n + '/' + b.max + '</b></span>'
+        : '<span class="pz vuoto" title="Slot vuoto — assegnalo dall\'Erborista">slot ' + (i + 1) + '</span>').join('')
+        + '</div><div class="sa-vite">' + '❤'.repeat(Math.max(0, inv.vite)) + ' <i>' + inv.vite + ' vite · ' + inv.hp + '/' + inv.hpMax + ' PV · 🪙 ' + inv.monete + '</i></div>';
+    },
+
+    // ---- CENTRO: il ritratto ----
+    // Non e' un'illustrazione: e' il personaggio VERO, disegnato dalla stessa funzione che lo disegna in
+    // partita (`Renderer._hero`), con addosso gli id dell'equipaggiamento che porta. Quindi le `tinta`
+    // dei 104 pezzi si vedono qui esattamente come si vedono sulla mappa, e l'alone del divino pure —
+    // se un giorno cambia il disegno del personaggio, cambia anche qui, senza che nessuno se ne ricordi.
+    _avviaRitratto() {
+      const cv = $('ritratto'); if (!cv || !window.Renderer) return;
+      if (this._ritrattoOn) return;
+      this._ritrattoOn = true;
+      const giro = () => {
+        if ($('upgradeScreen').classList.contains('hidden')) { this._ritrattoOn = false; return; }
+        this._disegnaRitratto();
+        requestAnimationFrame(giro);
+      };
+      requestAnimationFrame(giro);
+    },
+    _disegnaRitratto() {
+      const cv = $('ritratto'); const R = window.Renderer; if (!cv || !R) return;
+      const ctx = cv.getContext('2d'); if (!ctx) return;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const inv = this._stats && this._stats.inv; if (!inv) return;
+      const eq = {
+        h: this._heroId || 'guerriero',
+        wp: (inv.gear.find(g => g.slot === 'weapon') || {}).id || null,
+        arm: (inv.gear.find(g => g.slot === 'armor') || {}).id || null,
+        sh: (inv.gear.find(g => g.slot === 'shield') || {}).id || null,
+        stv: (inv.gear.find(g => g.slot === 'boots') || {}).id || null,
+        sp: this._spec || 0,
+      };
+      const t = performance.now() / 1000;
+      ctx.save();
+      ctx.translate(cv.width / 2, cv.height * 0.56);
+      // il raggio: grande quanto ci sta, cosi' si vedono i dettagli che in partita sono di 16 pixel
+      const r = Math.min(cv.width, cv.height) * 0.34;
+      // guarda verso il basso-destra e ondeggia piano: fermo sembrerebbe un cadavere in piedi
+      ctx.rotate(0.5 + Math.sin(t * 0.7) * 0.12);
+      try { R._hero(ctx, eq.h, r, t, false, 0, eq); } catch (_) { /* il ritratto non deve poter rompere il menu */ }
+      ctx.restore();
+    },
+
+    // ---- DESTRA: il baule ----
+    // Clic = te lo metti addosso. Non costa niente ed e' il punto: e' roba gia' pagata, e chiedere di
+    // attraversare il villaggio per cambiarsi una corazza che e' nel proprio baule non e' una regola,
+    // e' un attrito. Comprare invece resta un gesto del fabbro: da qui non si compra e non si vende.
+    _renderBaule() {
+      const box = $('baule'); if (!box) return;
+      const inv = this._stats && this._stats.inv;
+      if (!inv || !inv.baule) { box.innerHTML = ''; return; }
+      box.innerHTML = '';
+      let quanti = 0;
+      inv.baule.forEach(sl => {
+        if (!sl.pezzi || !sl.pezzi.length) return;
+        const g = document.createElement('div'); g.className = 'bgr';
+        const h = document.createElement('div'); h.className = 'bgr-h';
+        h.innerHTML = '<span class="ic">' + sl.icona + '</span> ' + esc(sl.slotName);
+        g.appendChild(h);
+        const riga = document.createElement('div'); riga.className = 'bgr-row';
+        sl.pezzi.forEach(it => {
+          quanti++;
+          const rar = RAR[it.rarita] || RAR.common;
+          const el = document.createElement('div');
+          el.className = 'bq' + (it.addosso ? ' on' : '');
+          el.style.setProperty('--c', it.colore);
+          el.title = it.nome + ' — ' + rar.name + ' ' + (it.carattere || '') + '\n' + (it.desc || '')
+                   + (it.addosso ? '\n\n(lo stai portando)' : '\n\nClic per indossarlo');
+          el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
+            + '<span class="nm">' + esc(it.nome) + '</span>'
+            + '<span class="rr" style="color:' + rar.color + '">' + esc(rar.name) + '</span>'
+            + (it.addosso ? '<span class="on-b">★</span>' : '');
+          el.onclick = () => { if (!it.addosso && this._equipaggia) this._equipaggia(it.id); };
+          riga.appendChild(el);
+        });
+        g.appendChild(riga); box.appendChild(g);
+      });
+      const nota = $('bauleNota');
+      // un baule con dentro solo cio' che hai addosso non e' un baule: si dice, invece di mostrare
+      // una griglia che sembra rotta.
+      if (nota) nota.innerHTML = quanti > (inv.gear || []).length
+        ? 'Tutto quello che hai comprato resta tuo. <b>Clic per indossarlo</b> — non costa niente, l\'hai già pagato.'
+        : 'Qui finisce tutto quello che compri dal <b>fabbro</b>, al villaggio. Per adesso porti addosso l\'unica roba che hai.';
     },
     // v1.51 — barra dei POTERI ATTIVI, sopra la barra abilita'. Aggiornata solo quando il server manda
     // l'elenco (scelta di un potere / sinergia / inizio partita), non a ogni frame.

@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.12.0',
+    VERSION: '2.13.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -261,6 +261,7 @@
       // torna indietro quando si riparte. Il server non tiene niente: costruisce e applica, e basta.
       SALVA: 'salva', SALVATO: 'salvato', RIPRENDI: 'riprendi',
       VENDI_GEAR: 'vendi_gear',                            // v2.12 — la rivendita dal fabbro, a meta' prezzo
+      EQUIPAGGIA: 'equipaggia',                            // v2.13 — rimettersi addosso roba del baule, gratis
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)

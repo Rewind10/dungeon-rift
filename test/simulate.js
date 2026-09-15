@@ -3760,6 +3760,12 @@ function testV181() {
 // ============================================================================
 function testV182() {
   console.log('\n[TEST 58] v1.82 — mercenari: aiutano, e non contano come giocatori');
+  // v2.13 — SEMINATO, come il TEST 62 prima di lui. Questo blocco falliva circa una volta su tre, e non
+  // per un bug: la mappa e' generata a caso, quindi il punto dove finisce il mercenario cambia a ogni
+  // giro e a volte lo mette dietro uno spigolo. Un test che fallisce a caso e' peggio di un test che non
+  // c'e': la volta che segnala qualcosa di vero nessuno gli crede. Con la stessa mappa a ogni giro misura
+  // l IA del mercenario, che e' cio' che vuole misurare. (Provato: senza il seme, 1 fallimento su 3.)
+  const _rndVero = Math.random; Math.random = MU.seedRng(0x182A);
   const dt = 1 / C.TICK_RATE;
   const Mrc = require('../shared/mercenari.js');
   const conn = { send() {} };
@@ -4046,6 +4052,7 @@ function testV182() {
     } else { assert(true, 'nessun angolo di roccia utile su questa mappa: prova saltata'); }
   }
 
+  Math.random = _rndVero;
   ok('mercenari verificati: aiutano, e non contano come giocatori');
 }
 
@@ -5489,6 +5496,76 @@ function testStoria() {
 }
 
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// TEST 71 — v2.13: LA SCHERMATA UNICA. Il baule, le derivate, e l'equipaggiare senza fabbro.
+// ============================================================================================
+// Cosa difende: che il pannello di fine ondata porti al client TUTTO cio' che la schermata nuova
+// disegna, e che la porta per equipaggiare dal baule non diventi per sbaglio un negozio aperto ovunque.
+function testSchermataUnica() {
+  console.log('\n[TEST 71] v2.13 — la schermata di fine ondata: baule, derivate, equipaggiare senza fabbro');
+  const Gear = require('../shared/gear.js');
+  const conn = { send() {} };
+  const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
+  const room = new Room('v213'); const p = room.addPlayer('a', cap, 'A', 'guerriero'); room.startGame();
+
+  // --- 1) il pannello porta heroId, derivate e baule ---
+  room.wave = 3; room.phase = C.PHASE_SHOP;
+  sent.length = 0; room.offerShop(p);
+  const m = sent.find(x => x.t === C.MSG.OFFER_SHOP);
+  assert(!!m, 'il pannello arriva al client');
+  assert(m.heroId === 'guerriero', 'e porta la classe (serve al ritratto per sapere chi disegnare)');
+  const d = m.inv && m.inv.derivate;
+  assert(!!d && typeof d.danno === 'number' && typeof d.armatura === 'number' && typeof d.cadenza === 'number' && typeof d.passo === 'number',
+    'porta le quattro derivate: ' + JSON.stringify(d));
+  // le derivate devono essere quelle VERE, non una ricostruzione: si confrontano col motore
+  assert(d.danno === Math.round(room.effDamage(p)), 'il danno e quello che usa il motore');
+  assert(Math.abs(d.cadenza - 1 / room.effFireDelay(p)) < 0.02, 'e la cadenza pure');
+  assert(m.inv.gear.every(g => g.id), 'ogni slot addosso porta l ID del pezzo (senza, il ritratto disegna un nudo)');
+  assert(Array.isArray(m.inv.baule) && m.inv.baule.length === 3, 'il baule arriva diviso per slot');
+  const tuttiAddosso = m.inv.baule.every(sl => sl.pezzi.every(x => x.addosso));
+  assert(tuttiAddosso, 'appena nati nel baule c e solo cio che si ha addosso');
+
+  // --- 2) si equipaggia dal baule, e non costa niente ---
+  const spadone = Gear.itemsOfRank('guerriero', 'weapon', 2).find(i => i.carattere === 'pesante');
+  p.coins = 500; room.enterMarket(); p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
+  room.buyGear('a', spadone.id);
+  assert(p.gear.weapon === spadone.id && p.coins === 500 - spadone.cost, 'si compra dal fabbro, come sempre');
+  const partenza = Gear.startingGear('guerriero');
+  room.phase = C.PHASE_SHOP;
+  const soldi = p.coins;
+  room.equipaggia('a', partenza.weapon);
+  assert(p.gear.weapon === partenza.weapon, 'e dal baule ci si rimette addosso il vecchio');
+  assert(p.coins === soldi, 'senza spendere niente: e gia tuo');
+  // e il pannello si rimanda, se no la schermata resterebbe a mostrare il pezzo di prima
+  sent.length = 0; room.equipaggia('a', spadone.id);
+  assert(sent.some(x => x.t === C.MSG.OFFER_SHOP), 'e il pannello si rimanda, col baule aggiornato');
+
+  // --- 3) LE TRE COSE CHE QUESTA PORTA NON DEVE FARE ---
+  // (a) non compra: se comprasse, sarebbe un negozio aperto ovunque e il fabbro non servirebbe piu'
+  const mai = Gear.itemsOfRank('guerriero', 'armor', 5).find(i => i.carattere === 'pesante');
+  const c0 = p.coins, g0 = p.gear.armor;
+  room.equipaggia('a', mai.id);
+  assert(p.gear.armor === g0 && p.coins === c0, 'dal baule NON si compra cio che non e tuo');
+  // (b) non in combattimento: cambiarsi l'armatura mentre arrivano addosso non e un gesto
+  room.phase = C.PHASE_COMBAT;
+  room.equipaggia('a', partenza.weapon);
+  assert(p.gear.weapon === spadone.id, 'in combattimento non ci si cambia');
+  room.phase = C.PHASE_SHOP;
+  // (c) niente roba di un'altra classe, nemmeno se te la scrivi in owned a mano
+  const armaMago = Gear.itemsFor('mago', 'weapon')[0];
+  p.owned[armaMago.id] = 1;
+  room.equipaggia('a', armaMago.id);
+  assert(p.gear.weapon === spadone.id, 'ne roba di un altra classe');
+  delete p.owned[armaMago.id];
+
+  // --- 4) il riepilogo dell'ondata porta danni e combo ---
+  p.damageDealt = 1234; p.comboBest = 9;
+  sent.length = 0; room.inviaRiepilogo(p);
+  const r = sent.find(x => x.t === C.MSG.WAVE_STATS);
+  assert(r && r.danni === 1234 && r.combo === 9, 'il riepilogo porta danni e combo migliore');
+  ok('la schermata unica verificata');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.12.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,31 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.0 (una schermata sola: chi sei, cosa porti, cosa hai)
+- **🗺️ IL PANNELLO DI FINE ONDATA NON HA PIU' QUATTRO LINGUETTE.** Ne aveva quattro (riepilogo,
+  personaggio, abilita', villaggio) perche' tutto in colonna non ci stava, dentro un tetto di 960px. Il
+  prezzo: per sapere com'eri messo dovevi girare per tre schede, e il **baule** — la roba che possedevi e
+  non indossavi — non si vedeva **da nessuna parte** se non dal fabbro, dall'altra parte del villaggio.
+- **📐 Adesso e' una schermata sola, larga 1280, a tre colonne.** A sinistra **chi sei** (livello, le
+  derivate, il riepilogo dell'ondata, i punti), al centro **cosa porti addosso**, a destra **cosa hai nel
+  baule**. In fondo due soli pulsanti: vai al villaggio, prossima mappa.
+- **🖼️ Il ritratto al centro e' il personaggio VERO**: e' `Renderer._hero`, la stessa funzione che lo
+  disegna in partita, con addosso gli id dell'equipaggiamento. Le tinte dei 104 pezzi si vedono qui come si
+  vedono sulla mappa, e l'alone del divino pure.
+- **📊 Le quattro derivate.** Forza, Costituzione, Intelligenza e Destrezza si spendevano alla cieca: il
+  pannello diceva quanti punti avevi messo, mai che effetto avessero. Ora ci sono **danno per colpo, danni
+  assorbiti, cadenza, passo**, presi dalle funzioni del motore e non ricostruiti nel client.
+- **🎒 Il baule, e il clic che equipaggia.** Tutto quello che compri resta tuo, e ora si vede: per slot,
+  col pezzo indossato marcato, e **un clic te lo mette addosso** — gratis, l'hai gia' pagato. E' una porta
+  nuova, non `buyGear` con un controllo in meno: **non compra**, non funziona in combattimento, e non
+  accetta roba di un'altra classe.
+- **🃏 La scelta in sospeso e' una banda in cima**, a tutta larghezza, e sparisce quando hai scelto. Tre
+  carte da confrontare non stanno in una colonna laterale, e una scelta in sospeso non e' una scheda fra le
+  altre: e' la cosa da fare adesso.
+- **🧪 3135 test passati, 0 falliti.** Nuovo TEST 71 (15 controlli), e una **sfarfallata pre-esistente
+  spenta**: il TEST 58 falliva una volta su tre per via della mappa generata a caso. Un test che fallisce a
+  caso e' peggio di un test che non c'e'.
 
 ## 🆕 Novita v2.12.0 (centoquattro pezzi, e dentro ogni grado un bivio)
 - **🎯 L'EQUIPAGGIAMENTO ERA UNA SCALA, NON UNA SCELTA.** Misurato prima di crederci: in una run intera si

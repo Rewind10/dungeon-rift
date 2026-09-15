@@ -2,6 +2,83 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.0] — 2026-09-15 · "Una schermata sola: chi sei, cosa porti, cosa hai"
+
+**Fase 2 del piano equipaggiamento** (`PIANO-EQUIPAGGIAMENTO.md`). Resta la fase 3: il negozio del fabbro
+ridisegnato con lo stesso stile a icone quadrate.
+
+#### 🗺️ Da quattro linguette a una schermata
+La v1.79 aveva diviso il pannello di fine ondata in **quattro schede** — riepilogo, personaggio, abilità,
+villaggio — perché tutto in colonna non ci stava. Il prezzo era che per sapere com'eri messo dovevi girare
+per tre schede, e il **baule** (la roba che possedevi e non indossavi) non si vedeva **da nessuna parte**:
+esisteva solo nel pannello del fabbro, dall'altra parte del villaggio.
+
+Adesso è una schermata sola, **larga 1280** (era `min(960px, 94vw)`), a tre colonne:
+
+| | |
+|---|---|
+| **Sinistra** | chi sei: livello, le quattro derivate, il riepilogo dell'ondata, i punti da spendere. Due linguette: PERSONAGGIO e ABILITÀ |
+| **Centro** | cosa porti addosso: il **ritratto** del personaggio e i suoi slot |
+| **Destra** | cosa hai: il **baule**, a icone quadrate |
+| **In fondo** | due soli pulsanti: vai al villaggio, prossima mappa |
+
+Il riepilogo dell'ondata sta **sopra** i punti: la prima domanda di chi apre questa schermata è «com'è
+andata», la seconda «cosa ci faccio adesso».
+
+#### 🖼️ Il ritratto è il personaggio vero
+Non è un'illustrazione: è `Renderer._hero`, **la stessa funzione che lo disegna in partita**, con addosso
+gli id dell'equipaggiamento che porta. Quindi le `tinta` dei 104 pezzi della 2.12 si vedono qui esattamente
+come si vedono sulla mappa, l'alone del divino pure, e il giorno che cambia il disegno del personaggio
+cambia anche qui senza che nessuno debba ricordarsene.
+
+#### 📊 Le quattro derivate
+Forza, Costituzione, Intelligenza e Destrezza si spendevano **alla cieca**: il pannello diceva quanti punti
+avevi messo, mai che effetto avessero. Adesso ci sono **danno per colpo, danni assorbiti, cadenza, passo**,
+calcolati dal server con le sue funzioni (`effDamage`, `effFireDelay`, `effSpeed`) — non ricostruiti nel
+client, che il giorno di una ritaratura direbbe una cosa e il gioco un'altra. Un test lo verifica
+confrontandoli col motore.
+
+#### 🎒 Il baule, e il clic che equipaggia
+`p.owned` era già l'inventario — tutto ciò che compri resta tuo — e non lo vedevi mai. Ora è la colonna di
+destra, per slot, con il pezzo indossato marcato, e **un clic te lo mette addosso**. Non costa niente: l'hai
+già pagato. Chiedere di attraversare il villaggio per cambiarsi una corazza che è nel proprio baule non è
+una regola, è un attrito — ed è esattamente il motivo per cui l'inventario non si guardava mai.
+
+**È una porta nuova (`MSG.EQUIPAGGIA`), non `buyGear` con un controllo in meno**, e la differenza conta:
+`buyGear` può *spendere* e per questo pretende che tu sia davanti al fabbro. Questa non spende. E non compra:
+un id che non è in `p.owned` viene ignorato, perché se questa porta potesse comprare sarebbe un negozio
+aperto ovunque e il fabbro non servirebbe più a niente. Non funziona nemmeno in combattimento, e non accetta
+roba di un'altra classe. Tre cose che il test verifica una per una.
+
+#### 🃏 La scelta in sospeso è una banda, non una scheda
+Carte di rango e abilità non stanno più in una linguetta: quando c'è qualcosa da scegliere compare una
+**banda a tutta larghezza in cima**, e sparisce quando hai scelto. Tre carte da leggere e confrontare non
+stanno in una colonna laterale, e una scelta in sospeso non è una scheda fra le altre — è la cosa da fare
+adesso. Il testo in fondo diceva *«nella sezione ABILITÀ»*: non era più vero, ora dice «lì in cima».
+
+#### 🔧 E il resto
+- **L'altezza è una catena**: la schermata riempie lo schermo, le tre colonne prendono ciò che avanza dopo
+  la banda, e a scorrere sono **solo le colonne**. Col primo tentativo (`max-height` in vh sulle colonne) la
+  banda aperta spingeva i due pulsanti **fuori dallo schermo** — cioè proprio quando servono di più.
+- **Sotto i 1100px** le tre colonne diventano una, in ordine di importanza.
+- Il riepilogo dell'ondata porta anche **danni inflitti e combo migliore**: due numeri che il gioco già
+  teneva e faceva vedere solo nella tabella di fine partita, cioè quando non servono più a niente.
+- La coda *«Puoi passare dal villaggio prima di ripartire»* è sparita: il villaggio è un pulsante a due
+  centimetri da lì, e ridirlo a parole è rumore.
+
+#### 🧪 I test
+`3135 passati, 0 falliti`. Nuovo **TEST 71** (15 controlli) sul pannello e sulla porta che equipaggia,
+verificato rimettendo il bug. Il controllo nel browser entra da `Net.onOfferShop` — il punto d'ingresso
+vero — misura la larghezza reale, conta le colonne e **legge i pixel del canvas** per essere sicuro che il
+ritratto disegni davvero; provato rompendolo, e li prende.
+
+**E una sfarfallata pre-esistente è stata spenta.** Il TEST 58 (mercenari) falliva circa **una volta su
+tre**, e non per un bug: la mappa è generata a caso e a volte il mercenario finiva dietro uno spigolo. Adesso
+è seminato come il TEST 62. Un test che fallisce a caso è peggio di un test che non c'è: la volta che
+segnala qualcosa di vero, nessuno gli crede.
+
+---
+
 ### [2.12.0] — 2026-09-15 · "Centoquattro pezzi, e dentro ogni grado un bivio"
 
 **Fase 1 del piano equipaggiamento** (`PIANO-EQUIPAGGIAMENTO.md`). Le fasi 2 e 3 — schermata di fine

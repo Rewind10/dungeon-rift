@@ -149,41 +149,23 @@
     <button id="changeHeroBtn" class="ghost">Cambia eroe</button>
   </div>
 </div>
-<!-- ===== v1.79 — IL MENU DI FINE ONDATA, A SEZIONI ==========================================
-     Prima era tutto in colonna nella stessa schermata: riepilogo, carte, punti, negozio e destinazione,
-     uno sotto l'altro. Adesso sono QUATTRO sezioni con una barra in basso, e la mappa successiva parte
-     da un pulsante suo, separato e centrato, che non si confonde con le sezioni. -->
+<!-- ===== v2.13 — IL MENU DI FINE ONDATA: UNA SCHERMATA SOLA ==================================
+     v1.79 lo aveva diviso in QUATTRO linguette (riepilogo, personaggio, abilita', villaggio) perche'
+     tutto in colonna non ci stava. Il prezzo era che per sapere com'eri messo dovevi girare per tre
+     schede, e il baule — la roba che possedevi — non si vedeva da nessuna parte.
+     Adesso e' una schermata sola, larga 1280, a tre colonne: a sinistra chi sei, al centro cosa porti
+     addosso, a destra cosa hai nel baule. In fondo due soli pulsanti. Le linguette rimaste sono due, e
+     stanno dentro la colonna di sinistra: PERSONAGGIO e ABILITA'. -->
 <div id="upgradeScreen" class="hidden">
   <div class="upgrade-inner">
 
-    <!-- ---- SEZIONE 1: RIEPILOGO (quella che si apre da sola) ---- -->
-    <section id="secRiepilogo" class="msec">
-      <!-- v2.8.1 — la cornice: due frasi che dicono di chi e' questa schermata -->
-      <p class="dono-cornice" id="menuCornice"></p>
-      <p class="dono-patto hidden" id="menuPatto"></p>
-      <div id="waveStats" class="hidden"></div>
-      <p class="shop-hint" id="riepilogoNota"></p>
-    </section>
-
-    <!-- ---- SEZIONE 2: PERSONAGGIO ---- -->
-    <section id="secPersonaggio" class="msec hidden">
-      <h2>PUNTI — cosa gli concedi</h2>
-      <p class="dono" id="notaPunti"></p>
-      <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
-      <div id="upgradeCards"></div>
-      <p class="shop-hint">Un punto per livello, uno per rango: <b>18 in tutta la partita</b>. Ogni statistica costa <b>1 punto</b> per livello e si ferma a 12: potrai portarne <b>una al massimo</b> e una <b>seconda fino a 6</b>. Scegli dove specializzarti.</p>
-      <h2>INVENTARIO</h2>
-      <div id="inventario"></div>
-      <div id="gearSection" class="hidden">
-        <h2>🪙 EMPORIO — equipaggiamento (monete)</h2>
-        <p class="dono" id="notaEmporio"></p>
-        <div class="shop-coins">Hai <b id="shopCoins">0</b> 🪙 monete</div>
-        <div id="gearCards"></div>
-      </div>
-    </section>
-
-    <!-- ---- SEZIONE 3: ABILITA' ---- -->
-    <section id="secAbilita" class="msec hidden">
+    <!-- ================================================================================
+         v2.13 — UNA SCHERMATA SOLA, non piu' quattro linguette.
+         La banda in cima compare SOLO quando c'e' davvero qualcosa da scegliere: una scelta in
+         sospeso non e' una scheda fra le altre, e' la cosa da fare adesso, e va larga quanto serve
+         per leggere tre carte affiancate. Sotto, le tre colonne restano sempre le stesse.
+         ================================================================================ -->
+    <div id="sceltaBanda" class="hidden">
       <div id="rankSection" class="hidden">
         <h2 id="rankTitle">RANGO</h2>
         <p class="dono" id="notaRango"></p>
@@ -196,21 +178,61 @@
         <div id="boonSub" class="rank-sub"></div>
         <div id="boonCards"></div>
       </div>
-      <h2 id="titoloPoteri">I poteri che hai concesso all’avatar</h2>
-      <div id="abilElenco"></div>
-    </section>
+    </div>
 
+    <div class="tre-colonne">
+
+      <!-- ---- SINISTRA: due linguette, il personaggio e cio' che gli hai concesso ---- -->
+      <div class="col-sx">
+        <nav class="sx-tabs">
+          <button class="stab on" id="tabPersonaggio">🧍 PERSONAGGIO</button>
+          <button class="stab" id="tabAbilita">🎴 ABILITÀ<i id="tabBadge" class="hidden">!</i></button>
+        </nav>
+
+        <div id="paneStat" class="spane">
+          <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
+          <!-- v2.13 — LE TRE DERIVATE. Le quattro statistiche si spendevano senza vedere mai l'effetto:
+               qui ci sono i numeri che il motore usa davvero — danno, armatura, cadenza, passo. -->
+          <div id="derivate"></div>
+          <!-- v2.13 — il riepilogo dell'ondata sta SOPRA i punti, non sotto. La prima domanda di chi
+               apre questa schermata e' «com'e' andata», la seconda «cosa ci faccio adesso»: in quest'ordine. -->
+          <h3>L'ONDATA APPENA CHIUSA</h3>
+          <div id="waveStats" class="hidden"></div>
+          <h3>PUNTI — cosa gli concedi</h3>
+          <p class="dono" id="notaPunti"></p>
+          <div id="upgradeCards"></div>
+          <p class="shop-hint">Un punto per livello, uno per rango: <b>18 in tutta la partita</b>. Ogni statistica costa <b>1 punto</b> per livello e si ferma a 12: potrai portarne <b>una al massimo</b> e una <b>seconda fino a 6</b>.</p>
+          <p class="dono-cornice" id="menuCornice"></p>
+          <p class="dono-patto hidden" id="menuPatto"></p>
+        </div>
+
+        <div id="paneAbil" class="spane hidden">
+          <h3 id="titoloPoteri">I poteri che hai concesso all’avatar</h3>
+          <div id="abilElenco"></div>
+        </div>
+      </div>
+
+      <!-- ---- CENTRO: il personaggio, con addosso quello che porta ---- -->
+      <div class="col-cx">
+        <h3>ADDOSSO</h3>
+        <div id="ritrattoWrap"><canvas id="ritratto" width="300" height="340"></canvas></div>
+        <div id="slotAddosso"></div>
+        <div id="beltAddosso"></div>
+      </div>
+
+      <!-- ---- DESTRA: il baule. Tutto cio' che possiedi, e un clic per mettertelo ---- -->
+      <div class="col-dx">
+        <h3>BAULE</h3>
+        <p class="shop-hint" id="bauleNota">Tutto quello che hai comprato resta tuo. <b>Clic per indossarlo</b> — non costa niente, l'hai già pagato.</p>
+        <div id="baule"></div>
+      </div>
+
+    </div>
   </div>
 
-  <!-- ---- la barra delle sezioni: quattro pulsanti, sempre tutti attivi ---- -->
-  <nav id="menuTabs">
-    <button class="mtab on" id="tabRiepilogo">📊 RIEPILOGO</button>
-    <button class="mtab" id="tabPersonaggio">🧍 PERSONAGGIO</button>
-    <button class="mtab" id="tabAbilita">🎴 ABILITÀ<i id="tabBadge" class="hidden">!</i></button>
-    <button class="mtab" id="tabVillaggio">🏕️ VAI AL VILLAGGIO</button>
-  </nav>
-  <!-- ---- e sotto, da solo, quello che fa ripartire il gioco ---- -->
+  <!-- ---- in fondo, due soli pulsanti ---- -->
   <div id="menuGo">
+    <button id="villaggioBtn">🏕️  VAI AL VILLAGGIO</button>
     <button id="nextWaveBtn" class="primary">▶  PROSSIMA MAPPA</button>
     <div id="goNota"></div>
   </div>

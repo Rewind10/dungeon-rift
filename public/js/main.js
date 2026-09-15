@@ -104,13 +104,15 @@
   function showLobby(players) { A.scene('lobby'); lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
   function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.scene('wave'); }
 
-  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady()); };
+  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady(), (id) => Net.equipaggia(id)); };
   // v1.79 — LA BARRA DEL MENU DI FINE ONDATA. Le tre sezioni si sfogliano senza mandare niente al
   // server; il villaggio e la mappa successiva sono le uniche due che gli parlano.
-  $('tabRiepilogo').onclick = () => HUD.mostraSezione('riepilogo');
+  // v2.13 — le linguette sono rimaste DUE, e stanno nella colonna di sinistra. Il villaggio non e' piu'
+  // una linguetta: e' un pulsante in fondo, accanto a quello che fa ripartire il gioco — sono le due
+  // cose che portano via da questa schermata, e stare vicine e' quello che sono.
   $('tabPersonaggio').onclick = () => HUD.mostraSezione('personaggio');
   $('tabAbilita').onclick = () => HUD.mostraSezione('abilita');
-  $('tabVillaggio').onclick = () => { Net.goVillage(); };
+  $('villaggioBtn').onclick = () => { if ($('villaggioBtn').disabled) return; Net.goVillage(); };
   $('nextWaveBtn').onclick = () => { if ($('nextWaveBtn').disabled) return; Net.shopReady(); HUD.prontoPerOndata(); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };
   Net.onWaveStats = (m) => { HUD.setWaveStats(m); };   // v1.78 — riepilogo di fine livello

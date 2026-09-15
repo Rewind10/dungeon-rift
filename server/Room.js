@@ -2015,6 +2015,9 @@ class Room {
     this.sendTo(p.id, {
       t: C.MSG.WAVE_STATS, wave: this.wave,
       uccisi: o.uccisi, xp: o.xp, monete: o.monete, livelli: o.livelli,
+      // v2.13 — i DANNI e la COMBO migliore: due numeri che il gioco gia' teneva e non faceva mai vedere
+      // (finivano solo nella tabella di fine partita, cioe' quando non servono piu' a niente).
+      danni: Math.round(p.damageDealt || 0), combo: p.comboBest || 0,
       durata: +(this.waveDur != null ? this.waveDur : 0).toFixed(1), par: this.parT || 0,
       bonus: this.parPreso && this.parBonus ? this.parBonus : null,
       carte: (p.scaglioniDovuti || []).length,
@@ -2038,8 +2041,11 @@ class Room {
               livello: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 ? (p.weapon2.evolved || '') : '', scuola: arma.school || '' },
       gear: (Gear.slotsFor(p.heroId) || []).map(sl => {
         const it = Gear.BY_ID[p.gear && p.gear[sl]];
-        return { slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
-                 nome: it ? it.name : '—', colore: it ? it.color : '#6f7890', rango: it ? it.rank : 0, desc: it ? it.desc : '' };
+        // v2.13 — l'ID serve: il ritratto al centro del menu lo passa a Renderer._hero per disegnare
+        // il personaggio con addosso davvero quello che porta, tinte comprese.
+        return { slot: sl, id: it ? it.id : null, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
+                 nome: it ? it.name : '—', colore: it ? it.color : '#6f7890', rango: it ? it.rank : 0,
+                 carattere: it ? it.carattere : '', desc: it ? it.desc : '' };
       }),
       belt: (p.belt || []).map(sl => {
         if (!sl) return null;
@@ -2048,8 +2054,32 @@ class Room {
       }),
       vite: p.lives, hp: Math.round(p.hp), hpMax: this.effMaxHp(p),
       monete: p.coins, uccisi: p.kills, combo: p.comboBest || 0,
+      // v2.13 — LE TRE DERIVATE. Forza, Costituzione, Intelligenza e Destrezza si spendono ma non si
+      // vedono: il giocatore non sa mai quanto fa male, quanto incassa, quanto spesso colpisce. Sono
+      // i numeri che il motore usa davvero (`effDamage`, `effFireDelay`, la riduzione dei danni), non
+      // una ricostruzione approssimata — se il motore cambia, questi cambiano con lui.
+      derivate: {
+        danno: Math.round(this.effDamage(p)),
+        cadenza: +(1 / this.effFireDelay(p)).toFixed(2),
+        armatura: Math.round(Math.min(0.85, (p.stats.dmgReduce || 0) + (p.gearBonus ? p.gearBonus.dmgReduce : 0)) * 100),
+        passo: Math.round(this.effSpeed(p)),
+      },
+      // v2.13 — IL BAULE. `p.owned` e' gia' l'inventario: tutto cio' che hai comprato resta tuo. Fino a
+      // ieri non lo vedevi da nessuna parte se non andando dal fabbro — cioe' possedevi roba di cui non
+      // sapevi niente. Qui arriva per slot, con addosso/non addosso, e si clicca per equipaggiare.
+      baule: (Gear.slotsFor(p.heroId) || []).map(sl => ({
+        slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
+        pezzi: Object.keys(p.owned || {}).map(id => Gear.BY_ID[id])
+          .filter(it => it && it.slot === sl && it.hero === p.heroId)
+          .sort((a, b) => (a.rank - b.rank) || 0)
+          .map(it => ({ id: it.id, nome: it.name, desc: it.desc, colore: it.color, rango: it.rank,
+                        carattere: it.carattere, rarita: Gear.rarityOf(it),
+                        addosso: p.gear[sl] === it.id ? 1 : 0 })),
+      })),
     };
-    this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, points: p.points, xp: p.xpPool, level: p.level, max: Lv.MAX_LEVEL, cap: pr.cap ? 1 : 0, rank: Lv.rankForLevel(p.level), rankName: Lv.rankName(p.heroId, p.level, p.spec), prog: +pr.frac.toFixed(3), stats, wave: this.wave, inv });
+    // v2.13 — heroId e spec viaggiano col pannello: il ritratto al centro ha bisogno di sapere CHI
+    // disegnare, e non deve andarselo a cercare nello snapshot (che a menu aperto non e' garantito).
+    this.sendTo(p.id, { t: C.MSG.OFFER_SHOP, points: p.points, xp: p.xpPool, level: p.level, max: Lv.MAX_LEVEL, cap: pr.cap ? 1 : 0, rank: Lv.rankForLevel(p.level), rankName: Lv.rankName(p.heroId, p.level, p.spec), prog: +pr.frac.toFixed(3), stats, wave: this.wave, heroId: p.heroId, spec: p.spec || 0, inv });
   }
   // v1.67 — il fabbro mostra SOLO il catalogo della classe di chi sta guardando, slot per slot. Il client
   // non filtra niente: cio' che non e' della tua classe non attraversa nemmeno la rete.
@@ -2162,6 +2192,34 @@ class Room {
   // SI VENDE QUELLO CHE HAI IN INVENTARIO, NON QUELLO CHE HAI ADDOSSO. Poter vendere il pezzo indosso
   // vorrebbe dire uscire dal negozio con lo slot vuoto, e uno slot vuoto e' uno stato che il resto del
   // gioco non sa disegnare ne' calcolare. Chi vuole disfarsene mette su qualcos'altro e poi vende.
+  // v2.13 — EQUIPAGGIARE DAL BAULE, senza passare dal fabbro.
+  //
+  // Non e' `buyGear` con un controllo in meno, ed e' importante che siano due porte diverse. `buyGear`
+  // puo' SPENDERE monete e per questo pretende che tu sia in piedi davanti al fabbro. Questa non spende
+  // niente: rimette addosso qualcosa che hai gia' pagato e che non hai mai smesso di possedere. Chiedere
+  // di attraversare il villaggio per cambiarsi una corazza che e' nel tuo baule non e' una regola, e'
+  // un attrito — ed e' esattamente il motivo per cui l'inventario non si guardava mai.
+  //
+  // Cio' che NON fa, e che va tenuto cosi': non compra. Un id che non e' in `p.owned` viene ignorato in
+  // silenzio, perche' se questa porta potesse comprare sarebbe un negozio aperto ovunque e il fabbro non
+  // servirebbe piu' a niente.
+  equipaggia(pid, itemId) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    // solo fra un'ondata e l'altra: in mezzo al combattimento cambiarsi l'armatura non deve essere un gesto
+    if (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_MARKET) return;
+    const it = Gear.BY_ID[itemId]; if (!it) return;
+    if (it.hero !== p.heroId) return;
+    if (!p.owned[it.id]) return;                            // non e' tuo: non si compra da qui
+    if (p.gear[it.slot] === it.id) return;                  // gia' addosso
+    p.gear[it.slot] = it.id;
+    this._recomputeGear(p);
+    // si rimanda SOLO il pannello, non `_inviaPannello`: quello rifa' anche il giro delle offerte
+    // (rango, carta, «niente da scegliere») e rimettersi una corazza non e' un motivo per riaprire una
+    // scelta gia' fatta. Qui cambiano il baule e le derivate, ed e' quello che si rimanda.
+    this.offerShop(p);
+    if (p._nearGear) this.offerGear(p, 1);                  // e se sei davanti al fabbro, anche il suo banco
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: 1 } });
+  }
   vendiGear(pid, itemId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
     const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant &&

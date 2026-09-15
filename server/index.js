@@ -32,6 +32,7 @@ attach(server, (conn) => {
       case C.MSG.BUY_STAT: if (room) room.buyStat(pid, m.id); break;
       case C.MSG.BUY_GEAR: if (room) room.buyGear(pid, m.id); break;
       case C.MSG.VENDI_GEAR: if (room) room.vendiGear(pid, m.id); break;   // v2.12 — rivendita dal fabbro
+      case C.MSG.EQUIPAGGIA: if (room) room.equipaggia(pid, m.id); break;  // v2.13 — dal baule, senza fabbro
       case C.MSG.BUY_MERCHANT: if (room) { if (m.dark) room.buyDark(pid, m.id); else room.buyMerchant(pid, m.id); } break;
       case C.MSG.PICK_BOON: if (room) room.pickBoon(pid, m.id); break;
       case C.MSG.PICK_RANK: if (room) room.pickRank(pid, m.id); break;

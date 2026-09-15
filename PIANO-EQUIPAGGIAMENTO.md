@@ -43,8 +43,24 @@ l'interfaccia nuova.
 | Fase | Cosa | Stato |
 |---|---|---|
 | **1** | Il **negozio**: 104 pezzi coi bivi, la vendita a metà prezzo | ✅ **fatta nella v2.12.0** |
-| **2** | La **schermata di fine livello unica**, con dentro l'**inventario** | **da fare** ← si riparte da qui |
-| **3** | Il **negozio ridisegnato** con lo stesso stile a icone quadrate della fase 2 | da fare |
+| **2** | La **schermata di fine livello unica**, con dentro l'**inventario** | ✅ **fatta nella v2.13.0** |
+| **3** | Il **negozio ridisegnato** con lo stesso stile a icone quadrate della fase 2 | **da fare** ← si riparte da qui |
+
+> ## ✅ COSA È STATO FATTO NELLA v2.13.0 (fase 2)
+>
+> Le tre decisioni che questo piano lasciava aperte, chiuse da Paolo:
+> - **Larghezza: 1280px** («una via di mezzo»), non full width e non i 960 di prima.
+> - **L'inventario a destra: clic = si equipaggia subito.** Non si vende da lì: vendere resta del fabbro.
+> - **Il villaggio è un pulsante in fondo**, non più una linguetta.
+>
+> Fatto: tre colonne (chi sei / cosa porti / cosa hai), due linguette a sinistra, il **ritratto** al centro
+> disegnato da `Renderer._hero` con l'equipaggiamento vero addosso, le **quattro derivate** (danno,
+> armatura, cadenza, passo) prese dalle funzioni del motore, il **baule** a icone quadrate con
+> `MSG.EQUIPAGGIA` — una porta nuova che *non compra*, non vale in combattimento e non accetta roba di
+> un'altra classe. La scelta in sospeso è diventata una **banda a tutta larghezza in cima**.
+>
+> Nota su cosa NON è stato fatto: le abilità nella linguetta di sinistra sono ancora l'elenco di prima, non
+> icone quadrate. Il restyle a icone è materiale della fase 3, insieme al negozio.
 
 > ## ✅ COSA È STATO FATTO NELLA v2.12.0 (fase 1)
 >
