@@ -2,6 +2,71 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.1] — 2026-09-15 · "La scheda, non quattro cartelloni"
+
+Correzioni chieste da Paolo guardando la 2.13.0: *«i 4 box di forza, intelligenza, etc sono troppo grandi.
+Puoi farli molto più piccoli ovvero come nei GDR in orizzontale con a fianco il livello […] anche i
+quadrati degli oggetti nell'inventario mi sembrano troppo grossi»*.
+
+#### 📋 Le quattro statistiche sono diventate quattro righe
+Erano quattro riquadri da 150px con icona, nome, descrizione e prezzo: **mezza colonna per dire quattro
+numeri**. Ora sono righe alte **36px**, come su una scheda da GDR:
+
+```
+💪 Forza          12 /20  [+]
+❤️ Costituzione   11 /20  [+]
+```
+
+Il **`+` sta accanto al numero** e si accende solo quando hai i punti per premerlo — spento, premerlo non
+manda niente (verificato in tutti e due i casi: il caso «con i punti» da solo non prova nulla, un pulsante
+sempre acceso lo passerebbe). La descrizione non è sparita: è nel titolo al passaggio del mouse, insieme a
+quanto viene dal profilo e quanto dai punti spesi.
+
+#### 🎭 Il profilo della classe
+Le quattro statistiche partivano **da zero per tutti**: un guerriero e un mago appena nati mostravano gli
+stessi quattro zeri, quando sono due cose opposte. Adesso ogni classe ha il suo profilo, come Paolo lo ha
+scritto:
+
+| | Forza | Costituzione | Destrezza | Intelligenza |
+|---|---|---|---|---|
+| **Guerriero** | 8 | 8 | 4 | 2 |
+| **Ladro** | 4 | 6 | 8 | 4 |
+| **Mago** | 2 | 4 | 6 | 8 |
+
+Il tetto è **20** = 8 (la base più alta) + 12 (`Loot.STAT_MAX_LEVEL`, i punti spendibili in una statistica).
+Un mago non arriverà mai a 20 di Forza, e va benissimo così.
+
+> ⚠️ **Il profilo è da leggere, non è un bonus: non entra in nessun calcolo.** Le differenze vere fra le
+> classi ci sono già e stanno altrove (arma, PV, velocità, scuola); i punti che spendi restano gli unici
+> numeri che mordono. Un test lo tiene tale: mette il profilo del guerriero a 99 su tutto e controlla che
+> danno, PV massimi e velocità **non si muovano**. Se un giorno si volesse che contassero davvero, il posto
+> è `newStats()` in `Room.js`, non la tabella in `heroes.js`.
+
+#### 📐 E lo spazio, in generale
+- I **quadretti del baule** da 96px a **68px**: ne stanno sei per riga invece di tre, e il nome sta lo
+  stesso perché va a capo su tre righe.
+- Le quattro **derivate** più compatte, gli **slot addosso** pure, e i testi di contorno (note, cornice
+  della storia, riepilogo dell'ondata) rimpiccioliti: erano tarati su una colonna larga 960 e dentro una
+  colonna da 400 rubavano spazio a ciò che si guarda davvero.
+- **Ordine nuovo nella colonna di sinistra: causa, effetto, risultato.** Statistiche (su cui agisci) →
+  derivate (ciò che ne esce) → riepilogo dell'ondata (che si legge e non si tocca). Prima le statistiche
+  erano in fondo, cioè **sotto la piega**: la cosa su cui devi agire era l'unica che non si vedeva.
+- Una regola CSS di quando le statistiche erano cartelloni (`grid-template-columns: minmax(140px,1fr)`)
+  le rimetteva **due per riga** e troncava i nomi in «Costit…», «Intellig…»: tolta.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`, **otto giri di fila**. Il controllo nel browser è salito a 24 voci: misura
+l'**altezza reale** di una riga e il **lato reale** di un quadretto, non si fida del CSS. Ogni controllo
+nuovo provato rimettendo il bug che deve prendere — compreso il caso «senza punti in mano»: quello «con i
+punti» da solo non prova nulla, un `+` sempre acceso lo passerebbe.
+
+**Una seconda sfarfallata spenta.** Il TEST 66 (caldera) falliva circa una volta su cinque sulla riga «si
+muove davvero»: la caldera è generata a caso, e in una manciata di mappe il boss partiva da un punto da cui
+non si allontanava abbastanza nei secondi concessi. Non era un bug del boss: era il test che chiedeva la
+stessa cosa a mappe diverse. Seminato come il 58 e il 62.
+
+---
+
 ### [2.13.0] — 2026-09-15 · "Una schermata sola: chi sei, cosa porti, cosa hai"
 
 **Fase 2 del piano equipaggiamento** (`PIANO-EQUIPAGGIAMENTO.md`). Resta la fase 3: il negozio del fabbro

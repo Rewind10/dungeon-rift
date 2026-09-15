@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,30 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.1 (la scheda, non quattro cartelloni)
+- **📋 LE QUATTRO STATISTICHE SONO RIGHE, NON RIQUADRI.** Erano quattro riquadri da 150px con icona,
+  nome, descrizione e prezzo: mezza colonna per dire quattro numeri. Ora sono righe alte 36px, come su una
+  scheda da GDR — `💪 Forza 12 /20 [+]` — col **`+` accanto al numero**, che si accende solo quando hai i
+  punti per premerlo.
+- **🎭 Ogni classe ha il suo profilo.** Le statistiche partivano da zero per tutti: un guerriero e un mago
+  appena nati mostravano gli stessi quattro zeri, quando sono due cose opposte.
+
+  | | For | Cos | Des | Int |
+  |---|---|---|---|---|
+  | Guerriero | 8 | 8 | 4 | 2 |
+  | Ladro | 4 | 6 | 8 | 4 |
+  | Mago | 2 | 4 | 6 | 8 |
+
+  Tetto **20** = 8 di base massima + 12 punti spendibili. **Il profilo e' da leggere, non e' un bonus: non
+  entra in nessun calcolo** — le differenze vere fra le classi stanno gia' in arma, PV, velocita' e scuola,
+  e i punti spesi restano gli unici numeri che mordono. Un test lo tiene tale.
+- **📐 Meno spazio sprecato ovunque**: i quadretti del baule da 96 a 68px (sei per riga invece di tre),
+  derivate e slot piu' compatti, i testi di contorno rimpiccioliti. E **ordine nuovo**: statistiche →
+  derivate → riepilogo. Prima le statistiche erano in fondo, cioe' sotto la piega: la cosa su cui devi
+  agire era l'unica che non si vedeva.
+- **🧪 3144 test passati, 0 falliti.** Il controllo nel browser misura l'**altezza reale** di una riga e il
+  **lato reale** di un quadretto: non si fida del CSS.
 
 ## 🆕 Novita v2.13.0 (una schermata sola: chi sei, cosa porti, cosa hai)
 - **🗺️ IL PANNELLO DI FINE ONDATA NON HA PIU' QUATTRO LINGUETTE.** Ne aveva quattro (riepilogo,

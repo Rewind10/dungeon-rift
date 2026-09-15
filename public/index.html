@@ -191,17 +191,20 @@
 
         <div id="paneStat" class="spane">
           <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
-          <!-- v2.13 — LE TRE DERIVATE. Le quattro statistiche si spendevano senza vedere mai l'effetto:
-               qui ci sono i numeri che il motore usa davvero — danno, armatura, cadenza, passo. -->
+          <!-- v2.13.1 — CAUSA, EFFETTO, RISULTATO, in quest'ordine.
+               Le quattro STATISTICHE sono cio' su cui agisci: il `+` accanto al numero. Le quattro
+               DERIVATE sono cio' che ne esce, e stanno attaccate sotto perche' rispondono alla domanda
+               «e quindi?». Solo dopo viene il riepilogo dell'ondata, che si legge e non si tocca.
+               Prima le statistiche stavano in fondo alla colonna, cioe' sotto la piega: la cosa su cui
+               devi agire era l'unica che non si vedeva senza scorrere. -->
+          <h3>STATISTICHE</h3>
+          <div id="upgradeCards"></div>
+          <p class="shop-hint">Il valore di base è quello della classe; i punti che spendi si sommano sopra. Un punto per livello, uno per rango: <b>18 in tutta la partita</b>.</p>
+          <h3>E QUINDI</h3>
           <div id="derivate"></div>
-          <!-- v2.13 — il riepilogo dell'ondata sta SOPRA i punti, non sotto. La prima domanda di chi
-               apre questa schermata e' «com'e' andata», la seconda «cosa ci faccio adesso»: in quest'ordine. -->
           <h3>L'ONDATA APPENA CHIUSA</h3>
           <div id="waveStats" class="hidden"></div>
-          <h3>PUNTI — cosa gli concedi</h3>
           <p class="dono" id="notaPunti"></p>
-          <div id="upgradeCards"></div>
-          <p class="shop-hint">Un punto per livello, uno per rango: <b>18 in tutta la partita</b>. Ogni statistica costa <b>1 punto</b> per livello e si ferma a 12: potrai portarne <b>una al massimo</b> e una <b>seconda fino a 6</b>.</p>
           <p class="dono-cornice" id="menuCornice"></p>
           <p class="dono-patto hidden" id="menuPatto"></p>
         </div>

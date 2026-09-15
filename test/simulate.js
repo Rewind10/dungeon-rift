@@ -4693,6 +4693,11 @@ function testV197() {
 // ============================================================================
 function testV199() {
   console.log('\n[TEST 66] v1.99 — la caldera: le due ondate dei boss non sono piu una caverna');
+  // v2.13.1 — SEMINATO, come il 58 e il 62. Anche questo falliva ogni tanto (circa una volta su cinque)
+  // sulla riga «si muove davvero»: la caldera e' generata a caso, e in una certa manciata di mappe il
+  // boss partiva in un punto da cui, nei secondi che il test gli concede, non si allontanava abbastanza.
+  // Non e' un bug del boss: e' il test che chiedeva la stessa cosa a mappe diverse.
+  const _rndVero = Math.random; Math.random = MU.seedRng(0x1990);
   const MG = require('../shared/mapgen.js');
   const dt = 1 / C.TICK_RATE;
 
@@ -4844,6 +4849,7 @@ function testV199() {
     assert(!room.isWallAt(boss.x, boss.y), 'e non finisce dentro la roccia');
   }
 
+  Math.random = _rndVero;
   ok('caldera verificata: connessa, il boss ci gira, e la faglia e aperta in mezzo');
 }
 
@@ -5557,6 +5563,35 @@ function testSchermataUnica() {
   room.equipaggia('a', armaMago.id);
   assert(p.gear.weapon === spadone.id, 'ne roba di un altra classe');
   delete p.owned[armaMago.id];
+
+  // --- 3bis) v2.13.1 — IL PROFILO DELLA CLASSE, e la promessa che NON conta ---
+  // Le quattro statistiche partivano da zero per tutti: un guerriero e un mago appena nati mostravano
+  // gli stessi quattro zeri. Adesso portano il profilo della classe. Ma il profilo e' SOLO da leggere, e
+  // questo blocco esiste per tenerlo tale: il giorno che qualcuno lo fa entrare in un calcolo senza
+  // dirlo, qui si rompe qualcosa.
+  const Her = require('../shared/heroes.js');
+  sent.length = 0; room.offerShop(p);
+  const pan = sent.find(x => x.t === C.MSG.OFFER_SHOP);
+  assert(pan.stats.every(st => typeof st.base === 'number' && st.tetto === Her.STAT_MAX), 'ogni statistica porta il suo valore di base e il tetto');
+  assert(pan.stats.find(st => st.id === 'st_for').base === 8, 'il guerriero parte con Forza 8');
+  assert(pan.stats.find(st => st.id === 'st_int').base === 2, 'e Intelligenza 2');
+  assert(Her.STAT_BASE.mago.st_int === 8 && Her.STAT_BASE.mago.st_for === 2, 'il mago e il suo opposto');
+  assert(Her.STAT_BASE.ladro.st_des === 8, 'e il ladro ha la Destrezza');
+  for (const h of Heroes.ORDER) {
+    const b = Her.STAT_BASE[h];
+    assert(Math.max(...Object.values(b)) + Loot.STAT_MAX_LEVEL === Her.STAT_MAX, h + ': il tetto e base massima + punti spendibili (' + Her.STAT_MAX + ')');
+  }
+  // LA PROMESSA: il profilo non entra in nessun calcolo. Due classi con profili opposti, stessa arma e
+  // stesso equipaggiamento, devono fare lo stesso danno — se il profilo mordesse, qui cambierebbe.
+  {
+    const r1 = new Room('v2131a'); const g = r1.addPlayer('g', conn, 'G', 'guerriero'); r1.startGame();
+    const d0 = r1.effDamage(g), hp0 = r1.effMaxHp(g), vel0 = r1.effSpeed(g);
+    const salvato = JSON.stringify(Her.STAT_BASE);
+    Her.STAT_BASE.guerriero = { st_for: 99, st_cos: 99, st_des: 99, st_int: 99 };
+    assert(r1.effDamage(g) === d0 && r1.effMaxHp(g) === hp0 && r1.effSpeed(g) === vel0,
+      'il profilo della classe NON entra nei calcoli: e un numero da leggere, non un bonus');
+    Object.assign(Her.STAT_BASE, JSON.parse(salvato));
+  }
 
   // --- 4) il riepilogo dell'ondata porta danni e combo ---
   p.damageDealt = 1234; p.comboBest = 9;

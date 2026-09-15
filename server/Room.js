@@ -2029,7 +2029,11 @@ class Room {
     // quattro cifre ma "1, 2 o 3 punti", che si legge senza calcolatrice.
     const stats = Loot.XP_STATS.map(s => {
       const lvl = p.buys[s.id] || 0, maxed = lvl >= Loot.STAT_MAX_LEVEL;
-      return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : Lv.statPointCost(lvl), lvl, max: Loot.STAT_MAX_LEVEL, maxed };
+      // v2.13.1 — `base` e' il profilo della classe (Heroes.STAT_BASE): il numero che il giocatore legge
+      // e' base + punti spesi, come su una scheda da GDR. Il profilo NON entra in nessun calcolo — le
+      // differenze vere fra le classi stanno gia' in arma, PV, velocita' e scuola.
+      return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : Lv.statPointCost(lvl), lvl,
+               max: Loot.STAT_MAX_LEVEL, maxed, base: Heroes.statBase(p.heroId, s.id), tetto: Heroes.STAT_MAX };
     });
     const pr = Lv.progress(p.xpPool);
     // v1.79 — la sezione PERSONAGGIO del menu mostra anche l'inventario: arma impugnata, equipaggiamento

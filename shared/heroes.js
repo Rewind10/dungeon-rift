@@ -65,5 +65,30 @@
     },
   };
   const ORDER = ['guerriero', 'mago', 'ladro'];
-  return { HEROES, ORDER };
+
+  // ============================================================================================
+  // v2.13.1 — IL PROFILO DELLA CLASSE, come su una scheda da GDR
+  // ============================================================================================
+  // Le quattro statistiche partivano tutte da zero e salivano coi punti spesi. Vero, ma illeggibile:
+  // un guerriero e un mago appena nati mostravano gli stessi quattro zeri, quando sono due cose
+  // opposte. Questi numeri dicono a colpo d'occhio CHI E' la classe — il guerriero e' forte e robusto,
+  // il mago sa e non regge un colpo, il ladro sta in mezzo e corre.
+  //
+  // ATTENZIONE, e va scritto perche' non si presti a equivoci: sono il PROFILO, non un bonus. Non
+  // entrano in nessun calcolo. Le differenze vere fra le classi ci sono gia' e stanno altrove (arma,
+  // PV, velocita', scuola), e i punti che spendi sono e restano gli unici numeri che mordono — quelli
+  // si sommano qui sopra e si vedono nelle derivate del pannello. Se un giorno si volesse che questi
+  // valori contassero davvero, il posto giusto e' `newStats()` in Room.js, non questa tabella.
+  //
+  // Il tetto e' 20: 8 (il massimo di partenza) + 12 (Loot.STAT_MAX_LEVEL, i punti spendibili in una
+  // statistica). Un mago non arrivera' mai a 20 di Forza, e va benissimo cosi'.
+  const STAT_MAX = 20;
+  const STAT_BASE = {
+    guerriero: { st_for: 8, st_cos: 8, st_des: 4, st_int: 2 },
+    ladro:     { st_for: 4, st_cos: 6, st_des: 8, st_int: 4 },
+    mago:      { st_for: 2, st_cos: 4, st_des: 6, st_int: 8 },
+  };
+  function statBase(heroId, statId) { return (STAT_BASE[heroId] || {})[statId] || 0; }
+
+  return { HEROES, ORDER, STAT_BASE, STAT_MAX, statBase };
 });

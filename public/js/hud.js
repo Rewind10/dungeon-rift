@@ -476,17 +476,31 @@
       $('shopXp').textContent = this._stats.points != null ? this._stats.points : this._stats.xp;
       const sl = $('shopLevel'); if (sl) sl.textContent = (this._stats.level || 1) + (this._stats.cap ? ' (max)' : '');
       const sr = $('shopRank'); if (sr) sr.textContent = this._stats.rankName || '';
+      // v2.13.1 — LA SCHEDA, NON QUATTRO CARTELLONI. Erano quattro riquadri grandi con icona, nome,
+      // descrizione e prezzo: prendevano mezza colonna per dire quattro numeri. Adesso sono quattro
+      // RIGHE, come su una scheda da GDR — nome, valore, tetto, e un `+` accanto al numero che si
+      // accende solo quando hai i punti per premerlo. La descrizione non e' sparita: e' nel titolo,
+      // dove serve quando la cerchi e non occupa spazio quando non la cerchi.
       const cont = $('upgradeCards'); cont.innerHTML = '';
       this._stats.stats.forEach(s => {
         const punti = this._stats.points != null ? this._stats.points : this._stats.xp;
         const maxed = !!s.maxed, afford = !maxed && punti >= s.cost;
+        const base = s.base || 0, tetto = s.tetto || 20;
+        const val = base + (s.lvl || 0);
         const el = document.createElement('div');
-        el.className = 'uc' + (maxed ? ' maxed' : (afford ? '' : ' disabled'));
-        el.style.borderColor = s.color;
-        const lvlTxt = s.max ? 'Lv.' + s.lvl + '/' + s.max : 'Lv.' + s.lvl;
-        const foot = maxed ? `<div class="cost maxed" style="color:${s.color}">MAX ★</div>` : `<div class="cost" style="color:${s.color}">◆ ${s.cost} ${s.cost === 1 ? 'punto' : 'punti'}</div>`;
-        el.innerHTML = `<span class="rar" style="color:${s.color}">${lvlTxt}</span><div class="icon">${s.icon}</div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div>${foot}`;
-        el.onclick = () => { if (afford && this._buy) this._buy(s.id); };
+        el.className = 'st-r' + (maxed ? ' maxed' : '');
+        el.style.setProperty('--c', s.color);
+        el.title = s.name + ' — ' + s.desc
+          + '\n' + base + ' di base per la classe, +' + (s.lvl || 0) + ' dai punti spesi'
+          + (maxed ? '\nal massimo' : '\ncosta ' + s.cost + (s.cost === 1 ? ' punto' : ' punti'));
+        el.innerHTML = '<span class="ic">' + s.icon + '</span>'
+          + '<span class="nm">' + esc(s.name) + '</span>'
+          + '<span class="vl">' + val + '</span><span class="mx">/' + tetto + '</span>'
+          + (maxed ? '<span class="pl max">\u2605</span>'
+                   : '<button class="pl' + (afford ? '' : ' off') + '" type="button" '
+                     + (afford ? '' : 'disabled ') + 'title="' + (afford ? 'Spendi ' + s.cost + (s.cost === 1 ? ' punto' : ' punti') : 'Ti servono ' + s.cost + (s.cost === 1 ? ' punto' : ' punti')) + '">+</button>');
+        const b = el.querySelector('button.pl');
+        if (b) b.onclick = (e) => { e.stopPropagation(); if (afford && this._buy) this._buy(s.id); };
         cont.appendChild(el);
       });
     },
