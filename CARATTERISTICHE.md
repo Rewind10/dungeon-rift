@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.11.3`
+**Versione attuale:** `2.12.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1522,7 +1522,7 @@ Il personaggio non parte nudo: `Room._preparaProva()` ricostruisce quello che a 
 | **Livello** | `1 + (onda - 1) x 0,95`, arrotondato, limitato al massimo |
 | **Punti statistica** | spesi tutti, a rotazione sulle statistiche disponibili |
 | **Passive e abilita'** | tutte quelle dovute fino a quel livello (presa la prima di ogni offerta) |
-| **Equipaggiamento** | rango 1 (ondate 1-5), 2 (6-10), 3 (11-15), 4 (16+) su tutti gli slot |
+| **Equipaggiamento** | il **grado** che ci si sarebbe potuti permettere: scarso (1-3), comune (4-7), raro (8-11), leggendario (12-15), divino (16+) — carattere equilibrato, che e' quello senza penalita'. Le soglie vengono da `test/monete.js`, non da una sensazione. |
 | **Monete** | 68 per ogni ondata saltata |
 
 Esempio verificato in un browser vero, cliccando la **12**: *Ondata 12/20 · Lv.11 Campione · 375 PV · 748

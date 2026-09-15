@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.11.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.12.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,43 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.12.0 (centoquattro pezzi, e dentro ogni grado un bivio)
+- **🎯 L'EQUIPAGGIAMENTO ERA UNA SCALA, NON UNA SCELTA.** Misurato prima di crederci: in una run intera si
+  prendevano 4 carte passive, 2 abilita' attive, 1 specializzazione, ~14 punti statistica — e **zero**
+  decisioni sull'equipaggiamento. Si comprava il pezzo dopo quando si avevano le monete, e basta.
+- **♻️ La regola si ribalta, ma solo a meta'.** **Fra un grado e l'altro si sale** (il divino batte il
+  leggendario, sempre). **Dentro lo stesso grado non si sale: si sceglie.** I tre pezzi di un grado costano
+  uguale e rendono uguale — sulle armi il danno al secondo sta dentro il **4%** — e cambiano in *come* si gioca.
+- **🗂️ Cinque gradi, 104 pezzi.** **Scarso** (1 per slot, non si compra: e' cio' con cui parti, ~20% sotto
+  il comune), poi Comune, Raro, Leggendario, Divino, **tre pezzi ciascuno**. 13 per slot.
+- **🎭 Tre caratteri, e ognuno e' il migliore in UNA cosa e il peggiore nelle altre due.**
+
+  | | Guerriero | Mago | Ladro |
+  |---|---|---|---|
+  | ▰ Pesante | rinculo | bolla grande | gittata |
+  | ▱ Equilibrata | portata | gittata | perforazione |
+  | ▫ Leggera | arco largo | bolla veloce | cadenza |
+
+  Sulle difensive e' protezione contro velocita' e cadenza. Guerriero divino: kit **pesante** 1,435 s fra un
+  fendente e l'altro, 435 PV, −51% danni · kit **leggero** 0,390 s, 314 PV, −27%. Due modi di giocare.
+- **💰 Si rivende a meta' prezzo**, dal fabbro, e si vende **cio' che sta nel baule** — mai cio' che si ha
+  addosso (il fabbro rifiuta *dicendo perche'*).
+- **🔍 Due difetti trovati rileggendo i numeri.** (1) Il danno al secondo era pari ma i secondari no:
+  l'Alabarda aveva portata 152 contro i 112 del Maglio a pari danno — non un bivio, la risposta giusta e due
+  sbagliate. (2) Le descrizioni del mago promettevano «bolla grossa» e il campo per la grandezza non era mai
+  stato impostato, pur essendo letto dal motore. Ora la bolla va da r6 a r24. Da li' la regola: **le
+  descrizioni di `gear.js` nascono dai numeri, non si scrivono a mano.**
+- **⚙️ La cadenza dall'equipaggiamento non esisteva.** `bonusOf` sommava `fireRateMult` e **nessuno lo
+  leggeva**: le armature pesanti promettevano di rallentarti e non ti toccavano.
+- **📏 `test/monete.js`**, nuovo: conta le monete che ogni ondata **contiene**, separando drop, premio di
+  velocita' e taglia. In `gear.js` c'era scritto che il Mercato apriva ogni 3 ondate — **falso**, il
+  villaggio si raggiunge alla fine di **ogni** ondata, e i vecchi prezzi erano tarati su quell'ipotesi.
+- **💾 Salvataggio: formato da 1 a 2.** I salvataggi della 2.11 non si caricano piu': contengono ID di
+  oggetti che non esistono. Non esploderebbero — ripartiresti disarmato e senza bonus, senza nessun errore,
+  che e' molto peggio di un rifiuto pulito.
+- **🧪 3119 test passati, 0 falliti.** Tre test che **codificavano la regola vecchia** sono stati riscritti:
+  un test che dice «ogni pezzo e' migliore del precedente nella lista» adesso difende il bug.
 
 ## 🆕 Novita v2.11.3 (riprendendo comanda il salvataggio, non il menu)
 - **🎭 SALVATO DA LADRO, RIPRESO CON LA SKIN DEL GUERRIERO.** Segnalato giocando, e riprodotto. Erano

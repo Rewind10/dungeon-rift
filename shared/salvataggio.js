@@ -37,7 +37,12 @@
   // Cambia SOLO quando cambia la FORMA del salvataggio (un campo nuovo indispensabile, uno che sparisce).
   // Un salvataggio con un numero diverso viene rifiutato con un messaggio, non caricato a meta': un
   // caricamento parziale produce un personaggio impossibile, ed e' molto peggio di un "non si puo'".
-  const FORMATO = 1;
+  // v2.12 — DA 1 A 2, e il motivo non e' un campo nuovo: e' che `gear` e `owned` contengono ID DI OGGETTI
+  // e con i 104 pezzi nuovi nessuno di quegli ID esiste piu'. Un salvataggio della 2.11 caricato oggi non
+  // esploderebbe — `effWeapon` e `bonusOf` ignorano gli ID che non conoscono — e sarebbe molto peggio:
+  // ripartiresti disarmato e senza bonus, senza nessun errore, con un personaggio che sembra rotto senza
+  // che si capisca perche'. Meglio un rifiuto pulito: si rigioca dall'inizio, e si sa il motivo.
+  const FORMATO = 2;
 
   const CHIAVE = 'dr_salvataggio';     // dove sta in localStorage
   const COSTO = 10;                    // le monete dell'Ostessa

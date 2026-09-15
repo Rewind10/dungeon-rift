@@ -1,0 +1,261 @@
+# 🗺️ PIANO — EQUIPAGGIAMENTO, INVENTARIO E SCHERMATA DI FINE LIVELLO
+
+**Scritto il 14 settembre 2026, a partire dalla versione 2.11.3.**
+Questo file esiste per un motivo solo: **poter riprendere da zero**. Chi lo legge — me fra una settimana, in
+una conversazione nuova che non ricorda niente — deve poter continuare senza chiedere niente a Paolo.
+Se una decisione non è scritta qui, non è stata presa.
+
+Il catalogo dei 104 pezzi non sta in questo file: sta nella pagina **«Armeria di Dungeon Rift»** →
+<https://claude.ai/artifact/QWzc3D6mGRQLPRR5QaWCeU> (privata, di Paolo). È la fonte da cui nascerà
+`shared/gear.js`.
+
+---
+
+## 📌 DA DOVE NASCE
+
+Parole di Paolo: *«la gestione dell'inventario e delle abilità non mi piace molto perché secondo me il
+personaggio si sviluppa troppo poco»*.
+
+Misurato, per capire se era una sensazione o un fatto. In una run intera il giocatore decide:
+
+| | |
+|---|---|
+| carte passive | **4 scelte** su 32 carte esistenti |
+| abilità attive | **2 scelte** su 4 per classe |
+| specializzazione | 1 |
+| punti statistica | ~14, su 4 statistiche |
+| **equipaggiamento** | **0 scelte** |
+
+Era un fatto. E la riga che pesa è l'ultima: l'equipaggiamento esiste (4 gradi per slot, con i nomi già
+scritti) ma è una **scala**, non una scelta — si compra il pezzo dopo quando si hanno le monete, non c'è
+mai un bivio. In più **il fabbro è spento**: `SHOP_GEAR_ENABLED: false`, «Emporio a monete nascosto in
+attesa di ridisegno». In una partita vera non si compra niente: l'equipaggiamento lo assegna il gioco in
+base all'ondata.
+
+---
+
+## 🧭 LE TRE FASI, IN QUEST'ORDINE
+
+L'ordine non è casuale ed è stato scelto da Paolo: **prima gli oggetti, poi il contenitore**. Così dopo la
+fase 1 il gioco è già giocabile e si può dire se il personaggio si sviluppa meglio, senza aspettare
+l'interfaccia nuova.
+
+| Fase | Cosa | Stato |
+|---|---|---|
+| **1** | Il **negozio**: 104 pezzi coi bivi, la vendita a metà prezzo | ✅ **fatta nella v2.12.0** |
+| **2** | La **schermata di fine livello unica**, con dentro l'**inventario** | **da fare** ← si riparte da qui |
+| **3** | Il **negozio ridisegnato** con lo stesso stile a icone quadrate della fase 2 | da fare |
+
+> ## ✅ COSA È STATO FATTO NELLA v2.12.0 (fase 1)
+>
+> Tutto quello che questo piano chiedeva per la fase 1, più tre cose che il piano non sapeva:
+>
+> - `shared/gear.js` riscritto: 104 pezzi con `carattere` e `tinta`, `RANK_RARITY` a cinque voci,
+>   `CARATTERI`, `itemsOfRank`, `maxRank`, `startingGear` sul **grado minimo**. Le `desc` **nascono dai
+>   numeri**: erano scritte a mano e mentivano.
+> - Il **listino sta in un posto solo** (`PREZZI`, una riga per slot): prima era scritto su ogni pezzo,
+>   104 occasioni perché due pezzi dello stesso grado divergessero di prezzo.
+> - `C.RARITY.scarso` aggiunto · le tre cose del renderer sistemate · `effFireDelay` legge
+>   `gearBonus.fireRateMult` · vendita completa (server + client) · commento falso sul Mercato corretto.
+> - **`SHOP_GEAR_ENABLED` resta SPENTO** — questo piano diceva di riaccenderlo, ed era sbagliato: il
+>   fabbro del villaggio funziona già e vende tutto. Due negozi con la stessa merce = chi ne trova uno
+>   smette di cercare l'altro. Deciso con Paolo.
+> - `shared/salvataggio.js`: **formato da 1 a 2**. I salvataggi vecchi contengono ID che non esistono più.
+> - `Room._preparaProva` sceglieva il pezzo per **posizione** nella lista, non per grado: con 13 pezzi per
+>   slot, `l[3]` all'ondata 16 dava un pezzo **comune**.
+> - `test/monete.js`, nuovo. 3119 test passati, 0 falliti (TEST 12, 37 e 62 riscritti: **codificavano la
+>   regola vecchia**, cioè erano diventati test che difendevano il bug).
+>
+> ### ⚠️ LA COSA APERTA: i prezzi sono troppo bassi, e adesso è misurato
+> Una run intera di 20 ondate contiene **~14.200 monete** (~9.900 senza premi di velocità né taglie).
+> La scala completa per il guerriero — comune, poi raro, poi leggendario, poi divino, con la rivendita a
+> metà che restituisce 1.715 — costa **~4.965 nette**, cioè è finita **verso l'ondata 11 su 20**.
+> Da lì in poi al fabbro non c'è più niente da volere. **Il listino approvato è quello che gira**: non è
+> stato cambiato senza chiedere. Se Paolo vuole, si alzano gli ultimi due gradi e si rimisura.
+
+---
+
+# FASE 1 — IL NEGOZIO
+
+## La regola che si ribalta
+
+In `shared/gear.js` c'è scritto nero su bianco: *«un rango più alto costa di più e ha statistiche migliori,
+SEMPRE — niente scambi alla pari, niente svantaggi nascosti»*. Era onesto ed era il problema. **Va
+riscritto**, perché adesso dentro ogni grado ci sono tre oggetti di pari valore e caratteri diversi.
+
+**Il vincolo che li tiene onesti: dentro lo stesso grado il danno al secondo è quasi identico (±8%).** Se
+un'arma dello stesso grado rendesse di più non sarebbe un bivio: sarebbe una scelta giusta e due sbagliate.
+La differenza sta in **come** si gioca — portata, arco, rinculo, perforazione, velocità del dardo — non in
+quanto rende. Fra un grado e l'altro invece si sale, come sempre.
+
+## I tre caratteri
+
+Gli stessi a ogni grado, così la regola si impara una volta:
+
+| | Armi | Difensive |
+|---|---|---|
+| **Pesante** | colpo forte, cadenza bassa, rinculo alto, portata corta | più difesa · **rallenta** e **abbassa la cadenza** |
+| **Equilibrata** | la via di mezzo | la via di mezzo |
+| **Leggera** | colpo debole, cadenza alta, rinculo basso | meno difesa · **velocizza** e **alza la cadenza** |
+
+Per il **ladro** il carattere dell'arco è **gittata contro cadenza**: l'arco lungo tiene lontano ma è lento,
+il ricurvo tira una freccia dopo l'altra ma vuole che tu stia addosso.
+Per il **mago** è la **bolla**: pesante = lenta e grossa, leggera = svelta e minuta.
+
+## Cinque gradi, non quattro
+
+Deciso da Paolo: *«nulla di gratuito, e l'equipaggiamento iniziale lo definirei come scarso, così ha senso
+iniziare subito l'upgrade con armi perlomeno comuni»*.
+
+| Grado | Quanti | Si compra? |
+|---|---|---|
+| **Scarso** | 1 per slot | no — è quello che hai addosso |
+| **Comune** | 3 per slot | sì |
+| **Raro** | 3 | sì |
+| **Leggendario** | 3 | sì |
+| **Divino** | 3 | sì |
+
+Fa **13 pezzi per slot** e **104 in tutto** (guerriero 3 slot, mago 2, ladro 3).
+
+## I numeri confermati
+
+- **Scarso** ≈ **20% sotto** il comune (l'arma di partenza del guerriero passa da 99 a 79 danni/s).
+- **Comune** = i valori di oggi (~99 danni/s), a **170 monete** l'arma.
+- **Rivendita** = **metà prezzo**. I pezzi scarsi valgono **8 monete** — simbolico, ma non zero: buttarli
+  non dev'essere gratis.
+- Si vende **ciò che si ha in inventario**, non quello che si ha addosso.
+
+Scala dei costi: armi 170 / 380 / 650 / 1100 · armature 150 / 340 / 600 / 1050 · scudi 160 / 360 / 620 /
+1100 · calzature 140 / 320 / 580 / 1000.
+
+> ⚠️ **I prezzi vanno MISURATI, non creduti.** Quelli vecchi erano tarati su un commento sbagliato in
+> `gear.js` («il Mercato apre ogni 3 ondate»): **falso**, il villaggio si raggiunge alla fine di **ogni**
+> ondata — `vaiAlVillaggio` controlla solo che la fase sia `PHASE_SHOP` e che non sia l'ultima ondata.
+> Quel commento va corretto. E prima di dire che i prezzi tornano, va simulata una run e contato quante
+> monete si accumulano davvero.
+
+## ⚠️ LE TRE COSE CHE IL PASSAGGIO A 5 GRADI ROMPE
+
+Trovate leggendo, **prima** di scrivere i dati. Se si scrivono i 104 oggetti senza sistemarle, il gioco si
+rompe in modi che i test non vedono.
+
+**1. Il grado 5 fa sparire l'arco del ladro.** In `public/js/renderer.js` (~riga 3527):
+
+```js
+const BL = [1, 1.34, 1.48, 1.60][wrk - 1], BC = [0.46, 0.62, 0.70, 0.76][wrk - 1];
+```
+
+Quattro valori indicizzati per rango: con un'arma di grado **5** diventa `[4]` → `undefined` → tutta la
+matematica del disegno va in `NaN`. Serve un quinto valore (o un clamp dell'indice). **È l'unico posto del
+genere**: il file è già stato spazzato cercando altri array indicizzati per rango e non ce ne sono.
+
+**2. Il campo `tinta` va riportato su tutti i pezzi nuovi.** Ogni oggetto difensivo porta una `tinta`
+(`{ cloth, clothDk, mant, capp }` per le armature, `{ steelDk }` per le calzature) che il renderer usa in
+`_palGear` per **ridipingere il personaggio**. Senza, niente crasha — `_palGear` controlla — ma il
+personaggio smette di cambiare aspetto comprando roba nuova, cioè sparisce proprio la soddisfazione che
+stiamo cercando di aggiungere. Le tinte vecchie sono recuperabili dalla versione 2.11.3 di `gear.js`.
+
+**3. L'alone del pregiato va spostato a `>= 5`.** In `renderer.js` (~riga 3284) la soglia è `>= 4`: con
+cinque gradi prenderebbe anche il leggendario. **Paolo ha deciso: deve brillare solo il divino.**
+
+## Il resto del lavoro della fase 1
+
+- **`shared/gear.js`**: riscrivere `ITEMS` (104 pezzi, con `carattere` e `tinta`), portare `RANK_RARITY` a
+  cinque voci, aggiungere `prezzoVendita(it)` e `CARATTERI`. `startingGear` deve prendere il **rango
+  minimo**, non il primo della lista.
+- **`shared/constants.js`**: aggiungere la rarità **`scarso`** a `C.RARITY` (oggi non c'è) e rimettere
+  `SHOP_GEAR_ENABLED: true`.
+- **La cadenza dall'equipaggiamento non esiste.** `bonusOf` somma qualunque chiave, ma **nessuno legge**
+  `gearBonus.fireRateMult`: `effFireDelay` guarda solo `p.stats.fireRateMult`. Serve una riga in
+  `Room.effFireDelay`. La **velocità** invece funziona già: `effSpeed` legge `gearBonus.speedMult`, quindi
+  un'armatura pesante rallenta mettendo un valore negativo.
+- **La vendita**: nuovo messaggio (`VENDI`), handler in `server/index.js`, metodo in `Room` che toglie da
+  `p.owned`, accredita `prezzoVendita`, e **rifiuta di vendere ciò che si ha addosso**. `p.owned` è già
+  l'inventario: non serve inventare una struttura nuova.
+- **Il tetto alla riduzione danni è 0,85** (`Room`, ~riga 850) — lo stack pesante è sicuro, ma tenere il
+  kit più pesante intorno a 0,50-0,55 come oggi.
+
+---
+
+# FASE 2 — LA SCHERMATA DI FINE LIVELLO
+
+Riferimento visivo: la schermata di **Baldur's Gate 3** che Paolo ha mandato. *«Ovviamente devi solo trarre
+ispirazione, nessuno si aspetta che tu la possa riprodurre fedelmente.»*
+
+Oggi il pannello ha **quattro linguette** (riepilogo, personaggio, abilità, villaggio) e una larghezza
+bloccata a `min(960px, 94vw)` — su un monitor grande resta una colonna al centro col nero intorno.
+
+**Le tre schede diventano una schermata sola, più l'inventario.** Impianto:
+
+| Zona | Cosa |
+|---|---|
+| **Sinistra** | **due linguette**: (1) statistiche del personaggio **+ il riepilogo dell'ondata** — uccisi, combo, danni, tempo; (2) le **abilità**, a icone quadrate |
+| **Centro** | il personaggio con addosso i suoi slot — arma, armatura, scudo/calzature *(dedotto dall'immagine; confermare)* |
+| **Destra** | la **griglia di icone quadrate**: l'inventario |
+| **In fondo** | **due soli pulsanti**: vai al villaggio, inizia ondata |
+
+**Le statistiche a sinistra.** Le quattro del gioco ci sono già come punti spendibili — forza,
+costituzione, intelligenza, destrezza — e si spiegano da sole come STR/DEX di un GDR. Paolo chiede di
+aggiungere **tre voci derivate**: **danno, armatura, cadenza**.
+
+**Sulla larghezza.** Paolo ha chiesto perché non si usa tutto lo schermo. Il tetto è `min(960px, 94vw)` in
+`.upgrade-inner`. Va alzato — ma *full width* letterale non è meglio: a 2560px le righe di testo diventano
+illeggibili. Proposta non ancora decisa: alzare a **1400-1600px** e far usare lo spazio in più alle
+**griglie**, tenendo i testi in una colonna leggibile. **Decisione aperta.**
+
+**Nota**: la schermata **SCONFITTA** di fine partita (`#endScreen`) è un'altra cosa e non è stata discussa.
+
+---
+
+# FASE 3 — IL NEGOZIO RIDISEGNATO
+
+Stesso stile della fase 2, e riusa i pezzi già scritti là.
+
+- **Linguette per slot**: guerriero *arma / armatura / scudo* · ladro *arco / armatura / calzature* ·
+  mago *arma / armatura*.
+- Dentro ogni linguetta **tutti** i pezzi come **icone quadrate**.
+- **All'hover** compaiono le statistiche del pezzo.
+- Da qui si **vende** anche.
+
+---
+
+## ✋ COME SI LAVORA SU QUESTO PROGETTO
+
+Regole di Paolo, e vanno rispettate:
+
+- **«Il capo sono io, tu esegui i miei desideri: meno iniziativa e più ascolto.»** Chiedere **prima** di
+  decidere. Su questo piano ha detto esplicitamente: *«non partire a testa bassa, andiamo passo passo»*.
+- **Niente immagini o anteprime** se non le chiede: consumano crediti.
+- **Meno test e meno spesso.**
+- **A ogni nuova versione si aggiornano i .md** — README, CARATTERISTICHE, CHANGELOG — così si può
+  riprendere dal punto in cui si è interrotto.
+- **Non si committa su git**, e si evita di eseguire git (lascia file `.git/*.lock` non cancellabili).
+- La consegna è: scrivere i file in `C:\Www\dungeon-rift`.
+
+### 🔬 E come si verifica — due lezioni pagate care, oggi
+
+**1. Provare la funzione non è provare la strada.** Il TEST 69 chiamava `_inviaPannello` a mano: dimostrava
+che *quella funzione* era giusta, non che il gioco ci passasse. Stessa cosa con le guardie del villaggio: i
+test chiamavano `setInput` a mano, e lì dentro «Spazio continua» e «Spazio spara» erano scollegati — **il
+legame che ha rotto il gioco non esisteva nella simulazione**. Nove assert verdi su un meccanismo che nella
+realtà non poteva funzionare. Si gioca l'ondata vera.
+
+**2. Un controllo nel browser che non tocca niente passa sempre.** Per la v2.9.4 avevo scritto
+`if (window.HUD && window.HUD.offerBoon) window.HUD.offerBoon(payload)` — e `HUD.offerBoon` **non esiste**
+(la funzione vera è `setBoons`). Quell'`if`, scritto per prudenza, ha reso la chiamata un buco nel vuoto, e
+il controllo è passato senza verificare niente. **Si entra dal punto d'ingresso vero** (`Net.onOfferBoon`) e
+si guarda cosa il client riceve e cosa manda.
+
+**3. E si prova che il test fallisca sul bug.** Prima di dire «corretto», rimettere il codice rotto e
+controllare che il test lo prenda. Un test che non fallisce sul bug che dovrebbe prendere non è un test.
+
+---
+
+## ▶️ LA PRIMA COSA DA FARE, DOMANI
+
+1. Aprire l'**Armeria** (link in cima) e applicare le correzioni di Paolo a nomi e numeri.
+2. Riscrivere `shared/gear.js` con i 104 pezzi, `carattere` e `tinta`.
+3. Sistemare le **tre cose del renderer** elencate sopra.
+4. Aggiungere la vendita, la cadenza dall'equipaggiamento, e riaccendere `SHOP_GEAR_ENABLED`.
+5. **Misurare** le monete di una run vera, e solo allora dire se i prezzi tornano.
+6. Consegnare una versione **giocabile**, così Paolo può dire se le prime ondate reggono.

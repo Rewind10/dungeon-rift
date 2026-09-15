@@ -272,7 +272,12 @@ function testV18() {
   const room = new Room('v18'); const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
   const p = room.addPlayer('b', cap, 'B', 'guerriero'); room.startGame();  // v1.67 — il guerriero e' quello con tutti e tre gli slot
   assert(p.coins === 0, 'il giocatore parte con 0 monete');
-  assert(p.gear && p.gear.weapon === 'gue_spada' && p.gear.armor === 'gue_maglia' && p.gear.shield === 'gue_scudo', 'si parte col rango 1 di ogni slot della classe');
+  // v2.12 — si parte col grado SCARSO di ogni slot, non piu' col comune. Gli id non si scrivono a mano:
+  // si chiedono al catalogo, se no ogni rinominata di un pezzo rompe un test che non c'entra niente.
+  const GearStart = require('../shared/gear.js');
+  const attesoStart = GearStart.startingGear('guerriero');
+  assert(p.gear && p.gear.weapon === attesoStart.weapon && p.gear.armor === attesoStart.armor && p.gear.shield === attesoStart.shield, 'si parte col grado scarso di ogni slot della classe');
+  assert(GearStart.rarityOf(GearStart.BY_ID[p.gear.weapon]) === 'scarso', 'e quel grado si chiama davvero scarso');
   // --- drop monete alla morte ---
   const before = room.groundCoins.length; const m = room.spawnMonster('orc', p.x + 30, p.y, { scaling: Waves.scaling(3, 1) }); room.killMonster(m, p);
   assert(room.groundCoins.length > before, 'un nemico ucciso lascia monete a terra');
@@ -286,36 +291,69 @@ function testV18() {
   // v1.67 — l'Emporio a livelli e' un catalogo di OGGETTI per classe: si compra un id, non uno slot.
   const Gear = require('../shared/gear.js');
   const hp0 = room.effMaxHp(p);
-  const piastre = Gear.BY_ID.gue_piastre, torre = Gear.BY_ID.gue_torre, alabarda = Gear.BY_ID.gue_alabarda;
-  assert(p.gear.armor === 'gue_maglia' && p.gear.weapon === 'gue_spada' && p.gear.shield === 'gue_scudo', 'si parte col rango 1 di ogni slot');
+  // v2.12 — i pezzi si prendono per GRADO e CARATTERE, non per nome. Con 104 pezzi i nomi cambiano;
+  // il grado e il carattere sono la struttura, e la struttura e' cio' che questo test deve difendere.
+  const pz = (slot, rango, car) => Gear.itemsOfRank('guerriero', slot, rango).find(i => i.carattere === car);
+  const armCom = pz('armor', 2, 'equilibrata');      // Maglia di Ferro
+  const armRara = pz('armor', 3, 'equilibrata');     // Armatura a Piastre
+  const torre = pz('shield', 2, 'pesante');          // Scudo a Torre
+  const lungaEq = pz('weapon', 4, 'equilibrata');    // Alabarda: la portata
+  const lungaLg = pz('weapon', 4, 'leggera');        // Falcione: l'arco
+  const lungaPs = pz('weapon', 4, 'pesante');        // Maglio: il rinculo
+  assert(p.gear.armor === attesoStart.armor && p.gear.weapon === attesoStart.weapon && p.gear.shield === attesoStart.shield, 'si parte col grado scarso di ogni slot');
   const dr0 = p.gearBonus.dmgReduce;
-  room.buyGear('b', 'gue_piastre');
-  assert(p.gear.armor === 'gue_piastre', 'l acquisto sostituisce l oggetto nello slot');
-  assert(p.coins === 100000 - piastre.cost, 'il costo viene scalato dalle monete');
+  room.buyGear('b', armRara.id);
+  assert(p.gear.armor === armRara.id, 'l acquisto sostituisce l oggetto nello slot');
+  assert(p.coins === 100000 - armRara.cost, 'il costo viene scalato dalle monete');
   assert(p.gearBonus.dmgReduce > dr0 && room.effMaxHp(p) > hp0, 'l armatura migliore da piu PV e piu riduzione');
   // il cambio e' LIBERO: si torna indietro, e il bonus del pezzo tolto sparisce (non resta appiccicato)
-  room.buyGear('b', 'gue_maglia');
-  assert(p.gear.armor === 'gue_maglia' && Math.abs(p.gearBonus.dmgReduce - dr0) < 1e-9, 'tornando indietro il bonus viene ricalcolato da zero');
-  room.buyGear('b', 'gue_piastre');
+  room.buyGear('b', attesoStart.armor);
+  assert(p.gear.armor === attesoStart.armor && Math.abs(p.gearBonus.dmgReduce - dr0) < 1e-9, 'tornando indietro il bonus viene ricalcolato da zero');
+  room.buyGear('b', armRara.id);
   // arma: cambia danno E portata del fendente
   const dmg0 = room.effDamage(p), rad0 = room.effWeapon(p).arcRadius;
-  room.buyGear('b', 'gue_alabarda');
-  assert(room.effDamage(p) > dmg0 && room.effWeapon(p).arcRadius > rad0, 'l alabarda fa piu danno e arriva piu lontano');
-  assert(room.effWeapon(p).arcHalf < Gear.BY_ID.gue_spada.weapon.arcHalf, 'ma copre un arco piu stretto');
+  room.buyGear('b', lungaEq.id);
+  assert(room.effDamage(p) > dmg0 && room.effWeapon(p).arcRadius > rad0, 'un arma di grado piu alto fa piu danno e arriva piu lontano');
+  // v2.12 — LA REGOLA NUOVA, ed e' il rovescio di quella vecchia. Prima l'arco si stringeva salendo di
+  // grado ("piu' e' lunga, piu' l'arco e' stretto"): era una scala. Adesso l'arco e' del CARATTERE e non
+  // del grado — dentro lo stesso grado la leggera ha l'arco piu' largo e la portata piu' corta della
+  // equilibrata, e la pesante ha il rinculo piu' forte di tutte.
+  assert(lungaLg.weapon.arcHalf > lungaEq.weapon.arcHalf, 'a pari grado la leggera copre un arco piu largo');
+  assert(lungaEq.weapon.arcRadius > lungaLg.weapon.arcRadius, 'ma arriva meno lontano della equilibrata');
+  assert(lungaPs.weapon.knockback > lungaEq.weapon.knockback && lungaEq.weapon.knockback > lungaLg.weapon.knockback, 'e il rinculo scala col carattere, non col grado');
+  const dps = w => w.weapon.dmg * w.weapon.fireRate;
+  const tutti = [dps(lungaEq), dps(lungaLg), dps(lungaPs)];
+  assert((Math.max(...tutti) - Math.min(...tutti)) / Math.min(...tutti) <= 0.04, 'e a pari grado rendono uguale: e un bivio, non una scala');
   assert(room.effWeapon(p).school === 'melee', 'l arma comprata NON cambia la scuola della classe');
+  // v2.12 — LA CADENZA DALL EQUIPAGGIAMENTO. Prima bonusOf sommava fireRateMult e NESSUNO lo leggeva.
+  const armPes = pz('armor', 5, 'pesante'), armLeg = pz('armor', 5, 'leggera');
+  room.buyGear('b', armPes.id); const ritPes = room.effFireDelay(p);
+  room.buyGear('b', armLeg.id); const ritLeg = room.effFireDelay(p);
+  assert(ritPes > ritLeg, 'l armatura pesante rallenta la cadenza, la leggera la alza (' + ritPes.toFixed(3) + 's contro ' + ritLeg.toFixed(3) + 's)');
+  room.buyGear('b', armRara.id);
   // scudo
-  const dr1 = p.gearBonus.dmgReduce; room.buyGear('b', 'gue_torre');
+  const dr1 = p.gearBonus.dmgReduce; room.buyGear('b', torre.id);
   assert(p.gearBonus.dmgReduce > dr1, 'lo scudo a torre riduce di piu');
+  // v2.12 — LA RIVENDITA: si vende cio che sta nel BAULE, mai cio che si ha addosso.
+  const inBaule = armCom.id; room.buyGear('b', inBaule); room.buyGear('b', armRara.id);
+  room.phase = C.PHASE_MARKET; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
+  const soldi0 = p.coins; room.vendiGear('b', p.gear.armor);
+  assert(p.coins === soldi0 && !!p.owned[p.gear.armor], 'il fabbro non compra cio che hai addosso');
+  room.vendiGear('b', inBaule);
+  assert(p.coins === soldi0 + Gear.prezzoVendita(Gear.BY_ID[inBaule]) && !p.owned[inBaule], 'e compra a meta prezzo cio che sta nel baule');
+  room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b'); p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
   // roba di un'altra classe: non si compra
-  room.buyGear('b', 'mag_bastone'); assert(p.gear.weapon === 'gue_alabarda', 'il guerriero non puo comprare oggetti del mago');
+  const armaMago = Gear.itemsFor('mago', 'weapon')[0];
+  room.buyGear('b', armaMago.id); assert(p.gear.weapon === lungaEq.id, 'il guerriero non puo comprare oggetti del mago');
   // monete insufficienti
-  p.coins = 0; room.buyGear('b', 'gue_spadone'); assert(p.gear.weapon === 'gue_alabarda', 'senza monete non si acquista');
+  p.coins = 0; const nonComprato = pz('weapon', 5, 'pesante');
+  room.buyGear('b', nonComprato.id); assert(p.gear.weapon === lungaEq.id, 'senza monete non si acquista');
   p.coins = 100000;
   // --- offerta gear inviata al client ---
   sent.length = 0; room.offerGear(p);
   const gm = sent.find(mm => mm.t === C.MSG.OFFER_GEAR);
   assert(gm && gm.slots.length === 3 && gm.slots.map(x => x.slot).join(',') === 'weapon,armor,shield', 'offerGear invia i 3 slot del guerriero');
-  assert(gm.slots.every(sl => sl.items.length >= 2 && sl.items.every(i => i.name && i.desc && typeof i.cost === 'number')), 'ogni slot porta i suoi oggetti con nome, descrizione e prezzo');
+  assert(gm.slots.every(sl => sl.items.length === 13 && sl.items.every(i => i.name && i.desc && typeof i.cost === 'number' && i.carattere && typeof i.vendita === 'number')), 'ogni slot porta i suoi 13 pezzi con nome, descrizione, prezzo, carattere e prezzo di rivendita');
   // --- snapshot espone le monete ---
   const snap = room.snapshot(); const me = snap.players.find(x => x.i === 'b'); assert(me && typeof me.co === 'number', 'lo snapshot espone le monete del giocatore'); assert(Array.isArray(snap.coins), 'lo snapshot espone le monete a terra');
   // --- riduzione danni con cap ---
@@ -761,11 +799,16 @@ function testV152() {
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, pw.x, pw.y) < T * 24, 'la fucina si raggiunge dalla piazza');
   // acquisto: serve essere vicini al fabbro
   p.coins = 100000; p.x = room.map.spawn.x; p.y = room.map.spawn.y;
+  // v2.12 — i pezzi si chiedono al catalogo per GRADO e CARATTERE: con 104 pezzi gli id scritti a mano
+  // sono una trappola, e questo test non parla di nomi, parla di distanza dal fabbro.
+  const GearV = require('../shared/gear.js');
+  const partenzaV = GearV.startingGear('ladro');
+  const cuoio = GearV.itemsOfRank('ladro', 'armor', 2, 'pesante').find(i => i.carattere === 'pesante');
   if (MU.dist(p.x, p.y, room.gearMerchant.x, room.gearMerchant.y) > C.MARKET_MERCH_RANGE + 12) {
-    room.buyGear('b', 'lad_cuoio'); assert(p.gear.armor === 'lad_pelle', 'lontano dal fabbro non si compra');
+    room.buyGear('b', cuoio.id); assert(p.gear.armor === partenzaV.armor, 'lontano dal fabbro non si compra');
   }
   p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
-  room.buyGear('b', 'lad_cuoio'); assert(p.gear.armor === 'lad_cuoio', 'vicino al fabbro l\'acquisto va a buon fine');
+  room.buyGear('b', cuoio.id); assert(p.gear.armor === cuoio.id, 'vicino al fabbro l\'acquisto va a buon fine');
   p._nearGear = false; room.updateGearMerchant(); assert(p._nearGear === true, 'avvicinandosi si apre il pannello del fabbro');
   p.x = room.gearMerchant.x + 400; room.updateGearMerchant(); assert(p._nearGear === false, 'allontanandosi il pannello si chiude');
   // uscita: CO-OP, il primo che entra nel portale porta tutti avanti
@@ -1716,7 +1759,10 @@ function testV166() {
   assert(Heroes.HEROES.mago.weapon.fireRate < 3, 'il mago parte con una cadenza bassa (' + Heroes.HEROES.mago.weapon.fireRate + '/s)');
   // --- 4) FENDENTE: nessun proiettile, danno nel settore davanti, niente alle spalle ---
   const r2 = new Room('v166b'); const p = r2.addPlayer('b', { send() {} }, 'B', 'guerriero'); r2.startGame();
-  const w = p.hero.weapon; assert(w.melee && w.arcRadius > 0 && w.arcHalf > 0, 'la spada dichiara raggio e apertura dell arco');
+  // v2.12 — l'arma vera e' quella EQUIPAGGIATA, non quella scritta in heroes.js. Prima le due
+  // coincidevano per caso (il pezzo di partenza copiava heroes.js); col grado scarso non coincidono
+  // piu', e l'evento 'swing' che il client usa per disegnare il fendente porta i numeri dell'oggetto.
+  const w = r2.effWeapon(p); assert(w.melee && w.arcRadius > 0 && w.arcHalf > 0, 'la spada dichiara raggio e apertura dell arco');
   const avanti = losSpot(r2, p, w.arcRadius * 0.6);
   p.aim = Math.atan2(avanti.y - p.y, avanti.x - p.x); p.input.aim = p.aim;
   const m1 = r2.spawnMonster('skeleton', avanti.x, avanti.y, { scaling: Waves.scaling(2, 1) });
@@ -1759,7 +1805,7 @@ function testV166() {
   ok('novita v1.66 verificate');
 }
 function testV167() {
-  console.log('\n[TEST 37] Novita v1.67 — il fabbro vende OGGETTI, uno per classe');
+  console.log('\n[TEST 37] Novita v1.67/v2.12 — il fabbro vende OGGETTI, uno per classe, con un bivio per grado');
   const Gear = require('../shared/gear.js');
   // --- 1) il catalogo e' ben formato e ogni classe ha i suoi slot ---
   assert(Object.keys(Gear.SLOTS).join(',') === 'guerriero,mago,ladro', 'gli slot sono definiti per tutte e tre le classi');
@@ -1767,64 +1813,114 @@ function testV167() {
   assert(Gear.slotsFor('mago').join(',') === 'weapon,armor', 'il mago ha arma e armatura');
   assert(Gear.slotsFor('ladro').join(',') === 'weapon,armor,boots', 'il ladro ha arma, armatura e calzature');
   assert(new Set(Gear.ITEMS.map(i => i.id)).size === Gear.ITEMS.length, 'nessun id di oggetto duplicato');
+  assert(Gear.ITEMS.length === 104, 'il catalogo ha 104 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
   for (const it of Gear.ITEMS) {
     assert(Gear.slotsFor(it.hero).includes(it.slot), it.id + ' sta in uno slot che la sua classe possiede');
-    assert(it.name && it.desc && typeof it.cost === 'number' && it.rank >= 1, it.id + ' ha nome, descrizione, prezzo e rango');
+    assert(it.name && it.desc && typeof it.cost === 'number' && it.rank >= 1, it.id + ' ha nome, descrizione, prezzo e grado');
+    assert(!!Gear.CARATTERI[it.carattere], it.id + ' ha un carattere fra i tre');
     assert(it.slot === 'weapon' ? !!it.weapon : !!it.bonus, it.id + ' porta un blocco arma oppure un blocco bonus');
+    // v2.12 — la TINTA non e' un vezzo: il renderer la legge in _palGear per ridipingere il personaggio.
+    // Senza, niente crasha e il personaggio smette di cambiare aspetto comprando — cioe' sparisce
+    // esattamente la soddisfazione per cui il catalogo esiste. Un pezzo difensivo senza tinta e' rotto.
+    if (it.slot !== 'weapon') assert(!!it.tinta && Object.keys(it.tinta).length > 0, it.id + ' porta la tinta che si vede addosso');
   }
-  // --- 2) rango piu' alto = costa di piu' E vale di piu' (regola dichiarata: niente scambi alla pari) ---
+
+  // --- 2) v2.12 — LA REGOLA NUOVA, ed e' il rovescio esatto di quella vecchia ------------------------
+  // Fino alla 2.11 questo test controllava che ogni pezzo costasse e valesse piu' del PRECEDENTE NELLA
+  // LISTA. Era la regola «un rango piu' alto e' sempre migliore», ed era il problema: l'equipaggiamento
+  // era una scala, non una scelta. Adesso ci sono DUE regole, e vanno controllate tutte e due.
+  //   FRA I GRADI  si sale: il grado dopo costa di piu' e rende di piu'.
+  //   DENTRO UN GRADO  non si sale: i tre pezzi costano uguale e rendono uguale, e cambiano in COME si gioca.
+  const dpsOf = w => w.dmg * w.fireRate;
+  const valOf = b => (b.maxHpFlat || 0) / 10 + (b.dmgReduce || 0) * 100 + (b.frontale || 0) * 20 + Math.abs(b.speedMult || 0) * 60;
   for (const hero of Object.keys(Gear.SLOTS)) for (const slot of Gear.slotsFor(hero)) {
-    const l = Gear.itemsFor(hero, slot);
-    assert(l.length >= 2, hero + '/' + slot + ' ha almeno due oggetti fra cui scegliere');
-    assert(l[0].cost === 0, hero + '/' + slot + ': il rango 1 e quello di partenza e costa 0');
-    for (let i = 1; i < l.length; i++) {
-      assert(l[i].cost > l[i - 1].cost, hero + '/' + slot + ': ' + l[i].id + ' costa piu del rango precedente');
+    const gradi = [];
+    for (let r = 1; r <= Gear.maxRank(); r++) gradi.push(Gear.itemsOfRank(hero, slot, r));
+    assert(gradi[0].length === 1, hero + '/' + slot + ': il grado scarso ha un pezzo solo, quello con cui parti');
+    assert(gradi[0][0].cost === 0, hero + '/' + slot + ': il grado scarso costa 0, non si compra');
+    for (let r = 1; r < gradi.length; r++) {
+      const g = gradi[r];
+      assert(g.length === 3, hero + '/' + slot + ' grado ' + (r + 1) + ': tre scelte, non una');
+      assert(new Set(g.map(i => i.carattere)).size === 3, hero + '/' + slot + ' grado ' + (r + 1) + ': i tre caratteri sono tutti diversi');
+      // DENTRO il grado: stesso prezzo, e per le armi stesso rendimento (entro il 4%)
+      assert(new Set(g.map(i => i.cost)).size === 1, hero + '/' + slot + ' grado ' + (r + 1) + ': i tre costano uguale — se no il bivio e truccato');
       if (slot === 'weapon') {
-        const dps = w => w.dmg * w.fireRate;
-        assert(dps(l[i].weapon) > dps(l[i - 1].weapon), l[i].id + ' fa piu danni al secondo del rango precedente');
+        const d = g.map(i => dpsOf(i.weapon));
+        const sc = (Math.max(...d) - Math.min(...d)) / Math.min(...d);
+        assert(sc <= 0.04, hero + ' grado ' + (r + 1) + ': i tre rendono uguale entro il 4% (sono al ' + (sc * 100).toFixed(1) + '%)');
+      }
+      // FRA i gradi: il migliore del grado dopo batte il migliore del grado prima
+      const prima = gradi[r - 1];
+      assert(g[0].cost > prima[0].cost, hero + '/' + slot + ': il grado ' + (r + 1) + ' costa piu del grado ' + r);
+      if (slot === 'weapon') {
+        assert(Math.max(...g.map(i => dpsOf(i.weapon))) > Math.max(...prima.map(i => dpsOf(i.weapon))), hero + '/' + slot + ': il grado ' + (r + 1) + ' rende piu del grado ' + r);
       } else {
-        const val = b => (b.maxHpFlat || 0) / 10 + (b.dmgReduce || 0) * 100 + (b.speedMult || 0) * 100;
-        assert(val(l[i].bonus) > val(l[i - 1].bonus), l[i].id + ' da bonus migliori del rango precedente');
+        assert(Math.max(...g.map(i => valOf(i.bonus))) > Math.max(...prima.map(i => valOf(i.bonus))), hero + '/' + slot + ': il grado ' + (r + 1) + ' vale piu del grado ' + r);
       }
     }
   }
-  // --- 3) le tre armi del guerriero sono DIVERSE, non la stessa piu' grande: piu' lunga = piu' stretta ---
-  const armi = Gear.itemsFor('guerriero', 'weapon');
-  for (let i = 1; i < armi.length; i++) {
-    assert(armi[i].weapon.arcRadius > armi[i - 1].weapon.arcRadius, armi[i].id + ' arriva piu lontano');
-    assert(armi[i].weapon.arcHalf < armi[i - 1].weapon.arcHalf, armi[i].id + ' copre un arco piu STRETTO');
-    assert(armi[i].weapon.fireRate < armi[i - 1].weapon.fireRate, armi[i].id + ' e piu lento a ripetere');
+
+  // --- 3) v2.12 — OGNI CARATTERE E' IL MIGLIORE IN UNA COSA E IL PEGGIORE NELLE ALTRE DUE ------------
+  // Senza questo controllo il "bivio" tornerebbe a essere una scala mascherata: basta che un carattere
+  // sia il migliore in due cose su tre e gli altri due non hanno piu' motivo di esistere.
+  const P = 'pesante', E = 'equilibrata', L = 'leggera';
+  const get = (h, s, r, c) => Gear.itemsOfRank(h, s, r).find(i => i.carattere === c);
+  for (let r = 2; r <= Gear.maxRank(); r++) {
+    const gp = get('guerriero', 'weapon', r, P).weapon, ge = get('guerriero', 'weapon', r, E).weapon, gl = get('guerriero', 'weapon', r, L).weapon;
+    assert(gp.knockback > ge.knockback && ge.knockback > gl.knockback, 'guerriero grado ' + r + ': il rinculo e della PESANTE');
+    assert(ge.arcRadius > gp.arcRadius && ge.arcRadius > gl.arcRadius, 'guerriero grado ' + r + ': la portata e della EQUILIBRATA');
+    assert(gl.arcHalf > ge.arcHalf && ge.arcHalf > gp.arcHalf, 'guerriero grado ' + r + ': l arco largo e della LEGGERA');
+    const mp = get('mago', 'weapon', r, P).weapon, me2 = get('mago', 'weapon', r, E).weapon, ml = get('mago', 'weapon', r, L).weapon;
+    assert(mp.r > me2.r && me2.r > ml.r, 'mago grado ' + r + ': la bolla grande e della PESANTE');
+    assert(me2.range > mp.range && me2.range > ml.range, 'mago grado ' + r + ': la gittata e della EQUILIBRATA');
+    assert(ml.bulletSpeed > me2.bulletSpeed && me2.bulletSpeed > mp.bulletSpeed, 'mago grado ' + r + ': la bolla veloce e della LEGGERA');
+    const lp = get('ladro', 'weapon', r, P).weapon, le = get('ladro', 'weapon', r, E).weapon, ll = get('ladro', 'weapon', r, L).weapon;
+    assert(lp.range > le.range && le.range > ll.range, 'ladro grado ' + r + ': la gittata e della PESANTE');
+    assert(le.pierce >= lp.pierce && le.pierce > ll.pierce, 'ladro grado ' + r + ': la perforazione e della EQUILIBRATA');
+    assert(ll.fireRate > le.fireRate && le.fireRate > lp.fireRate, 'ladro grado ' + r + ': la cadenza e della LEGGERA');
   }
-  // la cadenza delle bacchette resta la firma della classe: la alza l'Intelligenza, non l'acquisto
-  const bacch = Gear.itemsFor('mago', 'weapon');
-  assert(bacch.every(b => b.weapon.fireRate === bacch[0].weapon.fireRate), 'tutte le bacchette hanno la stessa cadenza di base');
+  // la cadenza del mago: quella EQUILIBRATA resta 1,5/s a ogni grado — e' la firma della classe, e sono
+  // gli altri due caratteri a scostarsene, non il grado.
+  for (let r = 1; r <= Gear.maxRank(); r++) {
+    const eq = get('mago', 'weapon', r, E);
+    if (eq) assert(eq.weapon.fireRate === 1.5, 'mago grado ' + r + ': la bacchetta equilibrata tiene la cadenza della classe');
+  }
+
   // --- 4) a runtime: cambio libero, ricalcolo da zero, niente roba di altre classi ---
   const room = new Room('v167'); const p = room.addPlayer('b', { send() {} }, 'B', 'ladro'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
   p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
-  assert(room.effWeapon(p).name === 'Arco Corto', 'il ladro parte con l arco corto');
+  const partenza = Gear.startingGear('ladro');
+  assert(room.effWeapon(p).name === Gear.BY_ID[partenza.weapon].name, 'il ladro parte con l arco scarso (' + Gear.BY_ID[partenza.weapon].name + ')');
   const sp0 = room.effSpeed(p);
-  room.buyGear('b', 'lad_stivali'); assert(room.effSpeed(p) > sp0, 'gli stivali migliori aumentano la velocita');
-  room.buyGear('b', 'lad_scarpe'); assert(Math.abs(room.effSpeed(p) - sp0) < 1e-9, 'tornando alle scarpe la velocita torna esatta (nessun bonus rimasto appiccicato)');
-  const d0 = room.effDamage(p); room.buyGear('b', 'lad_arcolungo');
-  assert(room.effDamage(p) > d0 && room.effWeapon(p).bulletSpeed > 900, 'l arco lungo fa piu danno e tira piu veloce');
+  const stivali = get('ladro', 'boots', 3, E);
+  room.buyGear('b', stivali.id); assert(room.effSpeed(p) > sp0, 'gli stivali migliori aumentano la velocita');
+  room.buyGear('b', partenza.boots); assert(Math.abs(room.effSpeed(p) - sp0) < 1e-9, 'tornando alle pezze la velocita torna esatta (nessun bonus rimasto appiccicato)');
+  const d0 = room.effDamage(p), v0 = room.effWeapon(p).bulletSpeed;
+  const arcoLungo = get('ladro', 'weapon', 3, P);
+  room.buyGear('b', arcoLungo.id);
+  assert(room.effDamage(p) > d0 && room.effWeapon(p).bulletSpeed > v0, 'l arco pesante fa piu danno e tira piu veloce di quello di partenza');
   assert(room.effWeapon(p).school === 'ranged', 'la scuola resta quella della classe, non dell oggetto');
-  // le frecce dell'arco lungo perforano di piu': l'oggetto arriva davvero fino al proiettile
+  // la perforazione arriva davvero fino al PROIETTILE: e' dell'equilibrata, ed e' il suo motivo di esistere
+  const arcoPerf = get('ladro', 'weapon', 3, E);
+  room.buyGear('b', arcoPerf.id);
   room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p);
   const fr = room.bullets.find(b => !b.hostile);
-  assert(fr && fr.arrow && fr.pierce >= 2, 'la freccia dell arco lungo perfora due nemici');
+  assert(fr && fr.arrow && fr.pierce >= arcoPerf.weapon.pierce, 'la freccia dell arco equilibrato perfora quanto dice la scheda (' + (fr ? fr.pierce : '?') + ')');
   // --- 5) i PV non superano mai il massimo quando si scende di armatura ---
   const q = room.addPlayer('c', { send() {} }, 'C', 'guerriero');
   q.coins = 100000; q.x = room.gearMerchant.x; q.y = room.gearMerchant.y;
-  room.buyGear('c', 'gue_piastre'); q.hp = room.effMaxHp(q);
-  room.buyGear('c', 'gue_maglia');
+  const corazzona = get('guerriero', 'armor', 5, P), scudino = get('guerriero', 'shield', 2, E);
+  room.buyGear('c', corazzona.id); q.hp = room.effMaxHp(q);
+  room.buyGear('c', Gear.startingGear('guerriero').armor);
   assert(q.hp <= room.effMaxHp(q), 'togliendo l armatura i PV rientrano nel nuovo massimo');
+  room.buyGear('c', scudino.id);
   // --- 6) lo snapshot porta al client cio' che si vede addosso ---
   const snap = room.snapshot(); const me = snap.players.find(x => x.i === 'b');
-  assert(me && me.wp === 'lad_arcolungo', 'lo snapshot porta l arma equipaggiata (serve a disegnare l arco lungo)');
+  assert(me && me.wp === arcoPerf.id, 'lo snapshot porta l arma equipaggiata (serve a disegnare l arco)');
   const gg = snap.players.find(x => x.i === 'c');
-  assert(gg && gg.sh === 'gue_scudo', 'e lo scudo equipaggiato (lo scudo a torre si disegna piu grande)');
-  ok('novita v1.67 verificate');
+  assert(gg && gg.sh === scudino.id, 'e lo scudo equipaggiato (lo scudo a torre si disegna piu grande)');
+  ok('novita v1.67/v2.12 verificate');
 }
 function testV168() {
   console.log('\n[TEST 38] Novita v1.68 — tetto a 30 vivi con coda, e snapshot magro');
@@ -2171,19 +2267,24 @@ function testV172() {
   assert(!!r.bandit, 'il Banditore ha un posto nel villaggio');
   assert(!r.map.village.npcs.find(n => n.bnd).soon, "e la sua bottega non e piu chiusa");
   p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; p.coins = 1000;
-  r.buyGear('a', 'gue_spadone'); r.buyGear('a', 'gue_alabarda');
-  assert(p.gear.weapon === 'gue_alabarda', "l'ultima comprata e quella addosso");
-  assert(p.owned.gue_spadone && p.owned.gue_alabarda, 'ma la precedente resta TUA: non sparisce piu nel nulla');
+  // v2.12 — due armi qualunque della stessa classe, prese dal catalogo: qui si prova il MAGAZZINO,
+  // non i nomi. Due gradi diversi perche' costino diverso e il conto delle monete abbia senso.
+  const GearB = require('../shared/gear.js');
+  const armaA = GearB.itemsOfRank('guerriero', 'weapon', 2, 'pesante').find(i => i.carattere === 'pesante');
+  const armaB = GearB.itemsOfRank('guerriero', 'weapon', 3, 'equilibrata').find(i => i.carattere === 'equilibrata');
+  r.buyGear('a', armaA.id); r.buyGear('a', armaB.id);
+  assert(p.gear.weapon === armaB.id, "l'ultima comprata e quella addosso");
+  assert(p.owned[armaA.id] && p.owned[armaB.id], 'ma la precedente resta TUA: non sparisce piu nel nulla');
   const c1 = p.coins;
-  r.buyGear('a', 'gue_spadone');
+  r.buyGear('a', armaA.id);
   assert(p.coins === c1, 'rimettersi addosso un oggetto posseduto non costa nulla');
-  assert(p.gear.weapon === 'gue_spadone', 'ed e davvero tornato addosso');
+  assert(p.gear.weapon === armaA.id, 'ed e davvero tornato addosso');
 
   // --- 2) v1.82: LA RICOMPRA NON C'E' PIU'. Il Banditore non ricompra le armi: quel posto al banco
   // adesso e' il reclutamento dei mercenari. Cio' che possiedi resta tuo e si rimette addosso gratis dal
   // Fabbro, che e' il comportamento che conta ed e' verificato qui sopra.
   assert(typeof r.sellGear !== 'function', 'la rivendita delle armi al Banditore e stata tolta');
-  assert(!!p.owned.gue_alabarda && !!p.owned.gue_spadone, 'e cio che hai comprato resta comunque tuo');
+  assert(!!p.owned[armaB.id] && !!p.owned[armaA.id], 'e cio che hai comprato resta comunque tuo');
 
   // --- 3) le tre offerte ---
   p.x = r.bandit.x; p.y = r.bandit.y;
@@ -3969,9 +4070,14 @@ function testV183() {
   assert((M - m2) / M < 0.15, 'e le tre classi restano entro il 15% di danno al secondo (' + [dpsG, dpsM, dpsOra].map(x => x.toFixed(0)).join(' / ') + ')');
 
   // --- 2) LO SCUDO PARA DAVANTI ---
-  const sc = Gear.BY_ID.gue_scudo, to = Gear.BY_ID.gue_torre;
+  // v2.12 — lo scudo equilibrato comune contro quello pesante dello stesso grado: e' il confronto giusto
+  // adesso, perche' il "para di piu'" e' del CARATTERE e non del grado.
+  // lo scudo di PARTENZA: e' quello che il guerriero ha addosso dentro `prova()` qui sotto, e la
+  // matematica dello sconto frontale va confrontata con quello, non con uno che potrebbe comprare.
+  const sc = Gear.BY_ID[Gear.startingGear('guerriero').shield];
+  const to = Gear.itemsOfRank('guerriero', 'shield', 2, 'pesante').find(i => i.carattere === 'pesante');
   assert(sc.bonus.frontale > 0 && to.bonus.frontale > sc.bonus.frontale, 'i due scudi parano di fronte, la torre piu del piccolo');
-  assert(Gear.bonusOf({ shield: 'gue_scudo' }).frontale === sc.bonus.frontale, 'il bonus frontale arriva nel calcolo dell equipaggiamento');
+  assert(Gear.bonusOf({ shield: sc.id }).frontale === sc.bonus.frontale, 'il bonus frontale arriva nel calcolo dell equipaggiamento');
   assert(!Gear.bonusOf({ shield: 'lad_mantello' }).frontale, 'e non lo hanno gli altri: e' + String.fromCharCode(39) + ' lo scudo, non la classe');
 
   const prova = (angoloAttacco) => {
@@ -4014,7 +4120,8 @@ function testV183() {
   {
     const r = new Room('v183x'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
     r.phase = C.PHASE_COMBAT; p.aim = 0; p.buffs = {};
-    p.gear.shield = 'gue_torre'; r._recomputeGear(p); p.hp = r.effMaxHp(p);
+    p.gear.shield = Gear.itemsOfRank('guerriero', 'shield', 2, 'pesante').find(i => i.carattere === 'pesante').id;
+    r._recomputeGear(p); p.hp = r.effMaxHp(p);
     const prima = p.hp; r.damagePlayer(p, 100, p.x + 60, p.y, 0);
     assert(prima - p.hp < davanti, 'lo Scudo a Torre para piu del piccolo (' + (prima - p.hp).toFixed(0) + ' contro ' + davanti.toFixed(0) + ')');
   }
@@ -4285,26 +4392,42 @@ function testV185() {
 }
 
 function testV188() {
-  console.log('\n[TEST 62] v1.88 — quattro ranghi di equipaggiamento per ogni slot');
+  console.log('\n[TEST 62] v1.88/v2.12 — CINQUE gradi di equipaggiamento per ogni slot, con tre scelte dentro');
   const conn = { send() {} };
-  const NOMI = ['common', 'rare', 'legendary', 'divine'];
-  assert(Gear.RANK_RARITY.join(',') === NOMI.join(','), 'le rarita sono comune, raro, leggendario, divino');
+  // v2.12 — erano quattro gradi e un pezzo per grado. Adesso sono cinque gradi e tre pezzi per grado
+  // (tranne il primo, che e' quello con cui parti). Le due righe che seguono sono la forma del catalogo:
+  // se qualcuno aggiunge un grado o un carattere, e' qui che se ne accorge.
+  const NOMI = ['scarso', 'common', 'rare', 'legendary', 'divine'];
+  assert(Gear.RANK_RARITY.join(',') === NOMI.join(','), 'i gradi sono scarso, comune, raro, leggendario, divino');
+  assert(Gear.maxRank() === 5, 'i gradi sono cinque');
 
   for (const h of Heroes.ORDER) {
     for (const slot of Gear.slotsFor(h)) {
       const l = Gear.itemsFor(h, slot);
-      assert(l.length === 4, h + '/' + slot + ': quattro oggetti (' + l.length + ')');
-      assert(l.map(i => i.rank).join(',') === '1,2,3,4', h + '/' + slot + ': i ranghi vanno da 1 a 4');
-      assert(l.map(i => Gear.rarityOf(i)).join(',') === NOMI.join(','), h + '/' + slot + ': una rarita per rango');
-      assert(l[0].cost === 0, h + '/' + slot + ': il rango 1 e quello di partenza e costa 0');
-      for (let k = 1; k < 4; k++) assert(l[k].cost > l[k - 1].cost, h + '/' + slot + ': ' + l[k].name + ' costa piu del precedente');
-      // niente scambi alla pari: salendo di rango non si perde mai niente
-      for (let k = 1; k < 4; k++) {
-        const a = l[k - 1], b = l[k];
-        if (a.bonus && b.bonus) for (const s of Object.keys(a.bonus)) assert((b.bonus[s] || 0) >= a.bonus[s], l[k].name + ': ' + s + ' non peggiora');
-        if (a.weapon && b.weapon) {
+      assert(l.length === 13, h + '/' + slot + ': tredici pezzi, 1 + 3x4 (' + l.length + ')');
+      assert(l.map(i => i.rank).join(',') === '1,2,2,2,3,3,3,4,4,4,5,5,5', h + '/' + slot + ': i gradi vanno da 1 a 5, tre pezzi per grado');
+      assert(l.map(i => Gear.rarityOf(i)).join(',') === [NOMI[0], NOMI[1], NOMI[1], NOMI[1], NOMI[2], NOMI[2], NOMI[2], NOMI[3], NOMI[3], NOMI[3], NOMI[4], NOMI[4], NOMI[4]].join(','), h + '/' + slot + ': una rarita per grado');
+      // v2.12 — l'ORDINE non e' un dettaglio estetico: il client ci mette le carte in colonna, e se
+      // l'ordine cambiasse cambierebbero le colonne sotto i piedi di chi sta guardando il negozio.
+      for (let k = 1; k < l.length; k += 3) {
+        if (l[k].rank === 1) continue;
+        assert([l[k].carattere, l[k + 1].carattere, l[k + 2].carattere].join(',') === 'pesante,equilibrata,leggera', h + '/' + slot + ' grado ' + l[k].rank + ': l ordine e pesante, equilibrata, leggera');
+      }
+      assert(l[0].cost === 0, h + '/' + slot + ': il grado scarso e quello di partenza e costa 0');
+      // FRA I GRADI si sale, DENTRO un grado no: si confrontano i gradi, non i pezzi in fila.
+      for (let r = 2; r <= Gear.maxRank(); r++) {
+        const g = Gear.itemsOfRank(h, slot, r), prima = Gear.itemsOfRank(h, slot, r - 1);
+        assert(g[0].cost > prima[0].cost, h + '/' + slot + ': il grado ' + r + ' costa piu del ' + (r - 1));
+        if (slot === 'weapon') {
           const dps = (w) => w.dmg * w.fireRate;
-          assert(dps(b.weapon) > dps(a.weapon), l[k].name + ': fa piu danni al secondo di ' + a.name);
+          assert(Math.max(...g.map(i => dps(i.weapon))) > Math.max(...prima.map(i => dps(i.weapon))), h + '/' + slot + ': il grado ' + r + ' rende piu del ' + (r - 1));
+        } else {
+          // dentro un grado i caratteri si scambiano difesa con velocita', quindi si confronta il
+          // MIGLIORE su ogni voce: e' quello che dice se il grado dopo e' davvero un passo avanti.
+          for (const voce of ['maxHpFlat', 'dmgReduce', 'frontale']) {
+            const mg = Math.max(...g.map(i => i.bonus[voce] || 0)), mp = Math.max(...prima.map(i => i.bonus[voce] || 0));
+            if (mp > 0) assert(mg > mp, h + '/' + slot + ': al grado ' + r + ' il meglio in ' + voce + ' batte il grado ' + (r - 1));
+          }
         }
       }
       // v1.88 — SI DEVE VEDERE: ogni pezzo che veste il personaggio porta la sua tinta.
@@ -4317,18 +4440,35 @@ function testV188() {
     const r = new Room('v188a'); const p = r.addPlayer('a', conn, 'A', 'guerriero'); r.startGame();
     const hp0 = r.effMaxHp(p);
     p.coins = 99999; r.enterMarket(); p.x = r.gearMerchant.x; p.y = r.gearMerchant.y; r.updateGearMerchant();
-    for (const slot of Gear.slotsFor('guerriero')) { const l = Gear.itemsFor('guerriero', slot); r.buyGear('a', l[3].id); }
-    assert(p.gear.weapon === 'gue_falce' && p.gear.armor === 'gue_ossidiana' && p.gear.shield === 'gue_aegis', 'comprati i tre pezzi divini');
+    // v2.12 — il grado divino e' il CINQUE, non il quattro, e dentro ci sono tre scelte: si prende la
+    // equilibrata, che e' quella senza penalita'. Prima qui c'era `l[3]`, cioe' il quarto pezzo della
+    // lista: con tredici pezzi per slot quel quarto e' un COMUNE, e il test avrebbe detto di si' a un
+    // personaggio vestito di stracci.
+    const divini = {};
+    for (const slot of Gear.slotsFor('guerriero')) {
+      const it = Gear.itemsOfRank('guerriero', slot, Gear.maxRank()).find(i => i.carattere === 'equilibrata');
+      divini[slot] = it; r.buyGear('a', it.id);
+    }
+    assert(p.gear.weapon === divini.weapon.id && p.gear.armor === divini.armor.id && p.gear.shield === divini.shield.id, 'comprati i tre pezzi divini');
+    assert(Gear.rarityOf(Gear.BY_ID[p.gear.weapon]) === 'divine', 'e sono davvero di grado divino');
     assert(r.effMaxHp(p) > hp0 + 100, 'i PV massimi salgono col set divino (' + hp0 + ' -> ' + r.effMaxHp(p) + ')');
-    assert(r.effWeapon(p).arcRadius > 160, 'e la portata del fendente e quella della Falce');
+    assert(r.effWeapon(p).arcRadius > 140, 'e la portata del fendente e quella della Falce (' + r.effWeapon(p).arcRadius + ')');
     const snap = r.snapshot(); const me = snap.players[0];
-    assert(me.arm === 'gue_ossidiana' && me.stv === undefined || me.arm === 'gue_ossidiana', 'lo snapshot porta l armatura, che il client disegna');
-    assert(me.sh === 'gue_aegis' && me.wp === 'gue_falce', 'e lo scudo e l arma');
+    assert(me.arm === divini.armor.id, 'lo snapshot porta l armatura, che il client disegna');
+    assert(me.sh === divini.shield.id && me.wp === divini.weapon.id, 'e lo scudo e l arma');
   }
   // e il ladro riceve la taratura della 1.83, che era rimasta solo in heroes.js
   {
-    const w = Gear.BY_ID['lad_arcocorto'].weapon;
-    assert(w.dmg === 38 && w.fireRate === 2.3, 'l Arco Corto ha i numeri della 1.83 (38 danni, 2,3/s)');
+    // v2.12 — l'Arco Corto e' diventato il COMUNE equilibrato (il grado di partenza adesso e' scarso) e
+    // la sua taratura e' cambiata col catalogo nuovo. Cio' che questo blocco deve difendere non e' il
+    // numero 38: e' che l'arma vera arrivi dall'OGGETTO e non da heroes.js — il bug della 1.88.
+    const w = Gear.itemsOfRank('ladro', 'weapon', 2, 'equilibrata').find(i => i.carattere === 'equilibrata').weapon;
+    assert(w.fireRate === 2.3, 'l Arco Corto tiene la cadenza della classe (2,3/s)');
+    const rq = new Room('v188b'); const pq = rq.addPlayer('q', conn, 'Q', 'ladro'); rq.startGame();
+    pq.coins = 9999; rq.enterMarket(); pq.x = rq.gearMerchant.x; pq.y = rq.gearMerchant.y; rq.updateGearMerchant();
+    const arco = Gear.itemsOfRank('ladro', 'weapon', 2, 'equilibrata').find(i => i.carattere === 'equilibrata');
+    rq.buyGear('q', arco.id);
+    assert(rq.effWeapon(pq).dmg === arco.weapon.dmg, 'e l arma in mano arriva dall OGGETTO, non da heroes.js');
   }
   ok('quattro ranghi per slot verificati');
 }
@@ -5138,7 +5278,7 @@ function testSalvataggio() {
     pg.coins = 999; pg.x = rg.innkeeper.x; pg.y = rg.innkeeper.y;
     pg.level = 7; pg.points = 3; pg.lives = 1; pg.xpPool = 1234;
     pg.cards = ['x']; pg.boonsOwned = { heavyarm: 2 }; pg.cardOn = { heavyarm: 1 };
-    pg.buys = { st_for: 4 }; pg.owned = { gue_spada: 1 }; pg.belt = ['p_forza', null, null];
+    pg.buys = { st_for: 4 }; pg.owned = { [require('../shared/gear.js').startingGear('guerriero').weapon]: 1 }; pg.belt = ['p_forza', null, null];
     pg.abil = { q: 'ab_carica', e: null }; pg.scaglioniDovuti = ['epic']; pg.abilDovute = ['e'];
     // la fotografia si prende PRIMA di salvare: salvare scala le monete, e il pacchetto tiene quelle di
     // prima (e' voluto — vedi il blocco 1 — quindi qui va confrontato con il prima, non con il dopo).

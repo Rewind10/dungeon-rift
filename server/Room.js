@@ -239,10 +239,20 @@ class Room {
     p.xpPool = 0; p.level = 1; p.points = 0; p.scaglioniDovuti = []; p.abilDovute = [];
     this.addXp(p, Lv.xpForLevel(liv));
     p.coins = Math.round(68 * (onda - 1));
-    // l'equipaggiamento: il rango che a quel punto ci si sarebbe potuti permettere
-    const rango = onda >= 16 ? 4 : onda >= 11 ? 3 : onda >= 6 ? 2 : 1;
+    // l'equipaggiamento: il grado che a quel punto ci si sarebbe potuti permettere.
+    // v2.12 — SI CHIEDE IL GRADO, NON LA POSIZIONE. Prima qui c'era `l[rango - 1]`, cioe' il pezzo in
+    // quella posizione della lista: funzionava solo finche' i gradi erano quattro e i pezzi quattro.
+    // Adesso i pezzi per slot sono tredici e la posizione non ha piu' niente a che vedere col grado —
+    // `l[3]` all'ondata 16 avrebbe dato un pezzo COMUNE. Fra i tre caratteri si prende l'equilibrato,
+    // che e' quello senza penalita': il personaggio di prova non deve avere un carattere per caso.
+    // Le soglie non sono a occhio: vengono da `test/monete.js`, che conta le monete che ogni ondata
+    // contiene. Col listino di oggi un kit comune si paga verso la quarta ondata, uno raro verso l'ottava,
+    // un leggendario verso la dodicesima, un divino verso la sedicesima — tenendo conto che si spende
+    // anche in pozioni, statistiche e Ostessa, e che la rivendita restituisce meta' del vecchio.
+    const grado = onda >= 16 ? 5 : onda >= 12 ? 4 : onda >= 8 ? 3 : onda >= 4 ? 2 : 1;
     for (const slot of Gear.slotsFor(p.heroId)) {
-      const l = Gear.itemsFor(p.heroId, slot); const it = l[Math.min(rango, l.length) - 1];
+      const l = Gear.itemsOfRank(p.heroId, slot, grado);
+      const it = l.find(i => i.carattere === 'equilibrata') || l[0];
       if (it) { p.gear[slot] = it.id; p.owned[it.id] = 1; }
     }
     this._recomputeGear(p);
@@ -934,7 +944,14 @@ class Room {
   effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
   effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.merc && p._torna) s *= (C.MERC_RIENTRO_MULT || 1.28); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.turbine) s *= (p.turbine.lento || 0.7); if (p.buffs.carica > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
-  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; let rate = base * p.stats.fireRateMult * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
+  // v2.12 — LA CADENZA DELL'EQUIPAGGIAMENTO. `gearBonus.fireRateMult` non lo leggeva nessuno: `bonusOf`
+  // sommava la chiave, ma qui si guardava solo `p.stats.fireRateMult`, quindi un'armatura non poteva ne'
+  // rallentare ne' accelerare i colpi. Serviva perche' il carattere PESANTE e' "piu' difesa, ma colpisci
+  // piu' piano" e senza questa riga meta' del compromesso non esisteva. Il passo invece funzionava gia':
+  // `effSpeed` legge `gearBonus.speedMult` dalla v1.88.
+  // Si somma a 1 e si stringe a un pavimento: -0,18 della corazzatura piu' pesante vale x0,82, e nemmeno
+  // un accumulo assurdo puo' portare la cadenza a zero o farla diventare negativa.
+  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; const gfr = Math.max(0.35, 1 + (p.gearBonus ? (p.gearBonus.fireRateMult || 0) : 0)); let rate = base * p.stats.fireRateMult * gfr * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
     if (p.perk.sangueFreddo && this.effWeapon(p).melee && p.hp / this.effMaxHp(p) < 0.40) d *= 1.25;
     if (p.perk.convergenza > 0 && (this.time - (p.lastShotT || 0)) >= p.perk.convergenza) d *= 3; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.po_dmg) d *= (1 + Pot.EFF.dmg * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
@@ -2041,7 +2058,9 @@ class Room {
       slot, name: Gear.SLOT_NAME[slot] || slot, icon: Gear.SLOT_ICON[slot] || '⚔️',
       items: Gear.itemsFor(p.heroId, slot).map(it => ({
         id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost,
+        carattere: it.carattere,           // v2.12 — il client ci mette la carta nella colonna giusta
         rarity: Gear.rarityOf(it), owned: p.gear[slot] === it.id ? 1 : 0, have: p.owned[it.id] ? 1 : 0,
+        vendita: Gear.prezzoVendita(it),   // v2.12 — quanto ti da' il fabbro se glielo rivendi
       })),
     }));
     this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0 });
@@ -2131,6 +2150,33 @@ class Room {
     p.boonOffer = null; p.boonPicked = true;
     this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: a.slot.toUpperCase(), cd: a.cd } });
     if (this.phase === C.PHASE_SHOP) this.offerBoon(p);   // se resta altro in coda si presenta subito
+  }
+  // ============================================================================================
+  // v2.12 — LA VENDITA
+  // ============================================================================================
+  // C'ERA GIA', ED ERA STATA TOLTA. Fino alla v1.82 esisteva `sellGear` al banco del BANDITORE, e fu
+  // rimossa con una ragione scritta nel codice: «un banco che fa due mestieri diversi non e' un banco,
+  // e' un menu». Era giusta — ma riguardava il POSTO, non la vendita. Il fabbro di mestiere ne fa uno
+  // solo, l'equipaggiamento: li' comprare e vendere sono la stessa conversazione, non due.
+  //
+  // SI VENDE QUELLO CHE HAI IN INVENTARIO, NON QUELLO CHE HAI ADDOSSO. Poter vendere il pezzo indosso
+  // vorrebbe dire uscire dal negozio con lo slot vuoto, e uno slot vuoto e' uno stato che il resto del
+  // gioco non sa disegnare ne' calcolare. Chi vuole disfarsene mette su qualcos'altro e poi vende.
+  vendiGear(pid, itemId) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant &&
+      MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
+    if (!atMarket) return;                                  // si vende DAL FABBRO, come si compra
+    const it = Gear.BY_ID[itemId]; if (!it) return;
+    if (it.hero !== p.heroId) return;
+    if (!p.owned[it.id]) return;                            // non ce l'hai
+    if (p.gear[it.slot] === it.id) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'vendi_no', perche: 'addosso' } }); return; }
+    const reso = Gear.prezzoVendita(it);
+    delete p.owned[it.id];
+    p.coins += reso;
+    this.offerGear(p, 1);
+    if (p._nearBnd) this.offerBandit(p, 1);
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'venduto', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, reso, color: it.color } });
   }
   buyStat(pid, statId) {
     const p = this.players.get(pid); if (!p || this.phase !== C.PHASE_SHOP) return;

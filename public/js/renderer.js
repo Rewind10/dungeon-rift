@@ -3281,8 +3281,12 @@
       // v1.88 — IL RANGO DIVINO SI VEDE ANCHE AL BUIO: un alone che respira, del colore del pezzo.
       // Solo il rango 4, e solo un pezzo (il piu' alto che hai): tre aloni sovrapposti sarebbero una lampadina.
       const rk = eq._rk;
-      if (rk && Math.max(rk.w, rk.a, rk.s, rk.b) >= 4) {
-        const src = rk.a >= 4 ? eq.arm : rk.w >= 4 ? eq.wp : rk.s >= 4 ? eq.sh : eq.stv;
+      // v2.12 — BRILLA SOLO IL DIVINO. La soglia era 4 quando i gradi erano quattro e il 4 era l'ultimo;
+      // con cinque gradi avrebbe preso anche il leggendario, e un alone che si accende a meta' catalogo
+      // smette di voler dire "questo e' il meglio che c'e'".
+      const ALONE = 5;
+      if (rk && Math.max(rk.w, rk.a, rk.s, rk.b) >= ALONE) {
+        const src = rk.a >= ALONE ? eq.arm : rk.w >= ALONE ? eq.wp : rk.s >= ALONE ? eq.sh : eq.stv;
         const col = this._gearCol(src, '#ffe9a8');
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = 0.16 + 0.07 * Math.sin(t * 2.4);
@@ -3524,7 +3528,12 @@
       // v1.88 — l'arco cresce con il rango: quattro lunghezze e quattro legni. Il rango 1 e' quello di
       // partenza e resta il metro; dal terzo il legno si scurisce e il colore lo da' l'oggetto.
       const wrk = (eq._rk && eq._rk.w) || 1;
-      const BL = [1, 1.34, 1.48, 1.60][wrk - 1], BC = [0.46, 0.62, 0.70, 0.76][wrk - 1];
+      // v2.12 — CINQUE VALORI, non quattro, e l'indice si stringe comunque. Con l'arrivo del grado
+      // SCARSO i ranghi sono diventati 5: qui c'erano quattro numeri indicizzati per rango, quindi un'arma
+      // di grado 5 leggeva `[4]` → `undefined` → tutta la matematica del disegno andava in NaN e l'arco del
+      // ladro spariva. Il clamp non e' ridondante: e' la rete per il giorno che i gradi diventano sei.
+      const _wi = Math.max(0, Math.min(4, wrk - 1));
+      const BL = [1, 1.18, 1.34, 1.48, 1.60][_wi], BC = [0.46, 0.55, 0.62, 0.70, 0.76][_wi];
       const lungo = wrk >= 2;
       const arcoCol = wrk >= 2 ? this._gearCol(eq.wp, _P.wood || '#8a6534') : (_P.wood || '#8a6534');
       const bx0 = -r * 0.56 * BL, bx1 = r * 0.80 * BL, by = -r * 1.00;         // ARCO ")" di lato

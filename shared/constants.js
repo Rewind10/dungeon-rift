@@ -6,12 +6,16 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.11.3',
+    VERSION: '2.12.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
     BOON_CHOICES: 3,          // carte potere offerte a fine ondata (se ne sceglie UNA)
-    SHOP_GEAR_ENABLED: false, // Emporio a monete NASCOSTO in attesa di ridisegno
+    // v2.12 — RESTA SPENTO, e adesso il motivo e' un altro. Non e' piu' «in attesa di ridisegno»: il
+    // fabbro del VILLAGGIO funziona e vende il catalogo intero. Accendere anche questo vorrebbe dire due
+    // negozi che vendono la stessa roba in due posti diversi — e il giocatore che ne trova uno smette di
+    // cercare l'altro. Deciso con Paolo: uno solo, quello del villaggio, dove c'e' anche la rivendita.
+    SHOP_GEAR_ENABLED: false,
 
     VIS_SCALE: 1.45, COL_SCALE: 1.08,  // v1.13 — ridimensionamento LEGGERO: occhi grandi, hitbox quasi invariata (fluidita preservata)
     TICK_RATE: 30, SNAPSHOT_RATE: 20, MAX_PLAYERS: 6,
@@ -226,6 +230,11 @@
     // v1.91 — MODALITA' DI PROVA: dal menu si puo' partire da un'ondata qualunque fino a questa.
     PROVA_MAX_ONDATA: 20,
     RARITY: {
+      // v2.12 — SCARSO: il grado sotto il comune, e ha un motivo solo. L'equipaggiamento di partenza
+      // prima era "comune", cioe' gia' a posto, e non dava nessuna fretta di andare dal fabbro. Adesso
+      // si parte con della ferraglia (~20% sotto il comune) e il primo acquisto ha senso subito.
+      // Peso 0 di proposito: non si sorteggia mai, non e' bottino — e' solo cio' con cui cominci.
+      scarso: { name: 'Scarso', color: '#7a7f8a', weight: 0, mult: 0.80 },
       common: { name: 'Comune', color: '#b8c0cc', weight: 60, mult: 1.00 },
       uncommon: { name: 'Non comune', color: '#4bd66b', weight: 26, mult: 1.18 },
       rare: { name: 'Raro', color: '#3aa0ff', weight: 10, mult: 1.40 },
@@ -251,6 +260,7 @@
       // e' la risposta col pacchetto che il client si mette in tasca, `RIPRENDI` e' il pacchetto che
       // torna indietro quando si riparte. Il server non tiene niente: costruisce e applica, e basta.
       SALVA: 'salva', SALVATO: 'salvato', RIPRENDI: 'riprendi',
+      VENDI_GEAR: 'vendi_gear',                            // v2.12 — la rivendita dal fabbro, a meta' prezzo
       BUY_MERCHANT: 'buy_merchant', OFFER_MERCHANT: 'offer_merchant',
       CHAT: 'chat', PING: 'ping', PONG: 'pong',
       BOONS: 'boons', // v1.51 — elenco poteri attivi del giocatore (per la barra in basso)

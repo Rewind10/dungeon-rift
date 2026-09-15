@@ -236,15 +236,24 @@
     // v1.67 — il pannello del fabbro non mostra piu' tre barre da riempire ma il CATALOGO della classe,
     // una riga per slot. Ogni carta e' un oggetto con un nome: quello indosso e' marcato IN USO, gli altri
     // portano il prezzo. Il cambio e' libero, quindi non si "sblocca" niente — si sceglie.
-    _gearCard(it, coins, onBuy) {
-      const rar = RAR[it.rarity] || RAR.common;
+    // v2.12 — LE COLONNE SONO I CARATTERI, E NON SI SPOSTANO MAI. Ogni carta sta nella colonna del suo
+    // carattere: pesante a sinistra, equilibrata al centro, leggera a destra, in tutti i gradi e in tutti
+    // gli slot. E' l'unico modo perche' il bivio si legga: se le carte scorressero una dietro l'altra,
+    // confrontare due pesanti di grado diverso vorrebbe dire cercarle. Il grado di partenza ha un pezzo
+    // solo e sta al centro, perche' e' equilibrato.
+    _carCol: { pesante: 1, equilibrata: 2, leggera: 3 },
+    _carIcon: { pesante: '▰', equilibrata: '▱', leggera: '▫' },
+    _gearCard(it, coins, onBuy, onSell) {
       const inUso = !!it.owned, tuo = !inUso && !!it.have, afford = tuo || coins >= it.cost;
       const el = document.createElement('div');
       el.className = 'gc' + (inUso ? ' maxed' : (afford ? '' : ' disabled'));
       el.style.borderColor = it.color;
-      const pips = []; for (let i = 0; i < 3; i++) pips.push('<span class="' + (i < it.rank ? 'on' : '') + '" style="' + (i < it.rank ? 'background:' + it.color : '') + '"></span>');
-      // il rango 1 costa 0: scrivere "🪙 0" fa sembrare un affare cio' che e' semplicemente l'equipaggiamento
-      // di partenza. Si scrive DI BASE, che e' l'informazione vera.
+      el.style.gridColumn = this._carCol[it.carattere] || 2;
+      // v2.12 — i pallini sono CINQUE, come i gradi. Erano tre da quando i gradi erano quattro, cioe'
+      // erano gia' sbagliati: un leggendario e un divino mostravano lo stesso identico riempimento.
+      const pips = []; for (let i = 0; i < 5; i++) pips.push('<span class="' + (i < it.rank ? 'on' : '') + '" style="' + (i < it.rank ? 'background:' + it.color : '') + '"></span>');
+      // il grado di partenza costa 0: scrivere "🪙 0" fa sembrare un affare cio' che e' semplicemente
+      // l'equipaggiamento con cui cominci. Si scrive DI BASE, che e' l'informazione vera.
       const foot = inUso
         ? '<div class="cost maxed" style="color:' + it.color + '">IN USO ★</div>'
         : tuo
@@ -252,22 +261,45 @@
         : (it.cost > 0
           ? '<div class="cost" style="color:' + (afford ? it.color : '#ff8a8a') + '">🪙 ' + it.cost + '</div>'
           : '<div class="cost" style="color:#8d97ab">DI BASE</div>');
-      el.innerHTML = '<span class="rar" style="color:' + rar.color + '">' + esc(rar.name) + '</span>'
+      // v2.12 — LA RIVENDITA. Compare solo su cio' che hai NEL BAULE e non addosso: quello che indossi
+      // non e' in vendita, e il server rifiuta comunque (con un messaggio, non in silenzio). Il pulsante
+      // e' dentro la carta ma ferma il clic, se no vendere e ricomprare sarebbero lo stesso gesto.
+      // `onSell` fa parte della condizione di proposito: il pannello di fine ondata riusa queste stesse
+      // carte e li' il fabbro non c'e'. Un pulsante che compare e non fa niente e' peggio di uno assente.
+      const vend = (tuo && it.vendita > 0 && onSell)
+        ? '<button class="gsell" type="button" title="Rivendi al fabbro">Vendi 🪙 ' + it.vendita + '</button>' : '';
+      el.innerHTML = '<span class="rar" style="color:' + it.color + '">' + (this._carIcon[it.carattere] || '') + ' ' + esc(it.carattere || '') + '</span>'
         + '<div class="nm">' + esc(it.name) + '</div><div class="ds">' + esc(it.desc) + '</div>'
-        + '<div class="pips">' + pips.join('') + '</div>' + foot;
+        + '<div class="pips">' + pips.join('') + '</div>' + foot + vend;
       el.onclick = () => { if (!inUso && afford && onBuy) onBuy(it.id); };
+      const b = el.querySelector('.gsell');
+      if (b) b.onclick = (e) => { e.stopPropagation(); if (onSell) onSell(it.id); };
       return el;
     },
-    _gearSlots(wrap, data, onBuy) {
+    _gearSlots(wrap, data, onBuy, onSell) {
       wrap.innerHTML = '';
       (data.slots || []).forEach(sl => {
         const box = document.createElement('div'); box.className = 'gslot';
         const h = document.createElement('div'); h.className = 'gslot-h';
         h.innerHTML = '<span class="ic">' + sl.icon + '</span> ' + esc(sl.name);
         box.appendChild(h);
-        const row = document.createElement('div'); row.className = 'gslot-row';
-        (sl.items || []).forEach(it => row.appendChild(this._gearCard(it, data.coins || 0, onBuy)));
-        box.appendChild(row); wrap.appendChild(box);
+        // raggruppati per GRADO: una fascia per grado, dentro le tre scelte in colonna fissa
+        const gradi = [];
+        (sl.items || []).forEach(it => { (gradi[it.rank] = gradi[it.rank] || []).push(it); });
+        gradi.forEach((lista, rank) => {
+          if (!lista || !lista.length) return;
+          const rar = RAR[lista[0].rarity] || RAR.common;
+          const fascia = document.createElement('div'); fascia.className = 'gfascia';
+          fascia.style.setProperty('--tc', lista[0].color);
+          const fh = document.createElement('div'); fh.className = 'gfascia-h';
+          fh.innerHTML = '<span class="tn">' + esc(rar.name) + '</span>'
+            + (lista[0].cost > 0 ? '<span class="gp">🪙 ' + lista[0].cost + '</span>' : '');
+          fascia.appendChild(fh);
+          const row = document.createElement('div'); row.className = 'gslot-row';
+          lista.forEach(it => row.appendChild(this._gearCard(it, data.coins || 0, onBuy, onSell)));
+          fascia.appendChild(row); box.appendChild(fascia);
+        });
+        wrap.appendChild(box);
       });
     },
     setGear(data, onBuyGear) { this._gear = data; this._buyGear = onBuyGear; if (!$('upgradeScreen').classList.contains('hidden')) this._render(); else this.showShop(); },
@@ -640,8 +672,8 @@
     // ===== v1.52 — MERCATO: pannello del mercante dell'equipaggiamento =====
     // Riusa le carte .gc dell'Emporio. Come per il Mercante Nero (fix v1.34) le carte si ricostruiscono
     // SOLO quando cambia qualcosa: ricrearle a ogni snapshot riavvierebbe le animazioni e le renderebbe invisibili.
-    showGear(data, onBuy) {
-      if (data) this._gearNpc = data; if (onBuy) this._buyGearNpc = onBuy;
+    showGear(data, onBuy, onSell) {
+      if (data) this._gearNpc = data; if (onBuy) this._buyGearNpc = onBuy; if (onSell) this._sellGearNpc = onSell;
       const panel = $('gearPanel'); if (!panel || !this._gearNpc) return;
       panel.classList.remove('hidden'); this._renderGearNpc();
     },
@@ -838,10 +870,14 @@
       const hd = $('gearHead');
       if (hd) hd.innerHTML = '\uD83D\uDD28 <b>Fabbro</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
       // la firma evita di ricostruire il pannello 20 volte al secondo mentre resti vicino al fabbro
-      const sig = JSON.stringify((d.slots || []).map(sl => [sl.slot, (sl.items || []).map(i => [i.id, i.owned])])) + '|' + (d.coins || 0);
+      // v2.12 — nella firma entra anche `have`: senza, vendere un pezzo del BAULE non cambiava niente di
+      // cio' che la firma guarda (id e `owned` restavano identici) e il pannello non si ridisegnava —
+      // il pulsante "Vendi" restava li' su un pezzo che non avevi piu'.
+      const sig = JSON.stringify((d.slots || []).map(sl => [sl.slot, (sl.items || []).map(i => [i.id, i.owned, i.have])])) + '|' + (d.coins || 0);
       if (sig === this._gearNpcSig) return; this._gearNpcSig = sig;
       const wrap = $('gearNpcCards'); if (!wrap) return;
-      this._gearSlots(wrap, d, (id) => { if (this._buyGearNpc) this._buyGearNpc(id); });
+      this._gearSlots(wrap, d, (id) => { if (this._buyGearNpc) this._buyGearNpc(id); },
+                                (id) => { if (this._sellGearNpc) this._sellGearNpc(id); });
     },
     lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.guerriero; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
     hideLobby() { $('lobby').classList.add('hidden'); },

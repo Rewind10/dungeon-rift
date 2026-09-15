@@ -2,6 +2,112 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.12.0] — 2026-09-15 · "Centoquattro pezzi, e dentro ogni grado un bivio"
+
+**Fase 1 del piano equipaggiamento** (`PIANO-EQUIPAGGIAMENTO.md`). Le fasi 2 e 3 — schermata di fine
+livello unica con inventario, e negozio ridisegnato a icone quadrate — restano da fare.
+
+#### 🎯 Da dove nasce
+Parole di Paolo: *«la gestione dell'inventario e delle abilità non mi piace molto perché secondo me il
+personaggio si sviluppa troppo poco»*. Misurato invece che creduto: in una run intera il giocatore
+prendeva 4 carte passive, 2 abilità attive, 1 specializzazione, ~14 punti statistica — e **zero**
+decisioni sull'equipaggiamento. L'equipaggiamento c'era ma era una **scala**: si comprava il pezzo dopo
+quando si avevano le monete. Una scala non è una scelta.
+
+#### ♻️ La regola che si ribalta
+In `shared/gear.js` c'era scritto nero su bianco: *«un rango più alto costa di più e ha statistiche
+migliori, SEMPRE — niente scambi alla pari, niente svantaggi nascosti»*. Era onesto ed era il problema.
+Adesso le regole sono due e vanno tenute insieme:
+
+- **Fra un grado e l'altro si sale.** Il divino batte il leggendario, sempre. Questo non è cambiato.
+- **Dentro lo stesso grado non si sale: si sceglie.** I tre pezzi di uno stesso grado costano uguale e
+  rendono uguale — sulle armi il danno al secondo sta dentro il **4%** — e cambiano solo in *come* si gioca.
+
+#### 🗂️ Cinque gradi, 104 pezzi
+| Grado | Quanti per slot | Si compra? |
+|---|---|---|
+| **Scarso** | 1 | no — è quello che hai addosso, ~20% sotto il comune |
+| Comune · Raro · Leggendario · Divino | 3 ciascuno | sì |
+
+13 pezzi per slot, **104 in tutto** (guerriero 3 slot, mago 2, ladro 3).
+
+#### 🎭 I tre caratteri, e la regola che li tiene onesti
+Ognuno è il **migliore in UNA cosa e il peggiore nelle altre due**. Senza questo vincolo il bivio
+tornerebbe a essere una scala mascherata.
+
+| | Guerriero | Mago | Ladro |
+|---|---|---|---|
+| ▰ **Pesante** | rinculo | bolla grande | gittata |
+| ▱ **Equilibrata** | portata | gittata | perforazione |
+| ▫ **Leggera** | arco largo | bolla veloce | cadenza |
+
+Sulle difensive il carattere è **protezione contro velocità e cadenza**: il pesante rallenta e abbassa la
+cadenza, il leggero fa il contrario. A grado divino, guerriero: kit pesante **1,435 s** fra un fendente e
+l'altro, 435 PV, −51% danni · kit leggero **0,390 s**, 314 PV, −27%. Due modi di giocare, non due livelli.
+
+#### 🐞 Due difetti della prima stesura, trovati rileggendo i numeri
+1. **Il danno al secondo era pari, ma i numeri secondari no.** A grado leggendario l'Alabarda aveva
+   portata 152 contro i 112 del Maglio *a parità di danno*: non era un bivio, era la risposta giusta e due
+   sbagliate. Il divario di portata è passato dal 36% al 14%, e ora si paga con arco stretto e rinculo dimezzato.
+2. **Le descrizioni del mago promettevano ciò che i numeri non facevano.** «Bolla lenta e grossa» era
+   scritto, ma il campo per la grandezza (`weapon.r`) non era mai stato impostato — pur essendo letto dal
+   motore. Ora la bolla va da **r6 a r24**, quattro volte, e si vede. Da qui la regola nuova: **le `desc` di
+   `gear.js` nascono dai numeri, non si scrivono a mano.** Una descrizione scritta a mano può mentire.
+
+#### 💰 La rivendita, e un commento falso corretto
+- Si rivende **a metà prezzo**, e si vende **ciò che si ha nel baule**, mai ciò che si ha addosso (il
+  fabbro rifiuta *dicendo perché* — un rifiuto muto si legge come un pulsante rotto). I pezzi scarsi, che
+  non sono costati nulla, valgono 8 monete: buttarli non dev'essere gratis.
+- In `gear.js` c'era scritto che *«il Mercato apre ogni 3 ondate»*: **falso**, il villaggio si raggiunge
+  alla fine di **ogni** ondata. I vecchi prezzi erano tarati su quell'ipotesi. Commento corretto.
+- **Il listino sta ora in un posto solo** (`PREZZI` in `gear.js`, una riga per slot). Prima era scritto su
+  ogni pezzo: 104 occasioni perché due pezzi dello stesso grado finissero a prezzi diversi per una
+  distrazione — che è proprio la cosa che un bivio non può permettersi.
+
+#### 🔧 Le tre cose che il passaggio a 5 gradi rompeva, sistemate prima di scrivere i dati
+1. **L'arco del ladro spariva al grado divino.** In `renderer.js` un array di quattro valori indicizzato
+   per rango: con un'arma di grado 5 leggeva `[4]` → `undefined` → tutto il disegno in `NaN`.
+2. **L'alone del pregiato** era a `>= 4`: con cinque gradi avrebbe preso anche il leggendario. Spostato a
+   `>= 5` — deciso da Paolo, deve brillare **solo il divino**.
+3. **La `tinta` su tutti i 65 pezzi difensivi.** Senza, niente crasha (`_palGear` controlla) ma il
+   personaggio smette di cambiare aspetto comprando — cioè sparisce la soddisfazione che il catalogo esiste
+   per dare. Ora un test lo verifica pezzo per pezzo.
+
+#### ⚙️ E il resto
+- **`Room.effFireDelay` legge la cadenza dall'equipaggiamento.** `bonusOf` sommava `fireRateMult` e
+  **nessuno lo leggeva**: le armature pesanti promettevano di rallentare la cadenza e non la toccavano.
+- **`Room.js`, il salto a un'ondata**: sceglieva il pezzo per **posizione** nella lista (`l[rango - 1]`).
+  Funzionava con quattro gradi e quattro pezzi; con tredici pezzi per slot `l[3]` all'ondata 16 avrebbe
+  dato un pezzo **comune**. Adesso si chiede il **grado**. Le soglie vengono dalla misura (vedi sotto).
+- **`SHOP_GEAR_ENABLED` resta spento**, e il motivo è cambiato: non è più «in attesa di ridisegno», è che
+  il fabbro del villaggio funziona e vende tutto. Due negozi con la stessa merce in due posti diversi
+  vogliono dire che chi ne trova uno smette di cercare l'altro.
+- **`shared/salvataggio.js`: formato da 1 a 2.** Non per un campo nuovo: `gear` e `owned` contengono ID di
+  oggetti, e nessuno di quegli ID esiste più. Un salvataggio della 2.11 non esploderebbe — e sarebbe molto
+  peggio: ripartiresti disarmato e senza bonus, senza nessun errore. Meglio un rifiuto pulito.
+- **Il negozio del fabbro**: una fascia per grado, e le colonne sono i caratteri — pesante a sinistra,
+  equilibrata al centro, leggera a destra, **sempre**. I pallini del grado sono passati da 3 a **5** (erano
+  già sbagliati da quando i gradi erano quattro: leggendario e divino mostravano lo stesso riempimento).
+
+#### 📏 Misurato, non creduto — `test/monete.js`
+Nuovo file. Conta le monete che ogni ondata **contiene** (stessa formula di `Room._killMonster`, stessa
+composizione di `Waves.buildWave`), separando drop, premio di velocità e taglia del Banditore.
+
+> Il primo tentativo faceva giocare tre bot e contava le monete in mano. Non ha funzionato, e il motivo va
+> scritto: un bot scritto per un file di misura gioca molto peggio di una persona: si impantanava
+> all'ondata 4 e la misura finiva lì. La sua mortalità diceva qualcosa sul bot, niente sull'economia.
+
+Risultato: **~14.200 monete** in una run intera di 20 ondate (~9.900 senza premi di velocità né taglie).
+
+#### 🔬 I test
+`3119 passati, 0 falliti`. Tre test che **codificavano la regola vecchia** sono stati riscritti per
+difendere quella nuova (TEST 12, 37, 62): non è un aggiustamento cosmetico — un test che dice «ogni pezzo
+è migliore del precedente nella lista» adesso è un test che difende il bug. E i controlli nel browser
+partono dal punto d'ingresso vero (`Net.onOfferGear`), guardano cosa il client **disegna** e cosa
+**manda**, e sono stati verificati rimettendo il bug per controllare che lo prendessero.
+
+---
+
 ### [2.11.3] — 2026-09-14 · "Salvato da ladro, ripreso con la skin del guerriero"
 
 #### 🐛 Il bug, segnalato giocando

@@ -120,7 +120,7 @@
   // 'near' distingue i due casi.
   Net.onOfferGear = (m) => {
     G.gearData = m;
-    if (m.near) HUD.showGear(m, (id) => Net.buyGear(id));
+    if (m.near) HUD.showGear(m, (id) => Net.buyGear(id), (id) => Net.vendiGear(id));
     else if (C.SHOP_GEAR_ENABLED) HUD.setGear(m, (id) => Net.buyGear(id));
   };
   // v1.71 — il banco dell'Erborista: stesso schema del fabbro, 'near' distingue l'aggiornamento
@@ -352,6 +352,13 @@
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;
       case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
+      // v2.12 — la rivendita. Due risposte, perche' le due cose vanno dette in modo diverso: quando il
+      // pezzo e' andato si vede il lampo e il totale; quando il fabbro rifiuta si dice PERCHE'. Un
+      // rifiuto muto sul pulsante "Vendi" si legge come un pulsante rotto.
+      case 'venduto': { A.buy(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 6, 70, 0.5); HUD.killfeed(`🪙 <b style="color:${ev.color}">${esc(ev.name)}</b> venduto al fabbro per <b>${ev.reso}</b> 🪙`); break; }
+      case 'vendi_no': HUD.killfeed(ev.perche === 'addosso'
+        ? '🔨 Il fabbro non compra quello che hai <b>addosso</b>: cambialo prima, poi torna a vendere.'
+        : '🔨 Il fabbro non può comprare quel pezzo.'); break;
       case 'boon_ok': if (ev.off) HUD.killfeed('\uD83C\uDCCF <b>' + esc(ev.name) + '</b> \u2014 <b style="color:#ffcf4a">presa ma SPENTA</b>: hai gi\u00e0 5 carte attive, accendila dalla Cartomante'); A.boon(); HUD.killfeed(`🎴 Potere ottenuto: ${ev.icon} <b>${esc(ev.name)}</b>`); HUD.onBoonPicked(); break;
       case 'weapon_evo': A.evo(); R.ring(ev.x, ev.y, ev.color || '#b061ff', 10, 90, 0.7); R.burst(ev.x, ev.y, ev.color || '#b061ff', 26, 220, 0.7); R.addShake(8); HUD.killfeed(`✦ <b style="color:${ev.color}">${esc(ev.name2 || '')}</b> → ARMA EVOLUTA: <b>${esc(ev.name)}</b>!`); break;
       // v1.78 — qui c'erano i tre annunci dello Scrigno del Tesoro (comparsa, morte, fuga). La
@@ -394,7 +401,7 @@
     if (w.me) {
       if (w.me.nm && !G._merchOpen && G.merchWares) { G._merchOpen = true; HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), null, false); } else if (!w.me.nm && G._merchOpen) { G._merchOpen = false; HUD.hideMerchant(false); }
       if (w.me.nmd && !G._darkOpen && G.darkWares) { G._darkOpen = true; HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), null, true); } else if (!w.me.nmd && G._darkOpen) { G._darkOpen = false; HUD.hideMerchant(true); }
-      if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
+      if (w.me.ng && G.gearData) { if (!G._gearOpen) { G._gearOpen = true; } HUD.showGear(G.gearData, (id) => Net.buyGear(id), (id) => Net.vendiGear(id)); } else if (!w.me.ng && G._gearOpen) { G._gearOpen = false; HUD.hideGear(); }
       if (w.me.nh && G.potData) { if (!G._herbOpen) G._herbOpen = true; HUD.showPotions(G.potData, potCb); } else if (!w.me.nh && G._herbOpen) { G._herbOpen = false; HUD.hidePotions(); }
       if (w.me.nb && G.bndData) { if (!G._bndOpen) G._bndOpen = true; HUD.showBandit(G.bndData, bndCb); } else if (!w.me.nb && G._bndOpen) { G._bndOpen = false; HUD.hideBandit(); }
       if (w.me.ns && G.seerData) { if (!G._seerOpen) G._seerOpen = true; HUD.showSeer(G.seerData, (id) => Net.toggleCard(id)); } else if (!w.me.ns && G._seerOpen) { G._seerOpen = false; HUD.hideSeer(); }

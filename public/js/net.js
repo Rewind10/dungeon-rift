@@ -12,6 +12,7 @@
     start(wave) { this.send({ t: 'start', wave: wave | 0 }); },   // v1.91 — wave>1 = prova da quell'ondata
     buyStat(id) { this.send({ t: C.MSG.BUY_STAT, id }); },
     buyGear(id) { this.send({ t: C.MSG.BUY_GEAR, id }); },
+    vendiGear(id) { this.send({ t: C.MSG.VENDI_GEAR, id }); },   // v2.12 — rivendita al fabbro, meta' prezzo
     buyMerchant(id, dark) { this.send({ t: C.MSG.BUY_MERCHANT, id, dark: dark ? 1 : 0 }); },
     pickBoon(id) { this.send({ t: C.MSG.PICK_BOON, id }); },
     pickRank(id) { this.send({ t: C.MSG.PICK_RANK, id }); },
