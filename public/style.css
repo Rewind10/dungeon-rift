@@ -226,10 +226,10 @@ h2.info-h:not(:first-child){margin-top:17px}
 .upgrade-inner{text-align:center;width:min(1280px,96vw);flex:1 1 auto;min-height:0;overflow:hidden;
   display:flex;flex-direction:column;gap:12px}
 #sceltaBanda{flex:0 0 auto}
-.tre-colonne{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr) minmax(0,1.1fr);gap:14px;
-  align-items:stretch;text-align:left;min-height:0;flex:1 1 auto}
+.tre-colonne{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.05fr);gap:18px;
+  align-items:start;text-align:left;min-height:0;flex:1 1 auto}
 .tre-colonne > div{background:rgba(9,12,20,.94);border:1px solid var(--line);border-radius:16px;
-  padding:12px 14px;overflow-y:auto;min-width:0;min-height:0}
+  padding:14px 16px;overflow-y:auto;min-width:0;min-height:0}
 #menuGo{flex:0 0 auto}
 .tre-colonne h3{margin:0 0 6px;font-size:11px;font-weight:900;letter-spacing:1.3px;text-transform:uppercase;color:#c8a23a;opacity:.9}
 .tre-colonne .col-sx h3{margin-top:12px}
@@ -944,3 +944,56 @@ h2.info-h:not(:first-child){margin-top:17px}
 /* la descrizione e l'etichetta stanno nel titolo: a 84px di lato non ci starebbero, e infilarcele
    piccolissime vorrebbe dire scrivere qualcosa che nessuno legge. */
 #sceltaBanda .bc .ds,#sceltaBanda .bc .ab,#sceltaBanda .bc .rar,#sceltaBanda .bc .own{display:none}
+
+
+/* ============================================================================================
+   v2.13.5 — VIA LE LINGUETTE, E LE TRE COLONNE SI RIEMPIONO
+   ============================================================================================
+   Il difetto che si vedeva giocando: a ondata 1 la colonna di sinistra era lunghissima e le altre due
+   quasi vuote, con due riquadri alti e neri. Le colonne sono alte uguali per forza (sono una griglia
+   `stretch`): se il contenuto non c'e', il vuoto si vede tutto.
+   La cura non e' accorciare la sinistra, e' RIEMPIRE le altre due. I poteri concessi — che stavano
+   dietro la seconda linguetta — sono l'altra meta' di «cosa hai» e sono finiti a destra, sotto il
+   baule: la colonna adesso ha una forma stabile fin dalla prima ondata, perche' la scaletta dei sei
+   scaglioni c'e' sempre, piena o vuota che sia. */
+.sx-tabs{display:none}
+.col-sx .shop-xp{margin:0 0 10px}
+/* la scaletta dei poteri: era tarata su una colonna larga 960, qui va stretta */
+#abilElenco{display:flex;flex-direction:column;gap:4px}
+.col-dx .ab-sc{display:flex;align-items:center;gap:8px;background:rgba(12,15,26,.72);border:1px solid var(--line);
+  border-radius:9px;padding:5px 8px;min-height:34px}
+.col-dx .ab-sc .lv{flex:none;width:52px;font-size:8.5px;font-weight:800;letter-spacing:.3px;
+  text-transform:uppercase;line-height:1.25;text-align:center}
+.col-dx .ab-sc .card{display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0}
+.col-dx .ab-sc .card .ic{font-size:16px;flex:none}
+.col-dx .ab-sc .card .nm{font-size:11.5px;font-weight:800;line-height:1.15}
+.col-dx .ab-sc .card .ds{font-size:9.5px;color:#8d97ab;line-height:1.2;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.col-dx .ab-sc .vuota,.col-dx .ab-sc .attesa{font-size:10px;font-style:italic;color:#6f7890}
+.col-dx .ab-sc .attesa{color:#ffcf4a;font-style:normal;font-weight:800}
+#abilSyn{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+#abilSyn .syn{font-size:10px;color:#7dffea;line-height:1.3}
+/* il ritratto: era 340 di altezza con mezzo riquadro vuoto sotto */
+#ritrattoWrap{align-items:center;min-height:0}
+.col-cx #slotAddosso{margin-top:2px}
+
+
+/* v2.13.5b — LE COLONNE SI FERMANO DOVE FINISCE IL CONTENUTO (`align-items:start`), invece di
+   allungarsi tutte fino alla piu' alta. Alla prima ondata il baule ha tre pezzi e i poteri sono tutti
+   da prendere: con lo `stretch` restavano due riquadri alti e neri, e un riquadro vuoto si legge come
+   un errore, non come «qui non c'e' ancora niente». Il tetto per lo scorrimento resta. */
+.tre-colonne > div{max-height:78vh}
+
+
+/* v2.13.5c — UN PO' PIU' D'ARIA FRA I RIQUADRI. Erano tutti attaccati: le quattro righe delle
+   statistiche, le quattro derivate, i quadretti del baule, le righe dei poteri. Con tutto a 3-4px di
+   distanza il colpo d'occhio e' una griglia unica e non si capisce dove finisce un gruppo e dove
+   comincia l'altro — che e' proprio cio' che serve adesso che i titoli sono meno. */
+#upgradeCards{gap:5px}
+#derivate{gap:6px}
+#slotAddosso{gap:6px}
+.bgr-row{gap:7px}
+#baule{gap:12px}
+#abilElenco{gap:6px;margin-top:16px}
+/* lo stacco fra il baule e la scaletta dei poteri lo fa un filetto, non un titolo */
+#abilElenco{border-top:1px solid var(--line);padding-top:14px}

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.4 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.5 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,21 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.5 (via le linguette, e le colonne si fermano dove finisce la roba)
+- **🗂️ LE DUE LINGUETTE NON CI SONO PIU'.** Erano l'ultimo residuo del pannello a schede: con una
+  schermata che mostra tutto insieme, una linguetta vuol dire «qui c'e' qualcosa che non vedi». I **poteri
+  concessi** sono finiti nella colonna di destra sotto il baule — sono l'altra meta' di «cosa hai» — e
+  danno alla colonna una forma stabile dalla prima ondata, perche' la scaletta dei sei scaglioni c'e'
+  sempre, piena o vuota che sia.
+- **📐 Niente piu' riquadri alti e neri.** A ondata 1 centro e destra erano due scatole quasi vuote: le
+  colonne si allungavano **tutte fino alla piu' alta** (`align-items: stretch`). Ora ognuna si ferma dove
+  finisce il suo contenuto. I bordi in basso non sono piu' allineati fra loro, ma un riquadro vuoto si
+  legge come un errore e uno corto no.
+- **✂️ Via il titolo sopra i poteri**: lo stacco dal baule lo fa un filetto. E **piu' aria fra i
+  riquadri** — erano tutti a 3-4px di distanza, e il colpo d'occhio era una griglia unica.
+- **🧪 3144 test passati, 0 falliti.** Il controllo nel browser non cerca piu' «quale linguetta e' aperta»:
+  verifica che le sette cose della schermata siano **tutte visibili insieme**, misurandone il rettangolo.
 
 ## 🆕 Novita v2.13.4 (quadrati, non rettangoli allungati)
 - **⬜ LE CARTE DELLA SCELTA SONO QUADRATE: 84x84.** Erano verticali (150px), poi rimpicciolite (84), poi

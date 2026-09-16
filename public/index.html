@@ -183,52 +183,43 @@
 
     <div class="tre-colonne">
 
-      <!-- ---- SINISTRA: due linguette, il personaggio e cio' che gli hai concesso ---- -->
+      <!-- ---- SINISTRA: chi sei ---- -->
       <div class="col-sx">
-        <nav class="sx-tabs">
-          <button class="stab on" id="tabPersonaggio">🧍 PERSONAGGIO</button>
-          <button class="stab" id="tabAbilita">🎴 ABILITÀ<i id="tabBadge" class="hidden">!</i></button>
-        </nav>
-
-        <div id="paneStat" class="spane">
-          <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
-          <!-- v2.13.1 — CAUSA, EFFETTO, RISULTATO, in quest'ordine.
-               Le quattro STATISTICHE sono cio' su cui agisci: il `+` accanto al numero. Le quattro
-               DERIVATE sono cio' che ne esce, e stanno attaccate sotto perche' rispondono alla domanda
-               «e quindi?». Solo dopo viene il riepilogo dell'ondata, che si legge e non si tocca.
-               Prima le statistiche stavano in fondo alla colonna, cioe' sotto la piega: la cosa su cui
-               devi agire era l'unica che non si vedeva senza scorrere. -->
-          <h3>STATISTICHE</h3>
-          <div id="upgradeCards"></div>
-          <p class="shop-hint">Il valore di base è quello della classe; i punti che spendi si sommano sopra. Un punto per livello, uno per rango: <b>18 in tutta la partita</b>.</p>
-          <h3>E QUINDI</h3>
-          <div id="derivate"></div>
-          <h3>L'ONDATA APPENA CHIUSA</h3>
-          <div id="waveStats" class="hidden"></div>
-          <p class="dono" id="notaPunti"></p>
-          <p class="dono-cornice" id="menuCornice"></p>
-          <p class="dono-patto hidden" id="menuPatto"></p>
-        </div>
-
-        <div id="paneAbil" class="spane hidden">
-          <h3 id="titoloPoteri">I poteri che hai concesso all’avatar</h3>
-          <div id="abilElenco"></div>
-        </div>
+        <div class="shop-xp">Livello <b id="shopLevel">1</b> · <b id="shopRank">Guerriero</b> — hai <b id="shopXp">0</b> punti</div>
+        <!-- v2.13.5 — LE LINGUETTE NON CI SONO PIU'. Erano due, PERSONAGGIO e ABILITA', ed erano
+             l'ultimo residuo del pannello a schede: con una schermata sola che mostra tutto insieme,
+             due linguette vogliono dire che qualcosa e' nascosto, cioe' esattamente il difetto che
+             questa schermata e' nata per togliere. I poteri sono finiti nella colonna di destra,
+             sotto il baule: sono l'altra meta' di «cosa hai». -->
+        <h3>STATISTICHE</h3>
+        <div id="upgradeCards"></div>
+        <h3>E QUINDI</h3>
+        <div id="derivate"></div>
+        <h3>L'ONDATA APPENA CHIUSA</h3>
+        <div id="waveStats" class="hidden"></div>
+        <p class="shop-hint">Il valore di base è quello della classe; i punti che spendi si sommano sopra. Un punto per livello, uno per rango: <b>18 in tutta la partita</b>.</p>
+        <p class="dono" id="notaPunti"></p>
+        <p class="dono-cornice" id="menuCornice"></p>
+        <p class="dono-patto hidden" id="menuPatto"></p>
       </div>
 
       <!-- ---- CENTRO: il personaggio, con addosso quello che porta ---- -->
       <div class="col-cx">
         <h3>ADDOSSO</h3>
-        <div id="ritrattoWrap"><canvas id="ritratto" width="300" height="340"></canvas></div>
+        <div id="ritrattoWrap"><canvas id="ritratto" width="300" height="300"></canvas></div>
         <div id="slotAddosso"></div>
         <div id="beltAddosso"></div>
       </div>
 
-      <!-- ---- DESTRA: il baule. Tutto cio' che possiedi, e un clic per mettertelo ---- -->
+      <!-- ---- DESTRA: cosa hai. Il baule si clicca, i poteri si guardano ---- -->
       <div class="col-dx">
         <h3>BAULE</h3>
         <p class="shop-hint" id="bauleNota">Tutto quello che hai comprato resta tuo. <b>Clic per indossarlo</b> — non costa niente, l'hai già pagato.</p>
         <div id="baule"></div>
+        <!-- v2.13.5 — niente titolo sopra la scaletta dei poteri: le righe dicono gia' «Liv. 3 / non
+             comune», e un titolo sopra una lista che si spiega da sola e' una riga di testo in piu' in
+             una colonna che ne ha gia' abbastanza. Lo stacco lo fa lo spazio, non una scritta. -->
+        <div id="abilElenco"></div>
       </div>
 
     </div>

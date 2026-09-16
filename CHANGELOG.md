@@ -2,6 +2,48 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.5] — 2026-09-16 · "Via le linguette, e le colonne si fermano dove finisce la roba"
+
+Paolo, guardando la schermata in partita: *«l'allineamento non è ottimale. Credo che i 2 tab non servano.
+Credo che i contenuti possano essere disposti meglio»*. Poi, sull'anteprima: *«togli la scritta "i poteri
+che hai concesso all'avatar" e aggiungi un piccolo padding tra i box»*.
+
+#### 🗂️ Le due linguette non ci sono più
+Erano l'ultimo residuo del pannello a schede della v1.79. Con una schermata che mostra tutto insieme, una
+linguetta vuol dire **«qui c'è qualcosa che non vedi»** — cioè esattamente il difetto che questa schermata
+è nata per togliere.
+
+I **poteri concessi** — che stavano dietro la seconda linguetta — sono finiti nella colonna di destra,
+sotto il baule. È il loro posto: sono l'altra metà di «cosa hai». E danno alla colonna una **forma stabile
+fin dalla prima ondata**, perché la scaletta dei sei scaglioni (liv. 3, 6, 8-Q, 9, 12, 14-E) c'è sempre,
+piena o vuota che sia. Si collega anche alla banda in cima: lo scaglione in sospeso dice «▲ da scegliere
+adesso».
+
+#### 📐 Il vuoto nero, e da dove veniva
+Nello screenshot di Paolo, a ondata 1, centro e destra erano **due riquadri alti e neri**. La causa non era
+che la sinistra fosse troppo lunga: le colonne erano una griglia `align-items: stretch`, quindi si
+allungavano **tutte fino alla più alta**, e dove il contenuto non c'era il vuoto si vedeva tutto.
+
+Ora è `align-items: start`: ogni colonna si ferma dove finisce il suo contenuto. I bordi in basso non sono
+più allineati fra loro — ma un riquadro vuoto si legge come un errore, uno corto no.
+
+#### ✂️ E il resto
+- Via il titolo **«I poteri che hai concesso all'avatar»**: le righe dicono già «Liv. 3 / non comune», e lo
+  stacco dal baule lo fa un **filetto**, non una scritta.
+- **Più aria fra i riquadri**: gap delle colonne 14 → 18px, padding interno 12/14 → 14/16, e più spazio fra
+  le righe delle statistiche, le derivate, i quadretti del baule e le righe dei poteri. Erano tutti a 3-4px
+  di distanza: il colpo d'occhio era una griglia unica in cui non si capiva dove finiva un gruppo.
+- **Il ritratto era tagliato** dal bordo quando l'ho ingrandito: il disegno del personaggio esce fino a 1,7
+  raggi per via dell'alone del divino. Rimesso a misura, e il centro sta a metà del riquadro.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`. Il controllo nel browser non cerca più «quale linguetta è aperta» — controlla
+che le sette cose che compongono la schermata (statistiche, derivate, riepilogo, ritratto, slot, baule,
+scaletta dei poteri) siano **tutte visibili nello stesso momento**, misurandone il rettangolo. Provato
+nascondendo il baule: lo prende.
+
+---
+
 ### [2.13.4] — 2026-09-16 · "Quadrati, non rettangoli allungati"
 
 Paolo, sulla 2.13.3: *«i box delle abilità devono essere dei quadrati, non dei rettangoli allungati»*.

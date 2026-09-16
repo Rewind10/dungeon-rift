@@ -107,11 +107,8 @@
   Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady(), (id) => Net.equipaggia(id)); };
   // v1.79 — LA BARRA DEL MENU DI FINE ONDATA. Le tre sezioni si sfogliano senza mandare niente al
   // server; il villaggio e la mappa successiva sono le uniche due che gli parlano.
-  // v2.13 — le linguette sono rimaste DUE, e stanno nella colonna di sinistra. Il villaggio non e' piu'
-  // una linguetta: e' un pulsante in fondo, accanto a quello che fa ripartire il gioco — sono le due
-  // cose che portano via da questa schermata, e stare vicine e' quello che sono.
-  $('tabPersonaggio').onclick = () => HUD.mostraSezione('personaggio');
-  $('tabAbilita').onclick = () => HUD.mostraSezione('abilita');
+  // v2.13.5 — le linguette non ci sono piu': la schermata mostra tutto insieme. Restano i due pulsanti
+  // in fondo, che sono le due cose che portano via da qui — e stare vicine e' quello che sono.
   $('villaggioBtn').onclick = () => { if ($('villaggioBtn').disabled) return; Net.goVillage(); };
   $('nextWaveBtn').onclick = () => { if ($('nextWaveBtn').disabled) return; Net.shopReady(); HUD.prontoPerOndata(); };
   Net.onOfferBoon = (m) => { HUD.setBoons(m, (id) => Net.pickBoon(id)); };

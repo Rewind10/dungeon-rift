@@ -323,13 +323,11 @@
     // v2.13 — le linguette sono due e stanno nella colonna di sinistra: PERSONAGGIO e ABILITA'. Il
     // riepilogo dell'ondata non e' piu' una scheda (e' finito sotto le statistiche, dov'e' il suo posto:
     // "com'e' andata" e "come sono messo" sono la stessa domanda) e il villaggio e' un pulsante in fondo.
-    mostraSezione(nome) {
-      if (nome !== 'abilita') nome = 'personaggio';
-      this._sez = nome;
-      const mappa = { personaggio: 'paneStat', abilita: 'paneAbil' };
-      for (const k in mappa) { const el = $(mappa[k]); if (el) el.classList.toggle('hidden', k !== nome); }
-      const tabs = { personaggio: 'tabPersonaggio', abilita: 'tabAbilita' };
-      for (const k in tabs) { const el = $(tabs[k]); if (el) el.classList.toggle('on', k === nome); }
+    // v2.13.5 — NON CI SONO PIU' SEZIONI DA MOSTRARE. Le linguette erano l'ultimo residuo del pannello
+    // a schede: con una schermata che mostra tutto insieme, una linguetta vuol dire «qui c'e' qualcosa
+    // che non vedi», cioe' il difetto che questa schermata e' nata per togliere. La funzione resta
+    // perche' `showShop()` la chiama, e si limita a riportare in cima la colonna che scorre.
+    mostraSezione() {
       const sx = document.querySelector('.col-sx'); if (sx) sx.scrollTop = 0;
     },
     // C'e' una scelta in sospeso? Finche' c'e', la mappa successiva non parte: uno scaglione saltato per
@@ -351,7 +349,6 @@
     },
     _aggiornaBarra() {
       const sosp = this._scelteInSospeso();
-      const badge = $('tabBadge'); if (badge) badge.classList.toggle('hidden', !sosp);
       const btn = $('nextWaveBtn'), nota = $('goNota');
       if (btn) {
         btn.classList.toggle('off', !!sosp);
@@ -587,9 +584,12 @@
       };
       const t = performance.now() / 1000;
       ctx.save();
-      ctx.translate(cv.width / 2, cv.height * 0.56);
+      // v2.13.5 — il centro sta a meta' e il raggio resta sotto un terzo del lato: il disegno del
+      // personaggio esce fino a 1,7 raggi (l'alone del divino), e con un raggio piu' grande la figura
+      // veniva tagliata dal bordo del riquadro.
+      ctx.translate(cv.width / 2, cv.height * 0.50);
       // il raggio: grande quanto ci sta, cosi' si vedono i dettagli che in partita sono di 16 pixel
-      const r = Math.min(cv.width, cv.height) * 0.34;
+      const r = Math.min(cv.width, cv.height) * 0.30;
       // guarda verso il basso-destra e ondeggia piano: fermo sembrerebbe un cadavere in piedi
       ctx.rotate(0.5 + Math.sin(t * 0.7) * 0.12);
       try { R._hero(ctx, eq.h, r, t, false, 0, eq); } catch (_) { /* il ritratto non deve poter rompere il menu */ }
