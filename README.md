@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,18 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.2 (niente titolone sopra le carte)
+- **✂️ VIA IL TITOLO.** Sopra le tre carte della scelta c'erano un `<h2>` («CONCEDIGLI UN'ABILITA'») e una
+  riga di accompagnamento: due righe di testo per dire una cosa che le carte dicono da sole. Resta **una
+  riga piccola**, che dice cio' che le carte non dicono — quale scaglione e', e su che tasto finisce
+  un'abilita' attiva. Il nome della **specializzazione** e' entrato li' dentro invece di sparire: e' l'unica
+  scelta della partita che non si puo' rifare.
+- **📏 Carte dimezzate**: da 150px a **84px**, e tutta la banda da ~227 a **134px**. Erano tarate su una
+  schermata che non esiste piu' (una colonna sola larga 960); nella banda della 2.13 spingevano il resto
+  fuori dallo schermo. A rimpicciolire sono i vuoti: nome e riga di effetto sono rimasti quelli.
+- **🧪 3144 test passati, 0 falliti.** Il controllo nel browser misura l'**altezza reale** della carta e
+  della banda e cerca la parola «CONCEDIGLI» nel testo: provato rimettendo i bug, e li prende.
 
 ## 🆕 Novita v2.13.1 (la scheda, non quattro cartelloni)
 - **📋 LE QUATTRO STATISTICHE SONO RIGHE, NON RIQUADRI.** Erano quattro riquadri da 150px con icona,

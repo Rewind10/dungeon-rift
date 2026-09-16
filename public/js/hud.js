@@ -216,10 +216,14 @@
       const d = this._rank;
       if (!d || !d.cards || !d.cards.length || d.picked) { sec.classList.add('hidden'); row.innerHTML = ''; return; }
       sec.classList.remove('hidden');
-      $('rankTitle').textContent = (d.spec ? '★ ' : '') + (d.title || 'RANGO');
-      $('rankSub').textContent = d.spec
-        ? 'La scelta vale per questa partita e si vede addosso al tuo personaggio'
-        : 'Rango ' + ['I', 'II', 'III', 'IV', 'V'][(d.rank || 1) - 1] + ' — scegli una carta, resta per tutta la partita';
+      // v2.13.2 — il titolo non c'e' piu' nel markup: quello che diceva («RANGO», «SPECIALIZZAZIONE»)
+      // e' finito dentro la riga piccola qui sotto, che e' l'unica rimasta.
+      // v2.13.2 — il titolo non c'e' piu': quello che diceva («SPECIALIZZAZIONE») e' entrato nella riga
+      // piccola, che e' l'unica rimasta. Senza, una specializzazione sembrerebbe una carta di rango
+      // qualunque — ed e' l'unica scelta della partita che non si puo' rifare.
+      $('rankSub').innerHTML = d.spec
+        ? '<b style="color:#c8a23a">\u2605 ' + esc(d.title || 'SPECIALIZZAZIONE') + '</b> \u2014 vale per questa partita e si vede addosso al tuo personaggio'
+        : 'Carta di <b>rango ' + ['I', 'II', 'III', 'IV', 'V'][(d.rank || 1) - 1] + '</b> \u2014 resta per tutta la partita';
       row.className = d.spec ? 'spec' : '';
       row.innerHTML = '';
       d.cards.forEach(c => {
@@ -395,8 +399,8 @@
         $('boonSection').classList.remove('hidden');
         const rar = RAR[this._boons.tier] || {};
         // v2.8.1 — "CONCEDIGLI", non "scegli": la carta non se la prende lui, gliela dai tu.
-        if (bt) bt.textContent = this._boons.abil ? ('⚡ ABILITÀ ATTIVA — TASTO ' + (this._boons.tasto || 'Q')) : '🎴 CONCEDIGLI UN\'ABILITÀ';
-        if (bs && this._boons.abil) bs.innerHTML = 'Si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
+        if (bt) bt.textContent = this._boons.abil ? ('\u26a1 ABILIT\u00c0 ATTIVA \u2014 TASTO ' + (this._boons.tasto || 'Q')) : '\uD83C\uDCCF CONCEDIGLI UN\'ABILIT\u00c0';
+        if (bs && this._boons.abil) bs.innerHTML = '<b style="color:#7cc7ff">\u26a1 Abilit\u00e0 attiva</b> \u2014 si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
           + ((this._boons.boons[0] && this._boons.boons[0].cd) || 30) + 's</b> · livello <b>' + (this._boons.liv || 6) + '</b>'
           + ' <span style="opacity:.75">— la scelta vale per tutta la partita</span>';
         else if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 4) + '</b> — '

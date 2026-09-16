@@ -2,6 +2,41 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.2] — 2026-09-16 · "Niente titolone sopra le carte"
+
+Correzioni chieste da Paolo: *«anche i box in "concedi un'abilità" sono troppo grandi, vanno ridotti della
+metà. Togli anche la scritta "concedi.." non mi piace, lascia solo le icone tanto si capisce»*.
+
+#### ✂️ Via il titolone
+Sopra le tre carte c'erano un `<h2>` («🎴 CONCEDIGLI UN'ABILITÀ») e una riga di accompagnamento: **due
+righe di testo per dire una cosa che le carte dicono da sole** — appaiono solo quando c'è da scegliere, e
+si scelgono cliccandole.
+
+Resta **una riga piccola**, e resta perché dice ciò che le carte *non* dicono: quale scaglione è (il colore
+da solo non basta a ricordarlo) e, per un'abilità attiva, su quale tasto finisce. Il titolo della
+**specializzazione** è entrato lì dentro invece di sparire: è l'unica scelta della partita che non si può
+rifare, e senza nome sembrerebbe una carta di rango qualunque.
+
+#### 📏 Carte dimezzate
+Le `.bc` erano tarate su una schermata che non esiste più — una colonna sola, larga 960, con la scelta come
+unico contenuto. Nella banda della 2.13 stanno sopra tre colonne piene, e alte 150px spingevano il resto
+fuori dallo schermo.
+
+| | prima | ora |
+|---|---|---|
+| carta | 150px | **84px** |
+| banda intera | ~227px | **134px** |
+| icona | 40px | 22px |
+
+A rimpicciolire sono i vuoti: nome e riga di effetto sono rimasti quelli.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`. Il controllo nel browser è a 31 voci: misura l'**altezza reale** della carta e
+della banda, conta i `<h1>/<h2>` dentro la banda e cerca la parola «CONCEDIGLI» nel testo. Provato
+rimettendo i due bug — le carte a 150px e il titolone nel markup — e li prende tutti e quattro.
+
+---
+
 ### [2.13.1] — 2026-09-15 · "La scheda, non quattro cartelloni"
 
 Correzioni chieste da Paolo guardando la 2.13.0: *«i 4 box di forza, intelligenza, etc sono troppo grandi.

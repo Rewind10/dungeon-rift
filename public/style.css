@@ -902,3 +902,25 @@ h2.info-h:not(:first-child){margin-top:17px}
 .tre-colonne .ws-i .v{font-size:15px}
 .tre-colonne .ws-i .k{font-size:8.5px}
 .tre-colonne .ws-b{font-size:11px;padding:6px 8px;margin-top:6px}
+
+
+/* ============================================================================================
+   v2.13.2 — LE CARTE DELLA SCELTA, DIMEZZATE
+   ============================================================================================
+   Le `.bc` erano tarate su una schermata che non esiste piu': una colonna sola, larga 960, con la
+   scelta come unico contenuto. Nella banda in cima alla schermata nuova stanno sopra tre colonne
+   piene di roba, e alte 150px spingevano tutto il resto fuori dallo schermo.
+   Qui sono circa la meta': 76px invece di 150, icona 22 invece di 40. Restano leggibili perche'
+   cio' che si legge (nome e riga di effetto) e' rimasto — a rimpicciolire sono i vuoti. */
+#sceltaBanda{padding:8px 12px 10px}
+#sceltaBanda .rank-sub{font-size:11.5px;margin:0 0 7px;line-height:1.35}
+#sceltaBanda .bc{min-height:76px;padding:8px 9px;gap:2px;border-radius:12px;border-width:1px}
+#sceltaBanda .bc:hover{transform:translateY(-2px) scale(1.01)}
+#sceltaBanda .bc .icon{font-size:22px;line-height:1}
+#sceltaBanda .bc .nm{font-size:12.5px;line-height:1.15}
+#sceltaBanda .bc .ds{font-size:10.5px;line-height:1.25;color:#cfc6de}
+#sceltaBanda .bc .rar{top:4px;right:6px;font-size:8.5px;letter-spacing:.6px}
+#sceltaBanda .bc .own{font-size:8.5px;margin-top:0}
+#sceltaBanda .bc .ab{margin-top:2px;font-size:9.5px}
+#sceltaBanda #boonCards,#sceltaBanda #rankCards{gap:8px;margin-bottom:0}
+#sceltaBanda #rankCards.spec .bc{min-height:96px}

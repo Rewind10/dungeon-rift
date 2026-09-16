@@ -166,15 +166,16 @@
          per leggere tre carte affiancate. Sotto, le tre colonne restano sempre le stesse.
          ================================================================================ -->
     <div id="sceltaBanda" class="hidden">
+      <!-- v2.13.2 — NIENTE TITOLONE. C'erano un `<h2>` («CONCEDIGLI UN'ABILITA'») e una riga di
+           accompagnamento sopra le carte: due righe di testo per dire una cosa che le carte dicono da
+           sole — appaiono solo quando c'e' da scegliere, e si scelgono cliccandole. Resta la riga
+           piccola, che dice cio' che le carte NON dicono: quale scaglione e' (il colore da solo non
+           basta a ricordarlo) e, per un'abilita' attiva, su quale tasto finisce. -->
       <div id="rankSection" class="hidden">
-        <h2 id="rankTitle">RANGO</h2>
-        <p class="dono" id="notaRango"></p>
         <div class="rank-sub" id="rankSub"></div>
         <div id="rankCards"></div>
       </div>
       <div id="boonSection" class="hidden">
-        <h2 id="boonTitle">🎴 CONCEDIGLI UN'ABILITÀ</h2>
-        <p class="dono" id="notaAbilita"></p>
         <div id="boonSub" class="rank-sub"></div>
         <div id="boonCards"></div>
       </div>
