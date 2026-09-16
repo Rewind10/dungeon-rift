@@ -1,4 +1,4 @@
-:root{--bg:#0a0b10;--panel:#141726;--panel2:#1c2033;--ink:#e7ecf5;--muted:#8b93a7;--line:#2a2f45;--accent:#3aa0ff;--accent2:#00f0c8;--danger:#ff4b6b;--gold:#ffb020;--radius:16px;--font:'Segoe UI',system-ui,-apple-system,sans-serif}
+:root{--bg:#0a0b10;--panel:#141726;--panel2:#1c2033;--ink:#e7ecf5;--muted:#8b93a7;--line:#2a2f45;--accent:#3aa0ff;--accent2:#00f0c8;--danger:#ff4b6b;--gold:#ffb020;--radius:16px;--font:'Segoe UI',system-ui,-apple-system,sans-serif;--fz:0px}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;user-select:none}
 .hidden{display:none !important}
@@ -997,3 +997,83 @@ h2.info-h:not(:first-child){margin-top:17px}
 #abilElenco{gap:6px;margin-top:16px}
 /* lo stacco fra il baule e la scaletta dei poteri lo fa un filetto, non un titolo */
 #abilElenco{border-top:1px solid var(--line);padding-top:14px}
+
+
+/* ============================================================================================
+   v2.13.6 — UN PUNTO IN PIU' SOPRA IL FULL HD, SOLO NEL RIEPILOGO DI FINE LIVELLO
+   ============================================================================================
+   Chiesto da Paolo: «quando la risoluzione e' > di full HD aumenta il font di 1 punto», e solo in
+   questa schermata — non in tutto il gioco.
+
+   COME. `--fz` vale 0 dappertutto e diventa 1px su `#upgradeScreen` quando il monitor e' piu' largo
+   di 1920 (lo decide `taraFont()` in main.js leggendo `screen.width`). Le righe qui sotto sono le
+   UNICHE che la usano: ognuna ripete una regola del foglio aggiungendoci il punto, e sta dentro
+   `#upgradeScreen`, quindi fuori di li' non tocca niente.
+
+   DA DOVE VENGONO. Non sono scritte a mano leggendo i selettori: sono state raccolte CHIEDENDO AL
+   BROWSER quali regole colpiscono davvero un elemento dentro questa schermata, con la schermata
+   aperta e popolata. Serviva: classi come `.ic`, `.nm`, `.ds` sono condivise con i pannelli dei
+   mercanti, e a occhio ci si sbaglia in entrambe le direzioni.
+
+   SE SI AGGIUNGE UNA REGOLA con un font-size nuovo in questa schermata, va aggiunta anche qui. Il
+   controllo `prova-font.js` se ne accorge: misura OGNI elemento con testo alle due risoluzioni e
+   pretende che siano cresciuti tutti. */
+#upgradeScreen{font-size:calc(16px + var(--fz))}
+#upgradeScreen button{font-size:calc(16px + var(--fz))}
+#upgradeScreen .tre-colonne h3{font-size:calc(11px + var(--fz))}
+#upgradeScreen .st-r .ic{font-size:calc(14px + var(--fz))}
+#upgradeScreen .st-r .nm{font-size:calc(13px + var(--fz))}
+#upgradeScreen .st-r .vl{font-size:calc(17px + var(--fz))}
+#upgradeScreen .st-r .mx{font-size:calc(11px + var(--fz))}
+#upgradeScreen .st-r .pl{font-size:calc(15px + var(--fz))}
+#upgradeScreen .dv .ic{font-size:calc(13px + var(--fz))}
+#upgradeScreen .dv b{font-size:calc(14px + var(--fz))}
+#upgradeScreen .dv i{font-size:calc(9.5px + var(--fz))}
+#upgradeScreen .sa .ic{font-size:calc(15px + var(--fz))}
+#upgradeScreen .sa .tx b{font-size:calc(13px + var(--fz))}
+#upgradeScreen .sa .tx i{font-size:calc(10px + var(--fz))}
+#upgradeScreen .sa-belt .pz{font-size:calc(12px + var(--fz))}
+#upgradeScreen .sa-belt .pz.vuoto{font-size:calc(11px + var(--fz))}
+#upgradeScreen .sa-vite{font-size:calc(12px + var(--fz))}
+#upgradeScreen .bgr-h{font-size:calc(11px + var(--fz))}
+#upgradeScreen .bq .car{font-size:calc(11px + var(--fz))}
+#upgradeScreen .bq .nm{font-size:calc(9.5px + var(--fz))}
+#upgradeScreen .bq .rr{font-size:calc(7.5px + var(--fz))}
+#upgradeScreen .bq .on-b{font-size:calc(9px + var(--fz))}
+#upgradeScreen .bc .icon{font-size:calc(40px + var(--fz))}
+#upgradeScreen .bc .nm{font-size:calc(17px + var(--fz))}
+#upgradeScreen .bc .ds{font-size:calc(13.5px + var(--fz))}
+#upgradeScreen .shop-xp{font-size:calc(17px + var(--fz))}
+#upgradeScreen .shop-xp b{font-size:calc(20px + var(--fz))}
+#upgradeScreen .shop-hint{font-size:calc(13px + var(--fz))}
+#upgradeScreen .rank-sub{font-size:calc(13.5px + var(--fz))}
+#upgradeScreen #waveStats .ws-h{font-size:calc(13px + var(--fz))}
+#upgradeScreen #waveStats .ws-i .v{font-size:calc(21px + var(--fz))}
+#upgradeScreen #waveStats .ws-i .k{font-size:calc(11px + var(--fz))}
+#upgradeScreen #waveStats .ws-b{font-size:calc(14px + var(--fz))}
+#upgradeScreen #menuGo button{font-size:calc(16px + var(--fz))}
+#upgradeScreen #goNota{font-size:calc(13px + var(--fz))}
+#upgradeScreen .ab-sc .lv{font-size:calc(11px + var(--fz))}
+#upgradeScreen .ab-sc .card .ic{font-size:calc(24px + var(--fz))}
+#upgradeScreen .ab-sc .card .nm{font-size:calc(14px + var(--fz))}
+#upgradeScreen .ab-sc .card .ds{font-size:calc(12px + var(--fz))}
+#upgradeScreen .ab-sc .vuota{font-size:calc(13px + var(--fz))}
+#upgradeScreen .dono{font-size:calc(12.5px + var(--fz))}
+#upgradeScreen .dono-cornice{font-size:calc(15px + var(--fz))}
+#upgradeScreen .dono-patto{font-size:calc(13.5px + var(--fz))}
+#upgradeScreen .tre-colonne .shop-hint{font-size:calc(11px + var(--fz))}
+#upgradeScreen .tre-colonne .dono{font-size:calc(11.5px + var(--fz))}
+#upgradeScreen .tre-colonne .dono-cornice{font-size:calc(11.5px + var(--fz))}
+#upgradeScreen .tre-colonne .shop-xp{font-size:calc(14px + var(--fz))}
+#upgradeScreen .tre-colonne .ws-h{font-size:calc(11px + var(--fz))}
+#upgradeScreen .tre-colonne .ws-i .v{font-size:calc(15px + var(--fz))}
+#upgradeScreen .tre-colonne .ws-i .k{font-size:calc(8.5px + var(--fz))}
+#upgradeScreen .tre-colonne .ws-b{font-size:calc(11px + var(--fz))}
+#upgradeScreen #sceltaBanda .rank-sub{font-size:calc(11px + var(--fz))}
+#upgradeScreen #sceltaBanda .bc .icon{font-size:calc(26px + var(--fz))}
+#upgradeScreen #sceltaBanda .bc .nm{font-size:calc(9.5px + var(--fz))}
+#upgradeScreen .col-dx .ab-sc .lv{font-size:calc(8.5px + var(--fz))}
+#upgradeScreen .col-dx .ab-sc .card .ic{font-size:calc(16px + var(--fz))}
+#upgradeScreen .col-dx .ab-sc .card .nm{font-size:calc(11.5px + var(--fz))}
+#upgradeScreen .col-dx .ab-sc .card .ds{font-size:calc(9.5px + var(--fz))}
+#upgradeScreen .col-dx .ab-sc .vuota, #upgradeScreen .col-dx .ab-sc .attesa{font-size:calc(10px + var(--fz))}

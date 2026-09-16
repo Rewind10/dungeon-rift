@@ -5,6 +5,34 @@
   const Net = window.Net, Input = window.Input, R = window.Renderer, HUD = window.HUD, A = window.GameAudio;
   const SV = window.GAME.Salvataggio;   // v2.11 — cosa c'e' dentro una partita salvata
   const $ = (id) => document.getElementById(id);
+
+  // ============================================================================================
+  // v2.13.6 — UN PUNTO IN PIU' SOPRA IL FULL HD
+  // ============================================================================================
+  // Tutte le misure dei caratteri, in style.css, sono scritte `calc(<n>px + var(--fz))`. Qui si
+  // decide quanto vale `--fz`, e vale 1px quando il monitor e' piu' largo del full HD.
+  //
+  // Si guarda `screen.width`, non la larghezza della finestra: e' la RISOLUZIONE, che e' quello che
+  // chiedeva Paolo, e su uno schermo 4K con la finestra a meta' il testo e' fisicamente piccolo lo
+  // stesso — ed e' li' che il punto in piu' serve.
+  //
+  // E si guarda in PIXEL CSS, non fisici, ed e' giusto cosi': un portatile 4K al 200% riporta 1920 e
+  // il suo testo NON e' piccolo, perche' ci pensa gia' il sistema. Se qui usassimo i pixel fisici
+  // ingrandiremmo una cosa che e' gia' grande.
+  //
+  // Si ricontrolla a ogni `resize` perche' spostare la finestra su un altro monitor cambia
+  // `screen.width` senza ricaricare la pagina.
+  const FULL_HD = 1920;
+  function taraFont() {
+    const grande = (window.screen && window.screen.width ? window.screen.width : window.innerWidth) > FULL_HD;
+    // si mette su #upgradeScreen, non sulla radice: il punto in piu' vale SOLO nel riepilogo di fine
+    // livello, e mettendolo sulla radice si erediterebbe ovunque — bastava che un domani una regola
+    // fuori di qui usasse `--fz` per far crescere mezzo gioco senza che nessuno l'avesse chiesto.
+    const sc = document.getElementById('upgradeScreen');
+    if (sc) sc.style.setProperty('--fz', grande ? '1px' : '0px');
+  }
+  taraFont();
+  window.addEventListener('resize', taraFont);
   const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   // ===== v2.11 — L'ARCHIVIO: il salvataggio vive nel browser =====================================

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.5 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.6 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.6 (un punto in piu' sopra il full HD)
+- **🔎 SOPRA IL FULL HD IL FONT CRESCE DI 1px**, e solo nel **riepilogo di fine livello**. Si guarda
+  `screen.width` — la **risoluzione del monitor**, non la larghezza della finestra: su uno schermo 4K con
+  la finestra a meta' il testo e' fisicamente piccolo lo stesso. E si legge in **pixel CSS, non fisici**:
+  un portatile 4K al 200% riporta 1920 e il suo testo non e' piccolo, perche' ci pensa gia' il sistema.
+- **🎯 `--fz` sta su `#upgradeScreen`, non sulla radice.** Sulla radice si erediterebbe ovunque, e
+  basterebbe che un domani una regola fuori di li' la usasse per far crescere mezzo gioco.
+- **🤖 Le 58 regole del blocco non sono scritte a mano**: sono state raccolte chiedendo al browser quali
+  regole colpiscono davvero un elemento di quella schermata. Scegliendole a occhio ne erano entrate 104 —
+  classi come `.ic`, `.nm`, `.ds` sono condivise con i pannelli dei mercanti.
+- **🧪 `prova-font.js`, nuovo**: apre la pagina a **tre risoluzioni** e misura il font calcolato dal
+  browser su **ogni** elemento con del testo. A 1920 non si muove niente; sopra, tutti e **121** i testi
+  della schermata crescono di 1px e i **16** dell'HUD non si muovono.
 
 ## 🆕 Novita v2.13.5 (via le linguette, e le colonne si fermano dove finisce la roba)
 - **🗂️ LE DUE LINGUETTE NON CI SONO PIU'.** Erano l'ultimo residuo del pannello a schede: con una

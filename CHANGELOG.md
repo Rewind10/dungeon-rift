@@ -2,6 +2,58 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.6] — 2026-09-16 · "Un punto in più sopra il full HD"
+
+Paolo: *«quando la risoluzione è > di full HD aumenta il font di 1 punto»*, e — chiarito subito dopo —
+**solo nel riepilogo di fine livello**.
+
+#### 🔎 Cosa guarda, e perché
+`screen.width`, cioè la **risoluzione del monitor**, non la larghezza della finestra. Su uno schermo 4K
+con la finestra a metà il testo è fisicamente piccolo lo stesso, ed è lì che il punto in più serve.
+
+E la legge in **pixel CSS, non fisici**, che è la cosa giusta: un portatile 4K al 200% riporta 1920 e il
+suo testo *non* è piccolo, perché ci pensa già il sistema — con i pixel fisici ingrandiremmo una cosa che
+è già grande. Si ricontrolla a ogni `resize`, perché spostare la finestra su un altro monitor cambia
+`screen.width` senza ricaricare la pagina.
+
+#### 🎯 Solo lì, e la variabile sta su `#upgradeScreen`
+Il primo tentativo l'aveva applicato a **tutta l'interfaccia** — riscrivendo tutti e 217 i `font-size`
+del foglio. Sbagliato e sproporzionato: Paolo ne voleva una schermata.
+
+Adesso `--fz` vale 0 dappertutto e diventa 1px **su `#upgradeScreen`**, non sulla radice. La differenza
+non è pignoleria: sulla radice si erediterebbe ovunque, e basterebbe che un domani una regola fuori di lì
+usasse `--fz` per far crescere mezzo gioco senza che nessuno l'avesse chiesto.
+
+#### 🤖 Le 58 regole non le ho scritte a mano
+Un blocco in fondo a `style.css` ripete 58 regole del foglio aggiungendoci il punto, tutte dentro
+`#upgradeScreen`. **Sono state raccolte chiedendo al browser** quali regole colpiscono davvero un elemento
+di quella schermata, con la schermata aperta e popolata.
+
+Serviva: al primo giro le avevo scelte leggendo i selettori, e ne erano entrate **104** — classi come
+`.ic`, `.nm`, `.ds` sono condivise con i pannelli dell'Erborista, del Banditore e dei mercanti, e a occhio
+ci si sbaglia in tutte e due le direzioni. Una cosa in più: `body` non aveva **nessun** `font-size` —
+ereditava i 16px del browser — quindi tutto ciò che non ne dichiara uno proprio sarebbe rimasto fermo
+mentre il resto cresceva. Ora `#upgradeScreen` ha la sua misura di base.
+
+> ⚠️ Chi aggiunge una regola con un `font-size` nuovo in quella schermata **la aggiunga anche al blocco**.
+> Il controllo se ne accorge.
+
+#### 🧪 Il controllo
+`prova-font.js`, nuovo. Apre la stessa pagina a **tre risoluzioni** (1920, 2560, 3840) dichiarando
+`screen` separatamente dal viewport — che è proprio la distinzione che conta qui — e misura il font
+**calcolato dal browser** su **ogni** elemento con del testo: 121 dentro la schermata, 16 nell'HUD.
+
+- a 1920 esatti non si muove niente;
+- sopra, **tutti e 121** crescono di esattamente 1px;
+- e i 16 **fuori** non si muovono.
+
+Provato rimettendo i due errori possibili — togliere una regola dal blocco (quattro testi restano fermi) e
+lasciar sfuggire `--fz` sulla radice (si muovono tutti e 16 gli elementi dell'HUD) — e li prende entrambi.
+
+`3144 passati, 0 falliti`, più i tre controlli nel browser verdi.
+
+---
+
 ### [2.13.5] — 2026-09-16 · "Via le linguette, e le colonne si fermano dove finisce la roba"
 
 Paolo, guardando la schermata in partita: *«l'allineamento non è ottimale. Credo che i 2 tab non servano.
