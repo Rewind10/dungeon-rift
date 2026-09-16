@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.3 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,23 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.3 (le carte girate di novanta gradi)
+- **↩️ CARTE DELLA SCELTA DIMEZZATE UN'ALTRA VOLTA: 42px.** A 84 erano ancora scatole — icona sopra, nome
+  sotto, descrizione sotto ancora — e tre righe incolonnate non scendono oltre senza diventare illeggibili.
+  Girate in **orizzontale** (icona a sinistra, nome e riga di effetto a destra) la stessa roba sta in meta'.
+
+  | | v2.13 | v2.13.2 | v2.13.3 |
+  |---|---|---|---|
+  | carta | 150px | 84px | **42px** |
+  | banda | 227px | 134px | **88px** |
+
+  La banda e' passata da un terzo di schermo a una striscia, e la colonna di sinistra adesso si vede tutta
+  senza scorrere anche con una scelta aperta.
+- **🏷️ Nel titolo** cio' che a 42px non ci stava e che comunque si leggeva poco: la rarita' (la dice gia' il
+  colore del bordo) e il «PER TUTTI / DELLA TUA CLASSE». A schermo resta cio' che serve per scegliere.
+- **🧪 3144 test passati, 0 falliti.** Il controllo misura l'altezza vera di carta e banda e verifica che la
+  carta sia davvero in orizzontale (flex-direction calcolato, non dichiarato).
 
 ## 🆕 Novita v2.13.2 (niente titolone sopra le carte)
 - **✂️ VIA IL TITOLO.** Sopra le tre carte della scelta c'erano un `<h2>` («CONCEDIGLI UN'ABILITA'») e una

@@ -229,10 +229,15 @@
       d.cards.forEach(c => {
         const el = document.createElement('div'); el.className = 'bc';
         el.style.borderColor = c.color || '#c8a23a';
-        el.innerHTML = '<span class="rar">' + (d.spec ? 'SPECIALIZZAZIONE' : 'CARTA DI RANGO') + '</span>'
-          + '<div class="icon">' + (c.icon || '★') + '</div><div class="nm">' + esc(c.name) + '</div>'
+        // v2.13.3 — stessa forma della carta dei poteri: una riga, icona a sinistra. L'etichetta
+        // ("SPECIALIZZAZIONE" / "CARTA DI RANGO") la dice gia' la riga sopra le carte, una volta per tutte
+        // e tre, invece che tre volte in piccolo.
+        el.title = (c.name || '') + ' \u2014 ' + (d.spec ? 'Specializzazione' : 'Carta di rango')
+          + '\n' + (c.desc || '') + (c.abilita ? '\n' + c.abilita : '');
+        el.innerHTML = '<div class="icon">' + (c.icon || '\u2605') + '</div>'
+          + '<div class="tx"><div class="nm">' + esc(c.name) + '</div>'
           + '<div class="ds">' + esc(c.desc) + '</div>'
-          + (c.abilita ? '<div class="ab">' + esc(c.abilita) + '</div>' : '');
+          + (c.abilita ? '<div class="ab">' + esc(c.abilita) + '</div>' : '') + '</div>';
         el.onclick = () => { if (this._pickRank) this._pickRank(c.id); if (this._rank) this._rank.picked = true; this._render(); };
         row.appendChild(el);
       });
@@ -411,7 +416,12 @@
           const r = RAR[b.rarity] || RAR.common;
           const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = r.color;
           const chi = b.hero && b.hero !== '*' ? 'DELLA TUA CLASSE' : 'PER TUTTI';
-          el.innerHTML = `<span class="rar" style="color:${r.color}">${r.name}</span><div class="icon">${b.icon}</div><div class="nm">${b.name}</div><div class="ds">${b.desc}</div><div class="own">${chi}</div>`;
+          // v2.13.3 — LA CARTA E' UNA RIGA. Quello che c'era scritto in piccolo sotto — la rarita' e il
+          // "per tutti / della tua classe" — e' finito nel TITOLO: la rarita' si vede gia' dal colore del
+          // bordo, e la classe conta una volta su dieci. Cio' che resta a schermo e' cio' che serve per
+          // scegliere: icona, nome, e la riga che dice cosa fa.
+          el.title = b.name + ' \u2014 ' + r.name + ' \u00b7 ' + chi + '\n' + b.desc;
+          el.innerHTML = `<div class="icon">${b.icon}</div><div class="tx"><div class="nm">${b.name}</div><div class="ds">${b.desc}</div></div>`;
           // v2.11.2 — `if (this._boons)` non e' pignoleria. `hideShop()` azzera `_boons`, e se il pannello si
           // chiude nello stesso fotogramma in cui clicchi (cambia la fase: parte l'ondata, o si va al
           // villaggio) questa riga tirava un'eccezione: la scelta arrivava al server ma il pannello NON si

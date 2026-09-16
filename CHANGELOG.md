@@ -2,6 +2,41 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.3] — 2026-09-16 · "Le carte girate di novanta gradi"
+
+Paolo, sulla 2.13.2: *«meglio ma troppo grosso, deve essere grande la metà: sono ancora troppo grossi i box
+delle abilità»*.
+
+#### ↩️ Dimezzate di nuovo, girandole
+A 84px erano ancora **scatole**: icona sopra, nome sotto, descrizione sotto ancora. Tre righe incolonnate
+non scendono sotto una certa altezza senza diventare illeggibili — rimpicciolire i caratteri ancora avrebbe
+dato una carta piccola che non si legge, che è peggio di una grande.
+
+Quindi sono girate di novanta gradi. **In orizzontale** — icona a sinistra, nome e riga di effetto a destra
+— la stessa roba sta in **42px**:
+
+| | v2.13 | v2.13.2 | v2.13.3 |
+|---|---|---|---|
+| carta | 150px | 84px | **42px** |
+| banda intera | 227px | 134px | **88px** |
+
+La banda è passata da un terzo di schermo a una striscia. Sotto, la colonna di sinistra adesso mostra tutto
+il suo contenuto senza scorrere anche con una scelta aperta, che prima non succedeva.
+
+#### 🏷️ Cosa è finito nel titolo
+Quello che a 42px non ci stava e che comunque si leggeva poco: l'etichetta della **rarità** (la dice già il
+colore del bordo) e il **«PER TUTTI / DELLA TUA CLASSE»**, che conta una volta su dieci. Sono nel titolo al
+passaggio del mouse, insieme alla descrizione per esteso. A schermo resta ciò che serve per scegliere:
+icona, nome, cosa fa.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`. Il controllo nel browser misura l'**altezza reale** della carta e della banda,
+controlla che la carta sia davvero in orizzontale (`flex-direction: row` calcolato, non dichiarato) e legge
+il titolo per verificare che ciò che è sparito da schermo sia finito lì. Provato rimettendo le carte a
+84px: le prende.
+
+---
+
 ### [2.13.2] — 2026-09-16 · "Niente titolone sopra le carte"
 
 Correzioni chieste da Paolo: *«anche i box in "concedi un'abilità" sono troppo grandi, vanno ridotti della

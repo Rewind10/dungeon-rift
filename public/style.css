@@ -912,15 +912,22 @@ h2.info-h:not(:first-child){margin-top:17px}
    piene di roba, e alte 150px spingevano tutto il resto fuori dallo schermo.
    Qui sono circa la meta': 76px invece di 150, icona 22 invece di 40. Restano leggibili perche'
    cio' che si legge (nome e riga di effetto) e' rimasto — a rimpicciolire sono i vuoti. */
-#sceltaBanda{padding:8px 12px 10px}
-#sceltaBanda .rank-sub{font-size:11.5px;margin:0 0 7px;line-height:1.35}
-#sceltaBanda .bc{min-height:76px;padding:8px 9px;gap:2px;border-radius:12px;border-width:1px}
-#sceltaBanda .bc:hover{transform:translateY(-2px) scale(1.01)}
-#sceltaBanda .bc .icon{font-size:22px;line-height:1}
-#sceltaBanda .bc .nm{font-size:12.5px;line-height:1.15}
-#sceltaBanda .bc .ds{font-size:10.5px;line-height:1.25;color:#cfc6de}
-#sceltaBanda .bc .rar{top:4px;right:6px;font-size:8.5px;letter-spacing:.6px}
-#sceltaBanda .bc .own{font-size:8.5px;margin-top:0}
-#sceltaBanda .bc .ab{margin-top:2px;font-size:9.5px}
-#sceltaBanda #boonCards,#sceltaBanda #rankCards{gap:8px;margin-bottom:0}
-#sceltaBanda #rankCards.spec .bc{min-height:96px}
+/* v2.13.3 — DIMEZZATE UN'ALTRA VOLTA, e per riuscirci sono girate di 90 gradi.
+   A 84px di altezza erano ancora scatole: icona sopra, nome sotto, descrizione sotto ancora, e tre
+   righe incolonnate non scendono sotto una certa altezza senza diventare illeggibili. In ORIZZONTALE
+   — icona a sinistra, nome e riga di effetto a destra — la stessa roba sta in 42px, cioe' meta'.
+   Quello che spariva comunque a quelle dimensioni (rarita' in piccolo, «PER TUTTI») e' finito nel
+   titolo al passaggio del mouse: la rarita' la dice gia' il colore del bordo. */
+#sceltaBanda{padding:7px 12px 9px}
+#sceltaBanda .rank-sub{font-size:11px;margin:0 0 6px;line-height:1.3}
+#sceltaBanda .bc{flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;
+  min-height:42px;padding:5px 9px;gap:8px;border-radius:10px;border-width:1px}
+#sceltaBanda .bc:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(176,97,255,.22)}
+#sceltaBanda .bc .icon{font-size:19px;line-height:1;flex:none;min-height:0;width:22px;text-align:center}
+#sceltaBanda .bc .tx{min-width:0;flex:1 1 auto}
+#sceltaBanda .bc .nm{font-size:12px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sceltaBanda .bc .ds{font-size:9.5px;line-height:1.2;color:#cfc6de;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sceltaBanda .bc .ab{margin-top:0;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sceltaBanda .bc .rar,#sceltaBanda .bc .own{display:none}
+#sceltaBanda #boonCards,#sceltaBanda #rankCards{gap:7px;margin-bottom:0}
+#sceltaBanda #rankCards.spec .bc{min-height:52px}
