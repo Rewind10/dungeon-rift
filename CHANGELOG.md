@@ -2,6 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.13.4] — 2026-09-16 · "Quadrati, non rettangoli allungati"
+
+Paolo, sulla 2.13.3: *«i box delle abilità devono essere dei quadrati, non dei rettangoli allungati»*.
+
+#### ⬜ La storia in quattro passi
+| | forma | misura |
+|---|---|---|
+| v2.13 | carte verticali | 150px, un terzo di schermo per tre |
+| v2.13.2 | stessa forma, rimpicciolita | 84px — ancora scatole |
+| v2.13.3 | girate in orizzontale | 42px di altezza, ma larghe un terzo di banda: **rettangoli lunghi** |
+| **v2.13.4** | **quadrati** | **84×84**, allineati e centrati |
+
+Ed è la forma giusta perché è quella che il menu usa già: **gli stessi quadretti del baule**, a destra.
+Una schermata dovrebbe avere un solo modo di disegnare «una cosa che si sceglie cliccandola», e adesso ce
+l'ha — in cima e a destra si somigliano perché sono la stessa cosa.
+
+#### 🔑 Cosa rende possibile il quadrato
+Che la **descrizione non sta più a schermo**: sta nel titolo, col resto (rarità, «per chi vale», effetto
+per esteso). A schermo restano icona e nome, che è quanto serve per riconoscere una carta già vista — la
+prima volta ci si passa sopra. Era l'unico modo: a 84px di lato la descrizione ci starebbe solo scritta
+così piccola che nessuno la leggerebbe, e scrivere qualcosa che nessuno legge è peggio che non scriverlo.
+
+#### 📐 Due dettagli che fanno la differenza
+- La griglia è a **colonne fisse**, non `1fr`. Con `1fr` le carte si allargherebbero a riempire la banda e
+  tornerebbero rettangoli — che è *esattamente* il difetto della 2.13.3, ed è così che ci era finito.
+- La banda si **stringe su ciò che contiene**: tre quadrati da 84 dentro una cornice larga 1280 lasciavano
+  due terzi di vuoto, e un riquadro quasi tutto vuoto sembra un errore di impaginazione.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`. Il controllo nel browser misura **larghezza e altezza** di ognuna delle tre
+carte e verifica che coincidano: una regola che dice `width: 84px` non garantisce niente sull'altezza, e il
+difetto di prima era proprio che la larghezza se la prendeva dalla griglia. Provato rimettendo
+`flex: 1 1 200px`: le misura a 241×84 e le boccia.
+
+---
+
 ### [2.13.3] — 2026-09-16 · "Le carte girate di novanta gradi"
 
 Paolo, sulla 2.13.2: *«meglio ma troppo grosso, deve essere grande la metà: sono ancora troppo grossi i box

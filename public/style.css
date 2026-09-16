@@ -236,7 +236,7 @@ h2.info-h:not(:first-child){margin-top:17px}
 .tre-colonne .col-sx .spane > h3:first-child{margin-top:0}
 
 /* la banda della scelta: c'e' solo quando c'e' qualcosa da scegliere */
-#sceltaBanda{background:linear-gradient(180deg,rgba(30,23,11,.97),rgba(12,10,7,.97));border:1px solid #7a5d1e;
+#sceltaBanda{background:linear-gradient(180deg,#1e170b,#0c0a07);border:1px solid #7a5d1e;
   border-radius:16px;padding:12px 16px}
 #sceltaBanda.hidden{display:none}
 #sceltaBanda h2{margin:0 0 4px}
@@ -912,22 +912,35 @@ h2.info-h:not(:first-child){margin-top:17px}
    piene di roba, e alte 150px spingevano tutto il resto fuori dallo schermo.
    Qui sono circa la meta': 76px invece di 150, icona 22 invece di 40. Restano leggibili perche'
    cio' che si legge (nome e riga di effetto) e' rimasto — a rimpicciolire sono i vuoti. */
-/* v2.13.3 — DIMEZZATE UN'ALTRA VOLTA, e per riuscirci sono girate di 90 gradi.
-   A 84px di altezza erano ancora scatole: icona sopra, nome sotto, descrizione sotto ancora, e tre
-   righe incolonnate non scendono sotto una certa altezza senza diventare illeggibili. In ORIZZONTALE
-   — icona a sinistra, nome e riga di effetto a destra — la stessa roba sta in 42px, cioe' meta'.
-   Quello che spariva comunque a quelle dimensioni (rarita' in piccolo, «PER TUTTI») e' finito nel
-   titolo al passaggio del mouse: la rarita' la dice gia' il colore del bordo. */
-#sceltaBanda{padding:7px 12px 9px}
+/* ============================================================================================
+   v2.13.4 — QUADRATI, non rettangoli allungati
+   ============================================================================================
+   Storia in tre passi, e vale la pena scriverla perche' spiega perche' il CSS e' fatto cosi'.
+   v2.13    carte verticali da 150px: un terzo di schermo per tre carte.
+   v2.13.2  stessa forma, rimpicciolita a 84px. Ancora scatole.
+   v2.13.3  girate in orizzontale: 42px di altezza, ma larghe un terzo di banda — rettangoli lunghi.
+   v2.13.4  QUADRATI da 84px di lato, allineati a sinistra. Stessa forma dei quadretti del baule:
+            il menu ha un solo modo di disegnare "una cosa che si sceglie cliccandola", e adesso e'
+            lo stesso a destra e in cima.
+   Il punto che rende possibile il quadrato e' che la descrizione NON sta piu' a schermo: sta nel
+   titolo, col resto. A schermo icona e nome, che e' quanto serve per riconoscere una carta che hai
+   gia' visto — e la prima volta ci si passa sopra.
+   La griglia e' a colonne FISSE (84px), non `1fr`: con `1fr` le carte si allargherebbero a riempire
+   la banda e tornerebbero rettangoli, che e' esattamente il difetto di prima. */
+/* la banda si stringe su cio' che contiene: tre quadrati da 84 dentro una cornice larga 1280
+   lasciavano due terzi di vuoto, e un riquadro quasi tutto vuoto sembra un errore di impaginazione. */
+#sceltaBanda{padding:7px 14px 9px;width:fit-content;max-width:100%;margin:0 auto;text-align:center}
+#sceltaBanda #boonSection,#sceltaBanda #rankSection{display:flex;flex-direction:column;align-items:center}
 #sceltaBanda .rank-sub{font-size:11px;margin:0 0 6px;line-height:1.3}
-#sceltaBanda .bc{flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;
-  min-height:42px;padding:5px 9px;gap:8px;border-radius:10px;border-width:1px}
-#sceltaBanda .bc:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(176,97,255,.22)}
-#sceltaBanda .bc .icon{font-size:19px;line-height:1;flex:none;min-height:0;width:22px;text-align:center}
-#sceltaBanda .bc .tx{min-width:0;flex:1 1 auto}
-#sceltaBanda .bc .nm{font-size:12px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#sceltaBanda .bc .ds{font-size:9.5px;line-height:1.2;color:#cfc6de;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#sceltaBanda .bc .ab{margin-top:0;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#sceltaBanda .bc .rar,#sceltaBanda .bc .own{display:none}
-#sceltaBanda #boonCards,#sceltaBanda #rankCards{gap:7px;margin-bottom:0}
-#sceltaBanda #rankCards.spec .bc{min-height:52px}
+#sceltaBanda #boonCards,#sceltaBanda #rankCards{display:flex;flex-wrap:wrap;gap:7px;margin:0;max-width:none}
+#sceltaBanda .bc{flex:none;width:84px;height:84px;min-height:0;
+  flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:6px 4px;gap:3px;border-radius:12px;border-width:2px}
+#sceltaBanda .bc:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(176,97,255,.25)}
+#sceltaBanda .bc .icon{font-size:26px;line-height:1;flex:none;min-height:0}
+#sceltaBanda .bc .tx{min-width:0;width:100%}
+#sceltaBanda .bc .nm{font-size:9.5px;font-weight:800;line-height:1.1;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* la descrizione e l'etichetta stanno nel titolo: a 84px di lato non ci starebbero, e infilarcele
+   piccolissime vorrebbe dire scrivere qualcosa che nessuno legge. */
+#sceltaBanda .bc .ds,#sceltaBanda .bc .ab,#sceltaBanda .bc .rar,#sceltaBanda .bc .own{display:none}

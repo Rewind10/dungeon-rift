@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.13.4 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.13.4 (quadrati, non rettangoli allungati)
+- **⬜ LE CARTE DELLA SCELTA SONO QUADRATE: 84x84.** Erano verticali (150px), poi rimpicciolite (84), poi
+  girate in orizzontale — e li' erano diventate rettangoli lunghi. Adesso sono **gli stessi quadretti del
+  baule**: una schermata dovrebbe avere un solo modo di disegnare «una cosa che si sceglie cliccandola», e
+  adesso ce l'ha.
+- **🔑 Cio' che rende possibile il quadrato** e' che la descrizione non sta piu' a schermo: sta nel titolo,
+  con rarita' ed effetto per esteso. A schermo icona e nome — quanto serve per riconoscere una carta gia'
+  vista; la prima volta ci si passa sopra.
+- **📐 Due dettagli**: la griglia e' a **colonne fisse**, non `1fr` (con `1fr` le carte si riallargherebbero
+  e tornerebbero rettangoli — e' cosi' che ci erano finite); e la banda si **stringe su cio' che contiene**,
+  invece di lasciare due terzi di vuoto.
+- **🧪 3144 test passati, 0 falliti.** Il controllo misura **larghezza E altezza** di ogni carta e verifica
+  che coincidano: `width: 84px` non garantisce niente sull'altezza.
 
 ## 🆕 Novita v2.13.3 (le carte girate di novanta gradi)
 - **↩️ CARTE DELLA SCELTA DIMEZZATE UN'ALTRA VOLTA: 42px.** A 84 erano ancora scatole — icona sopra, nome
