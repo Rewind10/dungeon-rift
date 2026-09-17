@@ -1,7 +1,7 @@
 /* hud.js — interfaccia: vite, XP, negozio, BOON, modalità, barra abilità */
 (function () {
   'use strict';
-  const HERO = window.GAME.Heroes.HEROES, HORDER = window.GAME.Heroes.ORDER, MON = window.GAME.Monsters.MONSTERS, BOSSES = window.GAME.Monsters.BOSSES, LOOT = window.GAME.Loot, RAR = window.GAME.Constants.RARITY;
+  const HERO = window.GAME.Heroes.HEROES, HORDER = window.GAME.Heroes.ORDER, MON = window.GAME.Monsters.MONSTERS, BOSSES = window.GAME.Monsters.BOSSES, LOOT = window.GAME.Loot, RAR = window.GAME.Constants.RARITY, SLOT_ICO = window.GAME.Gear.SLOT_ICON;
   const POT = window.GAME.Potions, BNT = window.GAME.Bounties;
   const $ = (id) => document.getElementById(id); const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { guerriero: '🛡️', mago: '🔮', ladro: '🏹' };
@@ -253,7 +253,9 @@
     // solo e sta al centro, perche' e' equilibrato.
     _carCol: { pesante: 1, equilibrata: 2, leggera: 3 },
     _carIcon: { pesante: '▰', equilibrata: '▱', leggera: '▫' },
-    _gearCard(it, coins, onBuy, onSell) {
+    // v2.15.2 — l'icona grande della carta, come l'ampolla dell'Erborista. Gear.SLOT_ICON e' la
+    // stessa fonte che nomina le linguette: un solo posto da cui esce il simbolo di uno slot.
+    _gearCard(it, coins, onBuy, onSell, slot) {
       const inUso = !!it.owned, tuo = !inUso && !!it.have, afford = tuo || coins >= it.cost;
       const el = document.createElement('div');
       el.className = 'gq' + (inUso ? ' on' : (afford ? '' : ' no'));
@@ -263,31 +265,44 @@
       // il controllo dovrebbe dedurlo dal testo, e dedurrebbe zero dove il testo non lo dice.
       el.dataset.cost = it.cost;
       el.dataset.rank = it.rank;
-      // v2.15.1 — LE INFORMAZIONI TORNANO DENTRO LA CELLA, E IL TOOLTIP SPARISCE.
-      // Nella 2.14 tutto cio' che non stava in 110px finiva nel `title`: statistiche, grado, carattere,
-      // rivendita. Funzionava solo col mouse fermo sopra, un pezzo per volta — cioe' il contrario di
-      // quello che serve in un negozio, che e' CONFRONTARE tredici pezzi insieme. Adesso la finestra e'
-      // larga come quella dell'Erborista e le celle sono 176px: ci sta tutto scritto. Niente `el.title`:
-      // l'informazione o e' a schermo o non c'e'.
+      // ============================================================================================
+      // v2.15.2 — LA CELLA E' FATTA COME QUELLA DELL'ERBORISTA
+      // ============================================================================================
+      // Parole di Paolo: «prendi esempio dall'erborista, il suo catalogo l'hai fatto bene». E aveva
+      // ragione: quel catalogo e' una CARTA ORIZZONTALE — icona a sinistra, nome nel suo colore,
+      // descrizione sotto su una riga, prezzo in alto a destra — e si legge senza sforzo. Il quadrato
+      // costringeva a incolonnare le statistiche una per riga e a rimpicciolire tutto per farcele stare:
+      // il risultato era testo centrato e minuscolo, cioe' esattamente cio' che qui si voleva evitare.
+      //
+      // Quindi: TRE per riga invece di quattro (le carte sono larghe, non alte), testo a sinistra,
+      // statistiche di seguito separate da '\u00b7' come le fa `gear.js`, e niente piu' tooltip.
       const rar = RAR[it.rarity] || RAR.common;
-      // la descrizione arriva gia' come elenco separato da '\u00b7' ("+50 PV \u00b7 -13% danni subiti \u00b7 ...").
-      // Una riga per voce: incolonnate si confrontano, di seguito si rileggono.
-      const voci = String(it.desc || '').split('\u00b7').map(x => x.trim()).filter(Boolean);
-      // lo stato, in una riga sola e senza abbreviazioni: quello che non si capisce in un negozio e'
-      // «perche' non posso cliccarlo».
-      const stato = inUso ? '<span class="st on">\u2605 in uso</span>'
-        : tuo ? '<span class="st tuo">gi\u00e0 tuo</span>'
-        : it.cost > 0 ? '<span class="st' + (afford ? '' : ' no') + '">\uD83E\uDE99 ' + it.cost + '</span>'
-        : '<span class="st base">di base</span>';
-      // la rivendita si scrive solo dove NON c'e' il pulsante Vendi (che porta gia' la cifra): due volte
-      // lo stesso numero nella stessa cella e' rumore.
+      const stato = inUso ? '<span class="tag on">\u2605 in uso</span>'
+        : tuo ? '<span class="tag tuo">gi\u00e0 tuo</span>'
+        : it.cost > 0 ? '' : '<span class="tag base">di base</span>';
+      // la rivendita si scrive solo dove NON c'e' il pulsante Vendi, che porta gia' la cifra.
       const riv = (it.vendita > 0 && !(tuo && onSell)) ? '<span class="riv">rivendi ' + it.vendita + '</span>' : '';
-      el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
-        + '<span class="nm">' + esc(it.name) + '</span>'
-        + '<span class="grd" style="color:' + rar.color + '">' + esc(rar.name) + (it.carattere ? ' \u00b7 ' + esc(it.carattere) : '') + '</span>'
-        + '<span class="gst">' + voci.map(v => '<i>' + esc(v) + '</i>').join('') + '</span>'
-        + '<span class="gfoot">' + stato + riv + '</span>'
-        + (tuo && it.vendita > 0 && onSell ? '<button class="gsell" type="button">\uD83E\uDE99 vendi ' + it.vendita + '</button>' : '');
+      const zoccolo = (stato || riv || (tuo && it.vendita > 0 && onSell))
+        ? '<div class="gfoot">' + stato + riv
+          + (tuo && it.vendita > 0 && onSell ? '<button class="gsell" type="button">\uD83E\uDE99 vendi ' + it.vendita + '</button>' : '')
+          + '</div>' : '';
+      // L'ICONA: non l'emoji dello slot, che sarebbe la stessa su tutte e tredici le carte della
+      // linguetta e non direbbe niente, ma il simbolo del CARATTERE (\u25b0 pesante, \u25b1 equilibrata,
+      // \u25ab leggera) nel colore del grado. E' l'unica cosa che distingue una carta dall'altra a
+      // colpo d'occhio, ed e' il simbolo che il giocatore vede gia' nel baule.
+      // IL PREZZO sta sulla riga del grado, non in alto a destra come dall'Erborista: li' i nomi sono
+      // corti ("Cura", "Fretta"), qui sono "Scettro delle Stelle Morte", e riservargli l'angolo
+      // spezzava il nome in due righe su meta' delle carte.
+      el.innerHTML = '<div class="ic">' + (this._carIcon[it.carattere] || '\u25b1') + '</div>'
+        + '<div class="gtx">'
+        + '<div class="nm" style="color:' + rar.color + '">' + esc(it.name) + '</div>'
+        + '<div class="grd"><span>' + esc(rar.name) + (it.carattere ? ' \u00b7 ' + esc(it.carattere) : '') + '</span>'
+        + (it.cost > 0 && !inUso && !tuo ? '<b class="cost' + (afford ? '' : ' no') + '">\uD83E\uDE99' + it.cost + '</b>' : '')
+        + '</div>'
+        + '<div class="ds">' + esc(it.desc || '') + '</div>'
+        + zoccolo
+        + '</div>'
+        ;
       el.onclick = () => { if (!inUso && afford && onBuy) onBuy(it.id); };
       const b = el.querySelector('.gsell');
       if (b) b.onclick = (e) => { e.stopPropagation(); if (onSell) onSell(it.id); };
@@ -343,7 +358,7 @@
       const pezzi = (sl.items || []).slice().sort((a, b) =>
         (a.cost - b.cost) || ((ord[a.carattere] || 0) - (ord[b.carattere] || 0)));
       const griglia = document.createElement('div'); griglia.className = 'ggriglia';
-      pezzi.forEach(it => griglia.appendChild(this._gearCard(it, data.coins || 0, onBuy, onSell)));
+      pezzi.forEach(it => griglia.appendChild(this._gearCard(it, data.coins || 0, onBuy, onSell, sl.slot)));
       wrap.appendChild(griglia);
     },
     // v2.13 — il pannello di fine ondata non ha piu' un negozio dentro (SHOP_GEAR_ENABLED e' spento e

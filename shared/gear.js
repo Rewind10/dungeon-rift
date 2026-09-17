@@ -45,7 +45,7 @@
      LEGGENDARIO  3                  si compra
      DIVINO       3                  si compra
 
-   Fa 13 pezzi per slot e 104 in tutto (guerriero 3 slot, mago 2, ladro 3).
+   Fa 13 pezzi per slot e 117 in tutto (tre slot per classe; dalla v2.15.3 anche il mago ha le calzature).
 
    ================================ LE TRE REGOLE DI SEMPRE ================================
    1. OGNI OGGETTO APPARTIENE A UNA CLASSE. Il guerriero vede solo roba da guerriero. La lista che arriva
@@ -91,7 +91,7 @@
   // Slot per classe, nell'ordine in cui devono comparire nel negozio.
   const SLOTS = {
     guerriero: ['weapon', 'armor', 'shield'],
-    mago: ['weapon', 'armor'],
+    mago: ['weapon', 'armor', 'boots'],
     ladro: ['weapon', 'armor', 'boots'],
   };
   const SLOT_NAME = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', boots: 'Calzature' };
@@ -460,6 +460,63 @@
     { id: 'lad_b_soffio_del_vento', hero: 'ladro', slot: 'boots', rank: 5, carattere: 'leggera',
       name: 'Soffio del Vento', color: '#ffe9a8', desc: '+30% passo · +11% cadenza',
       bonus: { speedMult: 0.3, fireRateMult: 0.11 }, tinta: { steelDk: '#675c85' } },
+
+    // ============================================================================================
+    // v2.15.3 — LE CALZATURE DEL MAGO
+    // ============================================================================================
+    // Il mago aveva DUE slot (arma, armatura) mentre il guerriero e il ladro ne hanno tre. Non e' mai
+    // stato scritto perche': e' cosi' dalla v1.78, cioe' dal giorno in cui l'equipaggiamento esiste. Con
+    // le stesse monete comprava una scala in meno degli altri due, e a fine run gli restavano in tasca.
+    //
+    // I NUMERI SONO GLI STESSI DEL LADRO, riga per riga. Non per pigrizia: lo slot e' lo stesso, quella
+    // scala e' gia' tarata e copiarla e' l'unico modo di aggiungere tredici pezzi senza aprire un
+    // cantiere di bilanciamento. Cio' che cambia sono i nomi — sandali e calzari, non stivali ferrati.
+    //
+    // ATTENZIONE, e va detto invece di scoprirlo giocando: sul mago questa roba NON SI VEDE. `_heroMago`
+    // lo disegna come una veste che arriva a terra, i piedi non ci sono, e la `tinta` (`steelDk`) e' la
+    // chiave che il guerriero e il ladro usano per lo stivale e che il mago non legge. L'unico effetto
+    // visibile e' l'alone del grado divino, che guarda anche il rango delle calzature. Per farle vedere
+    // davvero bisogna toccare il disegno del mago — far prendere all'ORLO della veste il colore delle
+    // calzature — ed e' un lavoro a parte, non una riga.
+    { id: 'mag_b_sandali_del_novizio', hero: 'mago', slot: 'boots', rank: 1, carattere: 'equilibrata',
+      name: 'Sandali del Novizio', color: '#7a7f8a', desc: '+1% passo',
+      bonus: { speedMult: 0.01 }, tinta: { steelDk: '#35323f' } },
+    { id: 'mag_b_calzari_del_sigillo', hero: 'mago', slot: 'boots', rank: 2, carattere: 'pesante',
+      name: 'Calzari del Sigillo', color: '#b8c0cc', desc: '+22 PV · −5% danni subiti · +2% passo · −4% cadenza',
+      bonus: { maxHpFlat: 22, dmgReduce: 0.05, speedMult: 0.02, fireRateMult: -0.04 }, tinta: { steelDk: '#2f2d4a' } },
+    { id: 'mag_b_sandali_dellapprendista', hero: 'mago', slot: 'boots', rank: 2, carattere: 'equilibrata',
+      name: 'Sandali dell\'Apprendista', color: '#b8c0cc', desc: '+12 PV · +8% passo',
+      bonus: { speedMult: 0.08, maxHpFlat: 12 }, tinta: { steelDk: '#3d3a5e' } },
+    { id: 'mag_b_pantofole_di_seta', hero: 'mago', slot: 'boots', rank: 2, carattere: 'leggera',
+      name: 'Pantofole di Seta', color: '#b8c0cc', desc: '+12% passo · +5% cadenza',
+      bonus: { speedMult: 0.12, fireRateMult: 0.05 }, tinta: { steelDk: '#5b5680' } },
+    { id: 'mag_b_calzari_runici', hero: 'mago', slot: 'boots', rank: 3, carattere: 'pesante',
+      name: 'Calzari Runici', color: '#3aa0ff', desc: '+38 PV · −8% danni subiti · +4% passo · −5% cadenza',
+      bonus: { maxHpFlat: 38, dmgReduce: 0.08, speedMult: 0.04, fireRateMult: -0.05 }, tinta: { steelDk: '#233a5e' } },
+    { id: 'mag_b_sandali_del_vento', hero: 'mago', slot: 'boots', rank: 3, carattere: 'equilibrata',
+      name: 'Sandali del Vento', color: '#3aa0ff', desc: '+20 PV · +13% passo',
+      bonus: { speedMult: 0.13, maxHpFlat: 20 }, tinta: { steelDk: '#2c4a74' } },
+    { id: 'mag_b_passi_di_seta', hero: 'mago', slot: 'boots', rank: 3, carattere: 'leggera',
+      name: 'Passi di Seta', color: '#3aa0ff', desc: '+18% passo · +7% cadenza',
+      bonus: { speedMult: 0.18, fireRateMult: 0.07 }, tinta: { steelDk: '#4c6b96' } },
+    { id: 'mag_b_calzari_del_conclave', hero: 'mago', slot: 'boots', rank: 4, carattere: 'pesante',
+      name: 'Calzari del Conclave', color: '#ffb020', desc: '+56 PV · −11% danni subiti · +6% passo · −6% cadenza',
+      bonus: { maxHpFlat: 56, dmgReduce: 0.11, speedMult: 0.06, fireRateMult: -0.06 }, tinta: { steelDk: '#4a2f62' } },
+    { id: 'mag_b_sandali_della_faglia', hero: 'mago', slot: 'boots', rank: 4, carattere: 'equilibrata',
+      name: 'Sandali della Faglia', color: '#ffb020', desc: '+30 PV · +18% passo',
+      bonus: { speedMult: 0.18, maxHpFlat: 30 }, tinta: { steelDk: '#5c3b78' } },
+    { id: 'mag_b_passi_lievi', hero: 'mago', slot: 'boots', rank: 4, carattere: 'leggera',
+      name: 'Passi Lievi', color: '#ffb020', desc: '+24% passo · +9% cadenza',
+      bonus: { speedMult: 0.24, fireRateMult: 0.09 }, tinta: { steelDk: '#7a5a96' } },
+    { id: 'mag_b_calzari_delle_ere', hero: 'mago', slot: 'boots', rank: 5, carattere: 'pesante',
+      name: 'Calzari delle Ere', color: '#ffe9a8', desc: '+78 PV · −14% danni subiti · +9% passo · −7% cadenza',
+      bonus: { maxHpFlat: 78, dmgReduce: 0.14, speedMult: 0.09, fireRateMult: -0.07 }, tinta: { steelDk: '#3a2f5e' } },
+    { id: 'mag_b_orme_del_vuoto', hero: 'mago', slot: 'boots', rank: 5, carattere: 'equilibrata',
+      name: 'Orme del Vuoto', color: '#ffe9a8', desc: '+42 PV · +24% passo',
+      bonus: { speedMult: 0.24, maxHpFlat: 42 }, tinta: { steelDk: '#473a72' } },
+    { id: 'mag_b_soffio_arcano', hero: 'mago', slot: 'boots', rank: 5, carattere: 'leggera',
+      name: 'Soffio Arcano', color: '#ffe9a8', desc: '+30% passo · +11% cadenza',
+      bonus: { speedMult: 0.3, fireRateMult: 0.11 }, tinta: { steelDk: '#6459a0' } },
   ];
 
   // Il prezzo lo stampa il listino, non il pezzo. Un pezzo senza uno slot nel listino costerebbe

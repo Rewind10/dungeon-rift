@@ -1479,6 +1479,16 @@ class Room {
     // guerriero dal menu e il salvataggio ti rifa' ladro. Senza riabbassare la bandiera il client resta
     // con la classe vecchia e disegna il personaggio sbagliato: ladro nei numeri, guerriero a vedersi.
     p._sent = 0;
+    // v2.15.3 — UNO SLOT NUOVO E I SALVATAGGI VECCHI. Il mago ha avuto le calzature: una partita salvata
+    // prima non ne ha nessuna, e senza questa riga si riprenderebbe a piedi nudi per sempre — nemmeno il
+    // pezzo di base, che a tutti gli altri e' regalato. Gli id non sono cambiati, quindi il FORMATO non si
+    // tocca: si riempie solo cio' che manca, ed e' la stessa riga che salvera' il prossimo slot aggiunto.
+    {
+      const base = Gear.startingGear(p.heroId) || {};
+      if (!p.gear || typeof p.gear !== 'object') p.gear = {};
+      if (!p.owned || typeof p.owned !== 'object') p.owned = {};
+      for (const sl in base) if (!p.gear[sl]) { p.gear[sl] = base[sl]; p.owned[base[sl]] = 1; }
+    }
     this._recomputeGear(p); this._recomputeBoons(p);
     p.hp = this.effMaxHp(p); p.hpDebt = 0;          // si riprende in forma: la sosta e' servita a quello
     p.dead = false; p.down = false;

@@ -147,12 +147,20 @@ l'interfaccia nuova.
 > - **Stati in chiaro** sulla casella (*in uso*, *già tuo*, prezzo, spenta se non basta) e **statistiche
 >   nel titolo** col grado, il carattere e il prezzo di rivendita.
 >
+> ### 👢 v2.15.3 — IL MAGO HA LE CALZATURE
+> Aveva due slot contro i tre degli altri due, dalla v1.78 e senza che nessun commento dicesse perché:
+> con le stesse monete comprava una scala in meno. Tredici pezzi nuovi (`mag_b_*`) con **gli stessi
+> numeri delle calzature del ladro**, catalogo da 104 a **117**, scala completa **6.120 monete**.
+> Due cose da sapere: sul mago **non si vedono** (la veste gli copre i piedi — per farle vedere va
+> toccato `_heroMago`, facendo prendere all'orlo il colore delle calzature), e i **salvataggi vecchi**
+> ora si riempiono da soli con il pezzo di partenza, se no il mago si riprendeva scalzo.
+>
 > ### 🔧 Ritoccato nella v2.15.1, su richiesta di Paolo
 > - **La finestra era la più piccola delle tre** (Fabbro 620 max e ~494 a schermo, Erborista 760,
 >   Banditore 860). Ora è **760 come l'Erborista**, con `width` e non solo `max-width`.
-> - **Le statistiche sono tornate DENTRO la cella** e il tooltip è stato tolto: restano 4 per riga, quindi
->   le celle sono 175px e ci sta una piccola scheda (nome, grado a parole, statistiche una per riga,
->   stato, rivendita). Il `title` non c'è più — l'informazione o è a schermo o non c'è.
+> - **Le statistiche sono tornate DENTRO la cella** e il tooltip è stato tolto. Nella **v2.15.2** la cella
+>   è poi diventata una **carta orizzontale come quelle dell'Erborista**, tre per riga, testo a sinistra,
+>   nome 14,5px e statistiche 12,5px: i quadrati costringevano a testo centrato da 9,5px.
 > - Il controllo nel browser adesso guarda **tutte e tre le classi e 8 slot**, e cerca anche il testo
 >   **tagliato dai puntini**, che non traboccherebbe e sparirebbe in silenzio.
 >

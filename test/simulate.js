@@ -417,7 +417,8 @@ function testV110() {
   const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
   const eb = room.addPlayer('z', cap, 'Z', 'mago'); room.offerGear(eb);
   const gearMsg = sent.find(m => m.t === C.MSG.OFFER_GEAR);
-  assert(gearMsg && gearMsg.slots.map(s => s.slot).join(',') === 'weapon,armor', 'il mago vede solo i suoi due slot (niente scudo, niente calzature)');
+  // v2.15.3 — il mago vede TRE slot: arma, armatura e calzature. Niente scudo, che resta del guerriero.
+  assert(gearMsg && gearMsg.slots.map(s => s.slot).join(',') === 'weapon,armor,boots', 'il mago vede i suoi tre slot (calzature si, scudo no)');
   ok('novita v1.10 verificate');
 }
 function testV111() {
@@ -1810,10 +1811,14 @@ function testV167() {
   // --- 1) il catalogo e' ben formato e ogni classe ha i suoi slot ---
   assert(Object.keys(Gear.SLOTS).join(',') === 'guerriero,mago,ladro', 'gli slot sono definiti per tutte e tre le classi');
   assert(Gear.slotsFor('guerriero').join(',') === 'weapon,armor,shield', 'il guerriero ha arma, armatura e scudo');
-  assert(Gear.slotsFor('mago').join(',') === 'weapon,armor', 'il mago ha arma e armatura');
+  assert(Gear.slotsFor('mago').join(',') === 'weapon,armor,boots', 'il mago ha arma, armatura e calzature');
   assert(Gear.slotsFor('ladro').join(',') === 'weapon,armor,boots', 'il ladro ha arma, armatura e calzature');
   assert(new Set(Gear.ITEMS.map(i => i.id)).size === Gear.ITEMS.length, 'nessun id di oggetto duplicato');
-  assert(Gear.ITEMS.length === 104, 'il catalogo ha 104 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
+  // v2.15.3 — 117 e non piu' 104: il mago ha avuto le sue calzature. Il conto e' 13 per slot e TRE
+  // slot per ognuna delle tre classi; finche' il mago ne aveva due, comprava una scala in meno degli
+  // altri con le stesse monete.
+  assert(Gear.ITEMS.length === 117, 'il catalogo ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
+  for (const h of ['guerriero', 'mago', 'ladro']) assert(Gear.slotsFor(h).length === 3, h + ': tre slot, come gli altri due');
   for (const it of Gear.ITEMS) {
     assert(Gear.slotsFor(it.hero).includes(it.slot), it.id + ' sta in uno slot che la sua classe possiede');
     assert(it.name && it.desc && typeof it.cost === 'number' && it.rank >= 1, it.id + ' ha nome, descrizione, prezzo e grado');
@@ -5304,6 +5309,20 @@ function testSalvataggio() {
     const sg = preso.find(m => m.t === C.MSG.SALVATO);
     for (const k of SV.CAMPI)
       assert(JSON.stringify(sg.dati[k]) === foto[k], 'il campo "' + k + '" entra nel pacchetto');
+  }
+  // v2.15.3 — UN SALVATAGGIO FATTO PRIMA CHE IL MAGO AVESSE LE CALZATURE. Gli id non sono cambiati, il
+  // FORMATO nemmeno: il pacchetto e' buono. Ma lo slot nuovo li' dentro non c'e', e riprendendo la partita
+  // il mago resterebbe a piedi nudi per sempre — senza nemmeno il pezzo di base, che a tutti e' regalato.
+  {
+    const r = new Room('salvB'); const p = r.addPlayer('a', { send() {} }, 'M', 'mago'); r.startGame();
+    const d = SV.costruisci(r, p);
+    delete d.gear.boots; delete d.owned[Gear.startingGear('mago').boots];
+    // r2 NON fa startGame: \`riprendi\` funziona solo dalla lobby (o da fine partita), e una stanza
+    // gia' avviata lo farebbe uscire alla prima riga — la prova passerebbe senza aver provato niente.
+    const r2 = new Room('salvC'); const p2 = r2.addPlayer('a', { send() {} }, 'M', 'mago');
+    r2.riprendi('a', d);
+    assert(!!p2.gear.boots, 'un salvataggio senza lo slot nuovo non lascia il mago scalzo: ' + p2.gear.boots);
+    assert(p2.owned[p2.gear.boots] === 1, 'e il pezzo di base risulta suo, come per le altre classi');
   }
   ok('salvataggio verificato: le cause si salvano, gli effetti si rifanno, e un pacchetto rotto non entra');
 }

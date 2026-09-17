@@ -426,7 +426,10 @@ h2.info-h:not(:first-child){margin-top:17px}
      vedeva. Qui `width` e non solo `max-width`: con la sola massima si restringe di nuovo sul
      contenuto e il problema torna. 760 sono anche i 176px per cella che servono a scriverci dentro
      le statistiche invece di nasconderle in un tooltip. */
-  width:min(760px,94vw);max-width:min(760px,94vw)}
+  width:min(760px,94vw);max-width:min(760px,94vw);
+  /* v2.15.2 — con le carte orizzontali tredici pezzi sono cinque righe: la finestra puo' arrivare a
+     sfondare lo schermo. Stesso tetto del Banditore, che ha lo stesso problema. */
+  max-height:80vh;overflow:auto}
 #gearPanel.hidden{display:none}
 /* v1.67 — il fabbro mostra un CATALOGO per classe: una riga per slot, dentro le carte degli oggetti.
    Le carte non hanno piu' icona immagine (le vecchie PNG erano per i tre eroi rimossi): contano il NOME e
@@ -1106,47 +1109,47 @@ h2.info-h:not(:first-child){margin-top:17px}
 .gtab .pt{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:#9fe06a;
   box-shadow:0 0 6px rgba(159,224,106,.8)}
 
-/* v2.14.1 — QUATTRO PER RIGA, TUTTA LA LARGHEZZA. Le celle sono `1fr`, non 84px fissi: si allargano
-   a riempire il pannello, e `aspect-ratio` le tiene quadrate qualunque larghezza esca. Con 84px fissi
-   restava una striscia di vuoto a destra — che era mezzo pannello inutilizzato. */
-.ggriglia{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+/* ============================================================================================
+   v2.15.2 — IL CATALOGO DEL FABBRO E' FATTO COME QUELLO DELL'ERBORISTA
+   ============================================================================================
+   Parole di Paolo: «prendi esempio dall'erborista, il suo catalogo l'hai fatto bene». Quelle carte
+   (.pc, piu' su in questo foglio) sono ORIZZONTALI: icona a sinistra, nome nel suo colore, descrizione
+   sotto su una riga, prezzo in alto a destra. Si leggono senza sforzo perche' il testo scorre come
+   scorre l'occhio.
+   Il quadrato faceva il contrario: per far stare cinque statistiche in 175px bisognava incolonnarle e
+   rimpicciolire il carattere, e veniva fuori una lapide di testo centrato da 9px.
+   TRE per riga, non quattro: sono carte larghe, e a quattro la descrizione andrebbe a capo tre volte. */
+.ggriglia{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 
-/* v2.15.1 — la cella non centra piu' tre righe: contiene una SCHEDA (nome, grado, statistiche una per
-   riga, stato). Quindi si parte dall'alto e lo stato si appoggia in fondo con `margin-top:auto`, se no
-   un pezzo con due statistiche e uno con cinque avrebbero il prezzo a due altezze diverse e la riga
-   non si leggerebbe per colonne. */
-.gq{position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-start;gap:2px;padding:7px 7px 6px;text-align:center;cursor:pointer;transition:.13s;
-  overflow:hidden;
-  background:linear-gradient(180deg,#2a2018,#150e08);border:2px solid var(--c,#6f7890);border-radius:12px}
-.gq:hover{transform:translateY(-2px);filter:brightness(1.15)}
-.gq.on{cursor:default;box-shadow:inset 0 0 16px rgba(255,207,74,.20)}
+/* `min-width:0` non e' un dettaglio: una casella di griglia parte da `min-width:auto`, cioe' non si
+   stringe sotto la larghezza del suo contenuto. Senza, il grado piu' lungo ("LEGGENDARIO · EQUILIBRATA")
+   allargava la colonna e la terza carta della riga finiva fuori dalla finestra. */
+.gq{background:linear-gradient(180deg,#2a2018,#150e08);border:2px solid var(--c,#6f7890);border-radius:14px;
+  padding:11px 11px 12px;display:flex;align-items:flex-start;gap:10px;text-align:left;position:relative;
+  min-width:0;cursor:pointer;transition:.15s}
+.gq:hover{transform:translateY(-3px);filter:brightness(1.12)}
+.gq.on{cursor:default;box-shadow:inset 0 0 18px rgba(255,207,74,.18)}
 .gq.on:hover{transform:none;filter:none}
-.gq.no{opacity:.42;cursor:not-allowed}
+.gq.no{opacity:.45;cursor:not-allowed}
 .gq.no:hover{transform:none;filter:none}
-.gq .car{font-size:13px;color:var(--c,#9fa9bf);line-height:1}
-.gq .nm{font-size:12px;font-weight:800;line-height:1.15;color:#f3e8d4;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* il grado a parole SOTTO il nome, nel colore del grado: il bordo lo diceva gia', ma solo a chi ha
-   imparato i cinque colori. Scritto, si legge la prima volta. */
-.gq .grd{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;line-height:1.1;
-  opacity:.95}
-/* LE STATISTICHE, una per riga. Erano la parte del tooltip che serviva davvero. */
-.gq .gst{display:flex;flex-direction:column;gap:1px;margin-top:3px;width:100%}
-.gq .gst i{font-style:normal;font-size:9.5px;font-weight:600;line-height:1.25;color:#c3b79f;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* lo zoccolo: stato e rivendita, incollati in fondo perche' stiano alla stessa altezza in tutta la riga */
-.gq .gfoot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:1px;padding-top:4px}
-.gq .riv{font-size:8.5px;font-weight:600;color:#7d8a9b;line-height:1}
-.gq .st{font-size:10px;font-weight:800;letter-spacing:.2px;color:#ffcf4a;line-height:1}
-.gq .st.on{color:#ffcf4a}
-.gq .st.tuo{color:#9fe06a}
-.gq .st.no{color:#ff8a8a}
-.gq .st.base{color:#8d7a5e;font-weight:600;font-style:italic}
-/* v2.15.1 — il Vendi non e' piu' in `absolute` sopra il testo: adesso la cella e' una colonna e il
-   pulsante e' l'ultima riga. Sovrapposto com'era, con le statistiche scritte dentro, coprirebbe una
-   voce e mezza. */
-.gq .gsell{margin-top:3px;width:100%;padding:3px 0;font:inherit;
-  font-size:9.5px;font-weight:800;border-radius:6px;cursor:pointer;
+.gq .ic{font-size:22px;flex:none;width:22px;text-align:center;line-height:1.3;color:var(--c,#9fa9bf)}
+.gq .gtx{min-width:0;flex:1}
+.gq .nm{font-weight:800;font-size:14.5px;line-height:1.2}
+/* la riga del grado porta anche il PREZZO, spinto a destra: il nome si tiene tutta la sua riga */
+.gq .grd{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#8b93a7;
+  line-height:1.3;margin-top:1px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+/* e il grado va a capo invece di finire in puntini: "LEGGENDARIO · EQU…" non dice il carattere, che e'
+   meta' della scelta. Due righe corte costano meno di un'informazione persa. */
+.gq .grd span{min-width:0}
+.gq .ds{font-size:12.5px;color:#c3b79f;line-height:1.3;margin-top:4px}
+.gq .cost{flex:none;font-weight:800;font-size:13.5px;color:#ffcf4a;letter-spacing:0}
+.gq .cost.no{color:#ff8a8a}
+.gq .gfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:5px}
+.gq .tag{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;line-height:1}
+.gq .tag.on{color:#ffcf4a}
+.gq .tag.tuo{color:#9fe06a}
+.gq .tag.base{color:#8d7a5e;font-weight:600;text-transform:none;font-style:italic}
+.gq .riv{font-size:11px;font-weight:600;color:#8b95a6;line-height:1;white-space:nowrap}
+.gq .gsell{padding:3px 9px;font:inherit;font-size:11.5px;font-weight:800;border-radius:6px;cursor:pointer;
   background:rgba(255,207,74,.12);border:1px solid rgba(255,207,74,.5);color:#ffcf4a;transition:.12s}
 .gq .gsell:hover{background:rgba(255,207,74,.28);border-color:#ffcf4a}

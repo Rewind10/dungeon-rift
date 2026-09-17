@@ -2,6 +2,72 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.15.3] — 2026-09-17 · "Le calzature del mago"
+
+Il mago aveva **due** slot (arma, armatura), il guerriero e il ladro **tre**. Non è una regressione
+recente: è così dalla v1.78, cioè dal giorno in cui l'equipaggiamento esiste, e nessun commento diceva
+perché. Il conto del catalogo lo confermava: 104 pezzi = 8 slot × 13, non 9.
+
+#### 👢 Tredici pezzi nuovi
+`mag_b_*`, dal grado scarso al divino, tre caratteri per grado. **I numeri sono gli stessi delle
+calzature del ladro, riga per riga**: lo slot è lo stesso e quella scala è già tarata, quindi copiarla è
+l'unico modo di aggiungere tredici pezzi senza aprire un cantiere di bilanciamento. Cambiano i nomi —
+sandali e calzari, non stivali ferrati. Il catalogo passa da **104 a 117 pezzi**, `SLOTS.mago` guadagna
+`boots`, e la scala completa costa **6.120 monete** (2.560 tornano indietro rivendendo i sorpassati).
+
+> ⚠️ **Sul mago questa roba NON SI VEDE, e va detto prima di giocarci.** `_heroMago` lo disegna come una
+> veste che arriva a terra: i piedi non ci sono, e la `tinta` (`steelDk`) è la chiave che usano lo
+> stivale del guerriero e quello del ladro, che il mago non legge. L'unico effetto visibile è **l'alone
+> del grado divino**, che guarda anche il rango delle calzature. Per farle vedere davvero bisogna toccare
+> il disegno del mago — far prendere all'**orlo** della veste il colore delle calzature — ed è un lavoro
+> a parte.
+
+#### 💾 I salvataggi fatti prima
+Gli id non sono cambiati e il `FORMATO` nemmeno, quindi un vecchio pacchetto resta valido. Ma dentro non
+c'è lo slot nuovo, e senza fare niente il mago si sarebbe ripreso **scalzo per sempre** — nemmeno il
+pezzo di base, che a tutte le classi è regalato. `riprendi` ora riempie gli slot mancanti col pezzo di
+partenza, ed è la stessa riga che salverà il prossimo slot aggiunto.
+
+Il test che lo controlla **è stato provato al contrario**: disattivando il riempimento fallisce
+(`p.gear.boots === undefined`). La prima stesura passava anche senza la correzione, perché la stanza
+faceva `startGame()` e `riprendi` esce subito se non si è in lobby: una prova che non provava niente.
+
+#### 🧪 Stato
+**3277 passati, 0 falliti**; il controllo nel browser del fabbro vede 117 pezzi e **9 slot** invece di 8,
+tutti senza testo tagliato né traboccato.
+
+---
+
+### [2.15.2] — 2026-09-17 · "Il catalogo del fabbro come quello dell'Erborista"
+
+Parole di Paolo davanti alla 2.15.1: *«perché hai messo il testo tutto centrale? Oltretutto il font è
+piccolissimo»*, e poi *«prendi esempio dall'erborista, il suo catalogo l'hai fatto bene»*. Aveva ragione
+su entrambe.
+
+#### 🃏 Carte orizzontali, tre per riga
+Le celle quadrate costringevano a incolonnare cinque statistiche e a rimpicciolire tutto per farcele
+stare: veniva fuori una lapide di testo **centrato da 9,5px**. Le carte dell'Erborista (`.pc`) sono
+orizzontali — icona a sinistra, nome nel suo colore, descrizione sotto — e si leggono perché il testo
+scorre come scorre l'occhio. Ora il fabbro è fatto così: **3 per riga**, testo **a sinistra**, nome a
+**14,5px** e statistiche a **12,5px**.
+
+#### 🔀 Due cose diverse dall'Erborista, e perché
+- **Il prezzo sta sulla riga del grado, non nell'angolo in alto a destra.** All'Erborista i nomi sono
+  corti («Cura», «Fretta»); qui si chiamano «Scettro delle Stelle Morte», e riservare l'angolo al prezzo
+  spezzava il nome in due righe su metà delle carte. Provato e scartato.
+- **L'icona è il simbolo del carattere (▰ ▱ ▫), non l'emoji dello slot.** Dentro la linguetta «Arma»
+  l'emoji ⚔️ sarebbe identica su tutte e tredici le carte: occuperebbe spazio senza distinguere niente.
+
+Tolto anche il prezzo dai pezzi **già tuoi**: rimetterli addosso non costa niente, e una cifra lì sopra
+diceva il contrario.
+
+#### 🐛 `min-width:0`, che non è un dettaglio
+Una casella di griglia parte da `min-width:auto`, cioè non si stringe sotto la larghezza del suo
+contenuto: il grado più lungo («LEGGENDARIO · EQUILIBRATA») allargava la colonna e **la terza carta della
+riga finiva fuori dalla finestra**. Visto sull'anteprima prima di consegnare.
+
+---
+
 ### [2.15.1] — 2026-09-17 · "Il fabbro largo come gli altri, e le statistiche scritte"
 
 Due richieste di Paolo sulla finestra del fabbro.
