@@ -60,6 +60,32 @@ function applicaStat(p, statId) {
   else if (statId === 'st_int') { p.stats.schoolDmg.magic += 0.09; p.stats.schoolRate.magic += 0.07; }
   else if (statId === 'st_des') { p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06; p.stats.speedMult += 0.025; }
 }
+// ============================================================================================
+// v2.15 — IL PROFILO DELLA CLASSE, applicato
+// ============================================================================================
+// `Heroes.profiloPunti()` dice quanti punti (frazionari, anche negativi) vale il profilo su ogni
+// statistica; qui si trasformano in effetti. Il PERCHE' dello scarto e del perimetro sta scritto per
+// esteso in shared/heroes.js, accanto a STAT_BASE. Qui basta ricordare la regola:
+//
+//   il profilo tocca PV, riduzione, passo e rinculo. NON tocca danno ne' cadenza.
+//
+// Per questo non riusa `applicaStat` con un peso: sarebbe piu' corto e sarebbe sbagliato, perche'
+// trascinerebbe dentro anche schoolDmg/schoolRate e romperebbe la parita' fra le tre classi (misurata:
+// 79/78/78 diventerebbero 93/105/102, col mago in testa). Le due funzioni si assomigliano e devono
+// restare separate.
+//
+// La riduzione non scende MAI sotto zero. Non e' pudore: chi subisce un colpo passa da `if (dr > 0)`,
+// quindi una riduzione negativa non farebbe alcun danno in piu' — comparirebbe solo nel pannello, come
+// un'armatura "-0,9%" che non esiste. Chi sta sotto il centro in Costituzione paga in PV, e quello si
+// sente davvero.
+function applicaProfilo(p) {
+  if (!p || !p.heroId) return;
+  const q = (s) => Heroes.profiloPunti(p.heroId, s);
+  p.stats.knockMult += 0.03 * q('st_for');
+  p.stats.maxHpFlat += 20 * q('st_cos');
+  p.stats.dmgReduce = Math.min(0.85, Math.max(0, (p.stats.dmgReduce || 0) + 0.012 * q('st_cos')));
+  p.stats.speedMult += 0.025 * q('st_des');
+}
 function newBoon() {
   return {
     bounce: 0, pierce: 0, chain: 0, poison: 0, explodeEvery: 0, killNova: 0, bulletSize: 0, slow: 0, thorns: 0,
@@ -185,7 +211,11 @@ class Room {
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
     for (const k in p.gear) p.owned[p.gear[k]] = 1;   // v1.72 — l'equipaggiamento di partenza e' gia' tuo
-    this._recomputeGear(p); p._needFull = true; this.players.set(pid, p); return p;
+    // v2.15 — il profilo della classe entra QUI, prima dell'equipaggiamento: e' la forma con cui il
+    // personaggio nasce. E i PV vanno riallineati subito, se no un mago (che in Costituzione sta sotto
+    // il centro) nascerebbe con 100 PV su un massimo di 91 e la barra partirebbe oltre il fondo.
+    applicaProfilo(p);
+    this._recomputeGear(p); p.hp = this.effMaxHp(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
   setInput(pid, i) { const p = this.players.get(pid); if (!p) return;
@@ -210,7 +240,7 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = { q: null, e: null }; p.abilDovute = []; p.cdQ = 0; p.cdE = 0; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = { q: null, e: null }; p.abilDovute = []; p.cdQ = 0; p.cdE = 0; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
     this.runStart = this.time;
     this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
     if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
@@ -2272,7 +2302,7 @@ class Room {
   //    meno quelle gia' spese, altrimenti spegnere e riaccendere sarebbe un modo per resuscitare gratis.
   _recomputeBoons(p) {
     const maxPrima = this.effMaxHp(p), hpPrima = p.hp;
-    p.stats = newStats(); p.boon = newBoon(); p.synActive = {}; p.defianceLeft = 0;
+    p.stats = newStats(); applicaProfilo(p); p.boon = newBoon(); p.synActive = {}; p.defianceLeft = 0;
     for (const id in p.buys) for (let i = 0; i < p.buys[id]; i++) applicaStat(p, id);
     const accese = {};
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }

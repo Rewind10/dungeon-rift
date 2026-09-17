@@ -2,6 +2,105 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.15.1] — 2026-09-17 · "Il fabbro largo come gli altri, e le statistiche scritte"
+
+Due richieste di Paolo sulla finestra del fabbro.
+
+#### 📏 «La finestra delle armi è più piccola delle altre»
+Vero, e misurato: le tre finestre del villaggio avevano larghezze massime diverse — **Fabbro 620px,
+Erborista 760, Banditore 860** — e quella del fabbro, essendo dimensionata sul contenuto, a schermo
+stava sui **494px**. Ora è **760 come l'Erborista**, con `width` e non solo `max-width`: con la sola
+massima si sarebbe ristretta di nuovo sul contenuto e il problema sarebbe tornato.
+
+Restano **4 celle per riga** (la regola data da Paolo nella fase 3), quindi le celle passano da 110 a
+**175px**. Scelto da lui fra tre varianti misurate.
+
+#### 📝 Le statistiche tornano DENTRO la cella, e il tooltip sparisce
+Nella 2.14 tutto ciò che non stava in 110px finiva nel `title`: statistiche, grado, carattere,
+rivendita. Funzionava solo col mouse fermo sopra, **un pezzo per volta** — cioè il contrario di quello
+che serve in un negozio, che è confrontarne tredici insieme. Ora la cella è una piccola scheda:
+
+- **nome** (fino a 2 righe), **grado a parole** nel colore del grado (il bordo lo diceva già, ma solo a
+  chi ha imparato i cinque colori) e il **carattere**;
+- le **statistiche una per riga** — incolonnate si confrontano, di seguito si rileggono;
+- in fondo lo **stato** (in uso / già tuo / prezzo / di base) e la **rivendita**, incollati al bordo
+  inferiore con `margin-top:auto` così stanno alla stessa altezza lungo tutta la riga;
+- il pulsante **Vendi** non è più in `absolute` sopra il testo ma è l'ultima riga della cella: sovrapposto
+  com'era, con le statistiche scritte dentro, avrebbe coperto una voce e mezza.
+
+`el.title` è stato **rimosso**: l'informazione o è a schermo o non c'è. Aggiornata di conseguenza anche
+la riga di aiuto in fondo al pannello, che prometteva «le statistiche col mouse sopra».
+
+#### 🧪 Verificato nel browser (27 controlli, tutti verdi)
+Oltre ai controlli della 2.14 rimasti in piedi, tre nuovi che servivano proprio qui:
+- **niente trabocca** dal quadrato, in **tutti e tre gli slot** — gli scudi hanno le descrizioni più
+  lunghe del gioco (5 voci) e misurare solo le armi non avrebbe detto niente;
+- **niente è tagliato dai puntini**: le voci hanno `text-overflow:ellipsis`, quindi una statistica troppo
+  lunga non traboccherebbe, **sparirebbe in silenzio**. Una statistica scritta a metà è peggio di una non
+  scritta, perché sembra scritta. Controllate **tutte e tre le classi, 8 slot** (il mago ne ha due, il
+  ladro ha gli stivali: roba mai vista prima in questa finestra);
+- lo **stato alla stessa altezza** lungo la riga, confrontando celle della stessa riga e escludendo
+  quelle col pulsante Vendi, dove sta una riga più su di proposito.
+
+Suite completa: **3155 passati, 0 falliti**; prova del menu di fine ondata: tutto OK.
+
+---
+
+### [2.15.0] — 2026-09-17 · "Il profilo della classe morde"
+
+Prima delle tre decisioni rimaste in sospeso dopo la chiusura di `PIANO-EQUIPAGGIAMENTO.md`.
+
+#### 🎭 Com'era
+`Heroes.STAT_BASE` (guerriero 8/8/4/2, ladro 4/6/8/4, mago 2/4/6/8) era **solo da leggere**: quattro
+numeri sulla scheda che non entravano in nessun calcolo, e un test lo teneva tale.
+
+#### 🔢 La misura che ha cambiato la risposta
+Paolo aveva scelto «un punto di base vale una frazione di un punto speso», e come verifica una tabella di
+numeri invece di una partita simulata. La tabella ha detto una cosa che non era prevista: con un quarto di
+punto su tutto, i danni al secondo passavano da **79/78/78** a **93/105/102** — parità rotta, e **il mago
+il più forte dei tre**. Non è un numero da ritoccare: ogni classe ha il suo valore più alto proprio nella
+statistica della propria scuola di danno, e INT e DES alzano danno **e** cadenza mentre FOR alza solo il
+danno. Sono state misurate tre varianti e Paolo ha scelto la terza.
+
+#### ✅ Cosa fa adesso
+- **Conta lo SCARTO dal centro (5,5), non il valore assoluto.** Sopra si guadagna, sotto si perde: la
+  somma per classe è quasi zero, quindi le classi si allontanano fra loro senza che la potenza media salga.
+- **Non tocca né danno né cadenza.** Solo PV, riduzione, passo e rinculo — la *forma* della classe. Quanto
+  picchia resta dell'arma e dei punti spesi, ed è lì che vive la parità fra le tre.
+- `Heroes.profiloPunti()` = `(base - 5,5) × 0,5`; `STAT_CENTRO` e `PROFILO_PESO` sono costanti dichiarate.
+- `applicaProfilo()` in `Room.js` sta **accanto** ad `applicaStat()` ed è deliberatamente separata:
+  riusarla con un peso sarebbe più corto e trascinerebbe dentro `schoolDmg`/`schoolRate`.
+- Applicata nei **tre** punti in cui le statistiche ripartono da zero (`addPlayer`, reset di `startGame`,
+  `_recomputeBoons`): saltandone uno il profilo sparirebbe alla prima carta accesa o spenta.
+- **La riduzione non va mai sotto zero**: il motore la ignorerebbe (`if (dr > 0)`) e il pannello mostrerebbe
+  un'armatura negativa inesistente. Chi sta sotto il centro paga in PV, non in bugie.
+
+#### 📊 I numeri, letti dal codice
+| classe | DPS | PV | riduzione | PV efficaci | passo |
+|---|---|---|---|---|---|
+| Guerriero | 79,2 invariato | 206 → **231** | 0 → 1,5% | +13,8% | **-1,9%** |
+| Mago | 78,0 invariato | 106 → **91** | 0 | **-14,2%** | +0,6% |
+| Ladro | 78,2 invariato | 118 → **123** | 0 → 0,3% | +4,6% | **+3,1%** |
+
+> ⚠️ **Il prezzo, detto prima di consegnare.** Il mago passa da **7 a 6 morsi di zombie** all'ondata 1. È un
+> colpo di margine in meno sul personaggio già più fragile, ed è la conseguenza voluta della variante scelta.
+
+#### 🧪 I test
+- **TEST 71** diceva l'opposto ed è stato **riscritto, non tolto**: ora pretende che spostare il profilo
+  muova PV e passo e **non** muova danno né cadenza — i due lati insieme, se no metà della regola non è
+  sorvegliata.
+- **TEST 54** misurava la riduzione delle carte in assoluto e falliva perché il ladro ora nasce con mezzo
+  punto di riduzione: ora misura la **differenza** prima/dopo la carta.
+- **3155 passati, 0 falliti.**
+
+#### 🔎 Trovato strada facendo, NON toccato
+Il passivo **Piastra** del guerriero — «riduce del 12% i danni subiti», scritto nella scheda che il
+giocatore legge alla scelta del personaggio — **non è applicato da nessuna parte**: `plate` e `passives`
+non compaiono in nessun calcolo del server. È un -12% che il giocatore crede di avere e non ha. Segnalato
+a Paolo, in attesa della sua decisione.
+
+---
+
 ### [2.14.0] — 2026-09-17 · "Il fabbro a icone quadrate" — FASE 3, e il piano è chiuso
 
 Ultima delle tre fasi di `PIANO-EQUIPAGGIAMENTO.md`. Fase 1 → v2.12.0, fase 2 → v2.13.0, fase 3 → questa.

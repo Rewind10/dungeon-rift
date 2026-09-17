@@ -49,7 +49,13 @@ l'interfaccia nuova.
 > # ✅ IL PIANO È CHIUSO (v2.14.0)
 >
 > Tutte e tre le fasi sono fatte. Quello che resta non è più questo piano: sono **tre decisioni di Paolo**
-> rimaste in sospeso, e vanno chiuse una per volta.
+> rimaste in sospeso, e vanno chiuse una per volta. **Ne resta una e mezza: la 3 è chiusa nella v2.15.0.**
+>
+> **E una cosa trovata strada facendo, ancora da decidere:** il passivo **Piastra** del guerriero — «riduce
+> del 12% i danni subiti», scritto nella scheda che il giocatore legge alla scelta del personaggio —
+> **non è applicato da nessuna parte nel motore**. `plate` e `passives` non compaiono in nessun calcolo:
+> si disegnano e basta. È un -12% che il giocatore crede di avere e non ha. Detto a Paolo il 17 settembre,
+> non toccato senza il suo via.
 >
 > ### 1. I prezzi sono troppo bassi, ed è misurato
 > `test/monete.js` dice che una run di 20 ondate contiene **~14.200 monete** (~9.900 senza premi di
@@ -63,12 +69,71 @@ l'interfaccia nuova.
 > per cui quella colonna resta la più alta delle tre. Il secondo compare solo all'ondata 1. Sono testi di
 > Paolo: da accorciare, togliere o lasciare — decide lui.
 >
-> ### 3. Il profilo delle classi conta o no?
-> `Heroes.STAT_BASE` (guerriero 8/8/4/2, ladro 4/6/8/4, mago 2/4/6/8) oggi è **solo da leggere**: non
-> entra in nessun calcolo, e un test lo tiene tale mettendo il profilo a 99 e controllando che danno, PV e
-> velocità non si muovano. Se si vuole che morda davvero, il posto è `newStats()` in `Room.js` — ed è un
-> lavoro di bilanciamento vero, non una riga.
+> ### 3. ~~Il profilo delle classi conta o no?~~ ✅ **CHIUSA nella v2.15.0**
+> Conta, ma solo su **PV, riduzione, passo e rinculo** — mai su danno e cadenza — e conta lo **scarto dal
+> centro (5,5)**, non il valore assoluto. Paolo ha scelto fra tre varianti misurate («vai con la C»).
+> Dettagli e numeri nel blocco della v2.15.0 qui sotto.
 
+> ## ✅ COSA È STATO FATTO NELLA v2.15.0 (decisione 3: il profilo delle classi)
+>
+> **La domanda era: il profilo conta o no?** Paolo ha scelto «frazione di punto» — un punto di base vale
+> una frazione di un punto speso — e come verifica «la tabella dei numeri», non una partita simulata. La
+> tabella ha fatto emergere un problema che ha cambiato la forma della risposta, ed è il motivo per cui
+> questo blocco è lungo: chi riprende da qui deve sapere **perché** non è stato fatto nel modo ovvio.
+>
+> ### Il problema che la misura ha tirato fuori
+> Facendo contare la base su tutto (un quarto di punto), i danni al secondo passavano da **79/78/78** a
+> **93/105/102**: parità rotta, e **il mago diventava il più forte dei tre**. Non è un numero da ritoccare,
+> è strutturale — ogni classe ha il suo valore più alto proprio nella statistica della propria scuola di
+> danno (mago INT 8, ladro DES 8, guerriero FOR 8), e per di più INT e DES alzano danno **e** cadenza
+> mentre FOR alza solo il danno. Qualunque peso dato alla base gonfia il danno, e lo gonfia di più a chi
+> ha due effetti invece di uno.
+>
+> ### Le tre varianti messe sul tavolo, tutte misurate sul motore vero
+> | | DPS | PV efficaci | passo |
+> |---|---|---|---|
+> | **A** — un quarto su tutto | 93 / 105 / 102 (parità rotta) | +22% / +20% / +28% | +2,5% / +3,8% / +5% |
+> | **B** — un quarto, non su danno e cadenza | invariato | +22% / +20% / +28% | idem |
+> | **C** — metà dello scarto, non su danno e cadenza | invariato | **+14% / -15% / +5%** | -1,9% / +0,6% / +3,1% |
+>
+> (ordine: guerriero / mago / ladro). **Paolo ha scelto la C.**
+>
+> ### Com'è fatta
+> - `Heroes.profiloPunti(heroId, statId)` = `(base - 5,5) × 0,5`. `STAT_CENTRO` e `PROFILO_PESO` sono due
+>   costanti dichiarate accanto a `STAT_BASE`: spostare `PROFILO_PESO` è l'unico modo di rendere il
+>   profilo più o meno marcato.
+> - `applicaProfilo(p)` in `server/Room.js`, **accanto** ad `applicaStat()` e deliberatamente **separata**:
+>   riusare `applicaStat` con un peso sarebbe più corto e sarebbe sbagliato, perché trascinerebbe dentro
+>   `schoolDmg`/`schoolRate`. Tocca `maxHpFlat`, `dmgReduce`, `speedMult`, `knockMult`. Basta.
+> - Si applica nei **tre** punti in cui le statistiche di un giocatore ripartono da zero: `addPlayer`, il
+>   reset di `startGame`, e `_recomputeBoons`. Se ne saltasse uno, il profilo sparirebbe la prima volta che
+>   si accende o spegne una carta.
+> - **La riduzione non scende mai sotto zero.** Chi subisce un colpo passa da `if (dr > 0)`, quindi una
+>   riduzione negativa non farebbe male davvero: comparirebbe solo nel pannello, come un'armatura «-0,9%»
+>   che non esiste. Chi sta sotto il centro in Costituzione paga in PV, e quello si sente.
+> - In `addPlayer` i PV vengono riallineati subito (`p.hp = this.effMaxHp(p)`): un mago nascerebbe con 100
+>   PV su un massimo di 91 e la barra partirebbe oltre il fondo.
+>
+> ### I numeri finali, letti dal codice della v2.15.0
+> | classe | DPS | PV | riduzione | PV efficaci | passo |
+> |---|---|---|---|---|---|
+> | Guerriero | 79,2 (invariato) | 206 → **231** | 0 → **1,5%** | 206 → 234,5 (**+13,8%**) | 203,7 → 199,9 (**-1,9%**) |
+> | Mago | 78,0 (invariato) | 106 → **91** | 0 | 106 → 91 (**-14,2%**) | 210,0 → 211,3 (+0,6%) |
+> | Ladro | 78,2 (invariato) | 118 → **123** | 0 → **0,3%** | 118 → 123,4 (**+4,6%**) | 231,2 → 238,3 (**+3,1%**) |
+>
+> **Il prezzo, detto in chiaro:** il mago passa da **7 a 6 morsi di zombie** all'ondata 1 (14 danni × il
+> fattore d'ondata). È un colpo di margine in meno sul personaggio già più fragile, ed era previsto.
+>
+> ### I test
+> - **TEST 71** diceva l'opposto («il profilo NON entra nei calcoli») ed è stato **riscritto, non tolto**:
+>   ora controlla i due lati insieme — spostare il profilo a 99 deve muovere PV e passo, e **non** deve
+>   muovere danno né cadenza. Controlla anche che nessuna classe nasca con riduzione negativa e che
+>   rimettendo il profilo a posto si torni esattamente ai PV di prima.
+> - **TEST 54** (Baluardo, Scudo Vitale) misurava la riduzione in **assoluto**: il ladro ora nasce con un
+>   mezzo punto di riduzione dal profilo e falliva per il motivo sbagliato. Ora misura la **differenza**
+>   prima/dopo la carta, che è quello che quelle prove volevano dire.
+> - Suite completa: **3155 passati, 0 falliti**.
+>
 > ## ✅ COSA È STATO FATTO NELLA v2.14.0 (fase 3)
 >
 > - **Una linguetta per slot**: 13 pezzi per volta invece di 39. La linguetta aperta si ricorda per classe,
@@ -81,6 +146,15 @@ l'interfaccia nuova.
 >   dice già il grado, e il prezzo è scritto sulla cella.
 > - **Stati in chiaro** sulla casella (*in uso*, *già tuo*, prezzo, spenta se non basta) e **statistiche
 >   nel titolo** col grado, il carattere e il prezzo di rivendita.
+>
+> ### 🔧 Ritoccato nella v2.15.1, su richiesta di Paolo
+> - **La finestra era la più piccola delle tre** (Fabbro 620 max e ~494 a schermo, Erborista 760,
+>   Banditore 860). Ora è **760 come l'Erborista**, con `width` e non solo `max-width`.
+> - **Le statistiche sono tornate DENTRO la cella** e il tooltip è stato tolto: restano 4 per riga, quindi
+>   le celle sono 175px e ci sta una piccola scheda (nome, grado a parole, statistiche una per riga,
+>   stato, rivendita). Il `title` non c'è più — l'informazione o è a schermo o non c'è.
+> - Il controllo nel browser adesso guarda **tutte e tre le classi e 8 slot**, e cerca anche il testo
+>   **tagliato dai puntini**, che non traboccherebbe e sparirebbe in silenzio.
 >
 > ### ⚠️ Cosa si è perso, e va saputo
 > Fino alla 2.12 le tre colonne del negozio erano i **caratteri**, sempre nello stesso ordine: due pesanti

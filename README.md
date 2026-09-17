@@ -128,9 +128,19 @@ Test: `npm test`
   | Ladro | 4 | 6 | 8 | 4 |
   | Mago | 2 | 4 | 6 | 8 |
 
-  Tetto **20** = 8 di base massima + 12 punti spendibili. **Il profilo e' da leggere, non e' un bonus: non
-  entra in nessun calcolo** — le differenze vere fra le classi stanno gia' in arma, PV, velocita' e scuola,
-  e i punti spesi restano gli unici numeri che mordono. Un test lo tiene tale.
+  Tetto **20** = 8 di base massima + 12 punti spendibili.
+
+  **Dalla v2.15 il profilo MORDE** (prima era solo da leggere), ma dentro un perimetro stretto e per due
+  scelte misurate. **Conta lo SCARTO dal centro (5,5), non il valore assoluto**: chi sta sopra guadagna,
+  chi sta sotto perde, la somma per classe e' quasi zero — le classi si allontanano fra loro senza che la
+  potenza media salga. E **non tocca ne' danno ne' cadenza**: quelli restano dell'arma e dei punti spesi.
+  Il perche' e' un numero: ogni classe ha il valore piu' alto proprio nella statistica della propria
+  scuola di danno (mago INT 8, ladro DES 8, guerriero FOR 8), e INT e DES alzano danno *e* cadenza mentre
+  FOR alza solo il danno — lasciandolo contare sul danno i 79/78/78 danni al secondo diventavano
+  **93/105/102, col mago in testa**. Il profilo cambia quindi la FORMA della classe: PV, riduzione, passo,
+  rinculo. Misurato: guerriero **+14% PV efficaci e -1,9% di passo**, mago **-14% PV**, ladro **+5% PV e
+  +3,1% di passo**; danno e cadenza fermi al millesimo. Il TEST 71 controlla entrambi i lati — che
+  spostare il profilo muova PV e passo, e che NON muova danno e cadenza.
 - **📐 Meno spazio sprecato ovunque**: i quadretti del baule da 96 a 68px (sei per riga invece di tre),
   derivate e slot piu' compatti, i testi di contorno rimpiccioliti. E **ordine nuovo**: statistiche →
   derivate → riepilogo. Prima le statistiche erano in fondo, cioe' sotto la piega: la cosa su cui devi

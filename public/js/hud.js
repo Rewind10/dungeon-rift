@@ -263,26 +263,31 @@
       // il controllo dovrebbe dedurlo dal testo, e dedurrebbe zero dove il testo non lo dice.
       el.dataset.cost = it.cost;
       el.dataset.rank = it.rank;
-      // v2.14 — TUTTO CIO' CHE NON STA IN UN QUADRATO STA NEL TITOLO: le statistiche per esteso, il
-      // grado, il carattere, il prezzo di rivendita. Sono le informazioni con cui si SCEGLIE, e
-      // scritte dentro 84px sarebbero scritte e non lette. Il piano della fase 3 diceva «all'hover
-      // compaiono le statistiche del pezzo»: e' questo.
+      // v2.15.1 — LE INFORMAZIONI TORNANO DENTRO LA CELLA, E IL TOOLTIP SPARISCE.
+      // Nella 2.14 tutto cio' che non stava in 110px finiva nel `title`: statistiche, grado, carattere,
+      // rivendita. Funzionava solo col mouse fermo sopra, un pezzo per volta — cioe' il contrario di
+      // quello che serve in un negozio, che e' CONFRONTARE tredici pezzi insieme. Adesso la finestra e'
+      // larga come quella dell'Erborista e le celle sono 176px: ci sta tutto scritto. Niente `el.title`:
+      // l'informazione o e' a schermo o non c'e'.
       const rar = RAR[it.rarity] || RAR.common;
-      el.title = it.name + ' \u2014 ' + rar.name + ' ' + (it.carattere || '')
-        + '\n' + (it.desc || '')
-        + '\n\n' + (inUso ? 'Lo stai portando.'
-            : tuo ? 'E\' gia\' tuo: rimetterlo addosso non costa niente.'
-            : afford ? 'Costa ' + it.cost + ' monete.' : 'Costa ' + it.cost + ' monete: non ti bastano.')
-        + (it.vendita > 0 && tuo ? '\nIl fabbro lo ricompra per ' + it.vendita + '.' : '');
+      // la descrizione arriva gia' come elenco separato da '\u00b7' ("+50 PV \u00b7 -13% danni subiti \u00b7 ...").
+      // Una riga per voce: incolonnate si confrontano, di seguito si rileggono.
+      const voci = String(it.desc || '').split('\u00b7').map(x => x.trim()).filter(Boolean);
       // lo stato, in una riga sola e senza abbreviazioni: quello che non si capisce in un negozio e'
       // «perche' non posso cliccarlo».
       const stato = inUso ? '<span class="st on">\u2605 in uso</span>'
         : tuo ? '<span class="st tuo">gi\u00e0 tuo</span>'
         : it.cost > 0 ? '<span class="st' + (afford ? '' : ' no') + '">\uD83E\uDE99 ' + it.cost + '</span>'
         : '<span class="st base">di base</span>';
+      // la rivendita si scrive solo dove NON c'e' il pulsante Vendi (che porta gia' la cifra): due volte
+      // lo stesso numero nella stessa cella e' rumore.
+      const riv = (it.vendita > 0 && !(tuo && onSell)) ? '<span class="riv">rivendi ' + it.vendita + '</span>' : '';
       el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
-        + '<span class="nm">' + esc(it.name) + '</span>' + stato
-        + (tuo && it.vendita > 0 && onSell ? '<button class="gsell" type="button" title="Rivendi al fabbro per ' + it.vendita + '">\uD83E\uDE99 ' + it.vendita + '</button>' : '');
+        + '<span class="nm">' + esc(it.name) + '</span>'
+        + '<span class="grd" style="color:' + rar.color + '">' + esc(rar.name) + (it.carattere ? ' \u00b7 ' + esc(it.carattere) : '') + '</span>'
+        + '<span class="gst">' + voci.map(v => '<i>' + esc(v) + '</i>').join('') + '</span>'
+        + '<span class="gfoot">' + stato + riv + '</span>'
+        + (tuo && it.vendita > 0 && onSell ? '<button class="gsell" type="button">\uD83E\uDE99 vendi ' + it.vendita + '</button>' : '');
       el.onclick = () => { if (!inUso && afford && onBuy) onBuy(it.id); };
       const b = el.querySelector('.gsell');
       if (b) b.onclick = (e) => { e.stopPropagation(); if (onSell) onSell(it.id); };

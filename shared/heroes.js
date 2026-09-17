@@ -74,12 +74,6 @@
   // opposte. Questi numeri dicono a colpo d'occhio CHI E' la classe — il guerriero e' forte e robusto,
   // il mago sa e non regge un colpo, il ladro sta in mezzo e corre.
   //
-  // ATTENZIONE, e va scritto perche' non si presti a equivoci: sono il PROFILO, non un bonus. Non
-  // entrano in nessun calcolo. Le differenze vere fra le classi ci sono gia' e stanno altrove (arma,
-  // PV, velocita', scuola), e i punti che spendi sono e restano gli unici numeri che mordono — quelli
-  // si sommano qui sopra e si vedono nelle derivate del pannello. Se un giorno si volesse che questi
-  // valori contassero davvero, il posto giusto e' `newStats()` in Room.js, non questa tabella.
-  //
   // Il tetto e' 20: 8 (il massimo di partenza) + 12 (Loot.STAT_MAX_LEVEL, i punti spendibili in una
   // statistica). Un mago non arrivera' mai a 20 di Forza, e va benissimo cosi'.
   const STAT_MAX = 20;
@@ -90,5 +84,44 @@
   };
   function statBase(heroId, statId) { return (STAT_BASE[heroId] || {})[statId] || 0; }
 
-  return { HEROES, ORDER, STAT_BASE, STAT_MAX, statBase };
+  // ============================================================================================
+  // v2.15 — IL PROFILO MORDE, MA SOLO DOVE NON ROMPE NIENTE
+  // ============================================================================================
+  // Fino alla v2.14 questi quattro numeri erano decorazione dichiarata: si leggevano e basta. Adesso
+  // contano. COME contano e' stato deciso misurando, e le due scelte qui sotto vanno spiegate perche'
+  // nessuna delle due e' quella che verrebbe in mente per prima.
+  //
+  // PRIMA SCELTA — conta lo SCARTO dal centro, non il valore assoluto.
+  // Se COS 8 valesse "otto quarti di punto in piu'", ogni classe guadagnerebbe e basta, e il gioco
+  // diventerebbe piu' facile per tutti senza che nessuno sia piu' diverso di prima. Contando invece
+  // quanto la statistica si DISCOSTA da 5,5 (il centro delle quattro), chi sta sopra guadagna e chi
+  // sta sotto perde: la somma per classe e' quasi zero. Le classi si allontanano fra loro, la potenza
+  // media resta dov'era. Il guerriero (COS 8, DES 4) regge di piu' e va piu' piano; il mago (COS 4)
+  // e' davvero il primo a cadere; il ladro (DES 8) corre davvero.
+  //
+  // SECONDA SCELTA — il profilo NON tocca danno ne' cadenza.
+  // Questa e' la meno ovvia ed e' quella che salva il bilanciamento. Le tre classi sono tarate alla
+  // pari (99/96/87 danni al secondo sulla carta, misurati; 79/78/78 con l'equipaggiamento di
+  // partenza) e la taratura e' scritta nei commenti delle tre armi qui sopra. Ma ogni classe ha il
+  // suo valore PIU' ALTO proprio nella statistica della sua scuola di danno — mago INT 8, ladro DES
+  // 8, guerriero FOR 8 — e per di piu' INT e DES alzano danno E cadenza mentre FOR alza solo il
+  // danno. Risultato misurato lasciando che il profilo contasse su tutto: 93/105/102, cioe' la
+  // parita' rotta e il MAGO diventato il piu' forte dei tre. Non e' un numero da ritoccare, e'
+  // strutturale. Quindi il profilo si ferma prima: PV, riduzione, passo e rinculo — la FORMA della
+  // classe. Quanto picchia resta deciso dall'arma e dai punti che spendi, e li' non si tocca niente.
+  //
+  // Gli effetti veri stanno in `applicaProfilo()` in server/Room.js, accanto ad `applicaStat()`: qui
+  // c'e' solo quanto pesa un punto di scarto. Spostare PESO e' l'unico modo di rendere il profilo
+  // piu' o meno marcato, e il TEST 71 controlla che spostarlo muova i PV e NON muova il danno.
+  const STAT_CENTRO = 5.5;
+  const PROFILO_PESO = 0.5;
+  // Quanti punti (frazionari) vale il profilo della classe su una statistica. Positivo sopra il
+  // centro, negativo sotto. Un guerriero: COS +1,25 punti, DES -0,75.
+  function profiloPunti(heroId, statId) {
+    const b = (STAT_BASE[heroId] || {})[statId];
+    if (b == null) return 0;
+    return (b - STAT_CENTRO) * PROFILO_PESO;
+  }
+
+  return { HEROES, ORDER, STAT_BASE, STAT_MAX, statBase, STAT_CENTRO, PROFILO_PESO, profiloPunti };
 });

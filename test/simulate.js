@@ -3352,13 +3352,17 @@ function testV1791() {
 function testV1792() {
   console.log('\n[TEST 54] v1.79.2 — passive ritarate e rifatte');
   const conn = () => ({ send() {} });
-  const nuova = (eroe, id) => { const r = new Room('p' + id); const p = r.addPlayer('a', conn(), 'A', eroe); r.startGame(); r.phase = C.PHASE_SHOP; p.boonOffer = [id]; r.pickBoon('a', id); return { r, p }; };
+  // v2.15 — `dr0` e' la riduzione che il personaggio ha GIA' prima della carta: dal profilo della
+  // classe un ladro (COS 6, sopra il centro) nasce con un mezzo punto di riduzione. Queste prove
+  // misurano quanto vale LA CARTA, quindi si guarda la differenza, non il totale — se no il giorno
+  // che il profilo si sposta di un soffio falliscono tutte per il motivo sbagliato.
+  const nuova = (eroe, id) => { const r = new Room('p' + id); const p = r.addPlayer('a', conn(), 'A', eroe); r.startGame(); r.phase = C.PHASE_SHOP; const dr0 = p.stats.dmgReduce || 0; p.boonOffer = [id]; r.pickBoon('a', id); return { r, p, dr0 }; };
 
   // --- le tarature semplici ---
   { const { p } = nuova('ladro', 'crit'); assert(Math.abs(p.stats.critChance - (0.03 + 0.10)) < 1e-9, 'Occhio di Falco: +10% critico e basta'); }
   { const { p } = nuova('ladro', 'executioner'); assert(Math.abs(p.stats.critChance - 0.08) < 1e-9 && Math.abs(p.stats.critMult - 2.30) < 1e-9, 'Giustiziere: +5% critico e +30% danno critico'); }
-  { const { p } = nuova('ladro', 'bulwark'); assert(Math.abs(p.stats.dmgReduce - 0.10) < 1e-9, 'Baluardo: -10%'); }
-  { const { p } = nuova('ladro', 'overheal'); assert(Math.abs(p.stats.dmgReduce - 0.05) < 1e-9 && p.stats.regen === undefined, 'Scudo Vitale: -5% e nessuna cura'); }
+  { const { p, dr0 } = nuova('ladro', 'bulwark'); assert(Math.abs((p.stats.dmgReduce - dr0) - 0.10) < 1e-9, 'Baluardo: -10%'); }
+  { const { p, dr0 } = nuova('ladro', 'overheal'); assert(Math.abs((p.stats.dmgReduce - dr0) - 0.05) < 1e-9 && p.stats.regen === undefined, 'Scudo Vitale: -5% e nessuna cura'); }
   { const { p } = nuova('guerriero', 'heavyarm'); assert(Math.abs(p.stats.dmgMult - 1.08) < 1e-9 && !p.perk.arcoPiu, 'Arma Pesante: +8% danno, niente altro'); }
 
   // --- TOSSINA: una quota del colpo, non un numero fisso ---
@@ -5581,16 +5585,41 @@ function testSchermataUnica() {
     const b = Her.STAT_BASE[h];
     assert(Math.max(...Object.values(b)) + Loot.STAT_MAX_LEVEL === Her.STAT_MAX, h + ': il tetto e base massima + punti spendibili (' + Her.STAT_MAX + ')');
   }
-  // LA PROMESSA: il profilo non entra in nessun calcolo. Due classi con profili opposti, stessa arma e
-  // stesso equipaggiamento, devono fare lo stesso danno — se il profilo mordesse, qui cambierebbe.
+  // --- v2.15 — IL PROFILO MORDE, E SI FERMA DOVE DEVE ---
+  // Fino alla v2.14 qui si controllava il contrario: che il profilo non entrasse in nessun calcolo. Ora
+  // conta, ma dentro un perimetro stretto, e il perimetro e' la cosa che va difesa: PV, riduzione, passo
+  // e rinculo SI', danno e cadenza NO. Il motivo e' misurato e sta scritto in shared/heroes.js — ogni
+  // classe ha il valore piu' alto proprio nella statistica della sua scuola di danno, quindi lasciarlo
+  // contare sul danno rovescerebbe la parita' fra le tre (79/78/78 -> 93/105/102, col mago in testa).
   {
-    const r1 = new Room('v2131a'); const g = r1.addPlayer('g', conn, 'G', 'guerriero'); r1.startGame();
-    const d0 = r1.effDamage(g), hp0 = r1.effMaxHp(g), vel0 = r1.effSpeed(g);
     const salvato = JSON.stringify(Her.STAT_BASE);
+    assert(Her.profiloPunti('guerriero', 'st_cos') > 0 && Her.profiloPunti('mago', 'st_cos') < 0,
+      'il profilo conta lo SCARTO dal centro: sopra si guadagna, sotto si perde');
+    const r1 = new Room('v215a'); const g = r1.addPlayer('g', conn, 'G', 'guerriero'); r1.startGame();
+    const d0 = r1.effDamage(g), cad0 = r1.effFireDelay(g), hp0 = r1.effMaxHp(g), vel0 = r1.effSpeed(g);
+    // (a) chi sta sopra il centro in Costituzione nasce piu' duro dei suoi PV nudi, chi sta sotto piu'
+    // fragile. Il confronto e' col nudo PIU' l'equipaggiamento di partenza, se no passerebbe da solo.
+    assert(hp0 > g.maxHp + g.gearBonus.maxHpFlat, 'il guerriero (COS 8) nasce piu duro: ' + hp0 + ' PV');
+    const r2 = new Room('v215b'); const m = r2.addPlayer('m', conn, 'M', 'mago'); r2.startGame();
+    assert(r2.effMaxHp(m) < m.maxHp + m.gearBonus.maxHpFlat, 'e il mago (COS 4) piu fragile: ' + r2.effMaxHp(m) + ' PV');
+    // (b) ma la riduzione non va mai sotto zero: il motore la ignorerebbe (`if (dr > 0)`) e il pannello
+    // mostrerebbe un'armatura negativa che non esiste. Chi sta sotto il centro paga in PV, non in bugie.
+    for (const h of Heroes.ORDER) {
+      const rr = new Room('v215' + h); const q = rr.addPlayer('q', conn, 'Q', h); rr.startGame();
+      assert((q.stats.dmgReduce || 0) >= 0, h + ': la riduzione del profilo non e mai negativa');
+      assert(rr.effMaxHp(q) > 0 && rr.effSpeed(q) > 0, h + ': PV e passo restano numeri sensati');
+    }
+    // (c) LA PROMESSA CHE RESTA. Si sposta il profilo a un valore assurdo e si ricalcola: PV e passo
+    // devono muoversi (se no il profilo non morde piu' e la v2.15 e' tornata indietro senza dirlo),
+    // danno e cadenza NO (se no qualcuno ha rimesso schoolDmg/schoolRate dentro `applicaProfilo`).
     Her.STAT_BASE.guerriero = { st_for: 99, st_cos: 99, st_des: 99, st_int: 99 };
-    assert(r1.effDamage(g) === d0 && r1.effMaxHp(g) === hp0 && r1.effSpeed(g) === vel0,
-      'il profilo della classe NON entra nei calcoli: e un numero da leggere, non un bonus');
+    r1._recomputeBoons(g);
+    assert(r1.effMaxHp(g) > hp0 && r1.effSpeed(g) > vel0, 'spostare il profilo muove PV e passo');
+    assert(r1.effDamage(g) === d0 && r1.effFireDelay(g) === cad0,
+      'ma NON danno ne cadenza: la parita fra le tre classi non la tocca il profilo');
     Object.assign(Her.STAT_BASE, JSON.parse(salvato));
+    r1._recomputeBoons(g);
+    assert(r1.effMaxHp(g) === hp0, 'e rimettendo il profilo a posto si torna esattamente dov era');
   }
 
   // --- 4) il riepilogo dell'ondata porta danni e combo ---

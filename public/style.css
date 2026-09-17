@@ -420,7 +420,13 @@ h2.info-h:not(:first-child){margin-top:17px}
 #shopMarketBtn{border-color:#a9772e;color:#ffcf4a}
 #shopMarketBtn:hover{background:rgba(169,119,46,.18)}
 /* v1.52 — MERCATO: pannello del fabbro (stessa cornice del Mercante Errante, carte .gc dell'emporio) */
-#gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.97),rgba(14,10,8,.97));border:2px solid #a9772e;border-radius:16px;padding:12px 16px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(620px,94vw)}
+#gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.97),rgba(14,10,8,.97));border:2px solid #a9772e;border-radius:16px;padding:12px 16px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  /* v2.15.1 — LARGA COME LE ALTRE. Fabbro 620, Erborista 760, Banditore 860: e quella del fabbro,
+     essendo dimensionata sul contenuto, a schermo stava sui 494px — la piu' piccola delle tre, e si
+     vedeva. Qui `width` e non solo `max-width`: con la sola massima si restringe di nuovo sul
+     contenuto e il problema torna. 760 sono anche i 176px per cella che servono a scriverci dentro
+     le statistiche invece di nasconderle in un tooltip. */
+  width:min(760px,94vw);max-width:min(760px,94vw)}
 #gearPanel.hidden{display:none}
 /* v1.67 — il fabbro mostra un CATALOGO per classe: una riga per slot, dentro le carte degli oggetti.
    Le carte non hanno piu' icona immagine (le vecchie PNG erano per i tre eroi rimossi): contano il NOME e
@@ -1105,8 +1111,13 @@ h2.info-h:not(:first-child){margin-top:17px}
    restava una striscia di vuoto a destra — che era mezzo pannello inutilizzato. */
 .ggriglia{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 
+/* v2.15.1 — la cella non centra piu' tre righe: contiene una SCHEDA (nome, grado, statistiche una per
+   riga, stato). Quindi si parte dall'alto e lo stato si appoggia in fondo con `margin-top:auto`, se no
+   un pezzo con due statistiche e uno con cinque avrebbero il prezzo a due altezze diverse e la riga
+   non si leggerebbe per colonne. */
 .gq{position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:3px;padding:8px 6px;text-align:center;cursor:pointer;transition:.13s;
+  justify-content:flex-start;gap:2px;padding:7px 7px 6px;text-align:center;cursor:pointer;transition:.13s;
+  overflow:hidden;
   background:linear-gradient(180deg,#2a2018,#150e08);border:2px solid var(--c,#6f7890);border-radius:12px}
 .gq:hover{transform:translateY(-2px);filter:brightness(1.15)}
 .gq.on{cursor:default;box-shadow:inset 0 0 16px rgba(255,207,74,.20)}
@@ -1114,17 +1125,28 @@ h2.info-h:not(:first-child){margin-top:17px}
 .gq.no{opacity:.42;cursor:not-allowed}
 .gq.no:hover{transform:none;filter:none}
 .gq .car{font-size:13px;color:var(--c,#9fa9bf);line-height:1}
-.gq .nm{font-size:11.5px;font-weight:800;line-height:1.15;color:#f3e8d4;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.gq .nm{font-size:12px;font-weight:800;line-height:1.15;color:#f3e8d4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* il grado a parole SOTTO il nome, nel colore del grado: il bordo lo diceva gia', ma solo a chi ha
+   imparato i cinque colori. Scritto, si legge la prima volta. */
+.gq .grd{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;line-height:1.1;
+  opacity:.95}
+/* LE STATISTICHE, una per riga. Erano la parte del tooltip che serviva davvero. */
+.gq .gst{display:flex;flex-direction:column;gap:1px;margin-top:3px;width:100%}
+.gq .gst i{font-style:normal;font-size:9.5px;font-weight:600;line-height:1.25;color:#c3b79f;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* lo zoccolo: stato e rivendita, incollati in fondo perche' stiano alla stessa altezza in tutta la riga */
+.gq .gfoot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:1px;padding-top:4px}
+.gq .riv{font-size:8.5px;font-weight:600;color:#7d8a9b;line-height:1}
 .gq .st{font-size:10px;font-weight:800;letter-spacing:.2px;color:#ffcf4a;line-height:1}
 .gq .st.on{color:#ffcf4a}
 .gq .st.tuo{color:#9fe06a}
 .gq .st.no{color:#ff8a8a}
 .gq .st.base{color:#8d7a5e;font-weight:600;font-style:italic}
-.gq .gsell{position:absolute;left:6px;right:6px;bottom:5px;padding:3px 0;font:inherit;
+/* v2.15.1 — il Vendi non e' piu' in `absolute` sopra il testo: adesso la cella e' una colonna e il
+   pulsante e' l'ultima riga. Sovrapposto com'era, con le statistiche scritte dentro, coprirebbe una
+   voce e mezza. */
+.gq .gsell{margin-top:3px;width:100%;padding:3px 0;font:inherit;
   font-size:9.5px;font-weight:800;border-radius:6px;cursor:pointer;
   background:rgba(255,207,74,.12);border:1px solid rgba(255,207,74,.5);color:#ffcf4a;transition:.12s}
 .gq .gsell:hover{background:rgba(255,207,74,.28);border-color:#ffcf4a}
-/* con il pulsante Vendi in fondo, il nome si stringe a due righe per non finirgli sotto */
-.gq .gsell ~ .nm,.gq:has(.gsell) .nm{-webkit-line-clamp:2}
-.gq:has(.gsell) .st{margin-bottom:12px}
