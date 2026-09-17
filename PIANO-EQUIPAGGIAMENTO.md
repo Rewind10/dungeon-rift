@@ -44,7 +44,49 @@ l'interfaccia nuova.
 |---|---|---|
 | **1** | Il **negozio**: 104 pezzi coi bivi, la vendita a metà prezzo | ✅ **fatta nella v2.12.0** |
 | **2** | La **schermata di fine livello unica**, con dentro l'**inventario** | ✅ **fatta nella v2.13.0** |
-| **3** | Il **negozio ridisegnato** con lo stesso stile a icone quadrate della fase 2 | **da fare** ← si riparte da qui |
+| **3** | Il **negozio ridisegnato** con lo stesso stile a icone quadrate della fase 2 | ✅ **fatta nella v2.14.0** |
+
+> # ✅ IL PIANO È CHIUSO (v2.14.0)
+>
+> Tutte e tre le fasi sono fatte. Quello che resta non è più questo piano: sono **tre decisioni di Paolo**
+> rimaste in sospeso, e vanno chiuse una per volta.
+>
+> ### 1. I prezzi sono troppo bassi, ed è misurato
+> `test/monete.js` dice che una run di 20 ondate contiene **~14.200 monete** (~9.900 senza premi di
+> velocità né taglie). La scala completa del guerriero — comune, raro, leggendario, divino, con la
+> rivendita a metà che restituisce 1.715 — costa **~4.965 nette**: finita **verso l'ondata 11 su 20**. Da
+> lì in poi al fabbro non c'è più niente da volere. **Il listino approvato è quello che gira**: non è
+> stato cambiato senza chiedere. Se si alzano gli ultimi due gradi, si rimisura con quel file.
+>
+> ### 2. I due testi in fondo alla colonna di sinistra
+> «Non impara: riceve...» e «Statistiche della partita / Da qui lo guardi...» sono ~200px e sono il motivo
+> per cui quella colonna resta la più alta delle tre. Il secondo compare solo all'ondata 1. Sono testi di
+> Paolo: da accorciare, togliere o lasciare — decide lui.
+>
+> ### 3. Il profilo delle classi conta o no?
+> `Heroes.STAT_BASE` (guerriero 8/8/4/2, ladro 4/6/8/4, mago 2/4/6/8) oggi è **solo da leggere**: non
+> entra in nessun calcolo, e un test lo tiene tale mettendo il profilo a 99 e controllando che danno, PV e
+> velocità non si muovano. Se si vuole che morda davvero, il posto è `newStats()` in `Room.js` — ed è un
+> lavoro di bilanciamento vero, non una riga.
+
+> ## ✅ COSA È STATO FATTO NELLA v2.14.0 (fase 3)
+>
+> - **Una linguetta per slot**: 13 pezzi per volta invece di 39. La linguetta aperta si ricorda per classe,
+>   e sfogliarle non parla col server. Sulla linguetta un **pallino verde** quando dentro c'è qualcosa che
+>   ti puoi permettere e non hai addosso.
+> - **Caselle quadrate**, le stesse del baule e della banda delle scelte: **quattro per riga**, celle `1fr`
+>   che si allargano a riempire il pannello (110px) e `aspect-ratio` che le tiene quadrate.
+> - **Ordine per prezzo** (a pari prezzo: pesante, equilibrata, leggera). Deciso da Paolo.
+> - **Via i titoli dei gradi e la colonna dei prezzi a destra**, su sua richiesta: il colore della cella
+>   dice già il grado, e il prezzo è scritto sulla cella.
+> - **Stati in chiaro** sulla casella (*in uso*, *già tuo*, prezzo, spenta se non basta) e **statistiche
+>   nel titolo** col grado, il carattere e il prezzo di rivendita.
+>
+> ### ⚠️ Cosa si è perso, e va saputo
+> Fino alla 2.12 le tre colonne del negozio erano i **caratteri**, sempre nello stesso ordine: due pesanti
+> di grado diverso stavano incolonnati e si confrontavano senza cercarli. Con quattro per riga in ordine di
+> prezzo quell'incolonnamento non c'è più — il carattere si legge dal simbolo in cima alla cella (▰ ▱ ▫) e
+> dal titolo. È il prezzo del layout richiesto, ed è stato detto a Paolo prima di consegnare.
 
 > ## ✅ COSA È STATO FATTO NELLA v2.13.0 (fase 2)
 >

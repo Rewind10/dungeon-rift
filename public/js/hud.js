@@ -256,61 +256,90 @@
     _gearCard(it, coins, onBuy, onSell) {
       const inUso = !!it.owned, tuo = !inUso && !!it.have, afford = tuo || coins >= it.cost;
       const el = document.createElement('div');
-      el.className = 'gc' + (inUso ? ' maxed' : (afford ? '' : ' disabled'));
-      el.style.borderColor = it.color;
-      el.style.gridColumn = this._carCol[it.carattere] || 2;
-      // v2.12 — i pallini sono CINQUE, come i gradi. Erano tre da quando i gradi erano quattro, cioe'
-      // erano gia' sbagliati: un leggendario e un divino mostravano lo stesso identico riempimento.
-      const pips = []; for (let i = 0; i < 5; i++) pips.push('<span class="' + (i < it.rank ? 'on' : '') + '" style="' + (i < it.rank ? 'background:' + it.color : '') + '"></span>');
-      // il grado di partenza costa 0: scrivere "🪙 0" fa sembrare un affare cio' che e' semplicemente
-      // l'equipaggiamento con cui cominci. Si scrive DI BASE, che e' l'informazione vera.
-      const foot = inUso
-        ? '<div class="cost maxed" style="color:' + it.color + '">IN USO ★</div>'
-        : tuo
-        ? '<div class="cost" style="color:#9fe06a">GIÀ TUO · GRATIS</div>'
-        : (it.cost > 0
-          ? '<div class="cost" style="color:' + (afford ? it.color : '#ff8a8a') + '">🪙 ' + it.cost + '</div>'
-          : '<div class="cost" style="color:#8d97ab">DI BASE</div>');
-      // v2.12 — LA RIVENDITA. Compare solo su cio' che hai NEL BAULE e non addosso: quello che indossi
-      // non e' in vendita, e il server rifiuta comunque (con un messaggio, non in silenzio). Il pulsante
-      // e' dentro la carta ma ferma il clic, se no vendere e ricomprare sarebbero lo stesso gesto.
-      // `onSell` fa parte della condizione di proposito: il pannello di fine ondata riusa queste stesse
-      // carte e li' il fabbro non c'e'. Un pulsante che compare e non fa niente e' peggio di uno assente.
-      const vend = (tuo && it.vendita > 0 && onSell)
-        ? '<button class="gsell" type="button" title="Rivendi al fabbro">Vendi 🪙 ' + it.vendita + '</button>' : '';
-      el.innerHTML = '<span class="rar" style="color:' + it.color + '">' + (this._carIcon[it.carattere] || '') + ' ' + esc(it.carattere || '') + '</span>'
-        + '<div class="nm">' + esc(it.name) + '</div><div class="ds">' + esc(it.desc) + '</div>'
-        + '<div class="pips">' + pips.join('') + '</div>' + foot + vend;
+      el.className = 'gq' + (inUso ? ' on' : (afford ? '' : ' no'));
+      el.style.setProperty('--c', it.color);
+      // il prezzo anche come dato sull'elemento: a schermo si legge solo su cio' che non hai ancora
+      // ("gia' tuo" e "in uso" non lo mostrano), e l'ordine della griglia e' il prezzo. Senza questo
+      // il controllo dovrebbe dedurlo dal testo, e dedurrebbe zero dove il testo non lo dice.
+      el.dataset.cost = it.cost;
+      el.dataset.rank = it.rank;
+      // v2.14 — TUTTO CIO' CHE NON STA IN UN QUADRATO STA NEL TITOLO: le statistiche per esteso, il
+      // grado, il carattere, il prezzo di rivendita. Sono le informazioni con cui si SCEGLIE, e
+      // scritte dentro 84px sarebbero scritte e non lette. Il piano della fase 3 diceva «all'hover
+      // compaiono le statistiche del pezzo»: e' questo.
+      const rar = RAR[it.rarity] || RAR.common;
+      el.title = it.name + ' \u2014 ' + rar.name + ' ' + (it.carattere || '')
+        + '\n' + (it.desc || '')
+        + '\n\n' + (inUso ? 'Lo stai portando.'
+            : tuo ? 'E\' gia\' tuo: rimetterlo addosso non costa niente.'
+            : afford ? 'Costa ' + it.cost + ' monete.' : 'Costa ' + it.cost + ' monete: non ti bastano.')
+        + (it.vendita > 0 && tuo ? '\nIl fabbro lo ricompra per ' + it.vendita + '.' : '');
+      // lo stato, in una riga sola e senza abbreviazioni: quello che non si capisce in un negozio e'
+      // «perche' non posso cliccarlo».
+      const stato = inUso ? '<span class="st on">\u2605 in uso</span>'
+        : tuo ? '<span class="st tuo">gi\u00e0 tuo</span>'
+        : it.cost > 0 ? '<span class="st' + (afford ? '' : ' no') + '">\uD83E\uDE99 ' + it.cost + '</span>'
+        : '<span class="st base">di base</span>';
+      el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
+        + '<span class="nm">' + esc(it.name) + '</span>' + stato
+        + (tuo && it.vendita > 0 && onSell ? '<button class="gsell" type="button" title="Rivendi al fabbro per ' + it.vendita + '">\uD83E\uDE99 ' + it.vendita + '</button>' : '');
       el.onclick = () => { if (!inUso && afford && onBuy) onBuy(it.id); };
       const b = el.querySelector('.gsell');
       if (b) b.onclick = (e) => { e.stopPropagation(); if (onSell) onSell(it.id); };
       return el;
     },
+    // ============================================================================================
+    // v2.14 — FASE 3: IL NEGOZIO A ICONE QUADRATE
+    // ============================================================================================
+    // Com'era, e perche' non andava. Dalla 2.12 il fabbro mostrava TUTTI i pezzi della classe in una
+    // colonna sola: tredici per slot, tre slot, trentanove carte alte 150px dentro un pannello da
+    // 620. Si scorreva per due schermate, e il confronto — che e' l'unica cosa che serve in un
+    // negozio — si faceva a memoria.
+    //
+    // Adesso: una LINGUETTA PER SLOT (ne vedi 13 per volta invece di 39) e dentro i pezzi come ICONE
+    // QUADRATE, le stesse del baule e della banda delle scelte. Il menu ha un solo modo di disegnare
+    // «una cosa che si sceglie cliccandola», e adesso e' lo stesso in tutti e tre i posti.
+    //
+    // Cosa NON e' cambiato, ed e' il punto: le tre colonne restano i CARATTERI — pesante a sinistra,
+    // equilibrata al centro, leggera a destra, in tutti i gradi — e le righe restano i gradi. E' la
+    // griglia che rende leggibile il bivio della fase 1: due pesanti di grado diverso stanno una
+    // sopra l'altra, e si confrontano senza cercarle.
     _gearSlots(wrap, data, onBuy, onSell) {
+      const slots = data.slots || [];
       wrap.innerHTML = '';
-      (data.slots || []).forEach(sl => {
-        const box = document.createElement('div'); box.className = 'gslot';
-        const h = document.createElement('div'); h.className = 'gslot-h';
-        h.innerHTML = '<span class="ic">' + sl.icon + '</span> ' + esc(sl.name);
-        box.appendChild(h);
-        // raggruppati per GRADO: una fascia per grado, dentro le tre scelte in colonna fissa
-        const gradi = [];
-        (sl.items || []).forEach(it => { (gradi[it.rank] = gradi[it.rank] || []).push(it); });
-        gradi.forEach((lista, rank) => {
-          if (!lista || !lista.length) return;
-          const rar = RAR[lista[0].rarity] || RAR.common;
-          const fascia = document.createElement('div'); fascia.className = 'gfascia';
-          fascia.style.setProperty('--tc', lista[0].color);
-          const fh = document.createElement('div'); fh.className = 'gfascia-h';
-          fh.innerHTML = '<span class="tn">' + esc(rar.name) + '</span>'
-            + (lista[0].cost > 0 ? '<span class="gp">🪙 ' + lista[0].cost + '</span>' : '');
-          fascia.appendChild(fh);
-          const row = document.createElement('div'); row.className = 'gslot-row';
-          lista.forEach(it => row.appendChild(this._gearCard(it, data.coins || 0, onBuy, onSell)));
-          fascia.appendChild(row); box.appendChild(fascia);
-        });
-        wrap.appendChild(box);
+      if (!slots.length) return;
+      // la linguetta aperta si ricorda PER CLASSE: riaprire il fabbro e ritrovare lo slot che stavi
+      // guardando e' la differenza fra un negozio e un modulo da riempire ogni volta.
+      if (!this._gslot || !slots.some(x => x.slot === this._gslot)) this._gslot = slots[0].slot;
+
+      const tabs = document.createElement('nav'); tabs.className = 'gtabs';
+      slots.forEach(sl => {
+        const b = document.createElement('button'); b.type = 'button';
+        b.className = 'gtab' + (sl.slot === this._gslot ? ' on' : '');
+        // il pallino dice «qui dentro c'e' qualcosa che puoi permetterti e non hai addosso»: senza,
+        // per sapere se vale la pena aprire una linguetta bisogna aprirla.
+        const pero = (sl.items || []).some(it => !it.owned && (it.have || (data.coins || 0) >= it.cost) && it.cost > 0);
+        b.innerHTML = '<span class="ic">' + sl.icon + '</span>' + esc(sl.name) + (pero ? '<i class="pt"></i>' : '');
+        b.onclick = () => { this._gslot = sl.slot; this._gearNpcSig = null; this._renderGearNpc(); };
+        tabs.appendChild(b);
       });
+      wrap.appendChild(tabs);
+
+      // v2.14.1 — UNA GRIGLIA SOLA, QUATTRO PER RIGA, IN ORDINE DI PREZZO.
+      // Prima erano cinque fasce, una per grado, con il nome del grado a sinistra e il prezzo a destra.
+      // Paolo: i titoli non servono (il colore della cella dice gia' il grado) e la colonna dei prezzi
+      // a destra «non vuol dire nulla», perche' il prezzo e' scritto sulla cella. Tolti entrambi, resta
+      // il colore — che e' l'informazione, non l'etichetta.
+      // L'ORDINE E' IL PREZZO: e' la domanda vera davanti a un negozio («cosa posso permettermi»), e
+      // lasciando il grado a fare da ordine si leggeva una classifica che non si usa. A pari prezzo
+      // resta pesante, equilibrata, leggera, se no due partite di fila mostrerebbero ordini diversi.
+      const sl = slots.find(x => x.slot === this._gslot) || slots[0];
+      const ord = { pesante: 0, equilibrata: 1, leggera: 2 };
+      const pezzi = (sl.items || []).slice().sort((a, b) =>
+        (a.cost - b.cost) || ((ord[a.carattere] || 0) - (ord[b.carattere] || 0)));
+      const griglia = document.createElement('div'); griglia.className = 'ggriglia';
+      pezzi.forEach(it => griglia.appendChild(this._gearCard(it, data.coins || 0, onBuy, onSell)));
+      wrap.appendChild(griglia);
     },
     // v2.13 — il pannello di fine ondata non ha piu' un negozio dentro (SHOP_GEAR_ENABLED e' spento e
     // resta spento: il fabbro e' uno, al villaggio). Questa resta per non rompere il richiamo dal server

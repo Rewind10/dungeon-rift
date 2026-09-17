@@ -420,7 +420,7 @@ h2.info-h:not(:first-child){margin-top:17px}
 #shopMarketBtn{border-color:#a9772e;color:#ffcf4a}
 #shopMarketBtn:hover{background:rgba(169,119,46,.18)}
 /* v1.52 — MERCATO: pannello del fabbro (stessa cornice del Mercante Errante, carte .gc dell'emporio) */
-#gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.96),rgba(14,10,8,.96));border:2px solid #a9772e;border-radius:16px;padding:12px 14px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(620px,94vw)}
+#gearPanel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:36;pointer-events:auto;background:linear-gradient(180deg,rgba(24,18,14,.97),rgba(14,10,8,.97));border:2px solid #a9772e;border-radius:16px;padding:12px 16px 10px;box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(6px);max-width:min(620px,94vw)}
 #gearPanel.hidden{display:none}
 /* v1.67 — il fabbro mostra un CATALOGO per classe: una riga per slot, dentro le carte degli oggetti.
    Le carte non hanno piu' icona immagine (le vecchie PNG erano per i tre eroi rimossi): contano il NOME e
@@ -1077,3 +1077,54 @@ h2.info-h:not(:first-child){margin-top:17px}
 #upgradeScreen .col-dx .ab-sc .card .nm{font-size:calc(11.5px + var(--fz))}
 #upgradeScreen .col-dx .ab-sc .card .ds{font-size:calc(9.5px + var(--fz))}
 #upgradeScreen .col-dx .ab-sc .vuota, #upgradeScreen .col-dx .ab-sc .attesa{font-size:calc(10px + var(--fz))}
+
+
+/* ============================================================================================
+   v2.14 — FASE 3: IL NEGOZIO DEL FABBRO A ICONE QUADRATE
+   ============================================================================================
+   Prima erano 39 carte alte 150px in una colonna sola: due schermate di scorrimento per un negozio
+   in cui l'unica cosa che serve e' confrontare. Adesso una linguetta per slot (13 per volta) e i
+   pezzi come quadrati da 84, gli stessi del baule e della banda delle scelte.
+   La GRIGLIA e' la cosa che non si tocca: righe = gradi, colonne = caratteri, pesante-equilibrata-
+   leggera sempre nello stesso ordine. E' quella che rende leggibile il bivio della fase 1 — due
+   pesanti di grado diverso stanno incolonnati e si confrontano senza cercarli. */
+.gtabs{display:flex;gap:6px;margin:0 0 10px}
+.gtab{position:relative;flex:1 1 0;padding:8px 6px;font-size:11.5px;font-weight:800;letter-spacing:.3px;
+  color:#b9a884;background:linear-gradient(180deg,#2a2018,#160f0a);border:1px solid #57401f;
+  border-radius:10px;cursor:pointer;transition:.13s;display:flex;align-items:center;justify-content:center;gap:5px}
+.gtab:hover{filter:brightness(1.18)}
+.gtab.on{color:#ffe2a8;border-color:#c8a23a;background:linear-gradient(180deg,#42311c,#231708);
+  box-shadow:0 0 0 1px rgba(200,162,58,.35) inset}
+.gtab .ic{font-size:13px}
+/* il pallino: «qui dentro c'e' qualcosa che ti puoi permettere» */
+.gtab .pt{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:#9fe06a;
+  box-shadow:0 0 6px rgba(159,224,106,.8)}
+
+/* v2.14.1 — QUATTRO PER RIGA, TUTTA LA LARGHEZZA. Le celle sono `1fr`, non 84px fissi: si allargano
+   a riempire il pannello, e `aspect-ratio` le tiene quadrate qualunque larghezza esca. Con 84px fissi
+   restava una striscia di vuoto a destra — che era mezzo pannello inutilizzato. */
+.ggriglia{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
+.gq{position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;padding:8px 6px;text-align:center;cursor:pointer;transition:.13s;
+  background:linear-gradient(180deg,#2a2018,#150e08);border:2px solid var(--c,#6f7890);border-radius:12px}
+.gq:hover{transform:translateY(-2px);filter:brightness(1.15)}
+.gq.on{cursor:default;box-shadow:inset 0 0 16px rgba(255,207,74,.20)}
+.gq.on:hover{transform:none;filter:none}
+.gq.no{opacity:.42;cursor:not-allowed}
+.gq.no:hover{transform:none;filter:none}
+.gq .car{font-size:13px;color:var(--c,#9fa9bf);line-height:1}
+.gq .nm{font-size:11.5px;font-weight:800;line-height:1.15;color:#f3e8d4;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.gq .st{font-size:10px;font-weight:800;letter-spacing:.2px;color:#ffcf4a;line-height:1}
+.gq .st.on{color:#ffcf4a}
+.gq .st.tuo{color:#9fe06a}
+.gq .st.no{color:#ff8a8a}
+.gq .st.base{color:#8d7a5e;font-weight:600;font-style:italic}
+.gq .gsell{position:absolute;left:6px;right:6px;bottom:5px;padding:3px 0;font:inherit;
+  font-size:9.5px;font-weight:800;border-radius:6px;cursor:pointer;
+  background:rgba(255,207,74,.12);border:1px solid rgba(255,207,74,.5);color:#ffcf4a;transition:.12s}
+.gq .gsell:hover{background:rgba(255,207,74,.28);border-color:#ffcf4a}
+/* con il pulsante Vendi in fondo, il nome si stringe a due righe per non finirgli sotto */
+.gq .gsell ~ .nm,.gq:has(.gsell) .nm{-webkit-line-clamp:2}
+.gq:has(.gsell) .st{margin-bottom:12px}

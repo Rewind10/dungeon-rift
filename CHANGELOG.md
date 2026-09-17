@@ -2,6 +2,62 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.14.0] — 2026-09-17 · "Il fabbro a icone quadrate" — FASE 3, e il piano è chiuso
+
+Ultima delle tre fasi di `PIANO-EQUIPAGGIAMENTO.md`. Fase 1 → v2.12.0, fase 2 → v2.13.0, fase 3 → questa.
+
+#### 🔨 Com'era, e perché non andava
+Dalla 2.12 il fabbro mostrava **tutti** i pezzi della classe in una colonna sola: 13 per slot, 3 slot,
+**39 carte alte 150px** dentro un pannello da 620. Si scorreva per due schermate, e il confronto — che è
+l'unica cosa che serve in un negozio — si faceva a memoria.
+
+#### 🗂️ Una linguetta per slot, e i pezzi come quadrati
+13 per volta invece di 39, e le caselle sono **quadrati**, gli stessi del baule e della banda delle
+scelte. Il menu ha un solo modo di disegnare «una cosa che si sceglie cliccandola», e adesso è lo stesso
+in tutti e tre i posti.
+
+**Quattro per riga, su tutta la larghezza.** Le celle sono `1fr`, non 84px fissi: si allargano a riempire
+il pannello (110px l'una) e `aspect-ratio` le tiene quadrate a qualunque larghezza esca. Con la misura
+fissa restava una striscia di vuoto a destra, cioè mezzo pannello inutilizzato.
+
+**In ordine di prezzo.** È la domanda vera davanti a un negozio — «cosa posso permettermi» — e lasciando
+il grado a fare da ordine si leggeva una classifica che non si usa. A pari prezzo resta pesante,
+equilibrata, leggera: senza un secondo criterio, due partite di fila mostrerebbero ordini diversi.
+
+#### ✂️ Cosa è sparito, su richiesta di Paolo
+- I **titoli dei gradi** («COMUNE», «RARO»…): il colore della cella lo dice già. Un test controlla che i
+  cinque gradi abbiano davvero **cinque colori distinti** — se li perdessimo, togliere i titoli avrebbe
+  tolto l'informazione e non l'etichetta.
+- La **colonna dei prezzi a destra** di ogni fascia: *«non vuol dire nulla»*, e aveva ragione — il prezzo
+  è scritto sulla cella.
+
+> ⚠️ **Cosa si è perso, e va detto.** Prima le tre colonne erano i caratteri, sempre nello stesso ordine:
+> due pesanti di grado diverso stavano incolonnati e si confrontavano senza cercarli. Con quattro per riga
+> in ordine di prezzo quell'incolonnamento non c'è più; il carattere si legge dal simbolo in cima alla
+> cella (▰ ▱ ▫) e dal titolo. È il prezzo del layout richiesto.
+
+#### 🟢 Tre aggiunte
+- Il **pallino verde** sulla linguetta: «qui dentro c'è qualcosa che ti puoi permettere e non hai addosso».
+  Senza, per sapere se vale la pena aprire una linguetta bisogna aprirla.
+- Gli **stati scritti in chiaro** sulla casella — *in uso*, *già tuo*, il prezzo, o spenta se non ti
+  bastano le monete. Quello che non si capisce in un negozio è «perché non posso cliccarlo».
+- Le **statistiche col mouse sopra**, come chiedeva il piano: dentro 110px sarebbero scritte e non lette.
+  Nel titolo ci sono anche grado, carattere e prezzo di rivendita.
+
+La linguetta aperta si ricorda per classe, e sfogliarle non parla col server.
+
+#### 🧪 I test
+`3144 passati, 0 falliti`, più i tre controlli nel browser verdi. Quello del fabbro è a **17 voci** e
+misura le cose invece di crederci: che le prime quattro celle stiano **davvero sulla stessa riga** e
+coprano 462px su 462, che i titoli dei gradi siano **zero**, che i colori siano **cinque**, che l'ordine
+dei prezzi sia crescente — letto dal **dato sull'elemento**, non dal testo, perché a schermo il costo non
+compare su ciò che hai già (e leggendo il testo si dedurrebbe zero dove il testo non lo dice).
+
+Provato rimettendo i due errori possibili: ordine per grado invece che per prezzo → lo prende; celle di
+nuovo a 84px fissi → prende sia la larghezza sia il fatto che una cella smette di essere quadrata.
+
+---
+
 ### [2.13.6] — 2026-09-16 · "Un punto in più sopra il full HD"
 
 Paolo: *«quando la risoluzione è > di full HD aumenta il font di 1 punto»*, e — chiarito subito dopo —

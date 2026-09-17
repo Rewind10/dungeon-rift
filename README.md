@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.13.6 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.14.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,24 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novita v2.14.0 (il fabbro a icone quadrate — FASE 3, piano chiuso)
+- **🔨 IL NEGOZIO DEL FABBRO ERANO 39 CARTE IN UNA COLONNA SOLA** (13 per slot, alte 150px, in un
+  pannello da 620): due schermate di scorrimento per un posto in cui l'unica cosa che serve e' confrontare.
+  Adesso **una linguetta per slot** — 13 per volta — e i pezzi come **quadrati**, gli stessi del baule e
+  della banda delle scelte.
+- **📐 Quattro per riga, su tutta la larghezza.** Le celle sono `1fr` e non 84px fissi: si allargano a
+  riempire il pannello (110px l'una) e restano quadrate. Con la misura fissa restava mezzo pannello vuoto.
+- **🪙 In ordine di PREZZO**, che e' la domanda vera davanti a un negozio. A pari prezzo resta pesante,
+  equilibrata, leggera.
+- **✂️ Via i titoli dei gradi e la colonna dei prezzi a destra.** Il colore della cella dice gia' il
+  grado, e un test controlla che i cinque gradi abbiano davvero **cinque colori distinti**.
+- **🟢 Tre aggiunte**: il **pallino verde** sulla linguetta («qui c'e' qualcosa che ti puoi permettere»),
+  gli **stati scritti in chiaro** sulla casella (*in uso*, *gia' tuo*, il prezzo, spenta se non ti basta),
+  e le **statistiche col mouse sopra** con grado, carattere e prezzo di rivendita.
+- **🧪 3144 test passati, 0 falliti.** Il controllo del fabbro e' a 17 voci e misura: che le prime quattro
+  celle stiano davvero sulla stessa riga e coprano tutta la larghezza, che i titoli siano zero, che i
+  colori siano cinque, che l'ordine dei prezzi sia crescente.
 
 ## 🆕 Novita v2.13.6 (un punto in piu' sopra il full HD)
 - **🔎 SOPRA IL FULL HD IL FONT CRESCE DI 1px**, e solo nel **riepilogo di fine livello**. Si guarda
