@@ -24,6 +24,51 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novita v2.16.0 (la progressione rifatta: si comincia con un'abilita' in mano)
+
+**Il problema, misurato.** Le abilita' attive si sbloccavano ai livelli 8 e 14. Incrociando la curva
+dell'esperienza con quella che le ondate mettono davvero a terra: il livello 8 arriva all'**ondata 12 di
+20** e il 14 all'**ondata 18**. Per undici ondate su venti il giocatore aveva in mano il clic sinistro e
+lo scatto, e la seconda abilita' arrivava a due ondate dalla fine — la sceglievi e il gioco finiva.
+
+**La scaletta nuova**, decisa da Paolo. I due elenchi si alternano sui dispari:
+
+| Livello | Cosa | Arriva all'ondata |
+|---|---|---|
+| **1** | 1a attiva — obbligatoria prima di scendere | **1** |
+| 3 | 1a passiva (non comune) | 4 |
+| 5 | 2a passiva (rara) | 8 |
+| **7** | 2a attiva | **11** |
+| 9 | 3a passiva (epica) | 13 |
+| 11 | 4a passiva (divina) | 15 |
+| **13** | 3a attiva — *da definire, il riquadro si vede spento* | 17 |
+| 15 | cap + specializzazione | 19 |
+
+- **⚡ La prima attiva si sceglie PRIMA di entrare.** Si parla con l'anziano, si attraversa la faglia e ci
+  si trova davanti la schermata di fine livello, dove la scelta e' necessaria per proseguire. Il blocco
+  sta sul **server** (`shopReady` ripropone la scelta invece di far partire l'ondata), non sul pulsante:
+  un bottone grigio si aggira, il metodo che decide se l'ondata parte no.
+- **⌨️ I tasti si sono scambiati il mestiere.** I **numeri 1 2 3** fanno partire le **abilita'** (che sono
+  passate da due a tre slot), **Q ed E** bevono le **pozioni** (che sono passate da tre slot a due). Vanno
+  insieme: tre abilita' non stanno su due tasti, e due pozioni non hanno bisogno di tre.
+- **🎖️ I ranghi sono solo scenici**: danno il titolo e non piu' un punto statistica. Il prezzo e' scritto
+  perche' non lo si riscopra per caso — il budget di una partita passa da **18 punti a 14** (-22%).
+  Deciso da Paolo sapendo la cifra; se il personaggio risultera' troppo magro, la via e' alzare le
+  statistiche di base, non rimettere i punti sui ranghi.
+- **💾 I salvataggi di prima si rifiutano** (`FORMATO` 2 → 3): la cintura e' scritta come tre slot e
+  `abil` come `{q, e}`. Un salvataggio si carica intero o si rifiuta intero.
+- **🧹 Dentro:** `p.abil` e le ricariche erano quattro variabili sciolte (`cdQ`, `cdE`, `cdQMax`,
+  `cdEMax`) — col terzo slot sarebbero diventate sei. Adesso sono array, e lo snapshot porta un elenco
+  (`ab`, `cab`) invece di quattro campi. Il Marchio non si cerca piu' «nello slot E» ma in quale slot e'.
+- **🧪 3297 test passati, 0 falliti**, piu' tre controlli nel browser. Il nuovo **prova-tasti** preme
+  davvero i tasti e guarda cosa esce da `Input.build`: se il client mandasse ancora i vecchi campi `q`/`e`
+  il server leggerebbe zero e non succederebbe niente, in silenzio. E la prova della scaletta **rifa' il
+  conto delle ondate a ogni esecuzione**: se qualcuno tocca l'XP e le scelte scivolano in fondo, si rompe
+  li' e non in partita.
+- **🎲 Una prova instabile seminata.** Il TEST 38 falliva una volta su quattro: se nell'ondata sorteggiata
+  capitano delle **larve** si fanno esplodere da sole, liberano posto e la coda ne versa altre. Non era un
+  difetto della coda ma un'asserzione che dipendeva dal sorteggio.
+
 ## 🆕 Novita v2.14.0 (il fabbro a icone quadrate — FASE 3, piano chiuso)
 - **🔨 IL NEGOZIO DEL FABBRO ERANO 39 CARTE IN UNA COLONNA SOLA** (13 per slot, alte 150px, in un
   pannello da 620): due schermate di scorrimento per un posto in cui l'unica cosa che serve e' confrontare.
@@ -889,7 +934,7 @@ scelta vale per tutta la partita.
 - **🎚️ Tetto ai livelli: 15.** Oltre non si sale, e l'esperienza raccolta dopo non serve piu' a niente.
   Al 15 si sceglie la **specializzazione** fra due, ed e' passiva.
 - **🎴 Le carte diventano abilita' passive a scaglioni**: **quattro in tutta la partita**, ai livelli
-  **3, 6, 9 e 12**. Ogni scaglione mostra 4 abilita' — 2 della tua classe e 2 neutre — e se ne sceglie 1.
+  **3, 5, 9 e 11** (dalla v2.16; prima 3-6-9-12). Ogni scaglione mostra 4 abilita' — 2 della tua classe e 2 neutre — e se ne sceglie 1.
   Le abilita' di classe le vede solo quella classe. Niente impilamento: i valori sono circa il doppio.
 - **📈 Curva XP** tarata sull'esperienza che le ondate mettono davvero a terra *(ritarata in v1.79.1)*:
   il livello 2 arriva entro la seconda ondata e il primo scaglione entro la quarta, coi soli nemici uccisi.
@@ -897,7 +942,7 @@ scelta vale per tutta la partita.
   ultime restano dov'erano.
 - **👥 Esperienza condivisa** fra i giocatori vivi, con un fattore di gruppo misurato: la stessa curva
   vale da 1 a 6 giocatori. Le monete restano di chi le raccoglie.
-- **◆ 18 punti statistica**, costo fisso di 1 per livello: una statistica al tetto piu' una seconda a 6.
+- **◆ 14 punti statistica** (erano 18 finche' i ranghi ne davano uno; dalla v2.16 i ranghi sono scenici), costo fisso di 1 per livello.
 - **🧭 Menu di fine ondata a quattro sezioni** — Riepilogo · Personaggio (con l'inventario) · Abilita' ·
   Vai al villaggio — e sotto, da solo, il pulsante della mappa successiva. Dal villaggio si torna al menu.
 - **🔮 La Cartomante e' chiusa**: la struttura resta nel villaggio, la funzione verra' ridisegnata.

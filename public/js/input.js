@@ -101,10 +101,16 @@
     moveVec() { let x = 0, y = 0; if (this.keys['KeyW'] || this.keys['ArrowUp']) y -= 1; if (this.keys['KeyS'] || this.keys['ArrowDown']) y += 1; if (this.keys['KeyA'] || this.keys['ArrowLeft']) x -= 1; if (this.keys['KeyD'] || this.keys['ArrowRight']) x += 1; return { x, y }; },
     // v2.10 — l'angolo arriva dal MIRINO, non piu' dal cursore. `px, py` restano nella firma perche' e' il
     // centro dello schermo e chi chiama lo passa gia': il mirino e' relativo a quel punto per costruzione.
-    build(px, py) { if (this._typing()) { this.dashEdge = false; return { mx: 0, my: 0, aim: Math.atan2(this.mira.y, this.mira.x), shoot: false, q: false, e: false, dash: false, pot: 0 }; } const mv = this.moveVec(); const aim = Math.atan2(this.mira.y, this.mira.x); const shoot = this.mouse.down || !!this.keys['Space']; const dash = this.dashEdge; this.dashEdge = false; // v1.71 — la cintura: 1 2 3. Si manda QUALE slot e' premuto (0 = nessuno); il fronte di salita lo
+    build(px, py) { if (this._typing()) { this.dashEdge = false; return { mx: 0, my: 0, aim: Math.atan2(this.mira.y, this.mira.x), shoot: false, ab: 0, dash: false, pot: 0 }; } const mv = this.moveVec(); const aim = Math.atan2(this.mira.y, this.mira.x); const shoot = this.mouse.down || !!this.keys['Space']; const dash = this.dashEdge; this.dashEdge = false; // v1.71 — la cintura: 1 2 3. Si manda QUALE slot e' premuto (0 = nessuno); il fronte di salita lo
     // riconosce il server, cosi' tenere premuto non svuota lo slot.
-    const pot = this.keys['Digit1'] ? 1 : (this.keys['Digit2'] ? 2 : (this.keys['Digit3'] ? 3 : 0));
-    return { mx: mv.x, my: mv.y, aim, shoot, q: !!this.keys['KeyQ'], e: !!this.keys['KeyE'], dash, pot }; },
+    // v2.16 — I TASTI SI SONO SCAMBIATI IL MESTIERE. I numeri erano le pozioni e Q/E le abilita';
+    // adesso i numeri sono le ABILITA' (che sono diventate tre) e Q/E le POZIONI (che sono diventate
+    // due). Vanno insieme: tre abilita' non stanno su due tasti, e due pozioni non hanno bisogno di tre.
+    // Come gia' faceva la cintura, si manda UN NUMERO e non un booleano per tasto: il server fa partire
+    // l'abilita' sul fronte di salita, quindi tenere premuto non la ripete.
+    const ab = this.keys['Digit1'] ? 1 : (this.keys['Digit2'] ? 2 : (this.keys['Digit3'] ? 3 : 0));
+    const pot = this.keys['KeyQ'] ? 1 : (this.keys['KeyE'] ? 2 : 0);
+    return { mx: mv.x, my: mv.y, aim, shoot, ab, dash, pot }; },
   };
   window.Input = Input;
 })();

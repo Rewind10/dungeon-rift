@@ -38,14 +38,22 @@
     buildAbilityBar(id) {
       const h = HERO[id]; const bar = $('abilityBar'); bar.innerHTML = '';
       const wi = { melee: '🗡️', magic: '🔮', ranged: '🏹' }[h.weapon.school] || '🔫';
+      // v2.16 — TRE slot di abilita' sui tasti 1, 2 e 3 (prima erano due, su Q ed E). Il terzo non ha
+      // ancora nessuna abilita' dentro: si vede spento e dice «in arrivo», perche' un posto vuoto
+      // dichiarato e' meglio di un posto che non esiste e poi compare.
+      const LV = (window.GAME && window.GAME.Levels) ? window.GAME.Levels.ABIL_SLOT : [{ lvl: 1 }, { lvl: 7 }, { lvl: 13 }];
+      const AB3 = (window.GAME && window.GAME.Abilities) ? window.GAME.Abilities : null;
+      const vuoto3 = !AB3 || !AB3.perSlot(id, 3).length;
       const slots = [{ k: 'DX', ic: '💨', t: 'Scatto' }, { k: 'SX', ic: wi, t: h.weapon.name },
-        { k: 'Q', ic: '🔒', t: 'Livello 8', lock: 1 }, { k: 'E', ic: '🔒', t: 'Livello 14', lock: 1 }];
+        { k: '1', ic: '🔒', t: 'Livello ' + ((LV[0] || {}).lvl || 1), lock: 1 },
+        { k: '2', ic: '🔒', t: 'Livello ' + ((LV[1] || {}).lvl || 7), lock: 1 },
+        { k: '3', ic: vuoto3 ? '…' : '🔒', t: vuoto3 ? 'In arrivo' : ('Livello ' + ((LV[2] || {}).lvl || 13)), lock: 1, vuoto: vuoto3 }];
       slots.forEach((s, i) => {
-        const el = document.createElement('div'); el.className = 'ab-slot' + (s.lock ? ' locked' : ''); el.id = 'ab' + i; el.title = s.t || '';
+        const el = document.createElement('div'); el.className = 'ab-slot' + (s.lock ? ' locked' : '') + (s.vuoto ? ' vuoto' : ''); el.id = 'ab' + i; el.title = s.t || '';
         el.innerHTML = '<span class="key">' + s.k + '</span><span class="ic">' + s.ic + '</span><span class="lbl">' + (s.t || '') + '</span><div class="cd hidden"></div>';
         bar.appendChild(el);
       });
-      this._abSlot = { q: null, e: null };
+      this._abSlot = [null, null, null];
     },
     updateAbilities(me) {
       if (!me) return;
@@ -55,9 +63,9 @@
       set(0, me.cd || 0);
       const f = $('ab1'); if (f) f.classList.add('ready');
       // l'abilita' arriva a partita in corso: il riquadro si riempie quando succede, non prima
-      this._abSlot = this._abSlot || { q: null, e: null };
+      this._abSlot = this._abSlot || [null, null, null];
       const AB = (window.GAME && window.GAME.Abilities) ? window.GAME.Abilities.BY_ID : {};
-      const riempi = (i, id, tasto) => {
+      const riempi = (i, id) => {
         const el = $('ab' + i); if (!el) return;
         const a = id ? AB[id] : null;
         if (!a) return;
@@ -66,9 +74,12 @@
         el.querySelector('.lbl').textContent = a.name;
         el.style.borderColor = a.color;
       };
-      if (me.aq && this._abSlot.q !== me.aq) { this._abSlot.q = me.aq; riempi(2, me.aq, 'Q'); }
-      if (me.ae && this._abSlot.e !== me.ae) { this._abSlot.e = me.ae; riempi(3, me.ae, 'E'); }
-      set(2, me.cq || 0, !!me.aq); set(3, me.ce || 0, !!me.ae);
+      // v2.16 — tre slot, e arrivano come un elenco solo (`ab`) invece di due campi sciolti.
+      const ab = me.ab || [], cab = me.cab || [];
+      for (let k = 0; k < 3; k++) {
+        if (ab[k] && this._abSlot[k] !== ab[k]) { this._abSlot[k] = ab[k]; riempi(2 + k, ab[k]); }
+        set(2 + k, cab[k] || 0, !!ab[k]);
+      }
     },
     // v1.62 — didascalia con il nome della zona (theme.name). Persistente: non e' un annuncio, e' il
     // posto in cui ti trovi. Cambia solo quando arriva una mappa nuova.
@@ -450,8 +461,8 @@
         $('boonSection').classList.remove('hidden');
         const rar = RAR[this._boons.tier] || {};
         // v2.8.1 — "CONCEDIGLI", non "scegli": la carta non se la prende lui, gliela dai tu.
-        if (bt) bt.textContent = this._boons.abil ? ('\u26a1 ABILIT\u00c0 ATTIVA \u2014 TASTO ' + (this._boons.tasto || 'Q')) : '\uD83C\uDCCF CONCEDIGLI UN\'ABILIT\u00c0';
-        if (bs && this._boons.abil) bs.innerHTML = '<b style="color:#7cc7ff">\u26a1 Abilit\u00e0 attiva</b> \u2014 si usa col tasto <b>' + (this._boons.tasto || 'Q') + '</b>, si ricarica in <b>'
+        if (bt) bt.textContent = this._boons.abil ? ('\u26a1 ABILIT\u00c0 ATTIVA \u2014 TASTO ' + (this._boons.tasto || '1')) : '\uD83C\uDCCF CONCEDIGLI UN\'ABILIT\u00c0';
+        if (bs && this._boons.abil) bs.innerHTML = '<b style="color:#7cc7ff">\u26a1 Abilit\u00e0 attiva</b> \u2014 si usa col tasto <b>' + (this._boons.tasto || '1') + '</b>, si ricarica in <b>'
           + ((this._boons.boons[0] && this._boons.boons[0].cd) || 30) + 's</b> · livello <b>' + (this._boons.liv || 6) + '</b>'
           + ' <span style="opacity:.75">— la scelta vale per tutta la partita</span>';
         else if (bs) bs.innerHTML = 'Scaglione <b>' + (this._boons.scaglione || 1) + ' di ' + (this._boons.tot || 4) + '</b> — '
@@ -494,8 +505,16 @@
     // cosa hai saltato e cosa manca ancora.
     _renderElencoAbilita() {
       const cont = $('abilElenco'); if (!cont) return;
-      const SC = [{ lvl: 3, tier: 'uncommon' }, { lvl: 6, tier: 'rare' }, { lvl: 8, slot: 'q', tasto: 'Q' },
-        { lvl: 9, tier: 'epic' }, { lvl: 12, tier: 'divine' }, { lvl: 14, slot: 'e', tasto: 'E' }];
+      // v2.16 — la scaletta non si scrive piu' a mano qui: si legge da levels.js, che e' l'unico posto
+      // che la decide. Scritta due volte, prima o poi le due copie si allontanano e il pannello mente.
+      const LVv = (window.GAME && window.GAME.Levels) ? window.GAME.Levels : null;
+      const SC = LVv
+        ? LVv.SCAGLIONI.map(x => ({ lvl: x.lvl, tier: x.tier }))
+            .concat(LVv.ABIL_SLOT.map(x => ({ lvl: x.lvl, slot: x.slot, tasto: String(x.slot) })))
+            .sort((a, b) => a.lvl - b.lvl)
+        : [{ lvl: 1, slot: 1, tasto: '1' }, { lvl: 3, tier: 'uncommon' }, { lvl: 5, tier: 'rare' },
+           { lvl: 7, slot: 2, tasto: '2' }, { lvl: 9, tier: 'epic' }, { lvl: 11, tier: 'divine' },
+           { lvl: 13, slot: 3, tasto: '3' }];
       const prese = (this._active || []).filter(b => !b.syn);
       const liv = this._stats ? (this._stats.level || 1) : 1;
       const inArrivo = this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked ? this._boons.tier : null;
@@ -874,14 +893,16 @@
     hideGear() { const panel = $('gearPanel'); if (panel) panel.classList.add('hidden'); this._gearNpcSig = null; },
 
     // ===== v1.71 — LA CINTURA =====
-    // Tre riquadri accanto alla barra abilita'. Si ricostruiscono SOLO quando cambia qualcosa (firma):
+    // v2.16 — DUE riquadri (erano tre) accanto alla barra abilita', e sui tasti Q ed E: i numeri sono
+    // passati alle abilita' attive, che dalla v2.16 sono tre. Si ricostruiscono SOLO quando cambia qualcosa (firma):
     // ridisegnarli 20 volte al secondo farebbe ripartire l'animazione dei pallini a ogni snapshot.
     // Il velo del cooldown, invece, si muove ogni frame — ma e' un'altezza in CSS, non HTML nuovo.
     buildBelt() {
+      const POT_TASTI = ['Q', 'E'];
       const bar = $('beltBar'); if (!bar) return;
       let html = '';
       for (let i = 0; i < POT.SLOTS; i++) {
-        html += '<div class="pot-slot empty" id="pot' + i + '"><span class="key">' + (i + 1) + '</span>' +
+        html += '<div class="pot-slot empty" id="pot' + i + '"><span class="key">' + (POT_TASTI[i] || (i + 1)) + '</span>' +
                 '<span class="ic">\uD83E\uDDEA</span><div class="pips"></div><div class="cdveil hidden"></div></div>';
       }
       bar.innerHTML = html; this._beltSig = null;
@@ -1044,7 +1065,10 @@
       });
       // --- il catalogo ---
       const sub = $('potionCatSub');
-      if (sub) sub.textContent = 'Clicca una pozione per metterla nello slot ' + (this._potSel + 1) + '. Un tipo per slot: quelle già in cintura sono spente.';
+      // v2.16 — gli slot si chiamano col loro TASTO (Q ed E), non col numero: i numeri adesso sono le
+      // abilita', e dire «slot 1» mandando il giocatore a premere 1 sarebbe un invito a sbagliare.
+      const TASTI = ['Q', 'E'];
+      if (sub) sub.textContent = 'Clicca una pozione per metterla nello slot ' + (TASTI[this._potSel] || (this._potSel + 1)) + '. Un tipo per slot: quelle già in cintura sono spente.';
       const cat = $('potionCat'); cat.innerHTML = '';
       d.list.forEach(it => {
         const dove = d.belt.findIndex(s => s && s.id === it.id);
@@ -1053,7 +1077,7 @@
         el.className = 'pc' + (dove >= 0 && !suo ? ' in' : '') + (suo ? ' pick' : '');
         el.innerHTML = '<div class="ic">' + it.icon + '</div><div><div class="nm" style="color:' + it.color + '">' + esc(it.name) + '</div>' +
           '<div class="ds">' + esc(it.desc) + ' \u00b7 ' + esc(it.dur) + '</div>' +
-          (dove >= 0 && !suo ? '<span class="tag">\u2014 già nello slot ' + (dove + 1) + '</span>' : '') +
+          (dove >= 0 && !suo ? '<span class="tag">\u2014 già nello slot ' + (TASTI[dove] || (dove + 1)) + '</span>' : '') +
           '</div><div class="cost">\uD83E\uDE99' + it.cost + '</div>';
         if (dove < 0) el.onclick = () => { if (cb.pick) cb.pick(this._potSel, it.id); };
         cat.appendChild(el);

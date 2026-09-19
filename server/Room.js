@@ -177,7 +177,10 @@ class Room {
       id: pid, conn, connected: true, name: (name || 'Eroe').slice(0, 16), heroId: hero.id, hero,
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
       hp: hero.hp, maxHp: hero.hp, dead: false, down: false, downT: 0, fireCd: 0, facing: 0,
-      input: { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false, pot: 0 }, cdQ: 0, cdE: 0, cdQMax: 0, cdEMax: 0, cdDash: 0, abil: { q: null, e: null }, abilDovute: [], carica: null, turbine: null, salva: null, scudoAb: null, veloCrit: 0, buffs: {},
+      // v2.16 — TRE SLOT, e si chiamano come i tasti che li attivano. `abil` era `{q, e}` e le ricariche
+      // erano quattro variabili sciolte (cdQ, cdE, cdQMax, cdEMax): con un terzo slot sarebbero diventate
+      // sei, e col quarto otto. Adesso sono array indicizzati 0-2, cioe' slot 1-3 meno uno.
+      input: { mx: 0, my: 0, aim: 0, shoot: false, ab: 0, dash: false, pot: 0 }, cdAb: [0, 0, 0], cdAbMax: [0, 0, 0], cdDash: 0, abil: [null, null, null], abilDovute: [], carica: null, turbine: null, salva: null, scudoAb: null, veloCrit: 0, buffs: {},
       // v1.71 — LA CINTURA: tre slot, ognuno null oppure { id, n }. Il cooldown e' UNO SOLO per tutti e
       // tre (potCd), altrimenti basterebbe alternare gli slot per bere tre volte di fila.
       belt: Pot.newBelt(), potCd: 0, potCdMax: Pot.COOLDOWN,
@@ -225,8 +228,8 @@ class Room {
     // che si fa con le mani (colpire, scattare, bere): la mira no, quella non sposta niente.
     // Non c'e' rischio di restare incastrati: la riga scade da sola dopo STORIA_RIGA secondi.
     if (this.storia) { p.input.mx = 0; p.input.my = 0; p.input.aim = i.aim || 0;
-      p.input.shoot = false; p.input.q = false; p.input.e = false; p.input.dash = false; p.input.pot = 0; return; }
-    p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.q = !!i.q; p.input.e = !!i.e; p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
+      p.input.shoot = false; p.input.ab = 0; p.input.dash = false; p.input.pot = 0; return; }
+    p.input.mx = MU.clamp(i.mx || 0, -1, 1); p.input.my = MU.clamp(i.my || 0, -1, 1); p.input.aim = i.aim || 0; p.input.shoot = !!i.shoot; p.input.ab = Math.max(0, Math.min(Ab.SLOTS, i.ab | 0)); p.input.dash = !!i.dash; p.input.pot = Math.max(0, Math.min(Pot.SLOTS, i.pot | 0)); }
 
   // v1.91 — `da` e' la MODALITA' DI PROVA: si parte direttamente dall'ondata voluta invece di rifare
   // quattordici livelli per vedere come si comporta il quindicesimo. Il personaggio non parte nudo — non
@@ -240,7 +243,7 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = { q: null, e: null }; p.abilDovute = []; p.cdQ = 0; p.cdE = 0; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
     this.runStart = this.time;
     this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
     if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
@@ -727,7 +730,16 @@ class Room {
       // v2.7 — IL VILLAGGIO D'APERTURA NON HA UN MENU DIETRO. Alle ondate normali la faglia riporta al
       // menu di fine ondata, perche' da li' si e' venuti. All'ondata 0 non c'e' nessun menu di fine
       // ondata a cui tornare: si e' arrivati dalla cella, e di qui si scende. Quindi si parte.
-      if (this.wave === 0) { this._storiaChiudi(); this.nextWave(); return; }
+      // v2.16 — MA SE C'E' LA PRIMA ABILITA' DA SCEGLIERE, IL PORTALE PORTA AL RIEPILOGO.
+      // Dalla v2.16 la prima attiva si prende al livello 1, cioe' prima di scendere: si parla con
+      // l'anziano, si attraversa la faglia e ci si trova davanti la schermata di fine livello, dove la
+      // scelta e' necessaria per proseguire (lo impone `shopReady`, che e' il server, non il pulsante).
+      // Se non c'e' niente da scegliere — un eroe senza abilita' — si parte come prima.
+      if (this.wave === 0) {
+        this._storiaChiudi();
+        if ([...this.players.values()].some(q => q.connected && this._scelteInCoda(q))) { this.riapriMenu(); return; }
+        this.nextWave(); return;
+      }
       this.riapriMenu(); return;
     }
   }
@@ -1549,20 +1561,20 @@ class Room {
   // Lo slot Q si sblocca al livello 6, lo slot E al 12. I NUMERI non stanno qui: stanno tutti in
   // shared/abilities.js, e questo blocco si limita a farli succedere. Aggiungere un'abilita' nuova
   // vuol dire una riga di tabella li' e un ramo dello switch qui — non toccare nient'altro.
-  abilitaDi(p, slot) { const id = p.abil ? p.abil[slot] : null; return id ? Ab.BY_ID[id] : null; }
-  useQ(p) { this._usaAbilita(p, 'q'); }
-  useE(p) { this._usaAbilita(p, 'e'); }
+  // slot 1-3; dentro `p.abil` e `p.cdAb` l'indice e' slot-1.
+  abilitaDi(p, slot) { const id = (p.abil && slot >= 1 && slot <= Ab.SLOTS) ? p.abil[slot - 1] : null; return id ? Ab.BY_ID[id] : null; }
+  useAbil(p, slot) { this._usaAbilita(p, slot); }
   _usaAbilita(p, slot) {
     // IL MERCENARIO NON HA ABILITA'. Come per l'esperienza, le monete e la chiave dei prigionieri: non
     // e' un giocatore per le regole del gioco, e' un compagno d'arme che mena.
     if (!p || p.dead || p.down || p.merc) return false;
     const a = this.abilitaDi(p, slot); if (!a) return false;
-    if ((slot === 'q' ? p.cdQ : p.cdE) > 0) return false;
+    if ((p.cdAb[slot - 1] || 0) > 0) return false;
     // Un'abilita' puo' RIFIUTARSI di partire (il Marchio senza bersaglio): in quel caso non consuma
     // la ricarica. Trenta secondi buttati per una mira sbagliata sarebbero una punizione, non una regola.
     if (this._eseguiAbilita(p, a) === false) return false;
     const t = Math.max(1, a.cd * (p.stats.cdrMult || 1));
-    if (slot === 'q') { p.cdQ = t; p.cdQMax = t; } else { p.cdE = t; p.cdEMax = t; }
+    p.cdAb[slot - 1] = t; p.cdAbMax[slot - 1] = t;
     this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
     return true;
   }
@@ -1859,8 +1871,11 @@ class Room {
     // mette su un bersaglio che sta per morire davvero, non su quello piu' comodo.
     if (m.marchio > 0 && m.marchioBy) {
       const mk = this.players.get(m.marchioBy);
-      if (mk && mk.abil && mk.abil.e === 'ab_marchio' && mk.cdE > 0) {
-        mk.cdE = Math.max(0, mk.cdE - (mk.cdEMax || 45) * (m.marchioRim || 0.5));
+      // v2.16 — il Marchio non sta piu' «nello slot E»: si cerca in QUALE slot e', perche' domani
+      // potrebbe stare nel terzo. Cercarlo per nome dello slot era un accoppiamento nascosto.
+      const iMk = mk && mk.abil ? mk.abil.indexOf('ab_marchio') : -1;
+      if (iMk >= 0 && mk.cdAb[iMk] > 0) {
+        mk.cdAb[iMk] = Math.max(0, mk.cdAb[iMk] - (mk.cdAbMax[iMk] || 45) * (m.marchioRim || 0.5));
         this.events.push({ t: 'marchio_ok', x: m.x, y: m.y, who: mk.id });
       }
     }
@@ -1986,8 +2001,7 @@ class Room {
       // v1.85 — ai livelli 6 e 12 non arriva una passiva ma uno SLOT: si sceglie fra le due abilita'
       // attive di quello slot. Sta nella stessa coda differita, per la stessa ragione: in mezzo
       // all'ondata nessuno legge due carte, e in cooperativa non si mette in pausa il mondo per uno.
-      const slot = Lv.slotPerLivello(p.level);
-      if (slot && !p.abil[slot]) { p.abilDovute = p.abilDovute || []; p.abilDovute.push(slot); }
+      this._slotDovuto(p, p.level);
       const r = Lv.rankForLevel(p.level);
       if (r > Lv.rankForLevel(p.level - 1)) this._rankUp(p, r);
       // l'evento parte SEMPRE, anche in mezzo alla battaglia: il "LEVEL UP" sopra la testa e il suo
@@ -2004,6 +2018,21 @@ class Room {
   // quindi l'offerta semplicemente non parte — nessun ramo da aggiungere quando le abilita' ci saranno.
   // v1.79 — il rango da' un punto (non la prima fascia, che e' il titolo di partenza, e non l'ultima,
   // che da' la SPECIALIZZAZIONE). Le carte di rango non esistono: al loro posto ci sono gli scaglioni.
+  // v2.16 — LO SLOT DOVUTO A UN LIVELLO, in un posto solo. Serve due volte: quando si sale di livello e
+  // — nuovo — all'INIZIO della partita, perche' la prima attiva si prende al livello 1, cioe' a un
+  // livello che non si "raggiunge" mai e che quindi nessun level-up avrebbe mai annunciato.
+  //
+  // Uno slot entra in coda solo se ha davvero delle abilita' dentro: il terzo e' ancora vuoto (Paolo ci
+  // deve pensare) e metterlo in coda bloccherebbe il giocatore su una scelta senza scelte, al 13, per
+  // sempre. Il giorno che si riempie, questa riga se ne accorge da sola.
+  _slotDovuto(p, L) {
+    const slot = Lv.slotPerLivello(L);
+    if (!slot || !p.abil || p.abil[slot - 1]) return false;
+    if (!Ab.perSlot(p.heroId, slot).length) return false;
+    p.abilDovute = p.abilDovute || [];
+    if (p.abilDovute.indexOf(slot) < 0) p.abilDovute.push(slot);
+    return true;
+  }
   _rankUp(p, r) {
     p.points += Lv.puntiPerRango(r);
     if (r >= Lv.RANK_SPEC) { p.specOffer = Lv.specsFor(p.heroId).map(x => x.id); p.rankOffer = null; }
@@ -2205,9 +2234,11 @@ class Room {
   offerAbilita(p, slot) {
     const due = Ab.perSlot(p.heroId, slot);
     p.boonOffer = due.map(a => a.id); p.boonPicked = due.length === 0;
-    const rar = slot === 'q' ? 'rare' : 'divine';
+    // v2.16 — il grado con cui si presenta lo slot: il primo e' raro, gli altri divini. Serve solo al
+    // colore della banda, non al gioco.
+    const rar = slot === 1 ? 'rare' : 'divine';
     this.sendTo(p.id, {
-      t: C.MSG.OFFER_BOON, abil: 1, slot, tasto: slot.toUpperCase(), tier: rar,
+      t: C.MSG.OFFER_BOON, abil: 1, slot, tasto: String(slot), tier: rar,
       tierName: (C.RARITY[rar] || {}).name || rar, tierColor: (C.RARITY[rar] || {}).color || '#fff',
       resta: (p.abilDovute || []).length + (p.scaglioniDovuti || []).length, liv: p.level,
       boons: due.map(a => ({ id: a.id, name: a.name, icon: a.icon, rarity: rar, hero: p.heroId,
@@ -2219,10 +2250,10 @@ class Room {
     const a = Ab.BY_ID[id]; if (!a || a.hero !== p.heroId) return;
     if (!p.abilDovute || p.abilDovute[0] !== a.slot) return;
     p.abilDovute.shift();
-    p.abil[a.slot] = id;
-    if (a.slot === 'q') { p.cdQ = 0; p.cdQMax = a.cd; } else { p.cdE = 0; p.cdEMax = a.cd; }
+    p.abil[a.slot - 1] = id;
+    p.cdAb[a.slot - 1] = 0; p.cdAbMax[a.slot - 1] = a.cd;
     p.boonOffer = null; p.boonPicked = true;
-    this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: a.slot.toUpperCase(), cd: a.cd } });
+    this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: String(a.slot), cd: a.cd } });
     if (this.phase === C.PHASE_SHOP) this.offerBoon(p);   // se resta altro in coda si presenta subito
   }
   // ============================================================================================
@@ -2378,7 +2409,17 @@ class Room {
   }
   // v1.79 — il pulsante centrale del menu: "sono pronto per la mappa successiva". Non sceglie piu' una
   // destinazione — il villaggio ha un pulsante suo.
-  shopReady(pid, dest) { const p = this.players.get(pid); if (!p) return; p.ready = true; }
+  // v2.16 — NON SI ENTRA NEL LIVELLO CON UNA SCELTA APPESA. Serve per la prima attiva, che si prende al
+  // livello 1: il giocatore parla con l'anziano, e il portale della faglia lo porta al riepilogo dove
+  // l'abilita' va scelta. Il blocco sta QUI, sul server, e non sul pulsante del client: un pulsante
+  // grigio si aggira, e cio' che decide se l'ondata parte e' questo metodo.
+  // Se la scelta e' in sospeso la si RIPROPONE invece di ignorare il clic in silenzio, se no il
+  // giocatore preme e non capisce perche' non succede niente.
+  shopReady(pid, dest) {
+    const p = this.players.get(pid); if (!p) return;
+    if (this._scelteInCoda(p)) { this.offerBoon(p); return; }
+    p.ready = true;
+  }
   // v1.79 — VAI AL VILLAGGIO. E' una mappa condivisa: ci si entra tutti insieme, come si usciva tutti
   // insieme dal portale. Vale la stessa regola del portale — il primo che decide trascina la stanza.
   vaiAlVillaggio(pid) {
@@ -2696,7 +2737,7 @@ class Room {
   updatePlayers(dt) {
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      p.fireCd = Math.max(0, p.fireCd - dt); p.cdQ = Math.max(0, p.cdQ - dt); p.cdE = Math.max(0, p.cdE - dt); p.cdDash = Math.max(0, p.cdDash - dt);
+      p.fireCd = Math.max(0, p.fireCd - dt); for (let q = 0; q < p.cdAb.length; q++) p.cdAb[q] = Math.max(0, p.cdAb[q] - dt); p.cdDash = Math.max(0, p.cdDash - dt);
       // v1.79.2 — quanto sei fermo (Concentrazione: conta il movimento CHIESTO, non quello ottenuto, se no
       // bastava spingersi contro un muro), la finestra del critico dopo lo scatto e la ricarica dell'uscita.
       p.fermoT = (Math.abs(p.input.mx) < 0.01 && Math.abs(p.input.my) < 0.01) ? (p.fermoT || 0) + dt : 0;
@@ -2814,10 +2855,13 @@ class Room {
       } else { p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
       p.aim = p.input.aim; p.facing = p.input.aim;
       if (p.input.shoot && !p.buffs.dash) this.firePlayerWeapon(p);
-      if (p.input.q && !p._qH) this.useQ(p); if (p.input.e && !p._eH) this.useE(p); if (p.input.dash && !p._dH) this.useDash(p);
+      // v2.16 — un numero solo invece di due booleani: come gia' faceva la cintura, l'abilita' parte
+      // sul FRONTE di salita (tenere premuto non la ripete).
+      if (p.input.ab && p.input.ab !== p._abH) this.useAbil(p, p.input.ab);
+      if (p.input.dash && !p._dH) this.useDash(p);
       // v1.71 — il tasto della cintura vale sul FRONTE di salita: tenerlo premuto beve una volta sola.
       if (p.input.pot && p.input.pot !== p._potH) this.usePotion(p, p.input.pot - 1);
-      p._qH = p.input.q; p._eH = p.input.e; p._dH = p.input.dash; p._potH = p.input.pot;
+      p._abH = p.input.ab; p._dH = p.input.dash; p._potH = p.input.pot;
     }
   }
   updateMonsters(dt) {
@@ -2994,11 +3038,13 @@ class Room {
       const gz = p.buffs.gz_weaken > 0 ? 'weaken' : p.buffs.gz_slow > 0 ? 'slow' : p.buffs.gz_sunder > 0 ? 'sunder' : 0;
       if (gz) o.gz = gz;
       // v1.85 — l'ID dell'abilita' viaggia quando CAMBIA (due volte per partita), la ricarica finche' scorre.
+      // v2.16 — tre slot: `ab` e' l'elenco degli id (viaggia quando CAMBIA, tre volte per partita) e
+      // `cab` le ricariche che scorrono. Prima erano quattro campi sciolti (aq, ae, cq, ce) e ogni slot
+      // nuovo ne avrebbe aggiunti altri due.
       if (p.abil) {
-        if (p.abil.q && (nuovo || p._aq !== p.abil.q)) { o.aq = p.abil.q; p._aq = p.abil.q; }
-        if (p.abil.e && (nuovo || p._ae !== p.abil.e)) { o.ae = p.abil.e; p._ae = p.abil.e; }
-        if (p.cdQ > 0) o.cq = +p.cdQ.toFixed(1);
-        if (p.cdE > 0) o.ce = +p.cdE.toFixed(1);
+        const firma = p.abil.join('|');
+        if (nuovo || p._afirma !== firma) { o.ab = p.abil.slice(); p._afirma = firma; }
+        if (p.cdAb.some(x => x > 0)) o.cab = p.cdAb.map(x => +x.toFixed(1));
       }
       if (p.scudoAb && p.scudoAb.hp > 0) o.sc = 1;      // la bolla dello Scudo di Mana
       if (p.buffs.giuramento > 0 && p.giurScudo) o.gi = 1;

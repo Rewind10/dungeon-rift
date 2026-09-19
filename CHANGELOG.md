@@ -2,6 +2,70 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.16.0] — 2026-09-19 · "La progressione rifatta"
+
+Piano: `PIANO-PROGRESSIONE.md`. Nasce da un'osservazione di Paolo — *«ci sono abilità passive e solo 2
+attive»* — verificata coi numeri: le attive si sbloccavano ai livelli 8 e 14, che con la curva
+dell'esperienza vera arrivano all'**ondata 12 e 18 di 20**. Undici ondate su venti col solo clic sinistro.
+
+#### 🪜 La scaletta
+Attive ai livelli **1, 7, 13**; passive a **3, 5, 9, 11**; specializzazione al 15. Otto momenti
+distribuiti invece di sei ammassati in fondo, e si comincia **con un'abilità in mano**.
+
+#### ⚡ La prima attiva si sceglie prima di scendere
+Si parla con l'anziano, si attraversa la faglia e ci si trova davanti la schermata di fine livello: la
+scelta è necessaria per proseguire. Il blocco è su `shopReady`, cioè **sul server** — che ripropone la
+scelta invece di ignorare il clic in silenzio. Un pulsante grigio si aggira; il metodo che decide se
+l'ondata parte, no.
+
+#### ⌨️ I tasti si sono scambiati il mestiere
+**1 2 3** → abilità (da due slot a tre) · **Q E** → pozioni (da tre slot a due). Vanno insieme: tre
+abilità non stanno su due tasti, e due pozioni non hanno bisogno di tre. Il terzo slot **non ha ancora
+nessuna abilità dentro** (Paolo ci vuole riflettere): si vede tratteggiato e dice «in arrivo», e il
+livello 13 per ora dà solo il punto statistica. Uno slot vuoto non entra mai nella coda delle scelte —
+bloccherebbe il giocatore su una scelta senza scelte.
+
+#### 🎖️ I ranghi diventano scenici
+Davano un punto statistica ciascuno (le fasce 2-5). Ora danno il titolo e basta.
+
+> ⚠️ **Il prezzo, in cifre.** Il budget di una partita passa da **18 punti a 14**: −22% su un sistema in
+> cui i punti sono l'unica cosa che alza danno e PV. Deciso da Paolo sapendo la cifra. Se il personaggio
+> risulterà troppo magro, la via che ha in mente è alzare le **statistiche di base**, non rimettere i
+> punti sui ranghi.
+
+#### 💾 `FORMATO` 2 → 3: i salvataggi di prima si rifiutano
+La cintura è scritta come tre slot e `abil` come `{q, e}`. Si potrebbe convertire, ma un salvataggio
+mezzo convertito è peggio di uno rifiutato. Stessa scelta della v2.12.
+
+#### 🧹 Dentro
+- `p.abil` e le ricariche erano **quattro variabili sciolte** (`cdQ`, `cdE`, `cdQMax`, `cdEMax`): col
+  terzo slot sarebbero diventate sei, col quarto otto. Ora sono array, e lo snapshot porta un elenco
+  (`ab`, `cab`) invece di quattro campi.
+- Il **Marchio** non si cerca più «nello slot E» ma **in quale slot è**: era un accoppiamento nascosto
+  che si sarebbe rotto il giorno in cui l'abilità cambia posto.
+- `_slotDovuto()` decide in **un posto solo** cosa è dovuto a un livello, e serve due volte: al salire di
+  livello e all'inizio partita — perché il livello 1 non si "raggiunge" mai, quindi nessun level-up lo
+  avrebbe annunciato.
+- Il pannello non riscrive più la scaletta a mano: la **legge da `levels.js`**. Scritta due volte, prima
+  o poi le due copie si allontanano e il pannello mente.
+
+#### 🧪 I test
+**3297 passati, 0 falliti**, più tre controlli nel browser.
+- **Nuovo `prova-tasti`**: preme davvero i tasti e guarda cosa esce da `Input.build`. Se il client
+  mandasse ancora i vecchi campi `q`/`e`, il server leggerebbe zero e non succederebbe niente — in
+  silenzio, che è il modo peggiore.
+- **La prova della scaletta rifà il conto delle ondate a ogni esecuzione**: se qualcuno tocca l'XP o la
+  composizione delle ondate e le scelte scivolano in fondo, si rompe lì e non in partita. È la misura da
+  cui è nata questa versione, diventata il test che impedisce di ricrearla.
+- Una trentina di test affermavano la vecchia scaletta: **riscritti, non tolti**.
+- L'aiuto in cima a `simulate.js` sceglie la prima attiva da solo, come già salta il prologo: dichiarato,
+  in un posto solo, e i test della scelta passano dalla strada vera (`avviaSenzaAbilita`).
+- **TEST 38 seminato**: falliva una volta su quattro. Non era la coda — se nell'ondata sorteggiata
+  capitano delle **larve**, quelle si fanno esplodere da sole, liberano posto e la coda ne versa altre.
+  L'asserzione dipendeva dal sorteggio; l'invariante vera (coda e contatore coincidono) no.
+
+---
+
 ### [2.15.3] — 2026-09-17 · "Le calzature del mago"
 
 Il mago aveva **due** slot (arma, armatura), il guerriero e il ladro **tre**. Non è una regressione

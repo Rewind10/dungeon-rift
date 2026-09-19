@@ -30,19 +30,36 @@
   // I LIVELLI DOVE SI SCEGLIE UN'ABILITA' PASSIVA. Il 15 non e' qui: quello e' la specializzazione,
   // che e' un'altra cosa.
   //
-  // v1.87 — LE QUATTRO PASSIVE RESTANO QUELLE, AI LORO LIVELLI. Nella 1.85 erano scese a due (3 e 9) per
-  // fare posto alle abilita' attive: era un baratto che nessuno aveva chiesto, e toglieva meta' della
-  // crescita del personaggio per aggiungere un tasto. Le attive si prendono ai livelli **8 e 14**, che
-  // sono liberi: si SOMMANO alla progressione invece di sostituirne un pezzo.
+  // ============================================================================================
+  // v2.16 — LA SCALETTA RIFATTA: si alterna, e si comincia con un'abilita' in mano
+  // ============================================================================================
+  // Com'era, e perche' non andava. Le passive stavano ai livelli 3-6-9-12 e le attive a 8 e 14.
+  // Misurato incrociando la curva dell'XP con quella che le ondate mettono davvero a terra: il livello 8
+  // arriva all'ondata 12 di 20 e il 14 all'ondata 18. Cioe' per UNDICI ondate su venti il giocatore
+  // aveva in mano il clic sinistro e lo scatto, e la seconda abilita' arrivava a due ondate dalla fine —
+  // la sceglievi e il gioco finiva. Parole di Paolo: «ci sono abilita' passive e solo 2 attive».
+  //
+  // Adesso i due elenchi si ALTERNANO sui livelli dispari, e la prima attiva si prende al livello 1,
+  // prima ancora di entrare nel primo livello. Le ondate a cui arrivano sono misurate, non stimate:
+  //
+  //    liv 1 -> ondata 1    ·  liv 3 -> ondata 4   ·  liv 5 -> ondata 8   ·  liv 7 -> ondata 11
+  //    liv 9 -> ondata 13   ·  liv 11 -> ondata 15 ·  liv 13 -> ondata 17 ·  liv 15 -> ondata 19
+  //
+  // Otto momenti distribuiti invece di sei ammassati in fondo. Il TEST della scaletta rifa' questo conto
+  // a ogni esecuzione: se qualcuno tocca l'XP o la composizione delle ondate, se ne accorge li'.
   const SCAGLIONI = [
     { lvl: 3,  tier: 'uncommon' },
-    { lvl: 6,  tier: 'rare' },
+    { lvl: 5,  tier: 'rare' },
     { lvl: 9,  tier: 'epic' },
-    { lvl: 12, tier: 'divine' },
+    { lvl: 11, tier: 'divine' },
   ];
-  // I due livelli delle ABILITA' ATTIVE. Stanno qui e non in abilities.js perche' e' la progressione a
-  // decidere QUANDO si sblocca uno slot; abilities.js decide COSA c'e' dentro.
-  const ABIL_SLOT = [{ lvl: 8, slot: 'q' }, { lvl: 14, slot: 'e' }];
+  // I livelli delle ABILITA' ATTIVE. Stanno qui e non in abilities.js perche' e' la progressione a
+  // decidere QUANDO si sblocca uno slot; abilities.js decide COSA c'e' dentro. Gli slot sono numerati
+  // come i tasti che li attivano (1, 2, 3) — dalla v2.16 le abilita' stanno sui numeri e le pozioni su
+  // Q ed E, che e' il contrario di prima.
+  // Il TERZO slot esiste gia' qui ma e' VUOTO in abilities.js: Paolo ci vuole riflettere. Fino ad allora
+  // il livello 13 da' solo il punto statistica e il terzo riquadro si vede spento.
+  const ABIL_SLOT = [{ lvl: 1, slot: 1 }, { lvl: 7, slot: 2 }, { lvl: 13, slot: 3 }];
   function slotPerLivello(L) { for (const a of ABIL_SLOT) if (a.lvl === L) return a.slot; return null; }
   // Il prossimo livello in cui si sceglie QUALCOSA (passiva o attiva), dopo il livello L.
   function prossimaScelta(L) {
@@ -97,8 +114,13 @@
   const RANK_SPEC = 6;          // la sesta fascia e' la specializzazione
   function rankForLevel(L) { let r = 1; for (let i = 0; i < RANK_LEVELS.length; i++) if (L >= RANK_LEVELS[i]) r = i + 1; return r; }
   function levelForRank(r) { return RANK_LEVELS[Math.max(0, Math.min(RANK_LEVELS.length - 1, r - 1))]; }
-  // Punti guadagnati salendo di rango: la fascia di partenza e quella della specializzazione non ne danno.
-  function puntiPerRango(r) { return (r >= 2 && r <= 5) ? POINTS_PER_RANK : 0; }
+  // v2.16 — I RANGHI SONO SOLO SCENICI. Davano un punto statistica ciascuno (le fasce 2-5, quattro punti
+  // in tutto); adesso danno il titolo e basta. Deciso da Paolo sapendo il prezzo, che e' stato misurato e
+  // va scritto qui perche' non lo si riscopra per caso: il budget di una partita passa da 18 punti a 14,
+  // cioe' -22%, su un sistema in cui i punti sono l'unica cosa che alza danno e PV. Se un giorno il
+  // personaggio risultasse troppo magro, la via che Paolo ha in mente e' alzare le STATISTICHE DI BASE,
+  // non rimettere i punti qui.
+  function puntiPerRango(r) { return 0 * r * POINTS_PER_RANK; }
 
   // Sei fasce, non piu' cinque: la prima e' il titolo con cui si comincia (livelli 1-2), l'ultima e' la
   // specializzazione e non ha un nome fisso.

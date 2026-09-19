@@ -58,9 +58,11 @@
           vivi.add(p.i);
           if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h, mc: p.mc || 0, pal: p.pal || null });
           // v1.85 — l'id dell'abilita' viaggia solo quando cambia: qui resta appiccicato al giocatore.
-          if (p.aq !== undefined || p.ae !== undefined) { const e = P.get(p.i) || {}; if (p.aq !== undefined) e.aq = p.aq; if (p.ae !== undefined) e.ae = p.ae; P.set(p.i, e); }
+          // v2.16 — le abilita' viaggiano come UN elenco (`ab`) invece di due campi sciolti (aq/ae):
+          // con tre slot sarebbero diventati sei campi, e con quattro otto.
+          if (p.ab !== undefined) { const e = P.get(p.i) || {}; e.ab = p.ab; P.set(p.i, e); }
           const st = P.get(p.i);
-          if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; p.aq = st.aq || null; p.ae = st.ae || null; }   // v1.82 — anche mercenario e tinta
+          if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; p.ab = st.ab || null; }   // v1.82 — anche mercenario e tinta
           p.d = p.d || 0; p.dn = p.dn || 0; p.dt = p.dt || 0; p.bf = p.bf || 0; p.bar = p.bar || 0;
           p.dash = p.dash || 0; p.ph = p.ph || 0; p.iv = p.iv || 0; p.cu = p.cu || 0;
           p.arm = p.arm || null; p.stv = p.stv || null;   // v1.88 — armatura e calzature

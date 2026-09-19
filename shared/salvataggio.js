@@ -42,7 +42,13 @@
   // esploderebbe — `effWeapon` e `bonusOf` ignorano gli ID che non conoscono — e sarebbe molto peggio:
   // ripartiresti disarmato e senza bonus, senza nessun errore, con un personaggio che sembra rotto senza
   // che si capisca perche'. Meglio un rifiuto pulito: si rigioca dall'inizio, e si sa il motivo.
-  const FORMATO = 2;
+  // v2.16 — FORMATO 3. La cintura e' passata da tre slot a due e le abilita' attive da due slot a tre:
+  // un pacchetto vecchio ha la cintura lunga tre e `abil` scritto come {q, e}. Si potrebbe convertire,
+  // ma un salvataggio mezzo convertito e' peggio di uno rifiutato — e la regola di questo file e' che un
+  // salvataggio si carica INTERO o si rifiuta INTERO. Come nella v2.12, quando cambiarono i 104 id
+  // dell'equipaggiamento: chi ha un pacchetto di prima riceve un messaggio chiaro, non una partita
+  // sbagliata di nascosto.
+  const FORMATO = 3;
 
   const CHIAVE = 'dr_salvataggio';     // dove sta in localStorage
   const COSTO = 10;                    // le monete dell'Ostessa

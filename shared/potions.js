@@ -30,7 +30,10 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const SLOTS = 3;          // slot della cintura
+  // v2.16 — DUE SLOT, NON PIU' TRE. Le pozioni si sono spostate sui tasti Q ed E (prima 1-2-3), e i
+  // numeri sono passati alle abilita' attive, che dalla v2.16 sono tre. Due tasti, due slot: la cintura
+  // segue la tastiera, non il contrario.
+  const SLOTS = 2;          // slot della cintura
   const MAX_CHARGES = 3;    // cariche per slot
   const COOLDOWN = 6;       // secondi fra un consumabile e l'altro, CONDIVISO fra i tre slot
   const REFUND = 0.5;       // rimborso sulle cariche rimaste quando si cambia il tipo di uno slot
