@@ -957,17 +957,23 @@ h2.info-h:not(:first-child){margin-top:17px}
 #sceltaBanda #boonSection,#sceltaBanda #rankSection{display:flex;flex-direction:column;align-items:center}
 #sceltaBanda .rank-sub{font-size:11px;margin:0 0 6px;line-height:1.3}
 #sceltaBanda #boonCards,#sceltaBanda #rankCards{display:flex;flex-wrap:wrap;gap:7px;margin:0;max-width:none}
-#sceltaBanda .bc{flex:none;width:84px;height:84px;min-height:0;
-  flex-direction:column;align-items:center;justify-content:center;text-align:center;
-  padding:6px 4px;gap:3px;border-radius:12px;border-width:2px}
-#sceltaBanda .bc:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(176,97,255,.25)}
-#sceltaBanda .bc .icon{font-size:26px;line-height:1;flex:none;min-height:0}
-#sceltaBanda .bc .tx{min-width:0;width:100%}
-#sceltaBanda .bc .nm{font-size:9.5px;font-weight:800;line-height:1.1;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* la descrizione e l'etichetta stanno nel titolo: a 84px di lato non ci starebbero, e infilarcele
-   piccolissime vorrebbe dire scrivere qualcosa che nessuno legge. */
-#sceltaBanda .bc .ds,#sceltaBanda .bc .ab,#sceltaBanda .bc .rar,#sceltaBanda .bc .own{display:none}
+/* v2.16.3 — LE CARTE DELLA BANDA COME QUELLE DELL'ARMERIA.
+   Erano quadrati da 84px con la descrizione nascosta nel `title`: si leggeva una carta per volta, col
+   mouse fermo sopra — cioe' il contrario di cio' che serve quando si deve SCEGLIERE fra tre. Adesso
+   sono carte orizzontali: icona a sinistra, nome nel colore del grado, sotto il grado e «per tutti /
+   della tua classe», e la descrizione per esteso. Stessa forma del negozio del fabbro, stesso modo di
+   leggersi. */
+#sceltaBanda .bc{flex:none;width:250px;height:auto;min-height:0;
+  flex-direction:row;align-items:flex-start;justify-content:flex-start;text-align:left;
+  padding:11px 12px 12px;gap:10px;border-radius:14px;border-width:2px}
+#sceltaBanda .bc:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(176,97,255,.25)}
+#sceltaBanda .bc .icon{font-size:26px;line-height:1.1;flex:none;min-height:0;width:30px;text-align:center}
+#sceltaBanda .bc .tx{min-width:0;flex:1}
+#sceltaBanda .bc .nm{font-size:14.5px;font-weight:800;line-height:1.2}
+#sceltaBanda .bc .rar{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  color:#8b93a7;line-height:1.3;margin-top:1px}
+#sceltaBanda .bc .ds{font-size:12.5px;color:#c3b79f;line-height:1.3;margin-top:4px;display:block}
+#sceltaBanda .bc .ab,#sceltaBanda .bc .own{display:none}
 
 
 /* ============================================================================================

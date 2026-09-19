@@ -2,6 +2,42 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.16.3] — 2026-09-19 · "La scaletta dice la verità, e le carte della scelta si leggono"
+
+Tre cose segnalate da Paolo con le schermate alla mano.
+
+#### 🐛 «— saltata» su un'abilità appena scelta (per la seconda volta)
+La v2.16.2 aveva fatto leggere le abilità al pannello da `inv.abil`, che il server manda dentro
+`OFFER_SHOP`. Giusto, ma **mancava metà del lavoro**: dopo la scelta il server non rimandava il
+pannello, quindi il client continuava a rendere la copia di **prima** della scelta. La riga diceva
+ancora «saltata». Ora `_prendiAbilita` rimanda `offerShop(p)` — `offerShop` e non `_inviaPannello`, che
+rifarebbe tutto il giro delle offerte e riaprirebbe una scelta già chiusa.
+
+#### 🐛 «Da scegliere adesso» su DUE righe (liv. 1 e liv. 5)
+Quando il pannello offre un'abilità attiva, il server ci mette dentro un `tier` — `rare` per il primo
+slot, `divine` per gli altri — che serve **solo a colorare la banda**. La scaletta lo prendeva per buono
+e accendeva anche la riga della passiva **rara del livello 5**: due righe che chiedevano una scelta
+quando la scelta era una sola. Ora il `tier` si guarda solo quando l'offerta **non** è un'abilità.
+
+Stessa bugia, stesso posto: sulla carta dell'abilità c'era scritto «Raro». Adesso c'è scritto quello che
+è — **⚡ attiva · tasto 1 · ricarica 30s**.
+
+#### 🃏 Le carte della scelta come quelle dell'armeria
+Erano quadrati da 84px con la descrizione **nascosta nel tooltip**: si leggeva una carta per volta, col
+mouse fermo sopra — il contrario di ciò che serve quando bisogna sceglierne una fra tre. Ora sono carte
+**orizzontali da 250px**: icona a sinistra, nome nel colore del grado, sotto grado e «per tutti / della
+tua classe» (o il tasto e la ricarica, se è un'attiva), e la descrizione per esteso. **`el.title`
+rimosso**, come al fabbro: l'informazione o è a schermo o non c'è.
+
+#### 🧪 Verificato dalla strada vera
+Non da un fixture comodo: pannello del livello 1 con l'offerta dell'abilità aperta, esattamente come la
+manda il server (`tier` compreso), poi il clic sulla carta e il pannello rimandato. Risultato: **una**
+riga chiede la scelta, le carte sono 250×148 senza tooltip con la descrizione a schermo, e dopo il clic
+la riga del livello 1 dice «⚡ Carica · ricarica 30s». **3297 test passati, 0 falliti**, e i controlli
+nel browser della schermata aggiornati alla forma nuova.
+
+---
+
 ### [2.16.2] — 2026-09-19 · "Due bachi della 2.16, trovati leggendo il codice"
 
 Paolo, con due schermate: *«non hai risolto nulla, inoltre ho preso l'abilità attiva ma segna saltata»*.

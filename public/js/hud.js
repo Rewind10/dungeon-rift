@@ -507,8 +507,22 @@
           // "per tutti / della tua classe" — e' finito nel TITOLO: la rarita' si vede gia' dal colore del
           // bordo, e la classe conta una volta su dieci. Cio' che resta a schermo e' cio' che serve per
           // scegliere: icona, nome, e la riga che dice cosa fa.
-          el.title = b.name + ' \u2014 ' + r.name + ' \u00b7 ' + chi + '\n' + b.desc;
-          el.innerHTML = `<div class="icon">${b.icon}</div><div class="tx"><div class="nm">${b.name}</div><div class="ds">${b.desc}</div></div>`;
+          // v2.16.3 — NIENTE PIU' TOOLTIP, come al fabbro. Le carte della banda erano quadrati da 84px con
+          // la descrizione nascosta nel `title`: si leggeva una carta per volta col mouse fermo sopra,
+          // cioe' il contrario di quello che serve quando si deve SCEGLIERE fra tre. Adesso sono carte
+          // orizzontali come quelle dell'armeria — icona a sinistra, nome nel colore del grado, grado e
+          // «per tutti / della tua classe» sotto, e la descrizione scritta per esteso.
+          el.innerHTML = '<div class="icon">' + b.icon + '</div>'
+            + '<div class="tx">'
+            + '<div class="nm" style="color:' + r.color + '">' + esc(b.name) + '</div>'
+            // su un'ABILITA' ATTIVA il grado non esiste: il `tier` che arriva col pacchetto ('raro',
+            // 'divino') e' solo il colore della banda, e scriverlo sulla carta direbbe una cosa falsa.
+            // Li' si scrive cosa e' davvero: attiva, su che tasto, con che ricarica.
+            + '<div class="rar">' + (this._boons.abil
+                ? ('\u26a1 attiva \u00b7 tasto ' + (this._boons.tasto || '1') + (b.cd ? ' \u00b7 ricarica ' + b.cd + 's' : ''))
+                : (esc(r.name || '') + ' \u00b7 ' + chi)) + '</div>'
+            + '<div class="ds">' + esc(b.desc || '') + '</div>'
+            + '</div>';
           // v2.11.2 — `if (this._boons)` non e' pignoleria. `hideShop()` azzera `_boons`, e se il pannello si
           // chiude nello stesso fotogramma in cui clicchi (cambia la fase: parte l'ondata, o si va al
           // villaggio) questa riga tirava un'eccezione: la scelta arrivava al server ma il pannello NON si
@@ -554,8 +568,14 @@
            { lvl: 13, slot: 3, tasto: '3' }];
       const prese = (this._active || []).filter(b => !b.syn);
       const liv = this._stats ? (this._stats.level || 1) : 1;
-      const inArrivo = this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked ? this._boons.tier : null;
-      const inArrivoSlot = this._boons && this._boons.abil && !this._boons.picked ? this._boons.slot : null;
+      // v2.16.3 — ATTENZIONE AL `tier` DELLE ABILITA'. Quando il pannello offre un'ABILITA' ATTIVA, il
+      // server ci mette dentro un `tier` ('rare' per il primo slot, 'divine' per gli altri) che serve
+      // SOLO a dare un colore alla banda. Qui veniva preso per buono, e cosi' scegliendo l'attiva del
+      // livello 1 si accendeva «da scegliere adesso» anche sulla riga della passiva RARA del livello 5:
+      // due righe che chiedevano una scelta, quando la scelta era una sola.
+      const offertaAperta = !!(this._boons && this._boons.boons && this._boons.boons.length && !this._boons.picked);
+      const inArrivo = (offertaAperta && !this._boons.abil) ? this._boons.tier : null;
+      const inArrivoSlot = (offertaAperta && this._boons.abil) ? this._boons.slot : null;
       const AB = (window.GAME && window.GAME.Abilities) ? window.GAME.Abilities.BY_ID : {};
       let html = '';
       for (const sc of SC) {

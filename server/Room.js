@@ -2259,6 +2259,12 @@ class Room {
     p.cdAb[a.slot - 1] = 0; p.cdAbMax[a.slot - 1] = a.cd;
     p.boonOffer = null; p.boonPicked = true;
     this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: String(a.slot), cd: a.cd } });
+    // v2.16.3 — E SI RIMANDA IL PANNELLO. La scaletta della schermata legge le abilita' da `inv.abil`,
+    // che viaggia dentro OFFER_SHOP: senza questa riga il client resta con la copia di prima della
+    // scelta e la riga continua a dire «saltata» su un'abilita' appena presa — che e' esattamente il
+    // difetto segnalato da Paolo. Si usa `offerShop`, non `_inviaPannello`, per la stessa ragione della
+    // v2.13: `_inviaPannello` rifa' tutto il giro delle offerte e riaprirebbe una scelta gia' chiusa.
+    if (this.phase === C.PHASE_SHOP) this.offerShop(p);
     if (this.phase === C.PHASE_SHOP) this.offerBoon(p);   // se resta altro in coda si presenta subito
   }
   // ============================================================================================
