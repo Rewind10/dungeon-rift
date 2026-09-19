@@ -166,6 +166,14 @@ h2.info-h:not(:first-child){margin-top:17px}
 #modeBanner{position:absolute;top:58px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(12,15,26,.85);border:2px solid var(--gold);border-radius:12px;padding:8px 20px;font-size:16px;opacity:0;transition:opacity .3s,transform .3s;backdrop-filter:blur(6px)}
 #modeBanner.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* v1.12 — barra abilita piu grande e caratteristica */
+/* v2.16.1 — QUANTO E' LARGA QUESTA BARRA LO DICE LEI, NON UN NUMERO SCRITTO A MANO.
+   La barra sta al centro; cintura, riquadro dell'eroe e vitali si appoggiano ai suoi fianchi, e fino
+   alla v2.16 lo facevano con degli scostamenti scritti a mano (`calc(50% + 240px)`) tarati su una barra
+   da QUATTRO riquadri. Passando a cinque — le abilita' sono diventate tre — la barra si e' allargata di
+   108px, cioe' 54 per lato, e la cintura ci e' finita sopra: i tasti Q ed E si sovrapponevano allo
+   scatto. Adesso `--abw` porta la larghezza VERA, misurata dal browser quando la barra si costruisce
+   (hud.js, `buildAbilityBar`), e i tre vicini si posizionano da quella. Il giorno che arriva un quarto
+   slot non si rompe niente. */
 #abilityBar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:16px;padding:10px 14px;background:linear-gradient(180deg,rgba(10,13,24,.55),rgba(8,10,18,.75));border:1px solid rgba(120,140,200,.18);border-radius:20px;backdrop-filter:blur(7px);box-shadow:0 10px 34px rgba(0,0,0,.5)}
 .ab-slot{width:92px;height:88px;border-radius:16px;background:linear-gradient(180deg,#1a2036,#0d1120);border:2px solid var(--line);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:inset 0 2px 10px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.35);transition:transform .12s,border-color .2s,box-shadow .2s}
 .ab-slot:hover{transform:translateY(-3px)}
@@ -192,7 +200,7 @@ h2.info-h:not(:first-child){margin-top:17px}
 .cf-item.out{opacity:0;transform:translateY(-10px) scale(.96)}
 .cf-item b{font-size:22px}
 .cf-item img.gearmini{width:26px;height:26px;vertical-align:middle}
-#vitals{position:absolute;bottom:10px;left:calc(50% + 390px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.55))}
+#vitals{position:absolute;bottom:10px;left:calc(50% + var(--abw, 480px) / 2 + 164px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.55))}
 #hpFlask{position:relative;width:118px;height:148px}
 #hpFlask svg{width:100%;height:100%;overflow:visible}
 #hpFlask.low #hpLiquid{fill:#ff1520}
@@ -510,7 +518,7 @@ h2.info-h:not(:first-child){margin-top:17px}
    vita, dove ci sarebbero due gruppi di icone in competizione nello stesso angolo. */
 /* v1.93.5 — margine dalla barra delle abilita: con quattro slot arriva a centro-222 px, e la cintura
    la copriva dal primo (DX). */
-#beltBar{position:absolute;bottom:20px;right:calc(50% + 240px);display:flex;gap:12px;padding:10px 13px;
+#beltBar{position:absolute;bottom:20px;right:calc(50% + var(--abw, 480px) / 2 + 14px);display:flex;gap:12px;padding:10px 13px;
   background:linear-gradient(180deg,rgba(10,13,24,.55),rgba(8,10,18,.75));border:1px solid rgba(120,140,200,.18);
   border-radius:20px;backdrop-filter:blur(7px);box-shadow:0 10px 34px rgba(0,0,0,.5);pointer-events:none;z-index:24}
 #beltBar.hidden{display:none}
@@ -573,7 +581,9 @@ h2.info-h:not(:first-child){margin-top:17px}
 /* v1.93.5 — sotto i 1440 px la fila non ci sta piu: cintura, quattro abilita, riquadro eroe e ampolla
    somigliano a 1200 px di roba su una riga sola, e la cintura finiva sopra la minimappa. Li sotto la
    cintura sale di una riga, centrata sopra la barra delle abilita. */
-@media (max-width:1440px){#beltBar{right:auto;left:50%;transform:translateX(-50%);bottom:124px}}
+/* v2.16.1 — 140 e non 124: la barra delle abilita' sta a `bottom:20px` ed e' alta 110, quindi arriva a
+   130. A 124 la cintura ci finiva SOPRA di sei pixel — poco, ma abbastanza da vedersi. */
+@media (max-width:1440px){#beltBar{right:auto;left:50%;transform:translateX(-50%);bottom:140px}}
 @media (max-width:900px){#beltBar{right:auto;left:16px;bottom:150px}#potionCat{grid-template-columns:1fr 1fr}}
 
 /* ===== v1.72 — LA TAGLIA IN CORSO, in partita =====
@@ -636,7 +646,7 @@ h2.info-h:not(:first-child){margin-top:17px}
    CARTE ATTIVE (prima una fila di gettoni senza contesto, #boonBar, ora rimossa). Gli slot vuoti restano
    visibili: il tetto di 5 e' una regola, e una regola che non si vede non esiste. */
 /* v1.93.5 — stessa storia dall altra parte: partiva da centro+116 e si mangiava lo slot della E. */
-#heroBox{position:absolute;bottom:20px;left:calc(50% + 240px);width:138px;z-index:24;pointer-events:none;
+#heroBox{position:absolute;bottom:20px;left:calc(50% + var(--abw, 480px) / 2 + 14px);width:138px;z-index:24;pointer-events:none;
   background:linear-gradient(180deg,rgba(10,13,24,.55),rgba(8,10,18,.75));border:1px solid rgba(120,140,200,.18);
   border-radius:16px;padding:9px 10px 10px;backdrop-filter:blur(7px);box-shadow:0 10px 34px rgba(0,0,0,.5);text-align:center}
 #heroBox.hidden{display:none}

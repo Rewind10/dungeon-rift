@@ -54,6 +54,13 @@
         bar.appendChild(el);
       });
       this._abSlot = [null, null, null];
+      // v2.16.1 — e si dice al foglio di stile quanto e' larga: cintura, riquadro dell'eroe e vitali si
+      // appoggiano ai suoi fianchi, e prima lo facevano con uno scostamento scritto a mano tarato su
+      // quattro riquadri. Con cinque la cintura ci finiva sopra. La misura si prende dopo il disegno.
+      try {
+        const w = Math.round(bar.getBoundingClientRect().width);
+        if (w > 0) document.documentElement.style.setProperty('--abw', w + 'px');
+      } catch (e) { /* se il browser non sa misurare resta il valore di riserva del CSS */ }
     },
     updateAbilities(me) {
       if (!me) return;

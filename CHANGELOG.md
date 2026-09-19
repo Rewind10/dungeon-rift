@@ -2,6 +2,37 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.16.1] — 2026-09-19 · "La barra in basso non si pesta più i piedi"
+
+Segnalato da Paolo: *«la grafica dei tasti Q ed E si sovrappongono agli altri»*. Vero, e misurato.
+
+#### 📐 Il perché
+La barra delle abilità sta al centro dello schermo; **cintura**, **riquadro dell'eroe** e **vitali** si
+appoggiano ai suoi fianchi. Lo facevano con scostamenti **scritti a mano** (`calc(50% + 240px)`), tarati
+su una barra da **quattro** riquadri. Con la v2.16 i riquadri sono diventati **cinque** (le abilità sono
+passate da due a tre): la barra si è allargata di **108px**, cioè 54 per lato, e la cintura le è finita
+sopra — i tasti Q ed E addosso allo Scatto.
+
+Misurato nel browser: barra `x523..1077`, cintura `x368..560`. **37px di sovrapposizione.**
+
+#### ✅ La larghezza la dice la barra, non un numero
+`buildAbilityBar` misura il proprio rettangolo e scrive `--abw` sul documento; i tre vicini si
+posizionano da lì (`calc(50% + var(--abw)/2 + 14px)`). Il giorno che arriva un quarto slot non si rompe
+niente — che è il punto: il numero scritto a mano si era rotto alla prima occasione utile.
+
+#### 🐛 E sei pixel che c'erano da prima
+Sotto i 1440px la cintura non sta di fianco alla barra ma **sopra**, a `bottom:124px`. La barra sta a
+`bottom:20px` ed è alta 110, quindi arriva a 130: **la cintura la copriva di sei pixel**, e non c'entrava
+niente con la v2.16 — c'era già. Ora è a 140.
+
+#### 🧪 Il controllo che impedisce il ritorno
+`prova-tasti` adesso misura i **rettangoli veri** delle quattro cose in fondo allo schermo e verifica che
+non si intersechino — in **tutte e due le disposizioni**, stretta (≤1440, cintura sopra) e larga (cintura
+di fianco). L'errore segnalato stava proprio in quella larga, e una prova fatta solo a 1000px non
+l'avrebbe visto. **3297 test passati, 0 falliti.**
+
+---
+
 ### [2.16.0] — 2026-09-19 · "La progressione rifatta"
 
 Piano: `PIANO-PROGRESSIONE.md`. Nasce da un'osservazione di Paolo — *«ci sono abilità passive e solo 2
