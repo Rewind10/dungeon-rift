@@ -2125,6 +2125,11 @@ class Room {
         const d = Pot.BY_ID[sl.id];
         return { id: sl.id, nome: d ? d.name : sl.id, icona: d ? d.icon : '🧪', n: sl.n || 0, max: Pot.MAX_CHARGES };
       }),
+      // v2.16.2 — LE ABILITA' ATTIVE NEL PANNELLO. La scaletta della schermata di fine livello le leggeva
+      // da un campo che l'HUD riempie durante il gioco (`_abSlot`, dallo snapshot): al livello 1, appena
+      // scelta e prima ancora di scendere, quel campo e' vuoto — e la riga diceva «saltata» su un'abilita'
+      // appena presa. Il pannello deve leggere la verita' dal server, non un residuo del gioco.
+      abil: (p.abil || []).slice(),
       vite: p.lives, hp: Math.round(p.hp), hpMax: this.effMaxHp(p),
       monete: p.coins, uccisi: p.kills, combo: p.comboBest || 0,
       // v2.13 — LE TRE DERIVATE. Forza, Costituzione, Intelligenza e Destrezza si spendono ma non si

@@ -2,6 +2,44 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.16.2] — 2026-09-19 · "Due bachi della 2.16, trovati leggendo il codice"
+
+Paolo, con due schermate: *«non hai risolto nulla, inoltre ho preso l'abilità attiva ma segna saltata»*.
+Aveva ragione su entrambe, ed entrambe erano mie della v2.16.
+
+#### 🐛 La barra: la misura c'era, ma arrivava vuota
+La v2.16.1 faceva misurare alla barra la propria larghezza dentro `buildAbilityBar`, una volta sola. Ma
+`buildAbilityBar` **gira alla scelta del personaggio, quando l'HUD è ancora nascosto** — e un elemento
+nascosto misura **zero**. La riga «se è zero non scrivo niente» faceva il suo dovere, il CSS restava sul
+valore di riserva (480px) e in partita la cintura tornava sopra la barra. Misurato: `--abw` valeva `""`.
+
+Adesso un **ResizeObserver** guarda la barra e scrive la misura quando passa da zero a larga, e a ogni
+aggiornamento dell'HUD si ricontrolla (una lettura, e copre i browser senza observer). Verificato
+riproducendo la condizione vera — barra costruita a HUD nascosto, poi HUD mostrato — a **1600 e 1280px**:
+`--abw` passa da `""` a `554px` e le quattro cose in fondo non si toccano.
+
+> La prova della 2.16.1 non l'aveva visto perché misurava a HUD **già visibile**: provava che la formula
+> è giusta, non che il numero ci arrivi. È lo stesso errore di sempre — provare la funzione invece della
+> strada.
+
+#### 🐛 «— saltata» su un'abilità appena presa
+Due bachi in una riga sola, `const id = (this._abSlot || {})[sc.slot]`:
+- `_abSlot` nella v2.16 è diventato un **array indicizzato da 0**, ma `sc.slot` vale **1, 2, 3**: lo slot
+  1 pescava il secondo e lo slot 3 non pescava niente;
+- e comunque `_abSlot` lo riempie lo **snapshot del gioco**: al livello 1, appena scelta l'abilità e
+  prima ancora di scendere, non è ancora arrivato nessuno snapshot.
+
+Ora il pannello legge le abilità da **`inv.abil`**, che il server gli manda insieme a tutto il resto: la
+verità viene da chi la possiede, non da un residuo del gioco.
+
+#### ✏️ E una frase rimasta indietro
+Sotto la banda della scelta c'era ancora scritto «Passive ai livelli **3, 6, 9 e 12**, abilità attive
+all'**8** e al **14**» — la scaletta di due versioni fa. Adesso l'elenco si costruisce da `levels.js`.
+
+**3295 test passati, 0 falliti**, più i controlli nel browser.
+
+---
+
 ### [2.16.1] — 2026-09-19 · "La barra in basso non si pesta più i piedi"
 
 Segnalato da Paolo: *«la grafica dei tasti Q ed E si sovrappongono agli altri»*. Vero, e misurato.

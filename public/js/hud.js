@@ -54,16 +54,39 @@
         bar.appendChild(el);
       });
       this._abSlot = [null, null, null];
-      // v2.16.1 — e si dice al foglio di stile quanto e' larga: cintura, riquadro dell'eroe e vitali si
-      // appoggiano ai suoi fianchi, e prima lo facevano con uno scostamento scritto a mano tarato su
-      // quattro riquadri. Con cinque la cintura ci finiva sopra. La misura si prende dopo il disegno.
-      try {
-        const w = Math.round(bar.getBoundingClientRect().width);
-        if (w > 0) document.documentElement.style.setProperty('--abw', w + 'px');
-      } catch (e) { /* se il browser non sa misurare resta il valore di riserva del CSS */ }
+      this._misuraBarra(bar);
+    },
+    // ============================================================================================
+    // v2.16.2 — QUANTO E' LARGA LA BARRA: misurata DAVVERO, non una volta sola a vuoto
+    // ============================================================================================
+    // Cintura, riquadro dell'eroe e vitali si appoggiano ai fianchi della barra delle abilita' e si
+    // posizionano da `--abw`. Nella v2.16.1 la misura si prendeva una volta, dentro `buildAbilityBar`.
+    // Ed e' li' che ho sbagliato: `buildAbilityBar` gira quando si sceglie il personaggio, cioe' quando
+    // l'HUD e' ancora NASCOSTO. Un elemento nascosto misura ZERO, la riga «se e' zero non scrivo niente»
+    // faceva il suo dovere, e il CSS restava sul valore di riserva (480px) — cioe' esattamente lo
+    // scostamento sbagliato di prima. In partita la cintura finiva di nuovo sopra la barra.
+    //
+    // La prova non l'aveva visto perche' il suo fixture misurava a HUD gia' visibile: provava che la
+    // formula e' giusta, non che il numero ci arrivi. Adesso:
+    //   · un ResizeObserver guarda la barra e scrive la misura quando passa da zero a larga;
+    //   · e a ogni aggiornamento si ricontrolla, che costa una lettura e copre i browser senza observer.
+    _misuraBarra(bar) {
+      const el = bar || $('abilityBar'); if (!el) return;
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w > 0 && w !== this._abw) {
+        this._abw = w;
+        document.documentElement.style.setProperty('--abw', w + 'px');
+      }
+      if (!this._abObs && typeof ResizeObserver === 'function') {
+        try {
+          this._abObs = new ResizeObserver(() => this._misuraBarra());
+          this._abObs.observe(el);
+        } catch (e) { this._abObs = null; }
+      }
     },
     updateAbilities(me) {
       if (!me) return;
+      this._misuraBarra();
       const set = (i, cd, pronta) => { const el = $('ab' + i); if (!el) return; const c = el.querySelector('.cd');
         if (cd > 0.1) { c.classList.remove('hidden'); c.textContent = cd < 10 ? cd.toFixed(1) : String(Math.ceil(cd)); el.classList.remove('ready'); }
         else { c.classList.add('hidden'); if (pronta !== false) el.classList.add('ready'); } };
@@ -499,10 +522,17 @@
         if (bt) bt.textContent = '🎴 NESSUNA SCELTA QUESTA VOLTA';
         if (bs) bs.innerHTML = this._boons.cap
           ? 'Sei al <b>livello ' + (this._boons.max || 15) + '</b>, il massimo: la crescita finisce qui.'
-          : (this._boons.prossimo
-            ? 'Passive ai livelli <b>3, 6, 9 e 12</b>, abilità attive all\'<b>8</b> e al <b>14</b>. La prossima al <b>livello ' + this._boons.prossimo + '</b>'
-              + (this._boons.manca ? ', fra <b>' + this._boons.manca + ' XP</b>' : '') + '.'
-            : 'Passive ai livelli <b>3, 6, 9 e 12</b>, abilità attive all\'<b>8</b> e al <b>14</b>.');
+          : (function (L, prossimo, manca) {
+            // v2.16.2 — i livelli non si scrivono piu' a mano: qui diceva ancora «3, 6, 9 e 12» e
+            // «all'8 e al 14», cioe' la scaletta di due versioni fa. Si leggono da levels.js.
+            const pas = L ? L.SCAGLIONI.map(x => x.lvl) : [3, 5, 9, 11];
+            const att = L ? L.ABIL_SLOT.map(x => x.lvl) : [1, 7, 13];
+            const elenco = (a) => a.length < 2 ? ('<b>' + a.join('') + '</b>')
+              : ('<b>' + a.slice(0, -1).join('</b>, <b>') + '</b> e <b>' + a[a.length - 1] + '</b>');
+            const base = 'Passive ai livelli ' + elenco(pas) + ', abilità attive ai livelli ' + elenco(att) + '.';
+            return prossimo ? base + ' La prossima al <b>livello ' + prossimo + '</b>'
+              + (manca ? ', fra <b>' + manca + ' XP</b>' : '') + '.' : base;
+          })((window.GAME && window.GAME.Levels) || null, this._boons.prossimo, this._boons.manca);
       } else { $('boonSection').classList.add('hidden'); }
       this._renderElencoAbilita();
     },
@@ -531,7 +561,16 @@
       for (const sc of SC) {
         let etichetta, colore, corpo;
         if (sc.slot) {
-          const id = (this._abSlot || {})[sc.slot];
+          // v2.16.2 — DUE BACHI IN UNA RIGA SOLA, ed erano tutti e due miei della v2.16.
+          // (a) `_abSlot` e' diventato un ARRAY indicizzato da 0, ma qui si leggeva con `sc.slot`, che
+          //     vale 1, 2, 3: lo slot 1 pescava il secondo e lo slot 3 pescava niente.
+          // (b) e comunque `_abSlot` lo riempie lo SNAPSHOT del gioco: al livello 1, appena scelta
+          //     l'abilita' e prima ancora di scendere, non e' ancora arrivato nessuno snapshot — quindi
+          //     la riga diceva «saltata» su un'abilita' appena presa.
+          // Adesso si legge da `inv.abil`, che il server manda col pannello, e `_abSlot` resta solo come
+          // ripiego per i pannelli vecchi.
+          const daServer = (this._stats && this._stats.inv && this._stats.inv.abil) || null;
+          const id = daServer ? daServer[sc.slot - 1] : (this._abSlot || [])[sc.slot - 1];
           const a = id ? AB[id] : null;
           etichetta = 'attiva ' + sc.tasto; colore = a ? a.color : '#8d97ab';
           corpo = a
