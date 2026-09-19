@@ -2,6 +2,37 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.16.4] — 2026-09-19 · "Il grado stampato sopra il nome"
+
+La v2.16.3 aveva rifatto le carte della scelta in orizzontale ma erano **illeggibili**: la riga del grado
+finiva stampata **sopra il nome**, e il nome restava minuscolo. Due cause, tutte e due nel foglio di
+stile, e tutte e due dello stesso tipo — **regole vecchie più specifiche delle nuove**.
+
+#### 🐛 `position:absolute` ereditato
+Il modello base delle carte grandi ha `.bc .rar{position:absolute;top:8px;right:10px}`: su una carta da
+150px la rarità sta nell'angolo. Le carte della banda ora sono **righe**, e in quell'angolo c'è il nome:
+senza un `position:static` esplicito il grado veniva disegnato **sopra**. Non era un problema di margini,
+era un elemento fuori dal flusso.
+
+#### 🐛 Il blocco dei corpi del carattere della v2.13.6
+`#upgradeScreen #sceltaBanda .bc .nm{font-size:calc(9.5px + var(--fz))}` — tarato sui quadrati da 84px,
+e **più specifico** della regola nuova (due id contro uno), quindi vinceva. Ora quel blocco porta i corpi
+giusti (14,5 / 10,5 / 12,5px) e ne ha anche per il grado e la descrizione, che prima non c'erano.
+
+#### ✂️ Due etichette accorciate
+«DELLA TUA CLASSE» → **«TUA CLASSE»**, e sulle attive via il «tasto 1», che è già scritto nella riga
+sopra la banda: ripetuto su ogni carta mandava la riga a capo senza aggiungere niente.
+
+#### ✅ Le passive hanno la stessa struttura, e sono quattro
+Verificato con i due casi veri: **2 carte** (le attive di uno slot) e **4 carte** (le passive di uno
+scaglione). Stanno su **una riga sola** — quattro carte da 250px fanno 1.051px dentro un pannello da
+1.280 — e in nessuna delle sei carte nome, grado e descrizione si intersecano. La misura è sui rettangoli
+veri dei tre pezzi di testo, non sull'occhio.
+
+**3297 test passati, 0 falliti.**
+
+---
+
 ### [2.16.3] — 2026-09-19 · "La scaletta dice la verità, e le carte della scelta si leggono"
 
 Tre cose segnalate da Paolo con le schermate alla mano.

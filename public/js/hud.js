@@ -502,7 +502,9 @@
         this._boons.boons.forEach(b => {
           const r = RAR[b.rarity] || RAR.common;
           const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = r.color;
-          const chi = b.hero && b.hero !== '*' ? 'DELLA TUA CLASSE' : 'PER TUTTI';
+          // v2.16.4 — «TUA CLASSE» e non «DELLA TUA CLASSE»: sulla riga della carta la versione lunga
+          // andava a capo, e una riga di due parole spezzata in due righe si legge peggio di una corta.
+          const chi = b.hero && b.hero !== '*' ? 'TUA CLASSE' : 'PER TUTTI';
           // v2.13.3 — LA CARTA E' UNA RIGA. Quello che c'era scritto in piccolo sotto — la rarita' e il
           // "per tutti / della tua classe" — e' finito nel TITOLO: la rarita' si vede gia' dal colore del
           // bordo, e la classe conta una volta su dieci. Cio' che resta a schermo e' cio' che serve per
@@ -518,8 +520,10 @@
             // su un'ABILITA' ATTIVA il grado non esiste: il `tier` che arriva col pacchetto ('raro',
             // 'divino') e' solo il colore della banda, e scriverlo sulla carta direbbe una cosa falsa.
             // Li' si scrive cosa e' davvero: attiva, su che tasto, con che ricarica.
+            // il TASTO non si ripete qui: sta gia' nella riga sopra la banda, e ripetuto tre volte
+            // sulle tre carte mandava a capo la riga senza aggiungere niente.
             + '<div class="rar">' + (this._boons.abil
-                ? ('\u26a1 attiva \u00b7 tasto ' + (this._boons.tasto || '1') + (b.cd ? ' \u00b7 ricarica ' + b.cd + 's' : ''))
+                ? ('\u26a1 attiva' + (b.cd ? ' \u00b7 ricarica ' + b.cd + 's' : ''))
                 : (esc(r.name || '') + ' \u00b7 ' + chi)) + '</div>'
             + '<div class="ds">' + esc(b.desc || '') + '</div>'
             + '</div>';
