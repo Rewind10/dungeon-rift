@@ -2,6 +2,23 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.17.1] — 2026-09-19 · "La modalità di prova si vede"
+
+Il pannello delle prove esisteva, stava nel posto giusto — sotto la scelta dell'eroe — e **aveva la
+classe `hidden` addosso**. Per aprirlo bisognava sapere di `?test` nell'indirizzo o del tasto **T**
+premuto nel menu: due scorciatoie che conosce solo chi ha letto il codice. Il commento lì accanto,
+dalla v1.99, diceva *«la modalità di prova torna VISIBILE nel menu»* — e quella riga non era mai stata
+tolta.
+
+Adesso è una **voce di menu**: chiusa, sotto «ENTRA IN PARTITA», si apre con un clic. Dentro ci sono le
+abilità attive da scegliere e i venti pulsanti delle ondate. Le due scorciatoie restano e ora si limitano
+ad aprirla.
+
+Ritoccato anche il testo, che prometteva la vecchia modalità: ora dice che si entra **con le abilità
+scelte lì sotto** e che **dall'ondata 1 si parte subito**, senza prologo né villaggio.
+
+---
+
 ### [2.17.0] — 2026-09-19 · "Il muro di fuoco esiste, il tempo si ruba"
 
 #### 🔍 Perché il muro di fuoco «non aveva nessun effetto grafico»

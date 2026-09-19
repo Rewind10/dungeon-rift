@@ -100,6 +100,7 @@
     //   · ?test (o #test) nell'indirizzo  —  http://localhost:8080/?test
     //   · il tasto T mentre si e' fermi nel menu
     const prova = $('provaBox');
+    // v2.17.1 — la voce c'e' sempre (vedi index.html): le due scorciatoie si limitano ad APRIRLA.
     const mostraProva = () => { if (prova) { prova.classList.remove('hidden'); prova.open = true; } };
     if (/[?&#]test\b/.test(location.search + location.hash)) mostraProva();
     window.addEventListener('keydown', (e) => {

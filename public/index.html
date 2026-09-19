@@ -102,14 +102,16 @@
            dire una cosa che non serve a nessuno. Chi non ha mai salvato lo scoprira' dall'Ostessa. -->
       <button id="riprendiBtn" class="primary riprendi hidden"></button>
       <div id="menuMsg"></div>
-      <!-- v1.99 — la modalita' di prova torna VISIBILE nel menu. Era stata nascosta in v1.96.1 (si apriva
-           con ?test o col tasto T): quelle due scorciatoie restano e non danno fastidio, ma il pannello
-           adesso c'e' e basta. -->
-      <details class="help prova hidden" id="provaBox">
-        <summary>🧪 Modalità di prova — parti da un'ondata</summary>
+      <!-- v2.17.1 — LA MODALITA' DI PROVA E' UNA VOCE DI MENU, non una scorciatoia da sapere.
+           Il commento della v1.99 diceva «torna visibile» ma la classe `hidden` era rimasta li': il
+           pannello c'era e non lo vedeva nessuno, e per aprirlo bisognava sapere di `?test` o del tasto
+           T. Adesso e' una voce chiusa che si apre con un clic, sotto la scelta dell'eroe — dove uno
+           che vuole provare una magia la cerca. Le due scorciatoie restano e ora si limitano ad aprirla. -->
+      <details class="help prova" id="provaBox">
+        <summary>🧪 Modalità di prova — scegli le magie e parti da un'ondata</summary>
         <p class="tag" style="margin:8px 0 6px;font-size:13px">Entri da solo con il personaggio che avresti a
-          quel punto: livello, punti spesi, equipaggiamento e abilità. Serve a guardare prestazioni e
-          giocabilità senza rigiocare tutto quello che viene prima.</p>
+          quel punto: livello, punti spesi, equipaggiamento e abilità — e con le <b>abilità attive che
+          scegli qui sotto</b>. Dall'ondata 1 si parte subito, senza prologo né villaggio.</p>
         <!-- v2.17 — le abilita' attive con cui entrare in prova: due righe, una per tasto. -->
         <div class="pa-tit">Abilità attive — si parte con queste</div>
         <div id="provaAbil"></div>
