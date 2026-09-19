@@ -10,6 +10,39 @@
     selectedHero: 'guerriero', _boons: null, _stats: null, _gear: null, _active: [],
     // v1.91 — la griglia della modalita' di prova: un pulsante per ondata. Le ondate col boss sono
     // marcate, perche' sono quelle che uno vuole provare per prime.
+    // v2.17 — LA SCELTA DELLE ABILITA' NELLA MODALITA' DI PROVA.
+    // Grafica volutamente essenziale: serve a provare le magie, non a essere bella. Due righe, una per
+    // slot, con le due abilita' di quello slot; si clicca e si parte. La scelta vive qui (`provaAbil`) e
+    // viaggia col messaggio `start`, dove il server la valida contro il catalogo della classe.
+    provaAbil: [null, null],
+    buildProvaAbil(heroId) {
+      const box = $('provaAbil'); if (!box) return;
+      const Ab = window.GAME && window.GAME.Abilities; if (!Ab) return;
+      const hero = heroId || this.selectedHero;
+      box.innerHTML = '';
+      this.provaAbil = [null, null];
+      for (const slot of [1, 2]) {
+        const due = Ab.perSlot(hero, slot);
+        if (!due.length) continue;
+        const riga = document.createElement('div'); riga.className = 'pa-riga';
+        const et = document.createElement('span'); et.className = 'pa-k'; et.textContent = 'TASTO ' + slot;
+        riga.appendChild(et);
+        due.forEach((ab, i) => {
+          const el = document.createElement('button');
+          el.className = 'pa' + (i === 0 ? ' sel' : '');
+          el.innerHTML = '<span class="ic">' + ab.icon + '</span><span class="nm">' + ab.name + '</span>'
+            + '<span class="ds">' + (ab.breve || '') + '</span>';
+          el.onclick = () => {
+            this.provaAbil[slot - 1] = ab.id;
+            [...riga.querySelectorAll('.pa')].forEach(x => x.classList.remove('sel'));
+            el.classList.add('sel');
+          };
+          riga.appendChild(el);
+          if (i === 0) this.provaAbil[slot - 1] = ab.id;      // la prima e' selezionata di partenza
+        });
+        box.appendChild(riga);
+      }
+    },
     buildProva(max, cb) {
       const g = $('provaGrid'); if (!g) return;
       g.innerHTML = '';
@@ -23,7 +56,7 @@
         g.appendChild(el);
       }
     },
-    buildHeroSelect(cb) { const w = $('heroSelect'); w.innerHTML = ''; HORDER.forEach(id => { const h = HERO[id]; const el = document.createElement('div'); el.className = 'hero-chip' + (id === this.selectedHero ? ' sel' : ''); el.style.setProperty('--pick', h.color); el.innerHTML = `<div class="avatar" style="background:${h.color2};color:${h.accent}">${HeroIcon[id]}</div><div class="hname">${h.name}</div><div class="hrole">${h.title}</div>`; el.onclick = () => { this.selectedHero = id; this.buildHeroSelect(cb); this.showHeroDetail(id); if (cb) cb(id); }; w.appendChild(el); }); this.showHeroDetail(this.selectedHero); },
+    buildHeroSelect(cb) { const w = $('heroSelect'); w.innerHTML = ''; HORDER.forEach(id => { const h = HERO[id]; const el = document.createElement('div'); el.className = 'hero-chip' + (id === this.selectedHero ? ' sel' : ''); el.style.setProperty('--pick', h.color); el.innerHTML = `<div class="avatar" style="background:${h.color2};color:${h.accent}">${HeroIcon[id]}</div><div class="hname">${h.name}</div><div class="hrole">${h.title}</div>`; el.onclick = () => { this.selectedHero = id; this.buildHeroSelect(cb); this.showHeroDetail(id); this.buildProvaAbil(id); if (cb) cb(id); }; w.appendChild(el); }); this.showHeroDetail(this.selectedHero); },
     // v1.66 — la scheda non mostra piu' Q/E (rimosse): al loro posto l'ARMA e la statistica che la governa,
     // che sono le due cose da sapere per scegliere la classe adesso.
     // v1.86.1 — LA SCHEDA DELLA CLASSE NON STA PIU' NEL MENU. Era un riquadro di sei righe (arma, danni,

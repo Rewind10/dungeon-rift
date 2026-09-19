@@ -82,10 +82,17 @@
         salti: 8, dmgMult: 1.6, calo: 0.84, gittata: 420, salto: 260 },
     ],
     ladro: [
-      { id: 'ab_velo', slot: 1, lvl: LVL_1, name: "Velo d'Ombra", icon: '🌫️', color: '#9ef0b0', cd: CD_1,
-        desc: 'Una nube di 150px per 5s: finche ci stai dentro i nemici ti perdono di vista, e il primo colpo che spari uscendo dall ombra e critico.',
-        breve: 'Nube che ti rende invisibile',
-        r: 150, dur: 5 },
+      // v2.17 — TEMPO RUBATO prende il posto del Velo d'Ombra. Il velo era una nube in cui nasconderti:
+      // in un gioco dove i mostri ti arrivano addosso da ogni parte, nascondersi per cinque secondi non
+      // cambiava l'ondata, la metteva in pausa. Questa invece e' la vecchia BULLET TIME dei tre eroi
+      // cyberpunk, tolta nella v1.66 insieme a loro — il motore la sa ancora fare (`this.bulletTime`
+      // c'e' sempre stato, con il suo fattore su mostri e proiettili nemici: mancava solo chi lo accende).
+      // Il nome non e' un vezzo: un ladro al tempo lo RUBA.
+      { id: 'ab_tempo', slot: 1, lvl: LVL_1, name: 'Tempo Rubato', icon: '\u23f3', color: '#8fd8ff', cd: CD_1,
+        desc: 'Per 4s il mondo va al 35%: mostri, colpi nemici, tutto. Tu no. Non fa danno: ti da il tempo di deciderlo.',
+        breve: 'Il mondo rallenta, tu no',
+        dur: 4, fattore: 0.35 },
+
       { id: 'ab_tagliola', slot: 1, lvl: LVL_1, name: 'Tagliola', icon: '🪤', color: '#cfd8dc', cd: CD_1,
         desc: 'Piazzi una trappola dove sei: il primo che ci entra resta bloccato 2,5s e prende danno. Resta armata 25s, fino a tre in campo.',
         breve: 'Trappola che blocca il primo che passa',

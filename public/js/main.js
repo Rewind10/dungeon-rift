@@ -87,8 +87,12 @@
     // v1.91 — MODALITA' DI PROVA: venti pulsanti, uno per ondata. Serve a guardare prestazioni e
     // giocabilita' di un'ondata alta senza rigiocare le quattordici che vengono prima. Si entra in una
     // stanza tutta propria (nome a caso) e la run parte da sola: niente sala d'attesa da attraversare.
+    HUD.buildProvaAbil(HUD.selectedHero);
     HUD.buildProva((C.PROVA_MAX_ONDATA || 20), (n) => {
       G.provaOnda = n;
+      // v2.17 — le attive scelte viaggiano con la partenza: il server le mette in mano al personaggio
+      // anche all'ondata 1, dove il personaggio di prova non viene nemmeno costruito.
+      G.provaAbil = (HUD.provaAbil || []).filter(Boolean);
       entra('prova' + n + '-' + Math.floor(Math.random() * 9000 + 1000));
     });
     // v1.99 — la modalita' di prova e' di nuovo VISIBILE nel menu (in v1.96.1 era nascosta). Le due
@@ -122,7 +126,7 @@
     $('menu').classList.add('hidden'); R.setMap(m.map);
     // in prova non si passa dalla sala d'attesa: si e' soli e la run parte subito dall'ondata scelta
     if (G.riprendiDati && m.phase === C.PHASE_LOBBY) { Net.riprendi(G.riprendiDati); G.riprendiDati = null; return; }
-    if (G.provaOnda && m.phase === C.PHASE_LOBBY) { Net.start(G.provaOnda); return; }
+    if (G.provaOnda && m.phase === C.PHASE_LOBBY) { Net.start(G.provaOnda, G.provaAbil || []); return; }
     if (m.phase === C.PHASE_LOBBY) showLobby(m.players); else enterGame();
   };
   Net.onMap = (m) => { R.setMap(m.map); HUD.zoneName(m.map && m.map.theme); };   // v1.62 — nome della zona in HUD
@@ -260,6 +264,12 @@
         R.ring(ev.x, ev.y, '#fff2c8', 9, (ev.r || 96) * 0.55, 0.22); R.ring(ev.x, ev.y, '#ffb020', 7, ev.r, 0.4); R.ring(ev.x, ev.y, '#8a5a2b', 4, (ev.r || 96) * 1.15, 0.5);
         R.burst(ev.x, ev.y, '#ffcf5a', 28, 300, 0.5); R.burst(ev.x, ev.y + 6, '#7a5a3a', 20, 160, 0.65);
         R.addShake(13); G.hitstop = Math.max(G.hitstop, 0.05); break;
+      // v2.17 — la vampata quando un mostro striscia contro il muro di fuoco
+      case 'muro_urto': R.burst(ev.x, ev.y, ev.c || '#ff9a3b', 5, 130, 0.3); break;
+      // v2.17 — il tempo rubato: anello che parte dal ladro, scossone corto e la fascia che dice cosa sta succedendo
+      case 'tempo_rubato': R.ring(ev.x, ev.y, ev.c || '#8fd8ff', 7, 220, 0.6); R.burst(ev.x, ev.y, ev.c || '#8fd8ff', 18, 240, 0.55); R.addShake(4);
+        if (ev.who === Net.id) HUD.modeBanner('\u23f3 TEMPO RUBATO', '#8fd8ff', 'Il mondo va al 35% per ' + (ev.dur || 4) + 's');
+        A.ability && A.ability('rift'); break;
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
       // v1.84 — i prigionieri: la chiave e chi la libera
       case 'crate_monete': A.crate && A.crate(); R.floater(ev.x, ev.y - 20, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', true); break;
@@ -441,6 +451,16 @@
     w.bul = next.bul.map(nb => { const pb = bm[nb.e]; const o = Object.assign({}, nb); if (pb) { o.vx = (nb.x - pb.x) * C.SNAPSHOT_RATE; o.vy = (nb.y - pb.y) * C.SNAPSHOT_RATE; o.x = lerp(pb.x, nb.x, a); o.y = lerp(pb.y, nb.y, a); } return o; });
     w.orbs = next.orbs; w.met = next.met; w.crates = next.crates || []; w.wdrops = next.wdrops || [];
     w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || []; w.tele = next.tele || []; w.rec = next.rec || null; w.chv = next.chv || null; w.chIn = next.chIn || 0; w.fg = next.fg || null;
+    // v2.17 — ED E' RICAPITATO, esattamente come dice l'avvertimento qui sotto. `muri`, `trap` e `nebb`
+    // stanno nello snapshot dalla v1.85 e non erano MAI stati copiati qui: il server li mandava, il
+    // client li buttava, e il renderer disegnava tre array vuoti. Risultato: il muro di fuoco, la
+    // tagliola e il velo non si sono mai visti — nessun errore da nessuna parte, solo abilita' che
+    // sembravano non fare niente. Paolo: «il muro di fuoco non ha nessun effetto grafico».
+    w.muri = next.muri || []; w.trap = next.trap || []; w.nebb = next.nebb || [];
+    // e `tick`, il tempo della PARTITA: il renderer ci mette i girovaghi del villaggio, che sono una
+    // funzione del tempo del server apposta perche' tutti li vedano nello stesso punto. Senza questa
+    // riga il renderer ripiegava sull'orologio locale, e in cooperativa ognuno li vedeva altrove.
+    w.tick = next.tick;
     // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
     // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
     w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;

@@ -2,6 +2,68 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.17.0] — 2026-09-19 · "Il muro di fuoco esiste, il tempo si ruba"
+
+#### 🔍 Perché il muro di fuoco «non aveva nessun effetto grafico»
+Perché **non veniva disegnato affatto**, e non da ieri: da **otto versioni**.
+
+`muri`, `trap` e `nebb` stanno nello snapshot dalla v1.85 e **non erano mai stati copiati** nel mondo
+interpolato dentro `main.js`. Il server li mandava, il client li buttava, il renderer disegnava tre array
+vuoti. Nessun errore, da nessuna parte. Per tutto questo tempo **il muro di fuoco, la tagliola e il velo
+d'ombra sono stati invisibili** — il che spiega anche perché due di quelle tre abilità sembravano non
+valere niente.
+
+In quel punto di `main.js` c'era già scritto, in maiuscolo, *«ATTENZIONE — QUI SI PERDONO I CAMPI
+NUOVI»*, e c'era già un controllo: ma copriva i campi letti dall'**HUD**, non quelli letti dal
+**renderer**. Ora c'è un controllo che legge dal sorgente quali `world.<campo>` il renderer usa davvero e
+pretende che `main.js` li copi tutti. Girandolo, ha trovato **un quarto campo perso**: `tick`, il tempo
+della partita con cui il renderer piazza i girovaghi del villaggio — senza, ognuno in cooperativa li
+vedeva altrove.
+
+#### 🧱 E adesso il muro è un MURO
+Misurato prima: 29 danni/s su uno spessore di 24px. Un mostro che lo attraversa ci resta dentro 0,2s e si
+becca **6 danni su 78** — l'8%. La descrizione prometteva di «decidere da dove ti arrivano addosso»; il
+codice non lo faceva.
+
+Ora **nega il terreno**: per i mostri è muro a tutti gli effetti. L'IA lo aggira, il negromante non ci si
+teletrasporta, **la Sfera d'Ossa ci rimbalza contro**. Il giocatore ci passa attraverso — la distinzione
+sta in `moveCircle`, che riconosce un mostro da un giocatore senza bandiere nuove. Il danno diventa il
+pedaggio di chi ci striscia contro, non il senso dell'abilità.
+
+**La grafica**, rifatta a quattro strati: alone sul pavimento, colata arancione pulsante, cuore
+bianco-giallo che si vede da lontano, fiamme fitte (una ogni 18px invece di 34) più braci che salgono.
+Nell'ultimo secondo lampeggia e cala: si capisce che sta per finire. E ogni mostro che ci sbatte fa una
+**vampata** nel punto di contatto.
+
+#### ⏳ Tempo Rubato prende il posto del Velo d'Ombra
+Il velo era una nube in cui nasconderti: in un gioco dove ti arrivano addosso da ogni parte non cambiava
+l'ondata, la metteva in pausa. Al suo posto la vecchia **bullet time** dei tre eroi cyberpunk, tolta nella
+v1.66 insieme a loro — e il motore la sapeva ancora fare: `this.bulletTime` c'è sempre stato, col suo
+fattore su mostri e proiettili nemici. **Mancava solo chi lo accendesse.**
+
+Per 4s il mondo va al **35%**, tu no. Si accende sulla stanza, non sul giocatore: rallenta per tutti, ed
+è anche il motivo per cui dura poco. Il nome non è un vezzo — un ladro al tempo lo *ruba*.
+
+**La grafica:** tinta fredda su tutto lo schermo, vignettatura blu che stringe i bordi, due anelli lenti
+dal centro (l'orologio che batte piano), rampa di 0,25s in entrata e in uscita perché un taglio netto
+sembrerebbe un lampo. Più anello e scossone dal personaggio e la fascia «⏳ TEMPO RUBATO».
+
+#### 🧪 La modalità di prova sceglie le magie
+Nel pannello delle prove c'è ora un selettore essenziale: una riga per tasto, le due abilità di quello
+slot, si clicca e si parte. **Anche dall'ondata 1** — prima l'ondata 1 passava da prologo e villaggio e il
+personaggio di prova non veniva nemmeno costruito. Gli id li valida il server contro il catalogo della
+classe: uno di un'altra classe si ignora invece di finire in mano al personaggio.
+
+Verificato dalla strada vera, non da un fixture: menu → personaggio → abilità → ondata 1 → **tasto
+premuto**, e si guarda lo schermo. Il muro compare, il tempo rallenta.
+
+**3298 test passati, 0 falliti.**
+
+> 📌 Restano in giro `nebbie` e `veloCrit`, che erano del velo d'ombra e ora non li riempie più nessuno.
+> Non li ho tolti in fretta perché `veloCrit` passa dal codice dei critici: da fare con calma.
+
+---
+
 ### [2.16.4] — 2026-09-19 · "Il grado stampato sopra il nome"
 
 La v2.16.3 aveva rifatto le carte della scelta in orizzontale ma erano **illeggibili**: la riga del grado

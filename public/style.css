@@ -47,6 +47,22 @@ button.primary:hover{filter:brightness(1.08)}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);width:100%;margin-top:8px}
 #menuMsg{margin-top:10px;min-height:18px;font-size:14px;color:var(--gold);text-align:center}
 /* v1.91 — la griglia della modalita' di prova */
+/* v2.17 — IL SELETTORE DELLE ABILITA' DELLA MODALITA' DI PROVA.
+   Volutamente essenziale: serve a scegliere due magie e partire, non a fare bella figura. Una riga per
+   tasto, l'etichetta a sinistra, due pulsanti larghi con icona, nome ed effetto in una riga. */
+.pa-tit{color:#8b93a7;font:800 11px var(--font);letter-spacing:1.4px;text-transform:uppercase;margin:12px 0 6px}
+.pa-riga{display:flex;align-items:stretch;gap:8px;margin-bottom:8px}
+.pa-k{flex:none;width:58px;display:flex;align-items:center;justify-content:center;border-radius:10px;
+  background:rgba(255,207,74,.10);border:1px solid rgba(255,207,74,.35);color:#ffcf4a;
+  font:900 10.5px var(--font);letter-spacing:.6px;text-align:center}
+.pa{flex:1;min-width:0;display:grid;grid-template-columns:26px 1fr;grid-template-rows:auto auto;
+  column-gap:8px;align-items:center;text-align:left;cursor:pointer;transition:.12s;
+  background:linear-gradient(180deg,#1c2230,#0e1120);border:2px solid var(--line);border-radius:12px;padding:8px 10px;font:inherit}
+.pa:hover{transform:translateY(-2px);border-color:#5d6a86}
+.pa.sel{border-color:#8fd8ff;box-shadow:0 0 0 1px rgba(143,216,255,.35),0 6px 16px rgba(60,140,200,.22)}
+.pa .ic{grid-row:1 / span 2;font-size:22px;text-align:center}
+.pa .nm{color:#f3e8d4;font-weight:800;font-size:13px;line-height:1.2}
+.pa .ds{color:#9aa6bd;font-size:11.5px;line-height:1.25}
 #provaGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 2px}
 .pw{padding:9px 0;font-size:14px;font-weight:800;border-radius:9px;background:rgba(28,32,51,.7);border:1px solid rgba(146,164,214,.20);color:#cfd7ea;transition:.12s}
 .pw:hover{background:rgba(58,160,255,.22);border-color:var(--accent);transform:translateY(-1px)}

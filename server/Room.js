@@ -243,9 +243,13 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
     this.runStart = this.time;
-    this.prova = da > 1 ? da : 0;                       // resta segnato: il riepilogo lo dice, e i record no
+    // v2.17 — ANCHE L'ONDATA 1 E' UNA PROVA, se si e' arrivati qui dal pannello delle prove (che si
+    // riconosce da `abilProva`: il menu manda sempre le attive scelte, anche vuote). Serve a provare le
+    // magie dal primo minuto senza attraversare prologo e villaggio.
+    const inProva = da > 1 || !!this.abilProva;
+    this.prova = inProva ? Math.max(1, da) : 0;         // resta segnato: il riepilogo lo dice, e i record no
     if (da > 1) { for (const p of this.players.values()) this._preparaProva(p, da); this.wave = da - 1; }
     // v2.7 — LA PARTITA COMINCIA CON UNO CHE SI SVEGLIA. Non con un'ondata. Il prologo si salta (chi
     // comanda preme Esc) ma non si spegne: e' il posto in cui il gioco dice di cosa parla, e senza quello
@@ -257,7 +261,7 @@ class Room {
     // risveglio vorrebbe dire provare cinquanta volte il prologo e zero volte quello che si voleva
     // provare. Il prologo ha i suoi test, che partono di li'.
     this._forceNewMap = false;   // si riparte puliti: la bandiera e' di chi esce dal villaggio, non di chi comincia
-    if (da > 1 || senzaStoria) { this.newMap((Math.random() * 1e9) | 0, Math.max(1, da)); this.nextWave(); }
+    if (inProva || senzaStoria) { this.newMap((Math.random() * 1e9) | 0, Math.max(1, da)); this.nextWave(); }
     else this.enterPrologo();
     if (process.env.DR_VILLAGGIO) { this.wave = 3; this.enterMarket(); }
   }
@@ -402,8 +406,24 @@ class Room {
 
   tileAtWorld(x, y) { const gx = (x / C.TILE) | 0, gy = (y / C.TILE) | 0; if (gx < 0 || gy < 0 || gx >= this.map.w || gy >= this.map.h) return C.T_WALL; return this.map.grid[gy * this.map.w + gx]; }
   isWallAt(x, y) { return this.tileAtWorld(x, y) === C.T_WALL; }
-  moveCircle(e, dx, dy) { const r = e.radius * 0.8; let nx = e.x + dx; if (!this._blk(nx, e.y, r)) e.x = nx; else e.x = this._snap(e.x, nx, e.y, r, true); let ny = e.y + dy; if (!this._blk(e.x, ny, r)) e.y = ny; else e.y = this._snap(e.y, ny, e.x, r, false); }
-  _blk(x, y, r) { return this.isWallAt(x - r, y) || this.isWallAt(x + r, y) || this.isWallAt(x, y - r) || this.isWallAt(x, y + r) || this._corpo(x, y, r); }
+  // v2.17 — IL QUARTO ARGOMENTO E' «CHI SI MUOVE». Serve al MURO DI FUOCO, che e' un muro per i mostri
+  // e non per te: senza distinguere, il mago si murerebbe dentro da solo. `e.def` c'e' sui mostri e non
+  // sui giocatori, quindi la distinzione non richiede una bandiera nuova da tenere allineata.
+  moveCircle(e, dx, dy) { const r = e.radius * 0.8, mo = !!e.def;
+    let nx = e.x + dx; if (!this._blk(nx, e.y, r, mo)) e.x = nx; else e.x = this._snap(e.x, nx, e.y, r, true, mo);
+    let ny = e.y + dy; if (!this._blk(e.x, ny, r, mo)) e.y = ny; else e.y = this._snap(e.y, ny, e.x, r, false, mo); }
+  _blk(x, y, r, mostro) { return this.isWallAt(x - r, y) || this.isWallAt(x + r, y) || this.isWallAt(x, y - r) || this.isWallAt(x, y + r) || this._corpo(x, y, r) || (mostro === true && this.muroFuoco(x, y, r)); }
+  // v2.17 — un cerchio tocca un muro di fuoco acceso? E' la funzione che rende il muro UN MURO.
+  // Prima bruciacchiava chi ci passava dentro per due decimi di secondo (misurato: 6 danni su 78 PV di
+  // uno zombie, l'8%) e la descrizione prometteva di «decidere da dove ti arrivano addosso»: una promessa
+  // che il codice non manteneva. Adesso il muro NEGA IL TERRENO — il danno e' il pedaggio di chi ci
+  // striscia contro, non il senso dell'abilita'.
+  muroFuoco(x, y, r) {
+    if (!this.muri.length) return false;
+    for (let i = 0; i < this.muri.length; i++) { const w = this.muri[i];
+      if (w.t > 0 && this._distSeg(x, y, w) <= w.sp + r) return true; }
+    return false;
+  }
   // v1.75.2 — un cerchio di raggio r, in (x,y), tocca un mobile o una persona del villaggio?
   _corpo(x, y, r) {
     const S = this.solids; if (!S) return false;
@@ -449,7 +469,7 @@ class Room {
       if (!this._blk(nx, ny, r)) { e.x = nx; e.y = ny; return; }
     }
   }
-  _snap(cur, tgt, oth, r, isX) { const st = tgt > cur ? 1 : -1; let v = cur; for (let i = 0; i < 12; i++) { const t = v + st * 2; const bx = isX ? t : oth, by = isX ? oth : t; if (this._blk(bx, by, r)) break; v = t; } return v; }
+  _snap(cur, tgt, oth, r, isX, mostro) { const st = tgt > cur ? 1 : -1; let v = cur; for (let i = 0; i < 12; i++) { const t = v + st * 2; const bx = isX ? t : oth, by = isX ? oth : t; if (this._blk(bx, by, r, mostro)) break; v = t; } return v; }
   // v1.63 — PROFONDITA' NEL MARGINE: 0 = sei al sicuro, cresce avvicinandosi al bordo giocabile.
   // I due assi si SOMMANO, quindi un angolo (dove sei coperto su due lati, il posto piu' abusato)
   // vale il doppio di un bordo dritto e la faglia ti mangia il doppio piu' in fretta.
@@ -496,7 +516,9 @@ class Room {
       ANELLO: C.ANELLO_ATTESA,
       flowStep(m) { if (!self.flow) return { x: 0, y: 0, d: -1 }; const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0; return PF.stepDir(self.flow, self.map.grid, self.map.w, self.map.h, gx, gy); },
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
-      isWallAt: (x, y) => self.isWallAt(x, y),
+      // v2.17 — per l'IA il muro di fuoco E' un muro: cosi' lo aggirano invece di suicidarcisi dentro,
+      // il negromante non ci si teletrasporta e la Sfera d'Ossa ci rimbalza contro (rimbalza gia' sui muri).
+      isWallAt: (x, y) => self.isWallAt(x, y) || self.muroFuoco(x, y, 10),
       shoot(m, dx, dy, spd, dmg, color) { self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: dx * spd, vy: dy * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); },
       summon(id, x, y) { if (self._postiLiberi() <= 0) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
       // v1.39 — evocazione OWNED (con proprietario) per il tetto di minion del Negromante
@@ -1683,10 +1705,14 @@ class Room {
         return true;
       }
       // ---------- LADRO ----------
-      case 'ab_velo': {
-        this.nebbie.push({ eid: NEXT++, owner: p.id, x: p.x, y: p.y, r: a.r, t: a.dur, max: a.dur });
-        p.buffs.hidden = Math.max(p.buffs.hidden || 0, 0.4);
-        p.veloCrit = 1;                               // il primo colpo che esce dall'ombra e' critico
+      case 'ab_tempo': {
+        // v2.17 — IL TEMPO RUBATO. Il motore rallentava gia' mostri e proiettili nemici con
+        // `this.bulletTime` (il fattore si legge in `updateMonsters` e in `updateBullets`): era rimasto
+        // li' dalla v1.66, quando le abilita' dei tre eroi cyberpunk furono tolte. Qui c'e' chi lo accende.
+        // Si accende sulla STANZA e non sul giocatore: e' il mondo che rallenta, e in cooperativa
+        // rallenta per tutti — che e' anche il motivo per cui dura poco.
+        this.bulletTime = { t: a.dur, factor: a.fattore, owner: p.id };
+        this.broadcast({ t: C.MSG.EVENT, ev: { t: 'tempo_rubato', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color } });
         return true;
       }
       case 'ab_tagliola': {
@@ -1765,6 +1791,9 @@ class Room {
         if (m.dead) continue;
         if (this._distSeg(m.x, m.y, w) > w.sp + m.radius) continue;
         this.damageMonster(m, Math.max(1, Math.round(w.dps * q)), m.x, m.y, 0, src);
+        // v2.17 — e si VEDE: una vampata nel punto di contatto. Senza, l'unico segno che il muro sta
+        // facendo qualcosa erano i numeri del danno, che in mezzo a un'ondata non si leggono.
+        this.events.push({ t: 'muro_urto', x: m.x, y: m.y, c: w.col });
       }
     }
     if (this.muri.some(w => w.t <= 0)) this.muri = this.muri.filter(w => w.t > 0);
@@ -2025,6 +2054,25 @@ class Room {
   // Uno slot entra in coda solo se ha davvero delle abilita' dentro: il terzo e' ancora vuoto (Paolo ci
   // deve pensare) e metterlo in coda bloccherebbe il giocatore su una scelta senza scelte, al 13, per
   // sempre. Il giorno che si riempie, questa riga se ne accorge da sola.
+  // v2.17 — LE ABILITA' SCELTE NELLA MODALITA' DI PROVA.
+  // Serve a Paolo per provare le magie: in prova si sceglie dal menu quali attive avere, e si parte —
+  // anche dall'ondata 1, che e' il caso in cui `_preparaProva` non gira nemmeno. Fuori dalla prova
+  // `this.abilProva` e' nullo e questa funzione non esiste per nessuno.
+  // Gli id si controllano contro il catalogo della CLASSE: un id di un'altra classe, o inventato, si
+  // ignora invece di finire in mano al personaggio.
+  _abilitaDiProva(p) {
+    if (!this.abilProva || !p || !p.abil) return false;
+    let messe = 0;
+    for (const id of this.abilProva) {
+      const a = Ab.BY_ID[id];
+      if (!a || a.hero !== p.heroId) continue;
+      p.abil[a.slot - 1] = id;
+      p.cdAb[a.slot - 1] = 0; p.cdAbMax[a.slot - 1] = a.cd;
+      p.abilDovute = (p.abilDovute || []).filter(x => x !== a.slot);
+      messe++;
+    }
+    return messe > 0;
+  }
   _slotDovuto(p, L) {
     const slot = Lv.slotPerLivello(L);
     if (!slot || !p.abil || p.abil[slot - 1]) return false;

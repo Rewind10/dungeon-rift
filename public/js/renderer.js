@@ -1580,7 +1580,7 @@
       if (!this.map.lit) this._drawFog(ctx, camX, camY, dt); // v1.21 — nebbia volumetrica a strati
       ctx.restore(); this._drawLighting(ctx, world, camX, camY);
       this._drawDarkness(world, camX, camY); // v1.16 — cono torcia + mappa scura (tasto L)
-      if (world.bt) { ctx.fillStyle = 'rgba(0,240,200,0.06)'; ctx.fillRect(0, 0, this.w, this.h); ctx.strokeStyle = 'rgba(0,240,200,0.15)'; ctx.lineWidth = 8; ctx.strokeRect(4, 4, this.w - 8, this.h - 8); }
+      this._drawTempo(ctx, world, dt);   // v2.17 — TEMPO RUBATO: tinta fredda, vignettatura, anelli lenti
       // v2.1 — nel villaggio no: la fascia viola della faglia e' il segno di un pericolo che li' non
       // esiste, e su una mappa illuminata si vedeva eccome (prima la copriva il buio).
       if (!this.map.lit) this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
@@ -1768,21 +1768,50 @@
     // ===== v1.85 — quello che le abilita' lasciano sul campo ==================================
     // Tre oggetti, tre linguaggi diversi: il muro BRUCIA (caldo, mobile, luminoso), la tagliola e'
     // METALLO (freddo, immobile, piccolo), la nube e' ASSENZA (scura, morbida, senza contorno).
+    // ============================================================================================
+    // v2.17 — IL MURO DI FUOCO SI VEDE
+    // ============================================================================================
+    // Prima: una striscia sbiadita e sei fiammelle ogni 34px su una linea lunga 220. In mezzo a
+    // un'ondata non si notava — Paolo: «non ha nessun effetto grafico». Adesso il muro e' fatto di
+    // quattro strati, dal basso verso l'alto, e cambia mentre muore:
+    //   1. l'ALONE, largo, che tinge il pavimento intorno;
+    //   2. la COLATA, una linea spessa arancione che pulsa;
+    //   3. il CUORE bianco-giallo, sottile, che e' la cosa che si vede da lontano;
+    //   4. le FIAMME, una ogni 18px invece che ogni 34, piu' braci che salgono.
+    // Nell'ultimo secondo tutto cala e il cuore lampeggia: si capisce che sta per cadere, e in un gioco
+    // dove il muro DECIDE da dove ti arrivano addosso, sapere quando finisce e' informazione, non ornamento.
     _drawMuri(ctx, world, dt) {
       for (const w of (world.muri || [])) {
         const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = Math.hypot(dx, dy) || 1;
-        const n = Math.max(4, Math.round(L / 34));
         const vita = Math.max(0, Math.min(1, w.p));
+        const morente = vita < 0.2 ? (0.55 + 0.45 * Math.sin(this.time * 18)) : 1;   // lampeggia sul finale
+        const puls = 0.86 + Math.sin(this.time * 7 + w.x * 0.05) * 0.14;
         ctx.save();
-        // la striscia rovente a terra: si spegne col tempo, cosi' si vede che sta per finire
-        const gr = ctx.createLinearGradient(w.x1, w.y1, w.x2, w.y2);
-        gr.addColorStop(0, 'rgba(255,120,30,0)'); gr.addColorStop(0.5, 'rgba(255,140,40,' + (0.16 + vita * 0.2) + ')'); gr.addColorStop(1, 'rgba(255,120,30,0)');
-        ctx.strokeStyle = gr; ctx.lineWidth = 26; ctx.lineCap = 'round';
+        ctx.lineCap = 'round';
+        // 1) l'alone sul pavimento
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(255,90,20,' + (0.10 + vita * 0.14) * morente + ')';
+        ctx.lineWidth = 64 * puls;
         ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+        // 2) la colata
+        ctx.strokeStyle = 'rgba(255,130,30,' + (0.34 + vita * 0.30) * morente + ')';
+        ctx.lineWidth = 30 * puls;
+        ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+        // 3) il cuore
+        ctx.strokeStyle = 'rgba(255,236,170,' + (0.55 + vita * 0.40) * morente + ')';
+        ctx.lineWidth = 8 * puls;
+        ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
+        // 4) le fiamme, fitte, e le braci che salgono
+        const n = Math.max(6, Math.round(L / 18));
         for (let i = 0; i <= n; i++) {
           const t = i / n, x = w.x1 + dx * t, y = w.y1 + dy * t;
-          this._flame(ctx, x, y, 0.62 + Math.sin(this.time * 6 + i) * 0.08 + vita * 0.25);
+          this._flame(ctx, x, y, (0.72 + Math.sin(this.time * 6 + i * 1.7) * 0.12 + vita * 0.3) * morente);
+        }
+        if (Math.random() < 0.9) {
+          const t = Math.random(), x = w.x1 + dx * t, y = w.y1 + dy * t;
+          this.particles.push({ x, y, vx: MU.rand(-14, 14), vy: -MU.rand(30, 85), life: MU.rand(0.5, 1.1), t: 0, fire: true, r: MU.rand(1.4, 3.2), over: true });
         }
       }
     },
@@ -2659,6 +2688,32 @@
         ctx.restore();
       }
       ctx.restore();
+    },
+    // v2.17 — TEMPO RUBATO: come si vede che il mondo sta andando al rallentatore.
+    // Tre cose insieme, perche' una sola si legge come un difetto dello schermo e non come un'abilita':
+    //   · una TINTA fredda su tutto il mondo (non sull'HUD: l'interfaccia resta leggibile);
+    //   · una VIGNETTATURA blu che stringe i bordi, come quando il tempo ti si chiude addosso;
+    //   · due ANELLI che si allargano dal personaggio a ritmo lento, l'orologio che batte piano.
+    // Si accende e si spegne con una rampa di 0,25s: un taglio netto sembrerebbe un lampo, non un'entrata.
+    _drawTempo(ctx, world, dt) {
+      const acceso = !!world.bt;
+      this._btA = Math.max(0, Math.min(1, (this._btA || 0) + (acceso ? 1 : -1) * (dt || 0.016) / 0.25));
+      const a = this._btA; if (a <= 0.001) return;
+      const W = this.w, H = this.h, cx = W / 2, cy = H / 2;
+      // 1) la tinta fredda su tutto (lo schermo, non il mondo: e' un effetto di camera)
+      ctx.fillStyle = 'rgba(120,180,255,' + (0.13 * a) + ')';
+      ctx.fillRect(0, 0, W, H);
+      // 2) la vignettatura blu che stringe i bordi
+      const gr = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.26, cx, cy, Math.max(W, H) * 0.62);
+      gr.addColorStop(0, 'rgba(10,26,60,0)'); gr.addColorStop(1, 'rgba(10,26,60,' + (0.62 * a) + ')');
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      // 3) due anelli lenti dal centro: l'orologio che batte piano
+      for (let k = 0; k < 2; k++) {
+        const f = ((this.time * 0.5 + k * 0.5) % 1);
+        ctx.strokeStyle = 'rgba(143,216,255,' + ((1 - f) * 0.4 * a) + ')';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(cx, cy, 30 + f * Math.max(W, H) * 0.5, 0, 7); ctx.stroke();
+      }
     },
     _drawEdgeVignette(ctx, world) {
       const me = world.me; if (!me) return;

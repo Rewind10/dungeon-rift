@@ -28,7 +28,14 @@ attach(server, (conn) => {
     switch (m.t) {
       case C.MSG.HELLO: { room = m.room ? getRoom(m.room) : joinable(); if (room.players.size >= C.MAX_PLAYERS) { conn.send(JSON.stringify({ t: 'full' })); conn.close(); return; } const p = room.addPlayer(pid, conn, m.name, m.hero); joined = true; conn.send(JSON.stringify({ t: C.MSG.WELCOME, id: pid, room: room.id, map: room.map, phase: room.phase, wave: room.wave, players: [...room.players.values()].map(x => ({ i: x.id, n: x.name, h: x.heroId })) })); room.broadcast({ t: C.MSG.EVENT, ev: { t: 'join', id: pid, name: p.name, count: room.players.size } }); break; }
       case C.MSG.INPUT: if (room) room.setInput(pid, m); break;
-      case 'start': if (room) room.startGame(m.wave | 0); break;   // v1.91 — `wave` = modalita' di prova
+      case 'start':
+        if (room) {
+          // v2.17 — in modalita' di prova si possono scegliere le abilita' attive dal menu: arrivano qui
+          // e la stanza se le tiene da parte. Gli id li valida `_abilitaDiProva`, non questa riga.
+          room.abilProva = Array.isArray(m.abil) ? m.abil.filter(x => typeof x === 'string').slice(0, 3) : null;
+          room.startGame(m.wave | 0);
+        }
+        break;   // v1.91 — `wave` = modalita' di prova
       case C.MSG.BUY_STAT: if (room) room.buyStat(pid, m.id); break;
       case C.MSG.BUY_GEAR: if (room) room.buyGear(pid, m.id); break;
       case C.MSG.VENDI_GEAR: if (room) room.vendiGear(pid, m.id); break;   // v2.12 — rivendita dal fabbro

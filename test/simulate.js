@@ -3040,6 +3040,33 @@ function testPonteClient() {
   assert(copiati.has('wt') && copiati.has('wp'), 'il cronometro (wt) e il tempo obiettivo (wp) arrivano fino all HUD');
   assert(letti.has('ex'), 'il ponte vede anche i campi letti dai metodi delegati (ex, lo stato dell uscita)');
   assert(copiati.has('ex'), 'e lo stato dell uscita (ex) arriva fino all HUD');
+  // ============================================================================================
+  // v2.17 — E NESSUN CAMPO DEL MONDO SI PERDE FRA LO SNAPSHOT E IL RENDERER
+  // ============================================================================================
+  // IL BUG CHE HA FATTO NASCERE QUESTO CONTROLLO. `muri`, `trap` e `nebb` stavano nello snapshot dalla
+  // v1.85 e non erano mai stati copiati nel mondo interpolato dentro main.js: il server li mandava, il
+  // client li buttava, il renderer disegnava tre array vuoti. Per otto versioni il muro di fuoco, la
+  // tagliola e il velo d'ombra non si sono MAI visti — senza un errore da nessuna parte. Paolo se n'e'
+  // accorto giocando: «il muro di fuoco non ha nessun effetto grafico».
+  // In quel punto di main.js c'era gia' un avvertimento scritto, e c'era gia' un controllo: ma copriva
+  // i campi letti dall'HUD, non quelli letti dal RENDERER. Questo li copre — legge dal sorgente quali
+  // `world.<campo>` il renderer usa davvero, e pretende che main.js li copi tutti.
+  {
+    const fs2 = require('fs'), path2 = require('path');
+    const dir = path2.join(__dirname, '..', 'public', 'js');
+    const srcR = fs2.readFileSync(path2.join(dir, 'renderer.js'), 'utf8');
+    const srcM = fs2.readFileSync(path2.join(dir, 'main.js'), 'utf8');
+    const letti = new Set(); let mm;
+    const re = /\bworld\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    while ((mm = re.exec(srcR))) letti.add(mm[1]);
+    for (const k of ['me', 'players', 'mon', 'bul']) letti.delete(k);   // roba del giocatore locale, non dello snapshot
+    const copiati = new Set();
+    const re2 = /\bw\.([a-zA-Z_][a-zA-Z0-9_]*)\s*=/g;
+    while ((mm = re2.exec(srcM))) copiati.add(mm[1]);
+    const persi = [...letti].filter(k => !copiati.has(k));
+    assert(persi.length === 0, 'nessun campo del mondo si perde fra snapshot e renderer (' + letti.size + ' controllati)'
+      + (persi.length ? ' — PERSI: ' + persi.join(', ') : ''));
+  }
   ok('il ponte fra server e HUD regge');
 }
 // ===================== v1.78 — USCITA, CARTE DAI LIVELLI, RIEPILOGO =====================
@@ -4420,7 +4447,7 @@ function testV185() {
   {
     const r = new Room('v185d'); const p = r.addPlayer('a', conn, 'A', 'ladro'); r.startGame();
     r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 5; r.waveList = [];
-    p.abil[0] = 'ab_velo';
+    p.abil[0] = 'ab_tempo';   // v2.17 — il Velo d'Ombra e' diventato Tempo Rubato (la bullet time)
     assert(r._usaAbilita(p, 1) === true, 'la prima volta parte');
     assert(Math.abs(p.cdAb[0] - 30) < 1.5, 'e mette 30s di ricarica (' + p.cdAb[0].toFixed(1) + ')');
     assert(r._usaAbilita(p, 1) === false, 'la seconda no, e in ricarica');
