@@ -12,11 +12,11 @@
   // ===== NOMI ============================================================================
   // Quindici per classe, corti: devono stare sopra la testa senza coprire mezzo schermo.
   const NOMI = {
-    guerriero: ['Bardo', 'Ghisla', 'Torbe', 'Corvin', 'Orsa', 'Ruggero', 'Vanda', 'Malco', 'Brenna',
+    barbaro: ['Bardo', 'Ghisla', 'Torbe', 'Corvin', 'Orsa', 'Ruggero', 'Vanda', 'Malco', 'Brenna',
                 'Ottone', 'Drusa', 'Gervas', 'Ilda', 'Rocco', 'Berta'],
     mago:      ['Vesper', 'Anselma', 'Morrin', 'Ilbe', 'Cinira', 'Ordo', 'Selva', 'Tibald', 'Numa',
                 'Erasmo', 'Livia', 'Cardan', 'Nebbia', 'Ostro', 'Rea'],
-    ladro:     ['Guizzo', 'Renza', 'Nibbio', 'Cardo', 'Bissa', 'Furio', 'Serpe', 'Lena', 'Tasso',
+    arciere:   ['Guizzo', 'Renza', 'Nibbio', 'Cardo', 'Bissa', 'Furio', 'Serpe', 'Lena', 'Tasso',
                 'Mirta', 'Sghembo', 'Nadia', 'Zaffo', 'Corva', 'Pece'],
   };
 
@@ -32,7 +32,7 @@
   // la tinta si legge. Ogni chiave qui dentro finisce nella firma della palette (renderer._palKey), quindi
   // due varianti non possono mai spartirsi un gradiente in cache.
   const TINTE = {
-    guerriero: [
+    barbaro: [
       { cloth: '#7a2f22', clothDk: '#3c1610', steelDk: '#5a3a30', metallo: '#96685a', pelo: '#2a1a10', skin: '#c98f5e' },  // ruggine
       { cloth: '#25406e', clothDk: '#101f36', steelDk: '#2f3f5a', metallo: '#6a7d9c', pelo: '#4a4030', skin: '#d6ad82' },  // ferro
       { cloth: '#54306e', clothDk: '#271636', steelDk: '#4a3358', metallo: '#8a7a9e', pelo: '#241826', skin: '#bb8a68' },  // viola
@@ -44,7 +44,7 @@
       { body: '#2a2a30', bodyDk: '#0c0c10', accent: '#ff7a2b', skin: '#d8cec2', orlo: 'rgba(255,122,43,.75)' },   // cenere e brace
       { body: '#5e1d6e', bodyDk: '#230a2c', accent: '#ff5ad0', skin: '#e6dcd2', orlo: 'rgba(255,90,208,.75)' },   // porpora
     ],
-    ladro: [
+    arciere: [
       { cloth: '#6a1f2c', clothDk: '#2e0d13', mant: '#3a1119', capp: '#5c1b28', skin: '#c08a5e', wood: '#5e3a1e' },   // bordeaux
       { cloth: '#1f3560', clothDk: '#0d1730', mant: '#101c33', capp: '#1c2f56', skin: '#d3ab80', wood: '#6a4a28' },   // blu notte
       { cloth: '#4a2a68', clothDk: '#1e1030', mant: '#251434', capp: '#3e2358', skin: '#b8845c', wood: '#4e3520' },   // viola
@@ -52,7 +52,12 @@
     ],
   };
 
-  const CLASSI = ['guerriero', 'mago', 'ladro'];
+  // v2.18 — I MERCENARI SONO TRE CLASSI, UNA PER CORPO. Erano i tre eroi di allora; ora che le classi
+  // sono sette si e' scelto un rappresentante per impalcatura — il barbaro per la pesante, il mago per
+  // l'arcana, l'arciere per l'agile — invece di aprire il banco a tutte e sette. Un mercenario deve
+  // leggersi a colpo d'occhio come "uno che picchia", "uno che lancia", "uno che tira": sette varianti
+  // al banco sarebbero sette nomi da ricordare per una scelta che dura un'ondata.
+  const CLASSI = ['barbaro', 'mago', 'arciere'];
 
   // ===== QUANTO COSTA ====================================================================
   // Cinquanta monete un livello 1, quaranta in piu' per ogni livello: al quindicesimo sono 610.
@@ -72,7 +77,7 @@
     for (const s of [3, 6, 9, 12]) if (L >= s) n++;
     return n;
   }
-  const STAT_CLASSE = { guerriero: 'st_for', mago: 'st_int', ladro: 'st_des' };
+  const STAT_CLASSE = { barbaro: 'st_for', mago: 'st_int', arciere: 'st_des' };
   function distribuisci(heroId, lvl, maxPerStat) {
     const cap = maxPerStat || 12;
     const principale = STAT_CLASSE[heroId] || 'st_for';
@@ -102,7 +107,7 @@
       costo: costo(lvl),
     };
   }
-  function palette(heroId, tinta) { const t = TINTE[heroId] || TINTE.guerriero; return t[(tinta | 0) % t.length]; }
+  function palette(heroId, tinta) { const t = TINTE[heroId] || TINTE.barbaro; return t[(tinta | 0) % t.length]; }
 
   // ===== COME PENSA ======================================================================
   // Questa non e' nuova: e' la testa dei bot che guidano le partite simulate dei test, rifinita in dieci

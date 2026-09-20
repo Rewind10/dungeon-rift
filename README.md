@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.14.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.18.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -18,11 +18,51 @@ Test: `npm test`
 | Mira | Mouse |
 | Spara | Click sinistro / Spazio |
 | **Scatto (dash)** | Tasto destro del mouse (o Shift) — attraversa i nemici |
-| **Pozioni della cintura** | 1 / 2 / 3 — il tipo di ogni slot lo scegli dall'Erborista |
-| **Abilità attive** | **Q** (si sblocca al livello 8) e **E** (livello 14) — quattro per classe, se ne sceglie una per slot |
+| **Abilità attive** | **1 / 2 / 3** — si sbloccano ai livelli 1, 7 e 13 |
+| **Pozioni della cintura** | **Q / E** — il tipo di ogni slot lo scegli dall'Erborista |
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.18.0 (da tre eroi a sette classi)
+
+**Le sette classi**: barbaro, paladino, maestro d'armi, assassino, arciere, mago, warlock. Le decisioni
+per esteso, con le parole di Paolo accanto a ciascuna, stanno in **`PIANO-CLASSI-SETTAGGI.md`**: è il
+file da aprire per primo per capire *perché* una cosa è com'è.
+
+**Tre impalcature, non sette.** Ogni classe dichiara un `corpo` — pesante (guerriero), agile (ladro),
+arcana (mago). Chi **disegna o veste** guarda il corpo; chi **bilancia** guarda la classe. È la
+distinzione che ha reso il passaggio fattibile invece di una riscrittura: `gear.js`, il renderer e i
+mercenari continuano a ragionare per tre.
+
+**Il Carisma, quinta statistica.** Scala le magie di paladino e warlock. Il budget resta **14 punti**
+su cinque righe: è voluto, distribuirli è la scelta. Le scuole di danno sono cinque — `melee` (Forza),
+`agile` (Destrezza, lame leggere), `ranged` (Destrezza, archi), `magic` (Intelligenza), `pact`
+(Carisma).
+
+**Le statistiche di partenza** sono una matrice 7 × 5: picco 10 per chi vive di una statistica sola,
+6-7 per chi ne ha due (paladino e maestro d'armi). Due sfasamenti — il tetto fermo a 20 con i picchi a
+10, e il warlock che somma 23 invece di 22 — sono **decisioni esplicite di Paolo, non bachi**.
+
+**Le abilità.** Al livello 1 la **firma** di classe si riceve, non si sceglie; il mago è l'unico che
+sceglie, e sceglie la **scuola** (elementare / evocazione / negromanzia), da cui prende il titolo. Ai
+livelli 7 e 13 si sceglie fra una abilità nuova e solo sua e una del serbatoio delle dodici di prima.
+**Ogni effetto a tempo dura 10 secondi**, tranne Turbine, Salva e il blocco della Tagliola, che sono
+azioni e non effetti; lo **Scudo di Mana** non scade affatto — assorbe 8 danni per punto di
+Intelligenza e dura fino a fine ondata. Ricariche invariate: **30 / 45 / 60**.
+
+**Le passive** passano da 32 a 38 carte: sei nuove, aggiunte *solo* alle classi che avevano una sola
+opzione in qualche fascia. Adesso ognuna delle sette ne vede quattro a ogni fascia.
+
+**Le specializzazioni del livello 15 non esistono più**: quattro dei sei rami sono diventati classi.
+
+**L'estetica.** La scelta dell'eroe è un box quadrato con l'artwork a sinistra e i cinque attributi a
+destra, scorribile con le frecce; in partita le sagome si distinguono per testa, spalle, arma e tinta.
+
+I **salvataggi di prima si rifiutano** (`FORMATO` 4): `heroId: 'guerriero'` non è convertibile, quella
+classe si è divisa in tre.
+
+---
 
 ## 🆕 Novita v2.16.0 (la progressione rifatta: si comincia con un'abilita' in mano)
 

@@ -2,6 +2,82 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.18.0] — 2026-09-20 · "Sette classi"
+
+La versione più grossa dalla v1.66. **I tre eroi diventano sette classi**: barbaro, paladino, maestro
+d'armi, assassino, arciere, mago e warlock. Tutte le decisioni, con le parole di Paolo accanto a
+ciascuna, stanno in **`PIANO-CLASSI-SETTAGGI.md`** — questo file riassume cosa è stato fatto.
+
+**La regola che ha reso fattibile il passaggio: `corpo`.** Ogni classe dichiara una delle **tre
+impalcature** di prima — pesante (guerriero), agile (ladro), arcana (mago). Chi disegna o veste guarda
+il corpo; chi bilancia guarda la classe. Senza questa distinzione sarebbe stata una riscrittura:
+`gear.js`, il renderer e i mercenari continuano a ragionare per tre.
+
+**Il Carisma è la quinta statistica.** Scala le magie di paladino e warlock, che non possono scalare
+con l'Intelligenza senza diventare un'etichetta invece che una statistica. Il budget resta **14 punti**
+su cinque righe invece di quattro: è voluto — *«la difficoltà o la scelta è proprio il saper distribuire
+i punti»*. Le scuole di danno passano da tre a cinque (`melee`, `agile`, `ranged`, `magic`, `pact`):
+`agile` esiste perché l'assassino vive di Destrezza ma combatte in mischia.
+
+**La matrice di partenza è 7 × 5.** Picco 10 per le classi monostatistiche, 6-7 per quelle che ne hanno
+due. Il tetto `STAT_MAX` resta **20** anche se i picchi ora sono 10 — decisione esplicita di Paolo
+(*«lascia così anche il tetto, so cosa faccio»*), e il warlock somma 23 invece di 22: **segnalati
+entrambi e lasciati così. Non sono bachi.** Il centro del profilo di classe scende da 5,5 a **4,4**
+(la media di 22 su cinque caselle) e il peso da 0,5 a **0,38**, perché con i picchi a 10 lo scarto
+massimo più che raddoppiava.
+
+**Trenta abilità attive al posto di dodici.** Al livello 1 la **firma** non si sceglie, si riceve —
+l'unica eccezione è il mago, che sceglie la **scuola** (elementare / evocazione / negromanzia) e ne
+prende il titolo. Ai livelli 7 e 13 si sceglie fra una abilità **nuova e solo sua** e una del
+**serbatoio**, cioè una delle dodici di prima. Le diciotto nuove e le nove firme sono tutte scritte.
+Le **evocazioni** si appoggiano alla macchina del mercenario, che è già un alleato con PV, arma e IA.
+
+**La regola dei 10 secondi.** Ogni effetto a tempo dura 10s, con tre eccezioni che *non sono* effetti a
+tempo — Turbine (1,2s), Salva (2s), il blocco della Tagliola (2,5s) — e una quarta cosa che esce dalla
+regola da un'altra parte: lo **Scudo di Mana non scade**, assorbe **8 danni per punto di Intelligenza**
+e dura fino a fine ondata. Le ricariche restano **30 / 45 / 60**: segnalato che così un'abilità del
+primo slot è attiva un terzo del tempo, e accettato con una ragione di gioco — *«spesso ci si dimentica
+di usarle»*.
+
+**Il terzo slot non è più spento.** Era vuoto dalla v2.16 in attesa di una decisione: adesso ogni
+classe ha le sue due candidate anche al 13.
+
+**Le passive: sei carte nuove, da 32 a 38.** Contate fascia per fascia sulle sette classi, quattro ne
+avevano *una sola* da qualche parte; adesso ognuna vede quattro offerte a ogni fascia. Le tre scuole
+del mago condividono le passive di proposito: le carte che le distinguerebbero parlerebbero tutte di
+creature evocate, e **non si progetta una carta prima della meccanica che descrive**.
+
+**Le specializzazioni del livello 15 spariscono.** Quattro dei sei rami (Paladino, Maestro d'Armi,
+Assassino, Stregone) sono diventati *classi*: tenerli avrebbe voluto dire un assassino che al
+quindicesimo si specializza in assassino. `SPECS` resta vuoto e non cancellato, come `CARDS` dalla
+v1.70. Il 15 dà il tetto, il punto statistica e il titolo dell'ultimo rango — che adesso esiste per
+tutte e sette.
+
+**L'estetica.** La scelta dell'eroe non è più tre riquadri ma **un box quadrato**: artwork a sinistra,
+a destra nome, epiteto, i cinque attributi a barre e la descrizione; frecce ai lati e tasti ← →. I
+sette ritratti stanno in `public/assets/classi/`. In partita le **sagome** si distinguono per testa,
+spalle, arma e tinta sulle stesse tre impalcature — nessuna struttura di disegno nuova.
+
+**Cose sistemate per strada:**
+- la **Piastra** (−12% danni subiti) passa dal guerriero al paladino, che ne è l'erede difensivo;
+- la legenda dei comandi nel menu diceva ancora *«1 2 3 Pozioni · Q E Abilità, si sbloccano al livello
+  8 e al 14»*: era rimasta alla versione prima della v2.16, che aveva invertito i tasti;
+- `#heroBox` era usato da **due** elementi diversi (il nuovo riquadro di scelta e il ritratto in
+  partita): il secondo vinceva e il primo collassava a zero. Il nuovo si chiama `#heroScelta`;
+- le **nebbie** erano macchina morta dalla v2.17 (il Velo d'Ombra era stato sostituito dal Tempo
+  Rubato) e tornano come **campi a terra**: Fame delle Tenebre, Nube Mortifera e le pozze
+  dell'Impronta Elementale, tre abilità su una macchina sola.
+
+**I salvataggi vecchi si rifiutano** (`FORMATO` da 3 a 4): un salvataggio con `heroId: 'guerriero'` non
+è recuperabile — quella classe si è divisa in tre e nessuno può indovinare quale volesse essere.
+
+**Test: 3949 passati, 0 falliti.** I test che affermavano il vecchio impianto sono stati **riscritti,
+non tolti** — quello delle specializzazioni adesso afferma che il bivio *non* compare, quello delle
+abilità cammina su tutte e trenta invece che sulle dodici di prima, e quello delle carte gira su sette
+classi invece di tre (è quello che avrebbe visto subito i quattro buchi riempiti dalle carte nuove).
+
+---
+
 ### [2.17.1] — 2026-09-19 · "La modalità di prova si vede"
 
 Il pannello delle prove esisteva, stava nel posto giusto — sotto la scelta dell'eroe — e **aveva la

@@ -124,15 +124,22 @@
 
   // Sei fasce, non piu' cinque: la prima e' il titolo con cui si comincia (livelli 1-2), l'ultima e' la
   // specializzazione e non ha un nome fisso.
+  // v2.18 — SETTE SCALE DI TITOLI, e la sesta non e' piu' vuota. Era `null` perche' al sesto rango
+  // parlava la specializzazione; le specializzazioni non esistono piu' (vedi SPECS qui sotto), quindi
+  // l'ultimo gradino ha un nome suo. I ranghi restano puramente scenici — `puntiPerRango()` torna 0.
   const RANK_NAMES = {
-    guerriero: ['Guerriero', 'Guerriero Esperto', 'Veterano', 'Campione', 'Signore delle Lame', null],
-    mago: ['Apprendista', 'Mago Giovane', 'Mago', 'Mago Anziano', 'Magister', null],
-    ladro: ['Ladro', 'Furfante', 'Predone', 'Ombra', 'Spettro', null],
+    barbaro:   ['Predone', 'Razziatore', 'Berserker', 'Distruttore', 'Furia del Nord', 'Flagello'],
+    paladino:  ['Scudiero', 'Cavaliere', 'Giurato', 'Campione', 'Baluardo', 'Luce della Faglia'],
+    maestro:   ['Schermidore', 'Duellante', 'Spadaccino', 'Maestro di Scherma', 'Lama Doppia', 'Mano Perfetta'],
+    assassino: ['Tagliagole', 'Sicario', 'Lama Silente', 'Ombra', 'Spettro', 'Nome Dimenticato'],
+    arciere:   ['Battitore', 'Tiratore', 'Cacciatore', 'Arciere Scelto', 'Occhio Lungo', 'Freccia Nera'],
+    mago:      ['Apprendista', 'Mago Giovane', 'Mago', 'Mago Anziano', 'Magister', 'Arcimago'],
+    warlock:   ['Iniziato', 'Patteggiato', 'Invocatore', 'Malediziere', 'Signore del Patto', 'Voce dell Abisso'],
   };
   function rankName(heroId, level, specId) {
     const r = rankForLevel(level);
-    if (r >= RANK_SPEC) { const s = SPEC_BY_ID[specId]; return s ? s.name : 'Leggenda'; }
-    return (RANK_NAMES[heroId] || RANK_NAMES.guerriero)[r - 1];
+    const scala = RANK_NAMES[heroId] || RANK_NAMES.barbaro;
+    return scala[Math.max(0, Math.min(scala.length - 1, r - 1))];
   }
 
   // ===== PUNTI ===============================================================================
@@ -162,40 +169,24 @@
   // si prendono piu' con la specializzazione: si scelgono a meta' partita e si giocano per mezza run.
   // La specializzazione tiene il suo passivo e in cambio ALZA LA POTENZA DELLE ABILITA' (abilityMult):
   // il campo `abilita` qui sotto resta come descrizione di cosa il ramo sa fare meglio.
-  const SPECS = {
-    guerriero: [
-      { id: 'paladino', name: 'Paladino', icon: '✨', color: '#ffe9a8', hero: 'guerriero',
-        desc: 'Aura di 220px: riduce del 18% i danni subiti, a te e ai compagni',
-        abilita: 'Giuramento — per 5s tu e i compagni nell aura siete immuni al primo colpo',
-        // v1.93 — l'aura curava i compagni (2% dei PV massimi al secondo, meta' a te): tolto. Resta la
-        // riduzione dei danni, che e' cio' che un Paladino deve fare senza rimettere PV in circolo.
-        apply: p => { p.perk.aura = 220; p.perk.auraDR = 0.18; } },
-      { id: 'maestro', name: "Maestro d'Armi", icon: '⚔️', color: '#ffd27a', hero: 'guerriero',
-        desc: '+35% cadenza del fendente, +20% apertura dell arco, rinculo x1,5',
-        abilita: 'Turbine — tre fendenti a 360° in 1,2s',
-        apply: p => { p.stats.schoolRate.melee += 0.35; p.perk.arcoPiu = 0.20; p.stats.knockMult *= 1.5; } },
-    ],
-    mago: [
-      { id: 'arcimago', name: 'Arcimago', icon: '🔮', color: '#c48cff', hero: 'mago',
-        desc: 'Ogni bolla esplode: 60% del danno in un raggio di 90px',
-        abilita: 'Meteora — tre esplosioni a caduta sul punto mirato',
-        apply: p => { p.perk.detona = 1; p.perk.detonaR = 90; p.perk.detonaQ = 0.6; } },
-      { id: 'stregone', name: 'Stregone', icon: '🕯️', color: '#ff5a7a', hero: 'mago',
-        desc: 'La bolla diventa un dardo che rimbalza su 3 nemici a danno pieno',
-        abilita: 'Catena Nera — fulmine che rimbalza fra 8 nemici',
-        apply: p => { p.perk.catena = 3; p.perk.catenaPiena = 1; } },
-    ],
-    ladro: [
-      { id: 'assassino', name: 'Assassino', icon: '🔪', color: '#9b5de5', hero: 'ladro',
-        desc: 'Critico al 35%, danno critico x3, i colpi alle spalle sono SEMPRE critici',
-        abilita: 'Marchio — segna un nemico: prende +50% danni da chiunque',
-        apply: p => { p.stats.critChance = Math.max(p.stats.critChance, 0.35); p.stats.critMult = Math.max(p.stats.critMult, 3.0); p.perk.spalleCrit = 1; if (!p.perk.spalle) p.perk.spalle = 0.8; } },
-      { id: 'cacciatore', name: 'Cacciatore di Teste', icon: '🎯', color: '#9ef0b0', hero: 'ladro',
-        desc: 'Ogni tiro e un ventaglio di 3 frecce che perforano 3 nemici',
-        abilita: 'Salva — 15 frecce in 2s',
-        apply: p => { p.stats.extraProjectiles += 2; p.boon.pierce += 2; } },
-    ],
-  };
+  // ============================================================================================
+  // v2.18 — LE SPECIALIZZAZIONI NON ESISTONO PIU'
+  // ============================================================================================
+  // Erano il bivio del livello 15: Paladino / Maestro d'Armi per il guerriero, Arcimago / Stregone per
+  // il mago, Assassino / Cacciatore di Teste per il ladro. Parole di Paolo, quando abbiamo deciso le
+  // sette classi: *«ovviamente le specializzazioni del livello 15 spariscono»* — ed e' inevitabile, non
+  // una scelta di gusto: quattro di quei sei nomi (Paladino, Maestro d'Armi, Assassino, Stregone) sono
+  // diventati CLASSI. Tenerli avrebbe voluto dire un assassino che al quindicesimo si specializza in
+  // assassino, e due `SPEC_BY_ID['assassino']` e `HEROES['assassino']` che si somigliano abbastanza da
+  // far sbagliare chiunque legga il codice fra sei mesi.
+  //
+  // La tabella resta VUOTA e non cancellata, con le sue funzioni: `specsFor()` risponde con una lista
+  // vuota, quindi il server salta l'offerta del bivio senza che nessuno debba aggiungere un `if`, e il
+  // moltiplicatore SPEC_ABIL_MULT non si applica mai perche' `p.spec` resta nullo. E' lo stesso modo in
+  // cui la v1.70 ha svuotato CARDS.
+  //
+  // Cosa fa adesso il livello 15: e' il tetto, da' il punto statistica e il titolo dell'ultimo rango.
+  const SPECS = {};
   const SPEC_BY_ID = {}; for (const h in SPECS) for (const s of SPECS[h]) SPEC_BY_ID[s.id] = s;
   const CARD_BY_ID = {}; for (const h in CARDS) for (const r in CARDS[h]) for (const c of CARDS[h][r]) { c.hero = h; c.rank = +r; CARD_BY_ID[c.id] = c; }
 

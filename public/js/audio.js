@@ -30,9 +30,17 @@
       let f0 = 560, f1 = 150, type = 'square', dur = 0.09, sub0 = 140, cHp = 1400, cG = 0.32, bG = 0.22;
       // v1.66 — un timbro per scuola: il fendente e' un colpo sordo e corto, la bolla un tono basso e morbido,
       // la freccia uno schiocco secco e acuto. Servono a distinguere le tre classi anche a orecchio.
-      if (hero === 'guerriero') { f0 = 260; f1 = 70; type = 'triangle'; dur = 0.13; sub0 = 90; cHp = 700; cG = 0.40; }
-      else if (hero === 'mago') { f0 = 420; f1 = 180; type = 'sine'; dur = 0.16; sub0 = 110; cHp = 1800; cG = 0.16; bG = 0.26; }
-      else if (hero === 'ladro') { f0 = 900; f1 = 420; type = 'square'; dur = 0.05; sub0 = 80; cHp = 2400; cG = 0.26; bG = 0.12; }
+      // v2.18 — il timbro segue la SCUOLA dell'arma, non piu' l'eroe: con sette classi e cinque scuole
+      // legarlo al nome della classe avrebbe voluto dire sette righe quasi identiche. Chi passa ancora
+      // un id di classe viene tradotto qui sotto, cosi' i vecchi punti di chiamata continuano a suonare.
+      const SCU = { barbaro: 'melee', paladino: 'melee', maestro: 'melee', guerriero: 'melee',
+                    assassino: 'agile', arciere: 'ranged', ladro: 'ranged', mago: 'magic', warlock: 'pact' };
+      const sc = SCU[hero] || hero;
+      if (sc === 'melee') { f0 = 260; f1 = 70; type = 'triangle'; dur = 0.13; sub0 = 90; cHp = 700; cG = 0.40; }
+      else if (sc === 'agile') { f0 = 620; f1 = 240; type = 'triangle'; dur = 0.06; sub0 = 90; cHp = 1900; cG = 0.30; bG = 0.16; }
+      else if (sc === 'magic') { f0 = 420; f1 = 180; type = 'sine'; dur = 0.16; sub0 = 110; cHp = 1800; cG = 0.16; bG = 0.26; }
+      else if (sc === 'pact') { f0 = 340; f1 = 140; type = 'sawtooth'; dur = 0.15; sub0 = 95; cHp = 1500; cG = 0.20; bG = 0.24; }
+      else if (sc === 'ranged') { f0 = 900; f1 = 420; type = 'square'; dur = 0.05; sub0 = 80; cHp = 2400; cG = 0.26; bG = 0.12; }
       if (weapon === 'scatter' || weapon === 'scatter_evo') { f0 = 380; f1 = 90; dur = 0.14; sub0 = 180; cHp = 900; cG = 0.42; bG = 0.26; }
       else if (weapon === 'burst' || weapon === 'burst_evo') { f0 = 1050; f1 = 500; type = 'sawtooth'; dur = 0.05; sub0 = 90; cHp = 2200; cG = 0.20; bG = 0.16; }
       else if (weapon === 'beam' || weapon === 'beam_evo') { f0 = 300; f1 = 700; type = 'sawtooth'; dur = 0.22; sub0 = 70; cHp = 700; cG = 0.30; bG = 0.24; }

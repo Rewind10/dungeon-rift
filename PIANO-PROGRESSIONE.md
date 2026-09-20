@@ -30,6 +30,12 @@ due, tardi. Metà del contenuto delle abilità non lo vede nessuno.
 
 ---
 
+> # ✅ CHIUSO NELLA v2.18.0 (20 settembre 2026)
+> I due punti che restavano aperti qui sotto sono stati chiusi: la **terza attiva del livello 13** adesso
+> esiste per tutte e sette le classi (il riquadro non è più spento), e il **buco fra l'ondata 4 e l'8**
+> resta com'è — la scaletta 1-3-5-7-9-11-13-15 non è stata toccata. Le specializzazioni del 15, citate
+> più volte qui sotto, **non esistono più**: vedi `PIANO-CLASSI-SETTAGGI.md`.
+>
 > # ✅ FATTO NELLA v2.16.0 (19 settembre 2026)
 > Tutto quello che c'è scritto qui sotto è stato realizzato, tranne la **terza attiva del livello 13**,
 > che Paolo deve ancora pensare: fino ad allora il terzo riquadro si vede tratteggiato con scritto «in

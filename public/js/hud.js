@@ -4,28 +4,45 @@
   const HERO = window.GAME.Heroes.HEROES, HORDER = window.GAME.Heroes.ORDER, MON = window.GAME.Monsters.MONSTERS, BOSSES = window.GAME.Monsters.BOSSES, LOOT = window.GAME.Loot, RAR = window.GAME.Constants.RARITY, SLOT_ICO = window.GAME.Gear.SLOT_ICON;
   const POT = window.GAME.Potions, BNT = window.GAME.Bounties;
   const $ = (id) => document.getElementById(id); const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { guerriero: '🛡️', mago: '🔮', ladro: '🏹' };
+  const iconHTML = (ic, cls) => (typeof ic === 'string' && /\.(png|svg|webp|jpg)$/i.test(ic)) ? `<img class="${cls || ''}" src="/${ic}" alt="" draggable="false">` : `<span class="emoji">${ic}</span>`; const HeroIcon = { barbaro: '🪓', paladino: '🛡️', maestro: '⚔️', assassino: '🗡️', arciere: '🏹', mago: '🔮', warlock: '⛓️' };
   const EVO_NAME = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; if (w.evo) EVO_NAME[w.evo.id] = { name: w.evo.name, icon: w.icon, color: w.evo.color }; }
   const HUD = {
-    selectedHero: 'guerriero', _boons: null, _stats: null, _gear: null, _active: [],
+    selectedHero: 'barbaro', _boons: null, _stats: null, _gear: null, _active: [],
     // v1.91 — la griglia della modalita' di prova: un pulsante per ondata. Le ondate col boss sono
     // marcate, perche' sono quelle che uno vuole provare per prime.
     // v2.17 — LA SCELTA DELLE ABILITA' NELLA MODALITA' DI PROVA.
     // Grafica volutamente essenziale: serve a provare le magie, non a essere bella. Due righe, una per
     // slot, con le due abilita' di quello slot; si clicca e si parte. La scelta vive qui (`provaAbil`) e
     // viaggia col messaggio `start`, dove il server la valida contro il catalogo della classe.
-    provaAbil: [null, null],
+    provaAbil: [null, null, null],
+    provaScuola: 'elementale',
+    // v2.18 — TRE RIGHE, NON DUE, e per il mago la riga della SCUOLA. Le abilita' del 7 e del 13
+    // dipendono dalla scuola scelta: senza sceglierla prima, le due righe sotto sarebbero vuote.
     buildProvaAbil(heroId) {
       const box = $('provaAbil'); if (!box) return;
       const Ab = window.GAME && window.GAME.Abilities; if (!Ab) return;
       const hero = heroId || this.selectedHero;
       box.innerHTML = '';
-      this.provaAbil = [null, null];
-      for (const slot of [1, 2]) {
-        const due = Ab.perSlot(hero, slot);
+      this.provaAbil = [null, null, null];
+      if (Ab.sceglieAlPrimo(hero)) {
+        const riga = document.createElement('div'); riga.className = 'pa-riga';
+        const et = document.createElement('span'); et.className = 'pa-k'; et.textContent = 'SCUOLA';
+        riga.appendChild(et);
+        Ab.scuoleMago().forEach((sc, i) => {
+          const el = document.createElement('button');
+          el.className = 'pa' + (sc.id === this.provaScuola ? ' sel' : '');
+          el.innerHTML = '<span class="ic">' + sc.firma.icon + '</span><span class="nm">' + sc.titolo + '</span>'
+            + '<span class="ds">' + (sc.firma.breve || '') + '</span>';
+          el.onclick = () => { this.provaScuola = sc.id; this.buildProvaAbil(hero); };
+          riga.appendChild(el);
+        });
+        box.appendChild(riga);
+      }
+      for (const slot of [1, 2, 3]) {
+        const due = Ab.perSlot(hero, slot, this.provaScuola);
         if (!due.length) continue;
         const riga = document.createElement('div'); riga.className = 'pa-riga';
-        const et = document.createElement('span'); et.className = 'pa-k'; et.textContent = 'TASTO ' + slot;
+        const et = document.createElement('span'); et.className = 'pa-k'; et.textContent = slot === 1 ? 'FIRMA' : 'TASTO ' + slot;
         riga.appendChild(et);
         due.forEach((ab, i) => {
           const el = document.createElement('button');
@@ -56,7 +73,71 @@
         g.appendChild(el);
       }
     },
-    buildHeroSelect(cb) { const w = $('heroSelect'); w.innerHTML = ''; HORDER.forEach(id => { const h = HERO[id]; const el = document.createElement('div'); el.className = 'hero-chip' + (id === this.selectedHero ? ' sel' : ''); el.style.setProperty('--pick', h.color); el.innerHTML = `<div class="avatar" style="background:${h.color2};color:${h.accent}">${HeroIcon[id]}</div><div class="hname">${h.name}</div><div class="hrole">${h.title}</div>`; el.onclick = () => { this.selectedHero = id; this.buildHeroSelect(cb); this.showHeroDetail(id); this.buildProvaAbil(id); if (cb) cb(id); }; w.appendChild(el); }); this.showHeroDetail(this.selectedHero); },
+    // ============================================================================================
+    // v2.18 — LA SCELTA DELLA CLASSE: UNA ALLA VOLTA, GRANDE
+    // ============================================================================================
+    // Erano tre riquadri affiancati; le classi sono sette e affiancarle avrebbe voluto dire sette
+    // francobolli. Qui se ne vede una alla volta: artwork a sinistra, e a destra nome, epiteto, i
+    // CINQUE punti attributo e la descrizione. Il mago mostra in fondo le sue tre scuole col titolo
+    // che ciascuna gli da'.
+    //
+    // Le barre degli attributi sono la ragione vera di questa schermata: con cinque statistiche e 14
+    // punti in tutta la partita, sapere DA DOVE parte una classe e' l'informazione che decide la
+    // scelta, e nei tre riquadri di prima non c'era posto per dirla.
+    buildHeroSelect(cb) {
+      const box = $('heroScelta'); if (!box) return;
+      this._heroCb = cb || this._heroCb;
+      const id = HORDER.indexOf(this.selectedHero) >= 0 ? this.selectedHero : HORDER[0];
+      this.selectedHero = id;
+      const h = HERO[id], SB = window.GAME.Heroes.STAT_BASE[id] || {};
+      const NOMI = { st_for: 'FOR', st_cos: 'COS', st_des: 'DES', st_int: 'INT', st_car: 'CAR' };
+      const stats = (window.GAME.Heroes.STATS || []).map(k => {
+        const v = SB[k] || 0;
+        return `<div class="st"><span class="k">${NOMI[k] || k}</span>`
+          + `<span class="track"><i style="width:${v * 10}%;background:${h.accent}"></i></span>`
+          + `<span class="v">${v}</span></div>`;
+      }).join('');
+      const scuole = (h.scuole || []).length
+        ? '<div class="scuole"><div class="sct">Scuola di magia — si sceglie prima di scendere</div>'
+          // una riga per scuola, non due: nel riquadro quadrato tre blocchi da due righe non ci stanno,
+          // e il mago e' l'unica classe che ha questo pezzo in piu' da far entrare.
+          // nome della scuola e TITOLO che ne deriva, e basta: e' l'informazione che decide la scelta
+          // («in base alla scelta diventera': elementare, evocatore o negromante»). La descrizione di
+          // cosa fa ciascuna sta nel riquadro dell'abilita', quando la si riceve.
+          + h.scuole.map(x => `<div class="sc"><b>${x.id.charAt(0).toUpperCase() + x.id.slice(1)}</b><em>&rarr; ${x.titolo}</em></div>`).join('')
+          + '</div>'
+        : '';
+      box.style.setProperty('--pick', h.accent);
+      box.innerHTML = `<div class="hcard" style="--pick:${h.accent}">
+        <div class="art"><img src="/assets/classi/${id}.png" alt="" draggable="false"><div class="vign"></div></div>
+        <div class="info">
+          <div><h3>${h.name}</h3><p class="epi">${h.title}</p></div>
+          <div class="stats">${stats}</div>
+          <p class="dsc">${h.desc || ''}</p>
+          ${scuole}
+        </div></div>`;
+      const pal = $('heroPallini');
+      if (pal) {
+        pal.innerHTML = '';
+        HORDER.forEach((hid, k) => { const d = document.createElement('i'); if (hid === id) d.className = 'on'; d.onclick = () => this.scegliEroe(hid); pal.appendChild(d); });
+      }
+      const prev = $('heroPrev'), next = $('heroNext');
+      if (prev) prev.onclick = () => this.scorriEroe(-1);
+      if (next) next.onclick = () => this.scorriEroe(1);
+      if (!this._heroTasti) {
+        this._heroTasti = 1;
+        addEventListener('keydown', (e) => {
+          const m = document.getElementById('menu');
+          if (!m || m.classList.contains('hidden')) return;          // solo nel menu
+          if (document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
+          if (e.key === 'ArrowLeft') { e.preventDefault(); this.scorriEroe(-1); }
+          if (e.key === 'ArrowRight') { e.preventDefault(); this.scorriEroe(1); }
+        });
+      }
+      this.showHeroDetail(id); this.buildProvaAbil(id);
+    },
+    scorriEroe(d) { const i = HORDER.indexOf(this.selectedHero); this.scegliEroe(HORDER[(i + d + HORDER.length) % HORDER.length]); },
+    scegliEroe(id) { this.selectedHero = id; this.buildHeroSelect(this._heroCb); if (this._heroCb) this._heroCb(id); },
     // v1.66 — la scheda non mostra piu' Q/E (rimosse): al loro posto l'ARMA e la statistica che la governa,
     // che sono le due cose da sapere per scegliere la classe adesso.
     // v1.86.1 — LA SCHEDA DELLA CLASSE NON STA PIU' NEL MENU. Era un riquadro di sei righe (arma, danni,
@@ -64,7 +145,7 @@
     // l'illustrazione e chiedeva di studiare una tabella prima di poter entrare in partita. Le tre classi
     // si scelgono dai loro tre riquadri, e cosa sanno fare si scopre giocandole. La funzione resta e non
     // fa niente finche' il riquadro non c'e': se un giorno lo si rimette altrove, torna a riempirlo.
-    showHeroDetail(id) { const h = HERO[id]; const SCH = { melee: ['💪', 'Forza', 'semicerchio in mischia'], magic: ['🔮', 'Intelligenza', 'proiettili magici'], ranged: ['🏹', 'Destrezza', 'tiro a distanza'] }[h.weapon.school] || ['⚔️', '—', '']; const box = document.getElementById('heroDetail'); if (!box) return; box.innerHTML = `<h3 style="color:${h.accent}">${h.name} — <span style="color:#c9d2e6;font-weight:600">${h.title}</span></h3><div class="ab"><span class="k">SX</span><b>${h.weapon.name}</b> — ${SCH[2]}, ${h.weapon.dmg} danni, ${h.weapon.fireRate}/s</div><div class="ab"><span class="k">${SCH[0]}</span><b>${SCH[1]}</b> — alza danno e cadenza di quest'arma</div><div class="ab"><span class="k">🖱▸</span><b>Scatto</b> — tasto destro: attraversa i nemici.</div><div class="ab pas">🛡️ ${h.passives.map(p => '<b>' + p.name + '</b>').join(' · ')}</div><div class="sw"><span class="s">▲ ${h.strengths}</span><br><span class="w">▼ ${h.weakness}</span></div>`; },
+    showHeroDetail(id) { const h = HERO[id]; const SCH = { melee: ['💪', 'Forza', 'semicerchio in mischia'], agile: ['🏹', 'Destrezza', 'lame leggere, da vicino'], magic: ['🔮', 'Intelligenza', 'proiettili magici'], ranged: ['🏹', 'Destrezza', 'tiro a distanza'], pact: ['✨', 'Carisma', 'magie di classe'] }[h.weapon.school] || ['⚔️', '—', '']; const box = document.getElementById('heroDetail'); if (!box) return; box.innerHTML = `<h3 style="color:${h.accent}">${h.name} — <span style="color:#c9d2e6;font-weight:600">${h.title}</span></h3><div class="ab"><span class="k">SX</span><b>${h.weapon.name}</b> — ${SCH[2]}, ${h.weapon.dmg} danni, ${h.weapon.fireRate}/s</div><div class="ab"><span class="k">${SCH[0]}</span><b>${SCH[1]}</b> — alza danno e cadenza di quest'arma</div><div class="ab"><span class="k">🖱▸</span><b>Scatto</b> — tasto destro: attraversa i nemici.</div><div class="ab pas">🛡️ ${h.passives.map(p => '<b>' + p.name + '</b>').join(' · ')}</div><div class="sw"><span class="s">▲ ${h.strengths}</span><br><span class="w">▼ ${h.weakness}</span></div>`; },
     // v1.66 — niente piu' slot Q/E: la barra tiene solo cio' che il giocatore puo' davvero premere.
     // v1.85 — quattro slot: scatto, arma, e le due ABILITA' ATTIVE. Q ed E nascono col LUCCHETTO e
     // dicono a che livello si aprono — un riquadro vuoto si legge come un guasto, uno chiuso come una meta.
@@ -746,7 +827,7 @@
       ctx.clearRect(0, 0, cv.width, cv.height);
       const inv = this._stats && this._stats.inv; if (!inv) return;
       const eq = {
-        h: this._heroId || 'guerriero',
+        h: this._heroId || 'barbaro',
         wp: (inv.gear.find(g => g.slot === 'weapon') || {}).id || null,
         arm: (inv.gear.find(g => g.slot === 'armor') || {}).id || null,
         sh: (inv.gear.find(g => g.slot === 'shield') || {}).id || null,
@@ -838,7 +919,7 @@
     updateHeroBox(me) {
       const box = $('heroBox'); if (!box) return;
       if (!me) { box.classList.add('hidden'); return; }
-      const LV = window.GAME.Levels, h = HERO[me.h] || HERO.guerriero;
+      const LV = window.GAME.Levels, h = HERO[me.h] || HERO.barbaro;
       const rk = (LV && me.lvl) ? LV.rankName(me.h, me.lvl, me.sp || null) : '';
       const sig = [me.n, me.h, me.lvl, rk, (this._active || []).map(b => b.id + (b.on === 0 ? '-' : '+') + (b.n || 1)).join(',')].join('|');
       if (sig !== this._heroSig) {
@@ -1098,8 +1179,8 @@
       // te lo ricorda e non ne offre un altro: uno solo per volta, e finche' e' vivo e' quello.
       const box = $('banditMerc'), msub = $('mercSub'); box.innerHTML = '';
       const M = d.merc || {};
-      const ICO = { guerriero: '\u2694\uFE0F', mago: '\uD83D\uDD2E', ladro: '\uD83C\uDFF9' };
-      const CLA = { guerriero: 'Guerriero', mago: 'Mago', ladro: 'Ladro' };
+      const ICO = HeroIcon;
+      const CLA = {}; for (const k in HERO) CLA[k] = HERO[k].name;
       if (M.assunto) {
         if (msub) msub.textContent = 'Ne hai gia\u2019 uno al soldo. Lo ritrovi sulla mappa, curato.';
         const el = document.createElement('div'); el.className = 'mi on';
@@ -1200,7 +1281,7 @@
       this._gearSlots(wrap, d, (id) => { if (this._buyGearNpc) this._buyGearNpc(id); },
                                 (id) => { if (this._sellGearNpc) this._sellGearNpc(id); });
     },
-    lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.guerriero; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
+    lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.barbaro; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
     hideLobby() { $('lobby').classList.add('hidden'); },
     end(victory, snap, me, runStats, dur) {
       const scr = $('endScreen');
@@ -1213,7 +1294,7 @@
       if (runStats && runStats.length) {
         html += '<table class="runtab"><thead><tr><th>Eroe</th><th>💀</th><th>🔥 Combo</th><th>Danni</th><th>🎴</th><th>Arma</th></tr></thead><tbody>';
         runStats.forEach((r, idx) => {
-          const h = HERO[r.h] || HERO.guerriero; const mine = me && r.i === me.i;
+          const h = HERO[r.h] || HERO.barbaro; const mine = me && r.i === me.i;
           const medal = idx === 0 ? '🥇 ' : (idx === 1 ? '🥈 ' : (idx === 2 ? '🥉 ' : ''));
           const wpn = r.evo ? ('✨ ' + ((WN[r.evo] || {}).name || 'Evoluta')) : (r.w ? ((WN[r.w] || {}).icon || '') + ' ' + ((WN[r.w] || {}).name || '') : '—');
           const syn = r.syn ? ` <span style="color:#7dffea">+${r.syn}🔗</span>` : '';
@@ -1278,7 +1359,7 @@
         guerriero: { veste: '#7f8895', vesteDk: '#2f3742', pelle: '#e0b183', acc: '#e0a52c' },
         mago:      { veste: '#3d3c8c', vesteDk: '#14133a', pelle: '#e3c396', acc: '#00f0c8' },
         ladro:     { veste: '#3c5140', vesteDk: '#1d2a22', pelle: '#e6c79c', acc: '#9ef0b0' },
-      }[chi === 'tu' ? (eroeId || 'guerriero') : chi] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
+      }[chi === 'tu' ? (window.GAME.Gear.corpoDi(eroeId || 'barbaro')) : chi] || { veste: '#6b5a3c', vesteDk: '#3a3020', pelle: '#e0b183', acc: '#ffcf4a' };
 
       // fondo: un alone del colore di chi parla, cosi' il riquadro non e' un buco nero
       const bg = g.createRadialGradient(W / 2, H * 0.62, 4, W / 2, H * 0.62, W * 0.72);

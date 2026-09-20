@@ -94,7 +94,16 @@
       <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
       <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
       <h2>Scegli il tuo eroe</h2>
-      <div id="heroSelect"></div>
+      <!-- v2.18 — IL BOX QUADRATO al posto dei riquadri delle tre classi. Le classi sono sette: sette
+           riquadri in fila sarebbero sette francobolli, e la scelta si farebbe a caso. Qui se ne vede
+           UNA alla volta, grande: l'artwork a sinistra, e a destra nome, epiteto, i cinque punti
+           attributo e cosa fa. Si scorre con le frecce ai lati o con i tasti freccia. -->
+      <div id="heroRiga">
+        <button id="heroPrev" class="hero-arrow" type="button" aria-label="Classe precedente">&#10094;</button>
+        <div id="heroScelta"></div>
+        <button id="heroNext" class="hero-arrow" type="button" aria-label="Classe successiva">&#10095;</button>
+      </div>
+      <div id="heroPallini"></div>
       <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
       <!-- v2.11 — RIPRENDI sta nella PRIMA schermata, non nella sala d'attesa: una partita salvata si
            riprende prima di scegliere eroe e stanza, non dopo. E compare SOLO se c'e' davvero un
@@ -132,8 +141,11 @@
         <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
         <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
         <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
-        <div class="tasto"><span class="kb">1 2 3</span><b>Pozioni</b><i>le tre della cintura</i></div>
-        <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Abilità attive</b><i>si sbloccano al livello 8 e al 14</i></div>
+        <!-- v2.16 — i tasti hanno cambiato mestiere: le abilita' stanno sui NUMERI e le pozioni su Q ed E.
+             Questa legenda era rimasta alla versione prima e diceva il contrario, con i livelli 8 e 14
+             che non esistono piu'. v2.18 — gli slot delle abilita' sono tre e si aprono a 1, 7 e 13. -->
+        <div class="tasto"><span class="kb">1 2 3</span><b>Abilità attive</b><i>si sbloccano ai livelli 1, 7 e 13</i></div>
+        <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Pozioni</b><i>le due della cintura</i></div>
         <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: è l'illuminazione giusta</i></div>
         <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
         <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>

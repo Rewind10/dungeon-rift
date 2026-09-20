@@ -51,14 +51,51 @@ function newStats() {
     // delle pozioni. Il test 58 vieta il rientro di entrambi.
     pierce: 0, extraProjectiles: 0, cdrMult: 1, knockMult: 1, novaEvery: 0, abilityMult: 1,
     xpMult: 1, dmgReduce: 0,
-    schoolDmg: { melee: 1, magic: 1, ranged: 1 }, schoolRate: { melee: 1, magic: 1, ranged: 1 } };
+    // v2.18 — CINQUE SCUOLE, non piu' tre: si costruiscono da `Heroes.SCUOLE` invece che a mano, cosi'
+    // aggiungerne una non vuol dire ricordarsi di due righe uguali qui sotto.
+    schoolDmg: Heroes.SCUOLE.reduce((o, k) => (o[k] = 1, o), {}),
+    schoolRate: Heroes.SCUOLE.reduce((o, k) => (o[k] = 1, o), {}) };
 }
 // L'effetto di UNA statistica comprata. Estratto da buyStat perche' il ricalcolo deve riapplicarle tutte.
+//
+// v2.18 — DESTREZZA GOVERNA DUE SCUOLE e il CARISMA ne governa una nuova. La Destrezza alza tiro e
+// mischia leggera perche' l'assassino vive di Destrezza ma combatte con i pugnali: con la sola
+// 'ranged', la sua statistica primaria non gli avrebbe alzato nulla. Il Carisma alza 'pact', che e'
+// la scuola di paladino e warlock.
 function applicaStat(p, statId) {
   if (statId === 'st_for') { p.stats.schoolDmg.melee += 0.09; p.stats.knockMult += 0.03; }
   else if (statId === 'st_cos') { p.stats.maxHpFlat += 20; p.stats.dmgReduce = Math.min(0.85, (p.stats.dmgReduce || 0) + 0.012); }
   else if (statId === 'st_int') { p.stats.schoolDmg.magic += 0.09; p.stats.schoolRate.magic += 0.07; }
-  else if (statId === 'st_des') { p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06; p.stats.speedMult += 0.025; }
+  else if (statId === 'st_car') { p.stats.schoolDmg.pact += 0.09; p.stats.schoolRate.pact += 0.07; }
+  else if (statId === 'st_des') {
+    p.stats.schoolDmg.ranged += 0.08; p.stats.schoolRate.ranged += 0.06;
+    p.stats.schoolDmg.agile += 0.08; p.stats.schoolRate.agile += 0.06;
+    p.stats.speedMult += 0.025;
+  }
+}
+// ============================================================================================
+// v2.18 — I BONUS DI CLASSE, e la piastra del paladino
+// ============================================================================================
+// Quattro classi hanno un bonus scritto nel documento: il barbaro con le armi pesanti, l'assassino
+// con la doppia leggera, l'arciere con l'arco, il mago con la staffa. La tabella sta in heroes.js
+// (`BONUS_CLASSE`); qui si applica, e si applica sulla SCUOLA o sul CARATTERE dell'arma equipaggiata.
+//
+// La Piastra del paladino NON sta qui: e' un moltiplicatore sul danno subito, dentro `hurt()`, dov'era
+// dalla v1.66 quando apparteneva al guerriero. Spostarla fra le statistiche la farebbe passare per il
+// tetto di `dmgReduce` e cambierebbe un numero tarato da dodici versioni. Due posti per due cose
+// diverse, non una dimenticanza.
+function bonusDiClasse(p, armaCarattere) {
+  if (!p || !p.heroId) return;
+  const b = Heroes.BONUS_CLASSE[p.heroId];
+  if (!b) return;
+  if (b.scuola) { p.stats.schoolDmg[b.scuola] = (p.stats.schoolDmg[b.scuola] || 1) * b.mult; return; }
+  // bonus legato al CARATTERE del pezzo impugnato (pesante / equilibrata / leggera in gear.js):
+  // senza arma equipaggiata non si applica, perche' e' un bonus all'arma, non alla classe in se'.
+  if (b.carattere && armaCarattere === b.carattere) {
+    const sc = (Heroes.HEROES[p.heroId] || {}).weapon;
+    const k = (sc && sc.school) || 'melee';
+    p.stats.schoolDmg[k] = (p.stats.schoolDmg[k] || 1) * b.mult;
+  }
 }
 // ============================================================================================
 // v2.15 — IL PROFILO DELLA CLASSE, applicato
@@ -92,6 +129,8 @@ function newBoon() {
     killHaste: 0, homing: 0, toxicBurst: 0, frostChain: 0,
     // v1.51 — nuovi poteri
     crowbar: 0, longshot: 0, killStep: 0, magnet: 0, retaliate: 0, aegis: 0, corpseBlast: 0, execute: 0, echo: 0, defiance: 0,
+    // v2.18 — Tributo di Sangue (warlock): ogni morte vicina alza il danno, a scaglioni e con un tetto.
+    killDmg: 0,
     executeBonus: 0, retaliateWide: 0,
     // v1.79 — thornsPct: quota del danno subito rimandata al mittente (Aura di Spine).
     // implodeEvery: ogni quante bolle una implode (Implosione, scaglione divino del mago).
@@ -172,7 +211,7 @@ class Room {
   spawnWeapons() { /* disattivata in v1.66 */ }
 
   addPlayer(pid, conn, name, heroId) {
-    const hero = Heroes.HEROES[heroId] || Heroes.HEROES.guerriero;
+    const hero = Heroes.HEROES[heroId] || Heroes.HEROES.barbaro;
     const p = {
       id: pid, conn, connected: true, name: (name || 'Eroe').slice(0, 16), heroId: hero.id, hero,
       x: this.map.spawn.x + MU.rand(-40, 40), y: this.map.spawn.y + MU.rand(-40, 40), vx: 0, vy: 0, aim: 0, radius: C.PLAYER_RADIUS * (C.COL_SCALE || 1),
@@ -180,7 +219,7 @@ class Room {
       // v2.16 — TRE SLOT, e si chiamano come i tasti che li attivano. `abil` era `{q, e}` e le ricariche
       // erano quattro variabili sciolte (cdQ, cdE, cdQMax, cdEMax): con un terzo slot sarebbero diventate
       // sei, e col quarto otto. Adesso sono array indicizzati 0-2, cioe' slot 1-3 meno uno.
-      input: { mx: 0, my: 0, aim: 0, shoot: false, ab: 0, dash: false, pot: 0 }, cdAb: [0, 0, 0], cdAbMax: [0, 0, 0], cdDash: 0, abil: [null, null, null], abilDovute: [], carica: null, turbine: null, salva: null, scudoAb: null, veloCrit: 0, buffs: {},
+      input: { mx: 0, my: 0, aim: 0, shoot: false, ab: 0, dash: false, pot: 0 }, cdAb: [0, 0, 0], cdAbMax: [0, 0, 0], cdDash: 0, abil: [null, null, null], abilDovute: [], scuola: null, titolo: null, carica: null, turbine: null, salva: null, scudoAb: null, veloCrit: 0, buffs: {},
       // v1.71 — LA CINTURA: tre slot, ognuno null oppure { id, n }. Il cooldown e' UNO SOLO per tutti e
       // tre (potCd), altrimenti basterebbe alternare gli slot per bere tre volte di fila.
       belt: Pot.newBelt(), potCd: 0, potCdMax: Pot.COOLDOWN,
@@ -243,7 +282,7 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.scuola = null; p.titolo = null; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
     this.runStart = this.time;
     // v2.17 — ANCHE L'ONDATA 1 E' UNA PROVA, se si e' arrivati qui dal pannello delle prove (che si
     // riconosce da `abilProva`: il menu manda sempre le attive scelte, anche vuote). Serve a provare le
@@ -889,7 +928,13 @@ class Room {
     // Uno per lancio a testa: e' una finestra, non un'immunita'.
     if (p.buffs.giuramento > 0 && p.giurScudo) { p.giurScudo = 0; this.events.push({ t: 'giur_para', x: p.x, y: p.y, who: p.id }); return; }
     let d = dmg;
-    if (p.heroId === 'guerriero') d *= 0.88;  // v1.66 — passiva Piastra: -12% danni subiti
+    // v2.18 — la Piastra passa dal guerriero al PALADINO, che ne e' l'erede: e' la classe che regge i
+    // colpi e protegge. Barbaro e maestro d'armi, gli altri due eredi del guerriero, NON la prendono —
+    // il barbaro perche' e' scoperto per carattere (petto nudo, niente piastra), il maestro perche' la
+    // sua difesa e' non farsi prendere. Resta qui e non fra le statistiche perche' e' un moltiplicatore
+    // sul danno subito: sommarlo a `dmgReduce` lo farebbe interagire col tetto dello 0,85 e cambierebbe
+    // un numero tarato da dodici versioni.
+    if (p.heroId === 'paladino') d *= 0.88;  // passiva Piastra: -12% danni subiti
     // v1.83 — LO SCUDO PARA DAVANTI. Il guerriero incassava quattro volte i danni degli altri due (5,6/s
     // contro 1,3-1,4/s misurati coi bot): e' l'unico che non puo' tenere le distanze, quindi l'unico che
     // non ha una risposta. Adesso ce l'ha, ed e' una risposta che si GIOCA: girarsi verso chi colpisce.
@@ -939,7 +984,47 @@ class Room {
       if (p.scudoAb.hp <= 0) this._rompiScudo(p);
       if (d <= 0) return;
     }
+    // ============================================================================================
+    // v2.18 — LE QUATTRO ABILITA' CHE PARLANO CON I DANNI SUBITI
+    // ============================================================================================
+    // FURIA (barbaro): incassi il 25% in piu'. E' il prezzo del +50% al danno, e va applicato QUI e non
+    // come `dmgReduce` negativa, perche' la riduzione ha un pavimento a zero e non puo' andare sotto.
+    if (p.buffs.furia > 0) d *= (p.furiaPresi || 1.25);
+    // BENEDIZIONE (paladino): l'aura riduce per tutti quelli dentro e rimanda una quota al mittente. La
+    // riduzione si legge dal bersaglio, non dal paladino: e' l'aura ad averlo gia' segnato in `p.bene`.
+    if (p.bene > 0) {
+      d *= (1 - p.beneDR);
+      if (p.beneSpine > 0 && sx != null) {
+        const rd = Math.max(1, Math.round(d * p.beneSpine));
+        for (const o of this.monsters) { if (o.dead) continue; if (MU.dist2(sx, sy, o.x, o.y) <= 44 * 44) { this.damageMonster(o, rd, p.x, p.y, 18, p); break; } }
+      }
+    }
+    // BALUARDO SACRO (paladino): i colpi FRONTALI non passano. Vale solo per i colpi con un'origine —
+    // un danno ad area senza sorgente non si para, come per lo scudo dell'equipaggiamento (v1.83).
+    if (p.buffs.baluardo > 0 && sx != null) {
+      const ang = Math.atan2(sy - p.y, sx - p.x);
+      const diff = Math.abs(((ang - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI);
+      if (diff <= (p.baluardoCono || 1.25)) {
+        this.events.push({ t: 'baluardo_para', x: p.x, y: p.y, who: p.id });
+        for (const o of this.monsters) { if (o.dead) continue; if (MU.dist2(sx, sy, o.x, o.y) <= 40 * 40) { this.damageMonster(o, Math.max(1, Math.round(this.effDamage(p) * (p.baluardoDmg || 0.8))), p.x, p.y, (p.baluardoKnock || 240) * p.stats.knockMult, p); break; } }
+        return;
+      }
+    }
+    // PARATA E RISPOSTA (maestro d'armi): una parata pronta ferma il colpo e fa partire il
+    // contrattacco. Non e' un'immunita': la prossima e' fra `passo` secondi, e nel frattempo si incassa.
+    if (p.parata && p.parata.pronta <= 0) {
+      p.parata.pronta = p.parata.passo;
+      const rd = this._abilDmg(p, p.parata.dmg);
+      let colpito = 0;
+      for (const o of this.monsters) { if (o.dead) continue; if (MU.dist(p.x, p.y, o.x, o.y) > p.parata.raggio + o.radius) continue; this.damageMonster(o, rd, p.x, p.y, 70 * p.stats.knockMult, p); colpito++; }
+      this.events.push({ t: 'parata', x: p.x, y: p.y, who: p.id, n: colpito });
+      return;
+    }
     p.hp -= d; const n = MU.norm(p.x - sx, p.y - sy); p.vx += n.x * 40 * kn; p.vy += n.y * 40 * kn; p.hitFlash = 0.15;
+    // ULTIMO RESPIRO (barbaro): non puoi scendere sotto 1 PV, ma il conto si SEGNA e torna addosso a
+    // meta' quando finisce. Non e' una cura e non e' un'invulnerabilita': e' un rinvio, ed e' scritto
+    // nella descrizione che il giocatore legge prima di prenderla.
+    if (p.buffs.respiro > 0 && p.hp < 1) { p.respiroDebito = (p.respiroDebito || 0) + (1 - p.hp); p.hp = 1; }
     this.events.push({ t: 'phit', x: p.x, y: p.y, d });
     // v1.79.2 — USCITA DI SCENA: scendendo sotto il 30% dei PV il ladro sparisce dalla vista dei mostri.
     // Non cura e non annulla il colpo: da' i secondi per sganciarsi, ed e' la sua unica via d'uscita.
@@ -999,6 +1084,13 @@ class Room {
     if (!it._w || it._w.school !== p.hero.weapon.school) it._w = Object.assign({}, it.weapon, { school: p.hero.weapon.school });
     return it._w;
   }
+  // v2.18 — il CARATTERE dell'arma impugnata (pesante / equilibrata / leggera), che e' cio' su cui si
+  // appoggiano i bonus di classe del barbaro e dell'assassino. Senza arma equipaggiata non c'e'
+  // carattere: il bonus vale sull'arma, non sulla classe in se'.
+  _caratteraArma(p) {
+    const it = p && p.gear && Gear.BY_ID[p.gear.weapon];
+    return (it && it.carattere) || null;
+  }
   // Ricalcola da zero i bonus degli oggetti indossati e riporta i PV dentro il nuovo massimo.
   _recomputeGear(p) {
     p.gearBonus = Gear.bonusOf(p.gear);
@@ -1006,7 +1098,7 @@ class Room {
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
   effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
-  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.merc && p._torna) s *= (C.MERC_RIENTRO_MULT || 1.28); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.turbine) s *= (p.turbine.lento || 0.7); if (p.buffs.carica > 0) s *= 1.25; if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
+  effSpeed(p) { let s = p.hero.speed * (p.stats.speedMult + (p.gearBonus ? p.gearBonus.speedMult : 0)) * 1.05; if (p.buffs.b_speed) s *= 1.45; if (p.buffs.i_speed) s *= 1.4; if (p.buffs.po_speed) s *= (1 + Pot.EFF.speed); if (p.buffs.curse > 0) s *= (C.CURSE_SPEED_MULT || 0.8); if (p.buffs.gz_slow > 0) s *= (C.GAZE_SLOW_MULT || 0.72); if (p.buffs.ragnatela > 0) s *= (C.RAGNATELA_MULT || 0.58); if (p.merc && p._torna) s *= (C.MERC_RIENTRO_MULT || 1.28); if (p.buffs.killStep > 0) s *= (1 + 0.20 * Math.min(2, p.killStepStacks || 1)); if (p.turbine) s *= (p.turbine.lento || 0.7); if (p.buffs.carica > 0) s *= 1.25; if (p.buffs.impeto > 0) s *= (p.impetoPasso || 1.25); if (p.buffs.dash > 0) s *= C.DASH_SPEED; return s; }
   weaponTier(p) { if (!p.weapon2) return null; if (p.weapon2.evolved) return Loot.WEAPON_EVOS[p.weapon2.evolved]; const w = Loot.WEAPONS[p.weapon2.type]; return w && w.tiers[p.weapon2.level - 1]; }
   // v2.12 — LA CADENZA DELL'EQUIPAGGIAMENTO. `gearBonus.fireRateMult` non lo leggeva nessuno: `bonusOf`
   // sommava la chiave, ma qui si guardava solo `p.stats.fireRateMult`, quindi un'armatura non poteva ne'
@@ -1015,10 +1107,20 @@ class Room {
   // `effSpeed` legge `gearBonus.speedMult` dalla v1.88.
   // Si somma a 1 e si stringe a un pavimento: -0,18 della corazzatura piu' pesante vale x0,82, e nemmeno
   // un accumulo assurdo puo' portare la cadenza a zero o farla diventare negativa.
-  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; const gfr = Math.max(0.35, 1 + (p.gearBonus ? (p.gearBonus.fireRateMult || 0) : 0)); let rate = base * p.stats.fireRateMult * gfr * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08)); return 1 / rate; }
+  effFireDelay(p) { let base = this.effWeapon(p).fireRate; const tr = this.weaponTier(p); if (tr) base *= tr.rate; const gfr = Math.max(0.35, 1 + (p.gearBonus ? (p.gearBonus.fireRateMult || 0) : 0)); let rate = base * p.stats.fireRateMult * gfr * this.schoolRate(p); if (p.buffs.b_rate) rate *= 1.7; if (p.buffs.i_rage) rate *= 1.4; if (p.buffs.po_rate) rate *= (1 + Pot.EFF.rate * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.killHaste > 0) rate *= (1 + Math.min(0.6, p.killHasteStacks * 0.08));
+    if (p.buffs.danza > 0) rate *= (p.danzaRate || 1.6);   // v2.18 — Danza delle Lame (maestro d'armi)
+    return 1 / rate; }
   effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
     if (p.perk.sangueFreddo && this.effWeapon(p).melee && p.hp / this.effMaxHp(p) < 0.40) d *= 1.25;
-    if (p.perk.convergenza > 0 && (this.time - (p.lastShotT || 0)) >= p.perk.convergenza) d *= 3; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.po_dmg) d *= (1 + Pot.EFF.dmg * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7); return d; }
+    if (p.perk.convergenza > 0 && (this.time - (p.lastShotT || 0)) >= p.perk.convergenza) d *= 3; if (p.buffs.guerrilla > 0) d *= 1.3; if (p.buffs.zeroday > 0) d *= 1.35; if (p.buffs.b_dmg) d *= 1.6; if (p.buffs.po_dmg) d *= (1 + Pot.EFF.dmg * Pot.powMult(p.buys.st_for || 0)); if (p.buffs.i_power) d *= 1.5; if (p.buffs.i_rage) d *= 2.0; if (p.buffs.curse > 0) d *= (C.CURSE_DMG_MULT || 0.6); if (p.buffs.gz_weaken > 0) d *= (C.GAZE_WEAKEN_MULT || 0.7);
+    // v2.18 — FURIA (barbaro) e TIRO ANCORATO (arciere). Il secondo non e' un moltiplicatore fisso: e'
+    // una scala che sale a ogni colpo restando fermi e si azzera al primo passo, ed e' `p.ancora` a
+    // tenerne il conto (si alza in `_sparo`, si azzera in `updatePlayers` quando il personaggio si muove).
+    if (p.buffs.furia > 0) d *= (p.furiaMult || 1.5);
+    if (p.buffs.ancorato > 0) d *= (1 + (p.ancora || 0));
+    // v2.18 — TRIBUTO DI SANGUE (warlock): +6% per ogni morte vicina negli ultimi 4s, fino a +36%.
+    if (p.buffs.tributo > 0) d *= (1 + Math.min(0.36, 0.06 * (p.tributoStack || 1)));
+    return d; }
   // v1.66 — moltiplicatori della scuola dell'arma impugnata (1 se l'arma non ne dichiara una).
   schoolDmg(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolDmg && p.stats.schoolDmg[k]) || 1; }
   schoolRate(p) { const k = this.effWeapon(p).school; return (k && p.stats.schoolRate && p.stats.schoolRate[k]) || 1; }
@@ -1046,6 +1148,20 @@ class Room {
 
   firePlayerWeapon(p) {
     const w = this.effWeapon(p); if (p.fireCd > 0) return; p.fireCd = this.effFireDelay(p); p.lastShotT = this.time;
+    // v2.18 — TIRO ANCORATO: il bonus cresce DOPO il colpo, non prima. Il primo colpo da fermo vale
+    // quello che vale; e' restare che paga. Il tetto e' l'unica cosa che impedisce a un arciere
+    // immobile di diventare, in dieci secondi, il doppio di se stesso.
+    if (p.buffs.ancorato > 0) p.ancora = Math.min(p.ancoraTetto || 0.6, (p.ancora || 0) + (p.ancoraPasso || 0.06));
+    // v2.18 — MARCHIO DEL PATRONO (warlock): ogni sesto colpo maledice il bersaglio mirato. Conta i
+    // TIRI e non il tempo, come i ventagli periodici del ladro dalla v1.69: "il sesto" si legge, "ogni
+    // 2,6 secondi" no.
+    if (p.perk.maledOgni > 0) {
+      p.maledSeq = (p.maledSeq || 0) + 1;
+      if (p.maledSeq % p.perk.maledOgni === 0) {
+        const bm = this._bersaglioMirato(p, 560);
+        if (bm) { bm.maled = p.perk.maledDur || 4; bm.maledBy = p.id; bm.maledMult = p.perk.maledMult || 1.25; this.events.push({ t: 'maledetto', x: bm.x, y: bm.y, e: bm.eid, who: p.id }); }
+      }
+    }
     const base = p.aim; let pc = 1 + p.stats.extraProjectiles + (p.buffs.b_quad ? 2 : 0);
     // v1.69 — ventagli periodici delle carte del ladro: contano i TIRI, non il tempo, cosi' il ritmo
     // resta leggibile ("il terzo e' doppio") invece di dipendere dalla cadenza.
@@ -1056,7 +1172,15 @@ class Room {
     if (crit) dmg *= p.stats.critMult; dmg = Math.round(dmg);
     // v1.85 — VELO D'OMBRA: il primo colpo dopo essere sparito e' critico. Va qui e non piu' in basso
     // perche' il danno del critico si calcola in questa riga: piu' avanti si cambierebbe solo il colore.
-    if (p.veloCrit) { p.veloCrit = 0; if (!crit) { crit = true; dmg = Math.round(dmg * p.stats.critMult); } }
+    if (p.veloCrit) {
+      p.veloCrit = 0;
+      // v2.18 — il premio del PATTO non e' un critico, e' un colpo che «vale doppio»: se il critico
+      // gia' c'e', moltiplicare due volte sarebbe quadruplo. Quindi il premio del patto si applica al
+      // posto del critico quando vale di piu', e si consuma comunque.
+      const pr = p.pattoPremio || 0; p.pattoPremio = 0;
+      if (pr > 1) dmg = Math.round(dmg * pr);
+      else if (!crit) { crit = true; dmg = Math.round(dmg * p.stats.critMult); }
+    }
     // v1.66 — il GUERRIERO non spara: descrive un semicerchio davanti a se'. Raggio e apertura vengono
     // dall'arma (arcRadius/arcHalf), non dall'eroe, perche' spada corta, spada lunga e alabarda dovranno
     // dare tre archi diversi allo stesso personaggio.
@@ -1074,7 +1198,7 @@ class Room {
     // risucchia verso dentro. Conta i colpi per conto suo, se no due abilita' si contenderebbero lo
     // stesso contatore e il ritmo di entrambe cambierebbe a seconda di quale hai preso.
     let implode = false; if (p.boon.implodeEvery > 0) { p.impShot = (p.impShot || 0) + 1; if (p.impShot % p.boon.implodeEvery === 0) implode = true; }
-    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: (ov.range || w.range) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison ? Math.max(1, Math.round((ov.dmg != null ? ov.dmg : dmg) * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow, homing: p.boon.homing, implode, frattura: p.boon.frattura }, {}));
+    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: ((ov.range || w.range) * (1 + (p.perk.gittata || 0))) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison ? Math.max(1, Math.round((ov.dmg != null ? ov.dmg : dmg) * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow, homing: p.boon.homing, implode, frattura: p.boon.frattura }, {}));
     const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
@@ -1269,7 +1393,7 @@ class Room {
     if (!pos) return;
     const n = this._quantiPrigionieri();
     const PAL = ['#8a3b2e', '#2f5d7a', '#5a4a86', '#7a6a2a', '#356b4a', '#7a3560', '#4a4a55'];
-    const CL = ['guerriero', 'mago', 'ladro'];
+    const CL = ['barbaro', 'mago', 'arciere'];   // v2.18 — i prigionieri: una classe per impalcatura
     const prigionieri = [];
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
@@ -1595,7 +1719,12 @@ class Room {
     // Un'abilita' puo' RIFIUTARSI di partire (il Marchio senza bersaglio): in quel caso non consuma
     // la ricarica. Trenta secondi buttati per una mira sbagliata sarebbero una punizione, non una regola.
     if (this._eseguiAbilita(p, a) === false) return false;
-    const t = Math.max(1, a.cd * (p.stats.cdrMult || 1));
+    // v2.18 — LA RICARICA VIENE DALLO SLOT, non dall'abilita'. `Ab.BY_ID[...]` non porta piu' `cd`
+    // addosso, perche' la stessa abilita' sta in slot diversi per classi diverse (il Turbine e' slot 2
+    // per il maestro d'armi e slot 3 per il barbaro, cioe' 45s contro 60s). Chiederla allo slot e'
+    // l'unica risposta giusta, e vale anche per chi arriva qui con un'abilita' messa a mano — una
+    // partita ripresa, un test, la modalita' di prova.
+    const t = Math.max(1, (a.cd || Ab.cdDiSlot(slot)) * (p.stats.cdrMult || 1));
     p.cdAb[slot - 1] = t; p.cdAbMax[slot - 1] = t;
     this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
     return true;
@@ -1603,6 +1732,68 @@ class Room {
   // Il danno delle abilita' e' una QUOTA DEL COLPO BASE, non un numero fisso: cosi' un'abilita' presa al
   // livello 6 vale ancora qualcosa all'ondata 18, senza una seconda tabella di scala da tenere allineata.
   _abilDmg(p, mult) { return Math.max(1, Math.round(this.effDamage(p) * mult * this.abilPow(p))); }
+  // ============================================================================================
+  // v2.18 — L'ELEMENTO DEL MAGO, e perche' oggi e' sempre fuoco
+  // ============================================================================================
+  // Scarica Elementale, Impronta e Palla di Fuoco leggono l'elemento dell'ARMA impugnata: fuoco, gelo,
+  // fulmine o veleno. Gli elementi delle verghe NON ESISTONO ANCORA — oggi le armi del mago si
+  // distinguono quasi solo per il raggio della bolla — quindi `elemento` sull'oggetto e' sempre
+  // assente e qui si ripiega sul fuoco. Il giorno che gear.js dichiarera' `elemento`, queste tre
+  // abilita' prendono le quattro facce senza che si tocchi una riga di qui: e' la dipendenza scritta
+  // in PIANO-CLASSI-SETTAGGI.md.
+  _elementoDi(p) {
+    const it = p && p.gear && Gear.BY_ID[p.gear.weapon];
+    return (it && it.elemento) || 'fuoco';
+  }
+  _effettoElemento(p) {
+    switch (this._elementoDi(p)) {
+      case 'gelo':    return { slow: true };
+      case 'fulmine': return { stun: 0.6 };
+      case 'veleno':  return { poison: Math.max(1, Math.round(this.effDamage(p) * 0.12)) };
+      default:        return {};                    // fuoco: danno e basta, ed e' il piu' pulito
+    }
+  }
+  // ============================================================================================
+  // v2.18 — LE EVOCAZIONI
+  // ============================================================================================
+  // Non hanno durata: *«altre come evocazioni non hanno limiti temporali»*. Restano finche' non
+  // muoiono, e muoiono come tutti.
+  //
+  // NON sono una creatura nuova: sono un MERCENARIO. Il mercenario e' gia' un alleato con PV, arma,
+  // IA (`Merc.pensa`), esclusione dall'XP e dal conteggio dei giocatori — tutto cio' che serve a un
+  // evocato, scritto e corretto in dieci versioni. Scrivere una seconda entita' alleata da zero
+  // avrebbe voluto dire rifare quelle dieci versioni di correzioni. Quindi l'evocato E' un mercenario,
+  // con `evocato: 1` addosso per distinguerlo dove serve (il banco non lo ricompra, l'Ostessa non lo
+  // cura, e a fine ondata non torna in campo da solo).
+  _evoca(p, a, sx, sy) {
+    if (!p || p.merc) return false;                 // un evocato non evoca: si fermerebbe solo a contarli
+    const miei = [];
+    for (const q of this.players.values()) if (q.evocato && q.evocatoBy === p.id && !q.dead) miei.push(q);
+    const quanti = Math.max(1, a.quanti | 0);
+    const TETTO = 4;                                // oltre quattro non si legge piu' chi e' chi a schermo
+    while (miei.length + quanti > TETTO && miei.length) { const v = miei.shift(); v.dead = true; v.hp = 0; }
+    let messi = 0;
+    for (let k = 0; k < quanti; k++) {
+      const id = 'evo_' + (this.mercCount++);
+      const q = this.addPlayer(id, { send() {} }, 'Evocato', a.corpo === 'ladro' ? 'arciere' : a.corpo === 'mago' ? 'mago' : 'barbaro');
+      if (!q) continue;
+      q.merc = true; q.evocato = 1; q.evocatoBy = p.id; q.mercOwner = p.id; q.lives = 1;
+      q.pal = Merc.palette(q.heroId, 2);
+      q.level = p.level; q.points = 0; q.buys = Object.assign({}, p.buys); q.xpPool = 0;
+      this._recomputeBoons(q);
+      // PV e danno sono QUOTE di chi lo evoca: un evocato di un mago all'ondata 18 deve reggere come
+      // all'ondata 18, e nessuno deve tenere allineata una seconda tabella di scala.
+      q.stats.maxHpMult = (a.hpQuota || 1) * (a.grande ? 1.35 : 1);
+      q.stats.dmgMult = (a.dmgQuota || 0.6) * this.abilPow(p);
+      q.maxHp = p.hero.hp; q.hp = this.effMaxHp(q);
+      const bx = (sx != null ? sx : p.x + Math.cos(p.aim) * 70) + MU.rand(-34, 34);
+      const by = (sy != null ? sy : p.y + Math.sin(p.aim) * 70) + MU.rand(-34, 34);
+      q.x = this.isWallAt(bx, by) ? p.x : bx; q.y = this.isWallAt(bx, by) ? p.y : by;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'evocato', x: q.x, y: q.y, who: p.id, hero: q.heroId, grande: a.grande ? 1 : 0 } });
+      messi++;
+    }
+    return messi > 0;
+  }
   // Il mostro piu' vicino alla LINEA DI MIRA (non il piu' vicino e basta): serve al Marchio e alla Meteora.
   _bersaglioMirato(p, gittata) {
     let best = null, bs = Infinity;
@@ -1667,8 +1858,222 @@ class Room {
         return true;
       }
       case 'ab_scudo': {
-        const hp = Math.max(1, Math.round(this.effMaxHp(p) * a.quota * this.abilPow(p)));
-        p.scudoAb = { hp, max: hp, t: a.dur, r: a.ondaR, knock: a.ondaKnock };
+        // v2.18 — NON E' PIU' A TEMPO. *«lo scudo di mana di solito non e' a tempo, semplicemente la
+        // barriera dopo tot danni si rompe»*. Quanto assorbe scala con l'INTELLIGENZA — 8 per punto,
+        // che su un mago appena nato (INT 10) fanno 80, cioe' quattro quinti dei suoi 100 PV. Scartato
+        // il 10 per punto, che gli avrebbe raddoppiato la vita rendendolo la scelta obbligata di ogni
+        // ondata invece di una giocata. `t` resta `null`: e' `fineOndata` a spegnerlo, quando l'ondata
+        // finisce, perche' una barriera che passa da un'ondata all'altra non e' una giocata, e' una
+        // rendita.
+        const punti = Heroes.statBase(p.heroId, 'st_int') + ((p.buys && p.buys.st_int) || 0);
+        const hp = Math.max(1, Math.round(punti * (a.perInt || 8) * this.abilPow(p)));
+        p.scudoAb = { hp, max: hp, t: null, fineOndata: 1, r: a.ondaR, knock: a.ondaKnock };
+        return true;
+      }
+      // ================= v2.18 — LE DICIOTTO NUOVE =================
+      // ---------- BARBARO ----------
+      case 'ab_furia': {
+        p.buffs.furia = a.dur; p.furiaMult = a.dmgMult; p.furiaPresi = a.presi;
+        this.events.push({ t: 'furia', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      case 'ab_spaccaossa': {
+        // Un colpo in LINEA, non in arco: si prende chi sta nel corridoio davanti, largo `largo`.
+        const dmg = this._abilDmg(p, a.dmgMult), cx = Math.cos(p.aim), cy = Math.sin(p.aim);
+        let n = 0;
+        for (const m of this.monsters) {
+          if (m.dead) continue;
+          const dx = m.x - p.x, dy = m.y - p.y;
+          const avanti = dx * cx + dy * cy;                       // quanto e' davanti
+          if (avanti < 0 || avanti > a.len) continue;
+          const lato = Math.abs(-dx * cy + dy * cx);              // quanto e' di lato
+          if (lato > a.largo / 2 + m.radius) continue;
+          this.damageMonster(m, dmg, p.x, p.y, a.knock * p.stats.knockMult, p, { stun: a.stun }); n++;
+        }
+        this.events.push({ t: 'spaccaossa', x: p.x, y: p.y, a: p.aim, len: a.len, w: a.largo, n, who: p.id });
+        return true;
+      }
+      case 'ab_respiro': {
+        p.buffs.respiro = a.dur; p.respiroDebito = 0; p.respiroQuota = a.quota;
+        this.events.push({ t: 'respiro', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      // ---------- PALADINO ----------
+      case 'ab_benedizione': {
+        // L'aura non e' un buff addosso al paladino: e' una zona che ogni tick RISEGNA su chi sta
+        // dentro (`p.bene`). Cosi' entrare e uscire funziona da solo, senza dover inseguire chi si
+        // allontana — ed e' come funziona gia' il Grido di Guerra.
+        p.benedizione = { t: a.dur, r: a.raggio, dr: a.dr, spine: a.spine };
+        this.events.push({ t: 'benedizione', x: p.x, y: p.y, r: a.raggio, who: p.id, dur: a.dur });
+        return true;
+      }
+      case 'ab_punizione': {
+        const pieno = this._abilDmg(p, a.dmgMult), mezzo = Math.max(1, Math.round(pieno * a.quota));
+        const tg = this._bersaglioMirato(p, a.raggio + 60);
+        let n = 0;
+        for (const m of this.monsters) {
+          if (m.dead) continue;
+          const d = MU.dist(p.x, p.y, m.x, m.y); if (d > a.raggio + m.radius) continue;
+          this.damageMonster(m, (tg && m.eid === tg.eid) ? pieno : mezzo, p.x, p.y, a.knock * p.stats.knockMult, p); n++;
+        }
+        this.events.push({ t: 'punizione', x: p.x, y: p.y, r: a.raggio, n, who: p.id });
+        return true;
+      }
+      case 'ab_baluardo': {
+        p.buffs.baluardo = a.dur; p.baluardoCono = a.cono; p.baluardoKnock = a.knock; p.baluardoDmg = a.dmgMult;
+        this.events.push({ t: 'baluardo', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      // ---------- MAESTRO D'ARMI ----------
+      case 'ab_danza': {
+        p.buffs.danza = a.dur; p.danzaRate = a.rate;
+        this.events.push({ t: 'danza', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      case 'ab_parata': {
+        p.parata = { t: a.dur, passo: a.passo, pronta: 0, dmg: a.dmgMult, raggio: a.raggio };
+        this.events.push({ t: 'parata_on', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      case 'ab_impeto': {
+        p.buffs.impeto = a.dur; p.impetoCdr = a.cdr; p.impetoPasso = a.passo;
+        this.events.push({ t: 'impeto', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      // ---------- ASSASSINO ----------
+      case 'ab_ombra': {
+        const m = this._bersaglioMirato(p, a.gittata);
+        if (!m) return false;                         // senza bersaglio non parte, e non costa niente
+        // dietro le spalle del bersaglio: si guarda dove GUARDA lui, non da dove vieni tu.
+        const f = m.facing || 0;
+        const nx = m.x - Math.cos(f) * a.dietro, ny = m.y - Math.sin(f) * a.dietro;
+        if (!this.isWallAt(nx, ny)) { p.x = nx; p.y = ny; }
+        p.aim = Math.atan2(m.y - p.y, m.x - p.x);
+        p.veloCrit = Math.max(p.veloCrit || 0, a.critGarantiti || 1);
+        this.events.push({ t: 'ombra_lunga', x: p.x, y: p.y, e: m.eid, who: p.id });
+        return true;
+      }
+      case 'ab_lame_verdi': {
+        p.buffs.lameVerdi = a.dur; p.lameQuota = a.quota; p.lameStack = a.stackMax; p.lameDur = a.durVeleno;
+        this.events.push({ t: 'lame_verdi', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      case 'ab_mortale': {
+        p.buffs.mortale = a.dur; p.mortaleSoglia = a.soglia; p.mortaleBoss = a.bossMult;
+        this.events.push({ t: 'mortale', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      // ---------- ARCIERE ----------
+      case 'ab_pioggia': {
+        // Come la Meteora ma su un'AREA scelta e con molti colpi leggeri invece di tre pesanti: si tira
+        // dove saranno, non su chi e' li' adesso.
+        const bx = p.x + Math.cos(p.aim) * Math.min(a.gittata, 340), by = p.y + Math.sin(p.aim) * Math.min(a.gittata, 340);
+        const dmg = this._abilDmg(p, a.dmgMult);
+        for (let k = 0; k < a.colpi; k++) {
+          const ang = Math.random() * Math.PI * 2, ray = Math.sqrt(Math.random()) * a.r;
+          this.meteors.push({ eid: NEXT++, mio: 1, owner: p.id, freccia: 1,
+            x: bx + Math.cos(ang) * ray, y: by + Math.sin(ang) * ray,
+            r: 34, dmg, t: 0.35 + (k / a.colpi) * a.dur, max: 0.35 + (k / a.colpi) * a.dur });
+        }
+        this.events.push({ t: 'pioggia_tell', x: bx, y: by, r: a.r, n: a.colpi });
+        return true;
+      }
+      case 'ab_ancorato': {
+        p.buffs.ancorato = a.dur; p.ancora = 0; p.ancoraPasso = a.passo; p.ancoraTetto = a.tetto;
+        this.events.push({ t: 'ancorato', x: p.x, y: p.y, who: p.id, dur: a.dur, c: a.color });
+        return true;
+      }
+      case 'ab_fulmine': {
+        // Il fulmine della freccia: stessa macchina della Catena Nera, ma i salti restano IN LINEA
+        // dietro al primo colpito invece di cercare il piu' vicino in ogni direzione.
+        let cur = this._bersaglioMirato(p, a.gittata);
+        if (!cur) return false;
+        let dmg = this._abilDmg(p, a.dmgMult);
+        const cx = Math.cos(p.aim), cy = Math.sin(p.aim), visti = {}; let px = p.x, py = p.y;
+        for (let k = 0; k < a.salti && cur; k++) {
+          visti[cur.eid] = 1;
+          this.events.push({ t: 'chain', x1: px, y1: py, x2: cur.x, y2: cur.y });
+          px = cur.x; py = cur.y;
+          this.damageMonster(cur, dmg, px, py, 30, p);
+          dmg = Math.max(1, Math.round(dmg * a.calo));
+          let nx = null, bd = a.salto;
+          for (const m of this.monsters) {
+            if (m.dead || visti[m.eid]) continue;
+            const dx = m.x - px, dy = m.y - py;
+            if (dx * cx + dy * cy < 0) continue;                  // solo in avanti: e' una freccia
+            const d = MU.dist(px, py, m.x, m.y); if (d < bd) { bd = d; nx = m; }
+          }
+          cur = nx;
+        }
+        return true;
+      }
+      // ---------- WARLOCK ----------
+      case 'ab_patto': {
+        const m = this._bersaglioMirato(p, a.gittata);
+        if (!m) return false;
+        m.maled = a.dur; m.maledBy = p.id; m.maledMult = a.mult; m.maledPremio = a.premio;
+        this.events.push({ t: 'maledetto', x: m.x, y: m.y, e: m.eid, who: p.id });
+        return true;
+      }
+      case 'ab_fame': {
+        this.nebbie.push({ eid: NEXT++, owner: p.id, x: p.x + Math.cos(p.aim) * 120, y: p.y + Math.sin(p.aim) * 120,
+          r: a.r, t: a.dur, max: a.dur, lento: a.lento, dps: this._abilDmg(p, a.dmgMult), tick: a.tick, acc: 0, col: a.color });
+        return true;
+      }
+      case 'ab_contagio': {
+        const m = this._bersaglioMirato(p, a.gittata);
+        if (!m) return false;
+        m.maled = a.dur; m.maledBy = p.id; m.maledMult = a.mult; m.maledSalto = a.salto;
+        this.events.push({ t: 'maledetto', x: m.x, y: m.y, e: m.eid, who: p.id, contagio: 1 });
+        return true;
+      }
+      // ---------- MAGO · ELEMENTALE ----------
+      case 'ab_scarica': {
+        const dmg = this._abilDmg(p, a.dmgMult); let n = 0;
+        for (const m of this.monsters) {
+          if (m.dead) continue;
+          if (MU.dist(p.x, p.y, m.x, m.y) > a.raggio + m.radius) continue;
+          this.damageMonster(m, dmg, p.x, p.y, 120 * p.stats.knockMult, p, this._effettoElemento(p)); n++;
+        }
+        this.events.push({ t: 'scarica', x: p.x, y: p.y, r: a.raggio, n, el: this._elementoDi(p), who: p.id });
+        return true;
+      }
+      case 'ab_impronta': {
+        p.buffs.impronta = a.dur; p.improntaR = a.r; p.improntaDur = a.durPozza;
+        p.improntaDmg = this._abilDmg(p, a.dmgMult); p.improntaTick = a.tick;
+        this.events.push({ t: 'impronta', x: p.x, y: p.y, who: p.id, dur: a.dur, el: this._elementoDi(p) });
+        return true;
+      }
+      case 'ab_palla': {
+        const tg = this._bersaglioMirato(p, a.gittata);
+        const bx = tg ? tg.x : p.x + Math.cos(p.aim) * Math.min(a.gittata, 340);
+        const by = tg ? tg.y : p.y + Math.sin(p.aim) * Math.min(a.gittata, 340);
+        const dmg = this._abilDmg(p, a.dmgMult); let n = 0;
+        for (const m of this.monsters) {
+          if (m.dead) continue;
+          if (MU.dist(bx, by, m.x, m.y) > a.raggio + m.radius) continue;
+          this.damageMonster(m, dmg, bx, by, 140 * p.stats.knockMult, p, this._effettoElemento(p)); n++;
+        }
+        this.events.push({ t: 'palla', x: bx, y: by, r: a.raggio, n, el: this._elementoDi(p), who: p.id });
+        return true;
+      }
+      // ---------- MAGO · EVOCAZIONE E NEGROMANZIA ----------
+      case 'ab_evoca': case 'ab_branco': case 'ab_evoca_magg': case 'ab_rialzata':
+        return this._evoca(p, a);
+      case 'ab_nube': {
+        this.nebbie.push({ eid: NEXT++, owner: p.id, x: p.x + Math.cos(p.aim) * 140, y: p.y + Math.sin(p.aim) * 140,
+          r: a.r, t: a.dur, max: a.dur, lento: a.lento, dps: this._abilDmg(p, a.dmgMult), tick: a.tick, acc: 0,
+          deriva: a.deriva, dx: Math.cos(p.aim), dy: Math.sin(p.aim), col: a.color });
+        return true;
+      }
+      case 'ab_dito': {
+        const m = this._bersaglioMirato(p, a.gittata);
+        if (!m) return false;
+        this.events.push({ t: 'dito', x1: p.x, y1: p.y, x2: m.x, y2: m.y, who: p.id });
+        if (m.boss) { this.damageMonster(m, this._abilDmg(p, a.bossMult), p.x, p.y, 0, p); return true; }
+        const mx = m.x, my = m.y;
+        this.damageMonster(m, m.hp + 999, p.x, p.y, 0, p);       // muore sul colpo, e passa dalla morte vera
+        this._evoca(p, a, mx, my);                                // e si rialza dove e' caduto
         return true;
       }
       case 'ab_meteora': {
@@ -1815,15 +2220,30 @@ class Room {
     }
     if (this.trappole.some(t => t.done)) this.trappole = this.trappole.filter(t => !t.done);
   }
+  // v2.18 — LE NEBBIE ERANO MORTE, E TORNANO COME CAMPI.
+  // Fino alla v2.17 questa lista serviva al Velo d'Ombra, che nascondeva chi lo lanciava; il Velo e'
+  // stato sostituito dal Tempo Rubato e da allora `nebbie` restava piena di niente — con il client che
+  // continuava a riceverla e a disegnarla. Adesso e' il contenitore dei CAMPI A TERRA: la Fame delle
+  // Tenebre del warlock, la Nube Mortifera del negromante, le pozze dell'Impronta Elementale. Fanno
+  // tutte la stessa cosa — stanno ferme (o derivano piano), rallentano e consumano — e una macchina
+  // sola per tre abilita' e' anche una sola cosa da correggere quando sbagliera'.
   updateNebbie(dt) {
     if (!this.nebbie.length) return;
-    for (const n of this.nebbie) n.t -= dt;
     for (const n of this.nebbie) {
+      n.t -= dt;
       if (n.t <= 0) continue;
-      const p = this.players.get(n.owner);
-      if (!p || p.dead || p.down) continue;
-      // Nasconde CHI L'HA MESSA: e' il velo del ladro, non un fumogeno per la squadra.
-      if (MU.dist(n.x, n.y, p.x, p.y) <= n.r) p.buffs.hidden = Math.max(p.buffs.hidden || 0, 0.35);
+      if (n.deriva) { n.x += n.dx * n.deriva * dt; n.y += n.dy * n.deriva * dt; }   // la nube avanza
+      if (!n.dps) continue;
+      n.acc = (n.acc || 0) + dt;
+      if (n.acc < (n.tick || 0.25)) continue;
+      const colpo = Math.max(1, Math.round(n.dps * n.acc)); n.acc = 0;
+      const src = this.players.get(n.owner);
+      for (const m of this.monsters) {
+        if (m.dead) continue;
+        if (MU.dist(n.x, n.y, m.x, m.y) > n.r + m.radius) continue;
+        this.damageMonster(m, colpo, n.x, n.y, 0, src, n.lento ? { slow: true } : {});
+        if (n.lento) { m.slowT = Math.max(m.slowT || 0, 0.4); m.slowMult = Math.min(m.slowMult || 1, n.lento); }
+      }
     }
     if (this.nebbie.some(n => n.t <= 0)) this.nebbie = this.nebbie.filter(n => n.t > 0);
   }
@@ -1848,10 +2268,35 @@ class Room {
     // v1.85 — MARCHIO: il segnato prende di piu' DA CHIUNQUE, non solo da chi l'ha segnato. E' li'
     // che sta il senso in cooperativa: e' il ladro che dice alla squadra dove picchiare.
     if (m.marchio > 0) d *= (m.marchioMult || 1.5);
+    // v2.18 — LA MALEDIZIONE del warlock. Stessa idea del Marchio e volutamente lo stesso punto di
+    // codice: chi e' maledetto prende di piu' da chiunque. Sono due effetti distinti e si sommano —
+    // e' l'unico modo in cui il warlock e un assassino in squadra si aiutano davvero.
+    if (m.maled > 0) d *= (m.maledMult || 1.35);
+    // v2.18 — CONSACRAZIONE (paladino): i nemici vicini a CHI HA LA CARTA prendono di piu', da chiunque.
+    // Si guarda la distanza dal portatore, non da chi colpisce: e' un'aura, non un bonus personale.
+    if (src && src.perk && src.perk.consacra > 0 && MU.dist(src.x, src.y, m.x, m.y) <= src.perk.consacra) d *= (src.perk.consacraMult || 1.10);
     // v1.89 — IL NUCLEO DEL COLOSSO: quando si sfalda e resta scoperto, incassa meta' danni in piu'.
     // E' la finestra su cui e' costruito tutto il combattimento.
     if (m.nucleo) d *= (m.def.nucleoDanno || 1.5);
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
+    // v2.18 — LAME SPORCHE DI VERDE (assassino): ogni colpo avvelena, e il veleno si SOMMA su chi lo
+    // prende piu' volte. Si appoggia al veleno che esiste gia' (`m.poison`), aggiungendo solo il conto
+    // delle dosi: senza tetto, dieci colpi in tre secondi farebbero piu' danno dell'arma stessa.
+    if (src && src.buffs && src.buffs.lameVerdi > 0) {
+      // il veleno del motore e' due campi: `m.poison` e' il danno per secondo e `m.poisonT` quanto dura
+      // (tick ogni mezzo secondo, in updateMonsters). Le dosi alzano il PRIMO, non il secondo.
+      m.velenoStack = Math.min(src.lameStack || 5, (m.velenoStack || 0) + 1);
+      m.poison = Math.max(m.poison || 0, Math.round(this.effDamage(src) * (src.lameQuota || 0.08) * m.velenoStack));
+      m.poisonT = Math.max(m.poisonT || 0, src.lameDur || 3);
+      m.poisonSrc = src.id;
+    }
+    // COLPO MORTALE (assassino): sotto soglia muoiono sul posto, i boss no — prendono un danno enorme,
+    // perche' un'esecuzione sui boss banalizzerebbe le ondate 5/10/15/20, ed e' la stessa regola che
+    // vale per Colpo di Grazia dalla v1.51.
+    if (m.hp > 0 && src && src.buffs && src.buffs.mortale > 0) {
+      if (!m.boss && m.hp <= m.maxHp * (src.mortaleSoglia || 0.30)) { m.hp = 0; this.events.push({ t: 'exec', x: m.x, y: m.y, e: m.eid }); }
+      else if (m.boss) m.hp -= Math.max(1, Math.round(d * ((src.mortaleBoss || 4) - 1)));
+    }
     // v1.51 — COLPO DI GRAZIA: esecuzione sotto soglia. Mai sui boss, altrimenti banalizza le ondate 5/10/15/20.
     if (m.hp > 0 && !m.boss && src && src.boon && src.boon.execute > 0) {
       const thr = 0.08 + 0.06 * src.boon.execute + (src.boon.executeBonus || 0);   // v1.79 — con execute 2: 20%
@@ -1908,6 +2353,23 @@ class Room {
         this.events.push({ t: 'marchio_ok', x: m.x, y: m.y, who: mk.id });
       }
     }
+    // v2.18 — MORIRE MALEDETTI. Due abilita' del warlock guardano questo momento: il PATTO paga chi
+    // l'ha lanciato (il colpo successivo vale doppio) e la MALEDIZIONE CONTAGIOSA salta al nemico piu'
+    // vicino, con il tempo che le resta. Il salto NON rinnova la durata: una maledizione che si
+    // rigenera a ogni morte non finirebbe mai, e in un'ondata fitta sarebbe una maledizione permanente
+    // su tutto il campo.
+    if (m.maled > 0 && m.maledBy) {
+      const wl = this.players.get(m.maledBy);
+      if (wl && m.maledPremio) { wl.veloCrit = Math.max(wl.veloCrit || 0, 1); wl.pattoPremio = m.maledPremio; }
+      if (m.maledSalto) {
+        let nx = null, bd = m.maledSalto;
+        for (const o of this.monsters) { if (o.dead || o.eid === m.eid || o.maled > 0) continue; const d = MU.dist(m.x, m.y, o.x, o.y); if (d < bd) { bd = d; nx = o; } }
+        if (nx) {
+          nx.maled = m.maled; nx.maledBy = m.maledBy; nx.maledMult = m.maledMult; nx.maledSalto = m.maledSalto;
+          this.events.push({ t: 'maledetto', x: nx.x, y: nx.y, e: nx.eid, who: m.maledBy, contagio: 1 });
+        }
+      }
+    }
     // v1.58 — DIVISIONE: la Melma alla morte lascia due melme minori (che non si dividono a loro volta).
     // v1.64 — anche la divisione rispetta il tetto: e' l'unico modo perche' "mai piu' di N in campo" sia
     // una promessa vera e non un auspicio. Il mostro che si divide libera comunque il proprio posto.
@@ -1954,6 +2416,10 @@ class Room {
       if (src.boon.killHaste) { src.killHasteStacks = Math.min(6, (src.killHasteStacks || 0) + 1); src.buffs.killHaste = 3; }
       // v1.51 — PASSO DI DANZA: scatto di velocita' a ogni uccisione (premia chi non si ferma).
       if (src.boon.killStep > 0) { src.killStepStacks = Math.min(2, (src.killStepStacks || 0) + 1); src.buffs.killStep = 3; }
+      // v2.18 — TRIBUTO DI SANGUE (warlock): si nutre di cio' che muore INTORNO a lui, non di cio' che
+      // uccide. In cooperativa vuol dire che le uccisioni dei compagni lo alimentano, ed e' voluto: il
+      // warlock logora, non finisce.
+      if (src.boon.killDmg > 0) { src.tributoStack = Math.min(6, (src.tributoStack || 0) + 1); src.buffs.tributo = 4; }
       // v1.51 — DEFLAGRAZIONE CADAVERICA: il cadavere esplode. Il flag _inCorpse impedisce la catena infinita
       // (esplosione -> uccide -> esplode -> ...): solo il primo cadavere della catena deflagra.
       if (src.boon.corpseBlast > 0 && !this._inCorpse) {
@@ -2064,27 +2530,54 @@ class Room {
     if (!this.abilProva || !p || !p.abil) return false;
     let messe = 0;
     for (const id of this.abilProva) {
-      const a = Ab.BY_ID[id];
-      if (!a || a.hero !== p.heroId) continue;
-      p.abil[a.slot - 1] = id;
-      p.cdAb[a.slot - 1] = 0; p.cdAbMax[a.slot - 1] = a.cd;
-      p.abilDovute = (p.abilDovute || []).filter(x => x !== a.slot);
+      const slot = Ab.slotDi(p.heroId, id, p.scuola);
+      if (!slot) continue;
+      const a = Ab.perSlot(p.heroId, slot, p.scuola).find(x => x.id === id);
+      if (!a) continue;
+      this._mettiAbilita(p, slot, a);
+      p.abilDovute = (p.abilDovute || []).filter(x => x !== slot);
       messe++;
     }
     return messe > 0;
   }
+  // v2.18 — AL LIVELLO 1 NON SI SCEGLIE PIU': SI RICEVE.
+  // *«la scelta diventa una sorta di abilita' di classe che ti viene data in base al personaggio,
+  // perciò non sparisce, semplicemente non c'è scelta»*. Quindi lo slot 1 non entra nella coda delle
+  // scelte: l'abilita' si mette in mano al personaggio qui, subito, e il giocatore la trova gia' sulla
+  // barra. L'UNICA eccezione e' il mago, che al livello 1 sceglie la SCUOLA — e quella si', va in coda,
+  // perche' e' una scelta vera e decide anche il 7 e il 13.
   _slotDovuto(p, L) {
     const slot = Lv.slotPerLivello(L);
     if (!slot || !p.abil || p.abil[slot - 1]) return false;
-    if (!Ab.perSlot(p.heroId, slot).length) return false;
+    if (slot === 1 && !Ab.sceglieAlPrimo(p.heroId)) {
+      const f = Ab.firma(p.heroId);
+      if (!f) return false;
+      this._mettiAbilita(p, 1, f);
+      return false;                       // niente coda: non c'e' niente da chiedere
+    }
+    if (!Ab.perSlot(p.heroId, slot, p.scuola).length) return false;
     p.abilDovute = p.abilDovute || [];
     if (p.abilDovute.indexOf(slot) < 0) p.abilDovute.push(slot);
     return true;
   }
+  // Mettere un'abilita' in uno slot: un posto solo, perche' sono tre cose da fare insieme (l'id, la
+  // ricarica azzerata, il massimo della ricarica) e dimenticarne una si vede solo giocando.
+  _mettiAbilita(p, slot, a) {
+    p.abil[slot - 1] = a.id;
+    p.cdAb[slot - 1] = 0;
+    p.cdAbMax[slot - 1] = a.cd || Ab.cdDiSlot(slot);
+    const sc = Ab.scuolaDiFirma(a.id);
+    if (sc) { p.scuola = sc; p.titolo = Ab.TITOLO_SCUOLA[sc] || null; }
+    this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: a.id, name: a.name, icon: a.icon, c: a.color, slot, tasto: String(slot), cd: a.cd || Ab.cdDiSlot(slot), scuola: sc || null, titolo: p.titolo || null } });
+  }
   _rankUp(p, r) {
     p.points += Lv.puntiPerRango(r);
-    if (r >= Lv.RANK_SPEC) { p.specOffer = Lv.specsFor(p.heroId).map(x => x.id); p.rankOffer = null; }
-    this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec), spec: r >= Lv.RANK_SPEC ? 1 : 0 });
+    // v2.18 — le specializzazioni non esistono piu' (levels.js: SPECS vuoto). `specsFor` torna una
+    // lista vuota, e senza questo controllo il server aprirebbe un bivio con zero rami: una schermata
+    // che chiede di scegliere fra niente e non si chiude piu'.
+    const rami = Lv.specsFor(p.heroId);
+    if (r >= Lv.RANK_SPEC && rami.length) { p.specOffer = rami.map(x => x.id); p.rankOffer = null; }
+    this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec), spec: (r >= Lv.RANK_SPEC && rami.length) ? 1 : 0 });
   }
 
   offerRank(p) {
@@ -2196,7 +2689,7 @@ class Room {
       baule: (Gear.slotsFor(p.heroId) || []).map(sl => ({
         slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
         pezzi: Object.keys(p.owned || {}).map(id => Gear.BY_ID[id])
-          .filter(it => it && it.slot === sl && it.hero === p.heroId)
+          .filter(it => it && it.slot === sl && it.hero === Gear.corpoDi(p.heroId))   // v2.18 — per impalcatura
           .sort((a, b) => (a.rank - b.rank) || 0)
           .map(it => ({ id: it.id, nome: it.name, desc: it.desc, colore: it.color, rango: it.rank,
                         carattere: it.carattere, rarita: Gear.rarityOf(it),
@@ -2229,7 +2722,11 @@ class Room {
     const atPanel = this.phase === C.PHASE_SHOP && C.SHOP_GEAR_ENABLED;
     if (!atMarket && !atPanel) return;
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    if (it.hero !== p.heroId) return;                       // la roba di un'altra classe non si compra
+    // v2.18 — si confronta il CORPO, non la classe. I pezzi di gear.js sono catalogati per impalcatura
+    // (guerriero / mago / ladro) e le sette classi se ne spartiscono tre: un barbaro e un paladino
+    // comprano dallo stesso banco perche' hanno lo stesso scheletro e gli stessi slot. Confrontare
+    // `it.hero` con `p.heroId` avrebbe vietato ogni acquisto a tutte e sette.
+    if (it.hero !== Gear.corpoDi(p.heroId)) return;         // la roba di un'altra impalcatura non si compra
     if (p.gear[it.slot] === it.id) return;                  // gia' addosso
     // v1.72 — se l'oggetto e' gia' nel MAGAZZINO l'hai gia' pagato: rimetterlo addosso non costa nulla.
     // Il vecchio non sparisce piu' nel nulla, resta tuo — e il Banditore lo ricompra a meta'.
@@ -2285,7 +2782,7 @@ class Room {
   // v1.85 — le DUE abilita' di uno slot. Non si sorteggia niente, come per le passive: con una sola
   // scelta per slot, nascondere un'opzione non aggiungerebbe varieta' ma solo rimpianto.
   offerAbilita(p, slot) {
-    const due = Ab.perSlot(p.heroId, slot);
+    const due = Ab.perSlot(p.heroId, slot, p.scuola);
     p.boonOffer = due.map(a => a.id); p.boonPicked = due.length === 0;
     // v2.16 — il grado con cui si presenta lo slot: il primo e' raro, gli altri divini. Serve solo al
     // colore della banda, non al gioco.
@@ -2300,13 +2797,17 @@ class Room {
   }
   // Prendere un'abilita' non passa da _recomputeBoons: non e' un potenziamento, e' cio' che il tasto fa.
   _prendiAbilita(p, id) {
-    const a = Ab.BY_ID[id]; if (!a || a.hero !== p.heroId) return;
-    if (!p.abilDovute || p.abilDovute[0] !== a.slot) return;
+    // v2.18 — lo slot NON sta piu' scritto sull'abilita'. Il Turbine e' slot 3 per il barbaro e slot 2
+    // per il maestro d'armi: chiederlo alla classe e' l'unico modo di avere una risposta giusta, e
+    // `slotDi` torna null se questa classe quell'abilita' non la puo' proprio avere.
+    const slot = Ab.slotDi(p.heroId, id, p.scuola);
+    if (!slot) return;
+    const a = (Ab.perSlot(p.heroId, slot, p.scuola).find(x => x.id === id)) || null;
+    if (!a) return;
+    if (!p.abilDovute || p.abilDovute[0] !== slot) return;
     p.abilDovute.shift();
-    p.abil[a.slot - 1] = id;
-    p.cdAb[a.slot - 1] = 0; p.cdAbMax[a.slot - 1] = a.cd;
+    this._mettiAbilita(p, slot, a);
     p.boonOffer = null; p.boonPicked = true;
-    this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'abil_presa', k: id, name: a.name, icon: a.icon, c: a.color, slot: a.slot, tasto: String(a.slot), cd: a.cd } });
     // v2.16.3 — E SI RIMANDA IL PANNELLO. La scaletta della schermata legge le abilita' da `inv.abil`,
     // che viaggia dentro OFFER_SHOP: senza questa riga il client resta con la copia di prima della
     // scelta e la riga continua a dire «saltata» su un'abilita' appena presa — che e' esattamente il
@@ -2342,7 +2843,7 @@ class Room {
     // solo fra un'ondata e l'altra: in mezzo al combattimento cambiarsi l'armatura non deve essere un gesto
     if (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_MARKET) return;
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    if (it.hero !== p.heroId) return;
+    if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
     if (!p.owned[it.id]) return;                            // non e' tuo: non si compra da qui
     if (p.gear[it.slot] === it.id) return;                  // gia' addosso
     p.gear[it.slot] = it.id;
@@ -2360,7 +2861,7 @@ class Room {
       MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
     if (!atMarket) return;                                  // si vende DAL FABBRO, come si compra
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    if (it.hero !== p.heroId) return;
+    if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
     if (!p.owned[it.id]) return;                            // non ce l'hai
     if (p.gear[it.slot] === it.id) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'vendi_no', perche: 'addosso' } }); return; }
     const reso = Gear.prezzoVendita(it);
@@ -2404,6 +2905,10 @@ class Room {
     const maxPrima = this.effMaxHp(p), hpPrima = p.hp;
     p.stats = newStats(); applicaProfilo(p); p.boon = newBoon(); p.synActive = {}; p.defianceLeft = 0;
     for (const id in p.buys) for (let i = 0; i < p.buys[id]; i++) applicaStat(p, id);
+    // v2.18 — il bonus di classe e la piastra del paladino entrano QUI, nel ricalcolo, e non altrove:
+    // e' l'unico punto che ricostruisce il personaggio da zero, quindi e' l'unico che non lascia in
+    // giro un bonus di un'arma che non impugni piu'.
+    bonusDiClasse(p, this._caratteraArma(p));
     const accese = {};
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
     for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }
@@ -2652,6 +3157,11 @@ class Room {
     if (this.wave >= Waves.FINAL_WAVE) return this._waveDone();
     this.waveDur = this.time - this.waveT0;
     this.phase = C.PHASE_CLEARED; this.exitT = C.EXIT_TIMEOUT;
+    // v2.18 — FINE ONDATA, FINE SCUDO. Lo Scudo di Mana non ha piu' una durata: *«il mago porta lo
+    // scudo fino al termine dell'ondata, non puo' protrarsi all'altra ondata»*. Qui e' dove l'ondata
+    // finisce, ed e' l'unico posto che deve saperlo. Si spegne in silenzio, senza l'esplosione della
+    // rottura: quella e' il premio per averlo consumato, non per averlo tenuto.
+    for (const q of this.players.values()) if (q.scudoAb && q.scudoAb.fineOndata) q.scudoAb = null;
     for (const p of this.players.values()) p.exitOk = false;
     // v1.84 — SI APRE LA FAGLIA. Al posto del pulsante EXIT in mezzo allo schermo: uno squarcio sulla
     // mappa, e ci si passa dentro. Il gesto e' lo stesso, ma succede nel gioco invece che nell'interfaccia
@@ -2796,7 +3306,12 @@ class Room {
   updatePlayers(dt) {
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      p.fireCd = Math.max(0, p.fireCd - dt); for (let q = 0; q < p.cdAb.length; q++) p.cdAb[q] = Math.max(0, p.cdAb[q] - dt); p.cdDash = Math.max(0, p.cdDash - dt);
+      p.fireCd = Math.max(0, p.fireCd - dt);
+      // v2.18 — IMPETO (maestro d'armi): le ricariche scorrono al doppio. Si moltiplica il TEMPO che
+      // passa, non si accorcia la ricarica: cosi' vale anche per quelle gia' partite, e non c'e' modo di
+      // guadagnare ricarica lanciandolo e rilanciandolo.
+      const _cdr = (p.buffs.impeto > 0 ? (p.impetoCdr || 2) : 1) * dt;
+      for (let q = 0; q < p.cdAb.length; q++) p.cdAb[q] = Math.max(0, p.cdAb[q] - _cdr); p.cdDash = Math.max(0, p.cdDash - dt);
       // v1.79.2 — quanto sei fermo (Concentrazione: conta il movimento CHIESTO, non quello ottenuto, se no
       // bastava spingersi contro un muro), la finestra del critico dopo lo scatto e la ricarica dell'uscita.
       p.fermoT = (Math.abs(p.input.mx) < 0.01 && Math.abs(p.input.my) < 0.01) ? (p.fermoT || 0) + dt : 0;
@@ -2805,7 +3320,7 @@ class Room {
       p.potCd = Math.max(0, p.potCd - dt);
       if (p.comboT > 0) { p.comboT -= dt; if (p.comboT <= 0) { p.comboT = 0; p.combo = 0; } }
       if (p.hitFlash) p.hitFlash = Math.max(0, p.hitFlash - dt);
-      for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; if (k === 'killStep') p.killStepStacks = 0; } }
+      for (const k of Object.keys(p.buffs)) { p.buffs[k] -= dt; if (p.buffs[k] <= 0) { delete p.buffs[k]; if (k === 'killHaste') p.killHasteStacks = 0; if (k === 'killStep') p.killStepStacks = 0; if (k === 'tributo') p.tributoStack = 0; } }
       if (p.aegisT > 0) p.aegisT -= dt;  // v1.51 — ricarica dell'Egida Ostinata
       // v1.85 — LE ABILITA' CHE DURANO. La Carica ferisce COL MOVIMENTO (non c'e' un colpo da
       // sparare: c'e' un corpo che passa), il Turbine e la Salva scandiscono i propri colpi, e lo
@@ -2821,6 +3336,46 @@ class Room {
         }
         if (p.carica.t <= 0) p.carica = null;
       }
+      // ============================================================================================
+      // v2.18 — LE QUATTRO NUOVE CHE VIVONO NEL TEMPO
+      // ============================================================================================
+      // BENEDIZIONE: l'aura RISEGNA a ogni tick chi sta dentro invece di segnarlo al lancio. Cosi'
+      // entrare e uscire funziona da solo e nessuno resta protetto dall'altra parte della mappa. La
+      // marcatura scade da se' (`bene` scende), quindi non serve una passata per pulirla.
+      if (p.benedizione) {
+        p.benedizione.t -= dt;
+        for (const q of this.alivePlayers) {
+          if (MU.dist(p.x, p.y, q.x, q.y) > p.benedizione.r) continue;
+          q.bene = 0.2; q.beneDR = p.benedizione.dr; q.beneSpine = p.benedizione.spine;
+        }
+        if (p.benedizione.t <= 0) p.benedizione = null;
+      }
+      if (p.bene > 0) p.bene -= dt;
+      // PARATA E RISPOSTA: una parata pronta ogni `passo` secondi. Il colpo parato lo consuma in
+      // `hurt()`; qui si ricarica soltanto.
+      if (p.parata) {
+        p.parata.t -= dt; p.parata.pronta = Math.max(0, p.parata.pronta - dt);
+        if (p.parata.t <= 0) p.parata = null;
+      }
+      // TIRO ANCORATO: il bonus cresce sparando da fermo e si azzera al primo passo. Il movimento si
+      // misura sulla posizione vera, non sull'input: essere spinti da un mostro conta come muoversi,
+      // ed e' giusto — «ancorato» vuol dire piantato, non «non hai premuto niente».
+      if (p.buffs.ancorato > 0) {
+        const mosso = (p._ancX == null) || MU.dist(p._ancX, p._ancY, p.x, p.y) > 2.5;
+        if (mosso) p.ancora = 0;
+        p._ancX = p.x; p._ancY = p.y;
+      } else if (p.ancora) { p.ancora = 0; }
+      // ULTIMO RESPIRO: quando finisce, il conto arriva. Meta' di quello che hai schivato torna
+      // addosso, e questa volta si puo' cadere davvero.
+      if (p.respiroDebito > 0 && !(p.buffs.respiro > 0)) {
+        const conto = Math.round(p.respiroDebito * (p.respiroQuota || 0.5));
+        p.respiroDebito = 0;
+        if (conto > 0) {
+          p.hp -= conto;
+          this.events.push({ t: 'respiro_conto', x: p.x, y: p.y, who: p.id, d: conto });
+          if (p.hp <= 0) this.downPlayer(p);
+        }
+      }
       if (p.turbine) {
         p.turbine.t -= dt; p.turbine.next -= dt;
         if (p.turbine.next <= 0 && p.turbine.fatti < p.turbine.giri) { p.turbine.next = p.turbine.ogni; p.turbine.fatti++; this._turbineColpo(p, p.turbine); }
@@ -2832,7 +3387,9 @@ class Room {
         while (p.salva.n > 0 && p.salva.next <= 0 && giri++ < 8) { p.salva.next += p.salva.ogni; p.salva.n--; this._frecciaSalva(p, p.salva); }
         if (p.salva.n <= 0) p.salva = null;
       }
-      if (p.scudoAb) { p.scudoAb.t -= dt; if (p.scudoAb.t <= 0) this._rompiScudo(p); }
+      // v2.18 — lo Scudo di Mana NON scade piu': `t` e' null e resta fino a fine ondata. Il ramo col
+      // tempo resta per gli scudi vecchi di una partita ripresa, che avevano ancora una durata.
+      if (p.scudoAb && p.scudoAb.t != null) { p.scudoAb.t -= dt; if (p.scudoAb.t <= 0) this._rompiScudo(p); }
       // v1.93 — QUI C'ERANO due cure: la rigenerazione passiva (p.stats.regen) e l'AURA DEL PALADINO,
       // che rimetteva ai compagni nel cerchio il 2% dei PV massimi al secondo (meta' a chi la portava).
       // L'aura resta, ma fa solo cio' che le compete: ridurre i danni (p.perk.auraDR, in damagePlayer).
@@ -2928,6 +3485,7 @@ class Room {
     for (const m of this.monsters) { if (m.dead) continue; if (m.hitFlash) m.hitFlash = Math.max(0, m.hitFlash - dt);
       if (m.taunt > 0) m.taunt -= dt;                 // v1.85 — Grido di Guerra
       if (m.marchio > 0) m.marchio -= dt;             // v1.85 — Marchio
+      if (m.maled > 0) m.maled -= dt;                 // v2.18 — maledizione del warlock
       // veleno (boon)
       // v1.79.2 — il veleno fa una QUOTA DEL COLPO che l'ha applicato (5% al secondo), non un numero
       // fisso: cosi' non diventa irrilevante all'ondata 15 ne' sproporzionato alla prima.
@@ -2975,7 +3533,19 @@ class Room {
             for (const dv of [-0.45, 0.45]) { const a2 = ang0 + dv;
               this.bullets.push({ eid: NEXT++, hostile: false, owner: b.owner, x: m.x, y: m.y, vx: Math.cos(a2) * vel, vy: Math.sin(a2) * vel, r: Math.max(4, b.r * 0.7), dmg: Math.max(1, Math.round(b.dmg * 0.5)), color: b.color, life: 0.55, crit: false, pierce: 0, knock: 0, bubble: b.bubble, figlia: 1 }); }
             this.events.push({ t: 'frattura', x: m.x, y: m.y, c: b.color });
-          } if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
+          }
+          // v2.18 — IMPRONTA ELEMENTALE (mago elementalista): ogni bolla che colpisce lascia a terra
+          // una pozza del suo elemento. Si appoggia ai campi (`nebbie`), come la Fame delle Tenebre e
+          // la Nube Mortifera: tre abilita', una macchina sola. Il tetto a dodici pozze non e' avarizia
+          // — a cadenza alta e dieci secondi di durata sarebbero un centinaio di zone da aggiornare a
+          // ogni tick, e il rallentamento lo pagherebbe il gioco intero.
+          if (src && src.buffs && src.buffs.impronta > 0 && this.nebbie.length < 12) {
+            this.nebbie.push({ eid: NEXT++, owner: src.id, x: m.x, y: m.y, r: src.improntaR || 62,
+              t: src.improntaDur || 3, max: src.improntaDur || 3, dps: src.improntaDmg || 1,
+              tick: src.improntaTick || 0.25, acc: 0, lento: this._elementoDi(src) === 'gelo' ? 0.55 : 0,
+              col: (Ab.BY_ID.ab_impronta || {}).color || '#5aa8ff' });
+          }
+          if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
           if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || (src && src.boon.explodeQuota) || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
     }
     if (this.bullets.some(b => b.dead)) this.bullets = this.bullets.filter(b => !b.dead);
@@ -3123,6 +3693,7 @@ class Room {
       if (m.shielded > 0) o.sh = 1;
       if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
       if (m.marchio > 0) o.mk = 1;                       // v1.85 — Marchio del ladro
+      if (m.maled > 0) o.ml = 1;                         // v2.18 — maledizione del warlock
       if (m.taunt > 0) o.tn = 1;                         // v1.85 — attirato dal Grido
       if (m.type === 'occhio') {
         o.gk = m.gazeKind; o.gt = +Math.max(0, Math.min(1, (m.gazeCycleT || 0) / (m.def.gazeCycle || 4))).toFixed(2);

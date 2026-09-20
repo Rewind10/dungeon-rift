@@ -48,7 +48,7 @@
   // salvataggio si carica INTERO o si rifiuta INTERO. Come nella v2.12, quando cambiarono i 104 id
   // dell'equipaggiamento: chi ha un pacchetto di prima riceve un messaggio chiaro, non una partita
   // sbagliata di nascosto.
-  const FORMATO = 3;
+  const FORMATO = 4;
 
   const CHIAVE = 'dr_salvataggio';     // dove sta in localStorage
   const COSTO = 10;                    // le monete dell'Ostessa
@@ -57,7 +57,10 @@
   // test se ne accorge: c'e' un controllo che confronta un personaggio salvato-e-ricaricato con
   // l'originale, campo per campo.
   const CAMPI = ['heroId', 'xpPool', 'level', 'points', 'cards', 'spec', 'boonsOwned', 'cardOn',
-    'buys', 'gear', 'owned', 'belt', 'coins', 'lives', 'abil', 'scaglioniDovuti', 'abilDovute'];
+    'buys', 'gear', 'owned', 'belt', 'coins', 'lives', 'abil', 'scaglioniDovuti', 'abilDovute',
+    // v2.18 — la SCUOLA del mago e il titolo che ne deriva: senza, una partita ripresa perderebbe le
+    // abilita' del 7 e del 13, che dalla scuola dipendono.
+    'scuola', 'titolo'];
 
   const copia = (v) => (v === undefined || v === null) ? v : JSON.parse(JSON.stringify(v));
 
@@ -70,7 +73,15 @@
   }
 
   // Cosa scrivere sul pulsante "Riprendi", senza dover aprire il salvataggio vero.
-  const NOMI = { guerriero: 'Guerriero', mago: 'Mago', ladro: 'Ladro' };
+  // v2.18 — SETTE CLASSI, e i tre nomi di prima non esistono piu'. Un salvataggio con `heroId:
+  // 'guerriero'` non e' recuperabile: quella classe si e' divisa in tre (barbaro, paladino, maestro
+  // d'armi) e nessuno puo' indovinare quale voleva essere. Per questo il FORMATO sale: il vecchio
+  // salvataggio viene RIFIUTATO con un messaggio chiaro, non convertito a caso. Stessa scelta della
+  // v2.12 coi 104 id dell'equipaggiamento, e della v2.16 con la cintura da due slot.
+  const NOMI = {
+    barbaro: 'Barbaro', paladino: 'Paladino', maestro: "Maestro d'Armi",
+    assassino: 'Assassino', arciere: 'Arciere', mago: 'Mago', warlock: 'Warlock',
+  };
   function etichetta(d) {
     if (!valido(d)) return null;
     return { ondata: d.ondata | 0, livello: d.level | 0, classe: NOMI[d.heroId] || d.heroId, nome: d.nome || '', quando: d.quando || 0 };
@@ -102,8 +113,8 @@
     p.coins = Math.max(0, p.coins | 0);
     p.lives = Math.max(0, Math.min(9, p.lives | 0));
     p.xpPool = Math.max(0, p.xpPool | 0);
-    if (!p.abil || typeof p.abil !== 'object') p.abil = { q: null, e: null };
-    if (!Array.isArray(p.belt)) p.belt = [null, null, null];
+    if (!Array.isArray(p.abil)) p.abil = [null, null, null];
+    if (!Array.isArray(p.belt)) p.belt = [null, null];
     if (!Array.isArray(p.cards)) p.cards = [];
     if (!Array.isArray(p.scaglioniDovuti)) p.scaglioniDovuti = [];
     if (!Array.isArray(p.abilDovute)) p.abilDovute = [];

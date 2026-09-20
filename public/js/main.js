@@ -33,7 +33,7 @@
   }
   taraFont();
   window.addEventListener('resize', taraFont);
-  const G = { started: false, meHero: 'guerriero', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
+  const G = { started: false, meHero: 'barbaro', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   // ===== v2.11 — L'ARCHIVIO: il salvataggio vive nel browser =====================================
   // Il server lo costruisce e lo applica, ma non lo TIENE: cosi' non ha cartelle da gestire, file da
@@ -211,7 +211,7 @@
   // "quel guerriero" che la rivelazione smette di essere astratta.
   function riga(r, conTasti) {
     const H = (window.GAME.Heroes && window.GAME.Heroes.HEROES) || {};
-    const mio = G.meHero || 'guerriero';
+    const mio = G.meHero || 'barbaro';
     const nomeEroe = (H[mio] && H[mio].name) ? H[mio].name.charAt(0) + H[mio].name.slice(1).toLowerCase() : 'eroe';
     const testo = String(r.t || '').replace(/\{eroe\}/g, nomeEroe);
     const NOMI = { oracolo: 'Oracolo', guardia: 'Guardia' };
@@ -250,7 +250,7 @@
       case 'runa': R.burst(ev.x + Math.cos(ev.a) * 16, ev.y + Math.sin(ev.a) * 16, '#c48cff', 3, 80, 0.2); break;
       case 'shot': A.shoot(ev.hero, ev.wt); R.heroAtk(ev.who); R.burst(ev.x + Math.cos(ev.a) * 14, ev.y + Math.sin(ev.a) * 14, ev.hero === 'mago' ? '#7ffbe4' : '#ffe', 2, 60, 0.15); break;
       // v1.66 — FENDENTE del guerriero: l'arco disegnato e' esattamente l'area che ha ferito.
-      case 'swing': R.heroAtk(ev.who); R.swing(ev.x, ev.y, ev.a, ev.rad, ev.half, ev.crit); A.shoot('guerriero', null); if (ev.hits > 1) R.addShake(2); break;
+      case 'swing': R.heroAtk(ev.who); R.swing(ev.x, ev.y, ev.a, ev.rad, ev.half, ev.crit); A.shoot('melee', null); if (ev.hits > 1) R.addShake(2); break;
       case 'turret_fire': R.burst(ev.x + Math.cos(ev.a) * 14, ev.y + Math.sin(ev.a) * 14, '#9fe0ff', 2, 80, 0.12); break;
       case 'mhit': A.hitMonster(); R.floater(ev.x, ev.y - 10, '' + ev.d, ev.crit ? '#fff36b' : '#ffd9d9', ev.crit); R.burst(ev.x, ev.y, '#ffb0b0', ev.crit ? 6 : 3, ev.crit ? 130 : 90, 0.25); break;
       case 'hitstop': G.hitstop = Math.max(G.hitstop, ev.d || 0.05); break;

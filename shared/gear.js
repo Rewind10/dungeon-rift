@@ -88,12 +88,33 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // Slot per classe, nell'ordine in cui devono comparire nel negozio.
+  // Slot per CORPO, nell'ordine in cui devono comparire nel negozio.
+  //
+  // v2.18 — QUESTE CHIAVI SONO I TRE CORPI, NON LE SETTE CLASSI. Dalla v2.18 le classi sono sette
+  // (barbaro, paladino, maestro d'armi, assassino, arciere, mago, warlock) ma condividono TRE
+  // impalcature, dichiarate in `shared/heroes.js` come `corpo`. L'equipaggiamento segue l'impalcatura:
+  // un barbaro e un paladino indossano gli stessi pezzi, perche' hanno lo stesso scheletro e gli stessi
+  // slot. Chi arriva qui con l'id di una classe viene tradotto da `_corpo()` qui sotto.
+  //
+  // Il modello per PESO x TIPOLOGIA descritto in PIANO-CLASSI-SETTAGGI.md (armi leggere/medie/pesanti
+  // incrociate con mischia/arco/magia, piu' doppia arma e scudo) sostituira' questa tabella: e' un
+  // lavoro a se', e questa riga esiste perche' le sette classi funzionino da subito con i 117 pezzi che
+  // ci sono gia'.
   const SLOTS = {
     guerriero: ['weapon', 'armor', 'shield'],
     mago: ['weapon', 'armor', 'boots'],
     ladro: ['weapon', 'armor', 'boots'],
   };
+  // Traduce l'id di una classe nel suo corpo. Non usa `require` di heroes.js (gear.js e' caricato anche
+  // dal browser, dove i moduli sono globali e l'ordine non e' garantito): la mappa e' piccola, esplicita,
+  // e se domani nasce una classe nuova il fallback la tratta come il corpo di cui porta il nome.
+  const CORPO_DI = {
+    barbaro: 'guerriero', paladino: 'guerriero', maestro: 'guerriero',
+    assassino: 'ladro', arciere: 'ladro',
+    mago: 'mago', warlock: 'mago',
+    guerriero: 'guerriero', ladro: 'ladro',
+  };
+  function _corpo(heroId) { return CORPO_DI[heroId] || heroId; }
   const SLOT_NAME = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', boots: 'Calzature' };
   const SLOT_ICON = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' };
 
@@ -533,14 +554,15 @@
   // Oggetti di una classe per uno slot: prima per grado, poi pesante -> equilibrata -> leggera. L'ordine
   // e' deciso qui e non nel client, cosi' negozio, inventario e test vedono sempre la stessa sequenza.
   function itemsFor(heroId, slot) {
-    return ITEMS.filter(i => i.hero === heroId && i.slot === slot)
+    const c = _corpo(heroId);
+    return ITEMS.filter(i => i.hero === c && i.slot === slot)
       .sort((a, b) => (a.rank - b.rank) || (CAR_ORD(a.carattere) - CAR_ORD(b.carattere)));
   }
   // I pezzi di UN grado solo. Serve a chi ragiona per grado (il salto a un'ondata, i test): prendere il
   // pezzo per POSIZIONE nella lista era giusto quando i ranghi erano quattro e i pezzi quattro, adesso
   // che sono tredici la posizione non c'entra piu' niente col grado.
   function itemsOfRank(heroId, slot, rank) { return itemsFor(heroId, slot).filter(i => i.rank === rank); }
-  function slotsFor(heroId) { return SLOTS[heroId] || []; }
+  function slotsFor(heroId) { return SLOTS[_corpo(heroId)] || []; }
   function maxRank() { return RANK_RARITY.length; }
 
   // Cio' che si ha addosso all'inizio: il pezzo di GRADO MINIMO di ogni slot — quello scarso, che non si
@@ -575,6 +597,6 @@
   const VENDITA_SCARSO = 8;
   function prezzoVendita(it) { return !it ? 0 : (it.cost > 0 ? Math.round(it.cost / 2) : VENDITA_SCARSO); }
 
-  return { ITEMS, BY_ID, SLOTS, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
+  return { ITEMS, BY_ID, SLOTS, CORPO_DI, corpoDi: _corpo, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
            itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita };
 });

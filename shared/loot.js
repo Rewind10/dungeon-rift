@@ -56,18 +56,29 @@
   ];
 
   // v1.66 — le sei statistiche "da sparatutto" (Vitalità/Potenza/Cadenza/Abilità/Agilità/Precisione) sono
-  // sostituite dalle quattro classiche da gioco di ruolo. Ogni statistica ha una scuola d'elezione
+  // sostituite dalle classiche da gioco di ruolo. Ogni statistica ha una scuola d'elezione
   // (weapon.school in shared/heroes.js): FORZA muove il melee, INTELLIGENZA la magia, DESTREZZA il tiro.
-  // Chi compra fuori scuola non spreca: le classi miste previste in progressione useranno quelle scuole.
+  //
+  // v2.18 — LA QUINTA: IL CARISMA. Con le sette classi, paladino e warlock lanciano magie che NON
+  // scalano con l'Intelligenza. Farle scalare con l'INT avrebbe voluto dire che il Carisma e' un nome
+  // diverso per la stessa casella, cioe' non una statistica. Decisione di Paolo, presa sapendo che i
+  // 14 punti della partita si spalmano ora su CINQUE righe invece di quattro: *«la difficolta' o la
+  // scelta e' proprio il saper distribuire i punti»*. Il budget NON e' stato alzato per compensare, ed
+  // e' voluto: non "sistemarlo" in seguito.
+  //
+  // La Destrezza governa DUE scuole (tiro e mischia leggera, per l'assassino): la seconda sta in
+  // `school2` perche' il pannello ne mostra una sola e il server le applica tutte e due.
   const XP_STATS = [
     { id: 'st_for', name: 'Forza', icon: '💪', color: '#ff8a5b', base: 10, school: 'melee',
       desc: '+9% danno in mischia, +3% rinculo' },
     { id: 'st_cos', name: 'Costituzione', icon: '❤️', color: '#ff5a7a', base: 10, school: null,
       desc: '+20 PV massimi, -1.2% danni subiti' },
+    { id: 'st_des', name: 'Destrezza', icon: '🏹', color: '#4bd66b', base: 10, school: 'ranged', school2: 'agile',
+      desc: '+8% danno con archi e lame leggere, +6% cadenza, +2.5% velocità' },
     { id: 'st_int', name: 'Intelligenza', icon: '🔮', color: '#b061ff', base: 10, school: 'magic',
       desc: '+9% danno magico, +7% cadenza delle magie' },
-    { id: 'st_des', name: 'Destrezza', icon: '🏹', color: '#4bd66b', base: 10, school: 'ranged',
-      desc: '+8% danno dei dardi, +6% cadenza, +2.5% velocità' },
+    { id: 'st_car', name: 'Carisma', icon: '✨', color: '#ffd24a', base: 10, school: 'pact',
+      desc: '+9% danno delle magie di classe, +7% cadenza' },
   ];
   // v1.51 — La curva era 1.55^n con livelli ILLIMITATI: con ~7.500 XP raccolti in una run intera il negozio
   // non era una scelta ma un rubinetto. Da allora il costo di ogni livello e' una TABELLA esplicita di
@@ -238,6 +249,36 @@
     { id: 'scomparsa', name: 'Uscita di Scena', icon: '🌑', rarity: 'divine', hero: 'ladro', max: 1,
       desc: 'Sotto il 30% dei PV sparisci dalla vista per 1,5s (una volta ogni 20s)',
       apply: p => { p.boon.scomparsa = 1.5; } },
+
+    // ============================================================================================
+    // v2.18 — LE SEI CARTE NUOVE
+    // ============================================================================================
+    // *«per le classi con poche alternative o troppo ripetitive prova ad aggiungere altre carte, ma
+    // solo per le classi che oggettivamente hanno poca scelta»*. Contate le carte proprie fascia per
+    // fascia sulle sette classi, quattro ne avevano UNA SOLA da qualche parte: il paladino all'epica e
+    // alla divina, l'assassino alla non comune, l'arciere alla rara, il warlock all'epica e alla
+    // divina. Barbaro, maestro d'armi e mago ne hanno due ovunque e NON sono stati toccati.
+    //
+    // Ognuna si appoggia a una meccanica gia' in piedi: nessuna chiede codice nuovo nel server.
+    { id: 'ira_giusta', name: 'Ira Giusta', icon: '💢', rarity: 'epic', hero: 'paladino', max: 1,
+      desc: 'Il 15% del danno che subisci torna a chi te l ha dato',
+      apply: p => { p.boon.thornsPct = (p.boon.thornsPct || 0) + 0.15; } },
+    { id: 'consacrazione', name: 'Consacrazione', icon: '🌟', rarity: 'divine', hero: 'paladino', max: 1,
+      desc: 'I nemici entro 200px prendono il 10% di danni in piu',
+      // lo specchio offensivo del Campo di Lentezza: stessa aura, effetto rovesciato.
+      apply: p => { p.perk.consacra = 200; p.perk.consacraMult = 1.10; } },
+    { id: 'agguato', name: 'Agguato', icon: '🗡️', rarity: 'uncommon', hero: 'assassino', max: 1,
+      desc: 'Il primo colpo su un nemico ancora a vita piena fa +15%',
+      apply: p => { p.boon.crowbar = (p.boon.crowbar || 0) + 0.375; } },
+    { id: 'vento', name: 'Vento in Poppa', icon: '💨', rarity: 'rare', hero: 'arciere', max: 1,
+      desc: 'Le frecce viaggiano il 25% piu veloci e la gittata cresce del 15%',
+      apply: p => { p.perk.bulletSpeed = (p.perk.bulletSpeed || 0) + 0.25; p.perk.gittata = (p.perk.gittata || 0) + 0.15; } },
+    { id: 'tributo', name: 'Tributo di Sangue', icon: '🩸', rarity: 'epic', hero: 'warlock', max: 1,
+      desc: 'Ogni nemico che muore vicino da +6% danno per 4s, fino a +36%',
+      apply: p => { p.boon.killDmg = (p.boon.killDmg || 0) + 1; } },
+    { id: 'marchio_patrono', name: 'Marchio del Patrono', icon: '🔗', rarity: 'divine', hero: 'warlock', max: 1,
+      desc: 'Ogni sesto colpo maledice il bersaglio: +25% danni subiti per 4s',
+      apply: p => { p.perk.maledOgni = 6; p.perk.maledMult = 1.25; p.perk.maledDur = 4; } }
   ];
   // v1.79 — TRE RITIRATE: Avidita, Fortuna Sfacciata e Fame Vorace davano bonus all XP raccolta. Col
   // tetto ai livelli sono spazzatura per costruzione — al livello 12, dove si sceglie lo scaglione
@@ -273,16 +314,42 @@
   // delle quattro non aggiungerebbe varieta' — con una sola scelta per scaglione aggiungerebbe solo
   // frustrazione; la varieta' sta nel cambiare classe e nella specializzazione del 15.
   // L'ordine e' voluto: prima le tue, poi le neutre.
+  // ============================================================================================
+  // v2.18 — CHI PUO' VEDERSI OFFRIRE COSA
+  // ============================================================================================
+  // Le 32 carte di prima erano pescate per i TRE eroi: un `hero` sull'oggetto bastava. Con sette classi
+  // non basta piu', perche' due classi dello stesso corpo devono vedere carte diverse — se no barbaro,
+  // paladino e maestro d'armi pescherebbero dallo stesso mazzo e si distinguerebbero solo per l'arma.
+  //
+  // Questa tabella e' l'elenco approvato nel documento, classe per classe. Le carte NEUTRE ('*') le
+  // vede chiunque e non si elencano. Una carta che non compare qui, per quella classe non esiste.
+  const CARTE_CLASSE = {
+    barbaro:   ['heavyarm', 'ampio', 'saldo', 'retaliate', 'adrenaline', 'juggernaut', 'corpseblast', 'nova'],
+    // niente Adrenalina Pura ne' Deflagrazione Cadaverica: sono la ferocia del barbaro, non la
+    // disciplina del paladino.
+    paladino:  ['heavyarm', 'ampio', 'saldo', 'retaliate', 'juggernaut', 'ira_giusta', 'nova', 'consacrazione'],
+    maestro:   ['heavyarm', 'ampio', 'saldo', 'killstep', 'adrenaline', 'lamasporca', 'nova', 'puntovitale'],
+    assassino: ['pierce', 'agguato', 'spalle', 'killstep', 'lamasporca', 'ombra', 'puntovitale', 'scomparsa'],
+    // Concentrazione e Campo di Lentezza vengono dal serbatoio del mago ma sull'arciere rendono di piu':
+    // si incastrano col Tiro Ancorato del livello 7, e sono cio' che lo separa dall'assassino.
+    arciere:   ['pierce', 'longshot', 'spalle', 'vento', 'concentra', 'ombra', 'puntovitale', 'lentezza'],
+    mago:      ['giant', 'freeze', 'chain', 'ricochet', 'explode', 'concentra', 'frattura', 'lentezza'],
+    // niente Frattura Arcana (la bolla che uccide si sdoppia): e' il marchio del mago. Il carattere del
+    // warlock sta nelle maledizioni, che sono le sue attive.
+    warlock:   ['giant', 'freeze', 'chain', 'ricochet', 'explode', 'tributo', 'marchio_patrono', 'lentezza'],
+  };
+  function carteDi(heroId) { return CARTE_CLASSE[heroId] || []; }
   function offerteScaglione(heroId, tier, ownedCounts) {
     const gia = ownedCounts || {};
     const libera = b => !(gia[b.id] > 0);
-    const mie = BOONS.filter(b => b.rarity === tier && b.hero === heroId && libera(b));
+    const elenco = carteDi(heroId);
+    const mie = BOONS.filter(b => b.rarity === tier && elenco.indexOf(b.id) >= 0 && libera(b));
     const neutre = BOONS.filter(b => b.rarity === tier && b.hero === '*' && libera(b));
     return mie.concat(neutre);
   }
   // Tutte le abilita' che una classe puo' incontrare in una run: le sue piu' le neutre. Serve al pannello
   // delle abilita' e ai test — un mago non deve mai vedere quelle del guerriero.
-  function boonsPerClasse(heroId) { return BOONS.filter(b => b.hero === heroId || b.hero === '*'); }
+  function boonsPerClasse(heroId) { const e = carteDi(heroId); return BOONS.filter(b => e.indexOf(b.id) >= 0 || b.hero === '*'); }
 
   // ===== EQUIPAGGIAMENTO a slot (v1.8): acquistabile con MONETE. 5 slot x 5 tier. =====
   // Ogni tier aggiunge `per` alle statistiche del giocatore (delta additivo, campi gia esistenti in p.stats).
@@ -299,5 +366,5 @@
     return out;
   }
 
-  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerteScaglione, boonsPerClasse, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, coinsFor };
+  return { CRATE_BUFFS, WEAPONS, WEAPON_EVOS, WEAPON_ORDER, ITEMS, XP_STATS, statCost, STAT_MAX_LEVEL, STAT_COST_STEPS, BOON_CHOICES, BOONS, BOON_BY_ID, offerteScaglione, boonsPerClasse, CARTE_CLASSE, carteDi, pickWeighted, SYNERGIES, SYNERGY_BY_ID, detectSynergies, coinsFor };
 });
