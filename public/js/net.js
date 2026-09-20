@@ -13,7 +13,7 @@
     buyStat(id) { this.send({ t: C.MSG.BUY_STAT, id }); },
     buyGear(id) { this.send({ t: C.MSG.BUY_GEAR, id }); },
     vendiGear(id) { this.send({ t: C.MSG.VENDI_GEAR, id }); },   // v2.12 — rivendita al fabbro, meta' prezzo
-    equipaggia(id) { this.send({ t: C.MSG.EQUIPAGGIA, id }); },  // v2.13 — dal baule, fra un'ondata e l'altra
+    equipaggia(id, mano) { this.send({ t: C.MSG.EQUIPAGGIA, id, mano }); },  // v2.13 — dall'inventario; v2.18.1 — con la mano
     buyMerchant(id, dark) { this.send({ t: C.MSG.BUY_MERCHANT, id, dark: dark ? 1 : 0 }); },
     pickBoon(id) { this.send({ t: C.MSG.PICK_BOON, id }); },
     pickRank(id) { this.send({ t: C.MSG.PICK_RANK, id }); },

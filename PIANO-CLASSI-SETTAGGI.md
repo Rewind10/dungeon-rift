@@ -15,6 +15,13 @@ dette. Se una riga è qui, è legge. Se non è qui, non è ancora stata decisa.
 > verghe** — finché non esistono, le due abilità dell'elementalista che li leggono si comportano tutte
 > come fuoco — e il modello **peso × tipologia** dell'equipaggiamento del punto 2, che per ora è servito
 > dai 117 pezzi esistenti attraverso le tre impalcature.
+>
+> ## ✅ AGGIUNTO NELLA v2.18.1
+> Le **due mani** del punto 3 sono realizzate: `{manoDx, manoSx, armatura, calzature}`, con l'arma
+> pesante a due mani, l'eccezione del barbaro, la doppia arma e lo scudo secondo le tabelle qui sotto.
+> La regola vive in `Gear.impugna`, in un posto solo. Comprare dal fabbro **non equipaggia più**: il
+> pezzo entra nell'inventario e si impugna scegliendo la mano. E **i ranghi non esistono più**: il
+> titolo mostrato è il nome della classe.
 
 ---
 

@@ -338,17 +338,28 @@ h2.info-h:not(:first-child){margin-top:17px}
 
 /* ---- centro: il ritratto e cio' che porta addosso ---- */
 .col-cx{text-align:center}
-#ritrattoWrap{display:flex;justify-content:center;margin-bottom:6px;
+/* v2.18.1 — LE QUATTRO CASELLE ATTORNO AL PERSONAGGIO. Erano un elenco sotto il ritratto: diceva le
+   stesse cose senza far vedere DOVE stanno. Adesso sono ai quattro angoli — mano destra in alto a
+   sinistra (il personaggio si guarda di fronte, quindi la sua destra e' la nostra sinistra), mano
+   sinistra in alto a destra, armatura e calzature sotto. */
+#ritrattoWrap{position:relative;display:flex;justify-content:center;margin-bottom:6px;
   background:radial-gradient(circle at 50% 42%,rgba(124,199,255,.10),rgba(0,0,0,0) 62%)}
 #ritratto{display:block;max-width:100%;height:auto}
-#slotAddosso{display:flex;flex-direction:column;gap:4px;text-align:left}
-.sa{display:flex;align-items:center;gap:8px;background:rgba(12,15,26,.72);border:1px solid var(--line);
-  border-left:3px solid var(--c,#6f7890);border-radius:9px;padding:5px 9px}
-.sa .ic{font-size:15px;flex:none}
-.sa .tx{min-width:0;display:flex;flex-direction:column}
-.sa .tx b{font-size:13px;font-weight:800;color:var(--c,#eaf3ff);line-height:1.2;
+.eq-slot{position:absolute;width:31%;min-height:52px;background:rgba(12,15,26,.82);
+  border:1px solid var(--line);border-left:3px solid var(--c,#6f7890);border-radius:9px;
+  padding:5px 7px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.eq-slot.tl{left:0;top:2%}
+.eq-slot.tr{right:0;top:2%}
+.eq-slot.bl{left:0;bottom:2%}
+.eq-slot.br{right:0;bottom:2%}
+.eq-slot .et{font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:#8d97ab}
+.eq-slot .nm{font-size:11.5px;font-weight:800;color:var(--c,#eaf3ff);line-height:1.2;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sa .tx i{font-style:normal;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#8d97ab}
+.eq-slot .car{font-size:9px;color:#78839a}
+.eq-slot.vuota{border-left-color:#3a4258;opacity:.66}
+.eq-slot.vuota .nm{color:#6f7890;font-weight:600}
+.eq-slot .due{font-size:9px;color:var(--gold);letter-spacing:.4px}
+@media (max-width:1180px){.eq-slot{width:36%;min-height:46px}}
 .sa-belt{display:flex;gap:6px;justify-content:center;margin-top:9px;flex-wrap:wrap}
 .sa-belt .pz{background:rgba(12,15,26,.72);border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:12px}
 .sa-belt .pz.vuoto{color:#6f7890;font-style:italic;font-size:11px}
@@ -1228,3 +1239,12 @@ h2.info-h:not(:first-child){margin-top:17px}
 .gq .gsell{padding:3px 9px;font:inherit;font-size:11.5px;font-weight:800;border-radius:6px;cursor:pointer;
   background:rgba(255,207,74,.12);border:1px solid rgba(255,207,74,.5);color:#ffcf4a;transition:.12s}
 .gq .gsell:hover{background:rgba(255,207,74,.28);border-color:#ffcf4a}
+
+/* v2.18.1 — i due pulsantini della MANO, dentro la casella dell'inventario. Spenti quando quella mano
+   non puo' tenere quel pezzo: la regola la calcola il server con la stessa funzione che poi decide,
+   cosi' non esistono due versioni della stessa regola che un giorno si contraddicono. */
+.bq .mani{display:flex;gap:3px;justify-content:center;margin-top:3px}
+.bq .mn{font:700 9px/1 var(--font);letter-spacing:.5px;padding:3px 6px;border-radius:5px;cursor:pointer;
+  background:rgba(58,160,255,.16);border:1px solid rgba(58,160,255,.45);color:#cfe6ff}
+.bq .mn:hover{background:rgba(58,160,255,.3)}
+.bq .mn.no{background:rgba(120,131,154,.10);border-color:rgba(120,131,154,.28);color:#5d6678;cursor:not-allowed}

@@ -221,18 +221,27 @@
         <p class="dono-patto hidden" id="menuPatto"></p>
       </div>
 
-      <!-- ---- CENTRO: il personaggio, con addosso quello che porta ---- -->
+      <!-- ---- CENTRO: il personaggio, con attorno le quattro caselle ----
+           v2.18.1 — le caselle stanno AI LATI del personaggio, non sotto: mano destra in alto a
+           sinistra, mano sinistra in alto a destra (si guarda il personaggio di fronte, quindi la sua
+           destra e' la nostra sinistra), armatura e calzature in basso. Un elenco sotto il ritratto
+           diceva le stesse cose senza far vedere dove stanno. -->
       <div class="col-cx">
-        <h3>ADDOSSO</h3>
-        <div id="ritrattoWrap"><canvas id="ritratto" width="300" height="300"></canvas></div>
-        <div id="slotAddosso"></div>
+        <h3>EQUIPAGGIAMENTO</h3>
+        <div id="ritrattoWrap">
+          <canvas id="ritratto" width="300" height="300"></canvas>
+          <div class="eq-slot tl" data-slot="manoDx"></div>
+          <div class="eq-slot tr" data-slot="manoSx"></div>
+          <div class="eq-slot bl" data-slot="armor"></div>
+          <div class="eq-slot br" data-slot="boots"></div>
+        </div>
         <div id="beltAddosso"></div>
       </div>
 
       <!-- ---- DESTRA: cosa hai. Il baule si clicca, i poteri si guardano ---- -->
       <div class="col-dx">
-        <h3>BAULE</h3>
-        <p class="shop-hint" id="bauleNota">Tutto quello che hai comprato resta tuo. <b>Clic per indossarlo</b> — non costa niente, l'hai già pagato.</p>
+        <h3>INVENTARIO</h3>
+        <p class="shop-hint" id="bauleNota">Tutto quello che possiedi. La <b>★</b> è quello che stai portando. Per armi e scudi scegli <b>la mano</b>; il resto si indossa con un clic.</p>
         <div id="baule"></div>
         <!-- v2.13.5 — niente titolo sopra la scaletta dei poteri: le righe dicono gia' «Liv. 3 / non
              comune», e un titolo sopra una lista che si spiega da sola e' una riga di testo in piu' in

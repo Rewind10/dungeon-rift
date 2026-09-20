@@ -91,6 +91,9 @@ function bonusDiClasse(p, armaCarattere) {
   if (b.scuola) { p.stats.schoolDmg[b.scuola] = (p.stats.schoolDmg[b.scuola] || 1) * b.mult; return; }
   // bonus legato al CARATTERE del pezzo impugnato (pesante / equilibrata / leggera in gear.js):
   // senza arma equipaggiata non si applica, perche' e' un bonus all'arma, non alla classe in se'.
+  // v2.18.1 — per l'ASSASSINO il bonus non e' «impugni una leggera» ma «ne impugni DUE»: e' scritto
+  // cosi' nel documento (*«doppia arma leggera/mischia»*) ed e' la sua identita', non una sfumatura.
+  if (p.heroId === 'assassino' && !p._doppiaLeggera) return;
   if (b.carattere && armaCarattere === b.carattere) {
     const sc = (Heroes.HEROES[p.heroId] || {}).weapon;
     const k = (sc && sc.school) || 'melee';
@@ -252,7 +255,7 @@ class Room {
       stats: newStats(),
       shotCount: 0, kills: 0, damageDealt: 0, combo: 0, comboBest: 0, comboT: 0, synActive: {}, comboRewT: 0,
     };
-    for (const k in p.gear) p.owned[p.gear[k]] = 1;   // v1.72 — l'equipaggiamento di partenza e' gia' tuo
+    for (const k in p.gear) if (p.gear[k]) p.owned[p.gear[k]] = 1;   // v1.72 — l'equipaggiamento di partenza e' gia' tuo
     // v2.15 — il profilo della classe entra QUI, prima dell'equipaggiamento: e' la forma con cui il
     // personaggio nasce. E i PV vanno riallineati subito, se no un mago (che in Costituzione sta sotto
     // il centro) nascerebbe con 100 PV su un massimo di 91 e la barra partirebbe oltre il fondo.
@@ -282,7 +285,7 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.scuola = null; p.titolo = null; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.scuola = null; p.titolo = null; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) if (p.gear[k]) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
     this.runStart = this.time;
     // v2.17 — ANCHE L'ONDATA 1 E' UNA PROVA, se si e' arrivati qui dal pannello delle prove (che si
     // riconosce da `abilProva`: il menu manda sempre le attive scelte, anche vuote). Serve a provare le
@@ -1079,7 +1082,10 @@ class Room {
   // leggerla. La scuola resta quella dell'eroe, altrimenti comprare un'arma spegnerebbe la statistica
   // su cui il giocatore ha investito la run intera.
   effWeapon(p) {
-    const it = p.gear && Gear.BY_ID[p.gear.weapon];
+    // v2.18.1 — l'arma sta in una MANO. La principale e' la destra se c'e', se no la sinistra: e'
+    // `Gear.armaPrincipale` a deciderlo, in un posto solo, perche' lo chiedono anche il ritratto, il
+    // fabbro e il bonus di classe.
+    const it = Gear.armaPrincipale(p.gear);
     if (!it || !it.weapon) return p.hero.weapon;
     if (!it._w || it._w.school !== p.hero.weapon.school) it._w = Object.assign({}, it.weapon, { school: p.hero.weapon.school });
     return it._w;
@@ -1088,7 +1094,7 @@ class Room {
   // appoggiano i bonus di classe del barbaro e dell'assassino. Senza arma equipaggiata non c'e'
   // carattere: il bonus vale sull'arma, non sulla classe in se'.
   _caratteraArma(p) {
-    const it = p && p.gear && Gear.BY_ID[p.gear.weapon];
+    const it = Gear.armaPrincipale(p && p.gear);
     return (it && it.carattere) || null;
   }
   // Ricalcola da zero i bonus degli oggetti indossati e riporta i PV dentro il nuovo massimo.
@@ -1645,7 +1651,10 @@ class Room {
       const base = Gear.startingGear(p.heroId) || {};
       if (!p.gear || typeof p.gear !== 'object') p.gear = {};
       if (!p.owned || typeof p.owned !== 'object') p.owned = {};
-      for (const sl in base) if (!p.gear[sl]) { p.gear[sl] = base[sl]; p.owned[base[sl]] = 1; }
+      // v2.18.1 — le caselle possono essere VUOTE per progetto (il guerriero non ha calzature, il mago
+      // non ha scudo, e la mano sinistra di chi non fa doppia arma resta libera): `base[sl]` e' null e
+      // riempire con null scriverebbe `p.owned[null] = 1`, cioe' un oggetto inesistente nell'inventario.
+      for (const sl in base) if (base[sl] && !p.gear[sl]) { p.gear[sl] = base[sl]; p.owned[base[sl]] = 1; }
     }
     this._recomputeGear(p); this._recomputeBoons(p);
     p.hp = this.effMaxHp(p); p.hpDebt = 0;          // si riprende in forma: la sosta e' servita a quello
@@ -1742,7 +1751,7 @@ class Room {
   // abilita' prendono le quattro facce senza che si tocchi una riga di qui: e' la dipendenza scritta
   // in PIANO-CLASSI-SETTAGGI.md.
   _elementoDi(p) {
-    const it = p && p.gear && Gear.BY_ID[p.gear.weapon];
+    const it = Gear.armaPrincipale(p && p.gear);
     return (it && it.elemento) || 'fuoco';
   }
   _effettoElemento(p) {
@@ -2577,7 +2586,10 @@ class Room {
     // che chiede di scegliere fra niente e non si chiude piu'.
     const rami = Lv.specsFor(p.heroId);
     if (r >= Lv.RANK_SPEC && rami.length) { p.specOffer = rami.map(x => x.id); p.rankOffer = null; }
-    this.events.push({ t: 'rankup', x: p.x, y: p.y, who: p.id, name: p.name, rank: r, title: Lv.rankName(p.heroId, p.level, p.spec), spec: (r >= Lv.RANK_SPEC && rami.length) ? 1 : 0 });
+    // v2.18.1 — NIENTE PIU' ANNUNCIO DEL RANGO. I ranghi non danno piu' un titolo (il titolo e' la
+    // classe) ne' punti (dalla v2.16): un cartello che grida «SEI DIVENTATO RAZZIATORE» annuncerebbe
+    // una cosa che non e' successa. La fascia resta come righello interno — vedi levels.js.
+    // p.gear non cambia, p.points nemmeno: qui non resta niente da dire.
   }
 
   offerRank(p) {
@@ -2653,13 +2665,29 @@ class Room {
     const inv = {
       arma: { nome: (tier && tier.name) || arma.name || 'Arma', icona: (Loot.WEAPONS[p.weapon2 && p.weapon2.type] || {}).icon || '⚔️',
               livello: p.weapon2 ? p.weapon2.level : 0, evo: p.weapon2 ? (p.weapon2.evolved || '') : '', scuola: arma.school || '' },
-      gear: (Gear.slotsFor(p.heroId) || []).map(sl => {
-        const it = Gear.BY_ID[p.gear && p.gear[sl]];
+      // v2.18.1 — LE QUATTRO CASELLE, nell'ordine in cui stanno attorno al personaggio: mano destra in
+      // alto a sinistra, mano sinistra in alto a destra (chi guarda il ritratto lo vede di fronte),
+      // armatura e calzature in basso. `vuoto` dice perche' una casella e' vuota, e non e' un dettaglio:
+      // un riquadro vuoto senza spiegazione si legge come un guasto.
+      gear: [
+        { slot: 'manoDx', slotName: 'Mano destra', icona: '🗡️' },
+        { slot: 'manoSx', slotName: 'Mano sinistra', icona: '🛡️' },
+        { slot: 'armor', slotName: 'Armatura', icona: '🥼' },
+        { slot: 'boots', slotName: 'Calzature', icona: '👢' },
+      ].map(c => {
+        const it = Gear.BY_ID[p.gear && p.gear[c.slot]];
+        const due = it && Gear.aDueMani(it, Heroes.maniDi(p.heroId));
         // v2.13 — l'ID serve: il ritratto al centro del menu lo passa a Renderer._hero per disegnare
         // il personaggio con addosso davvero quello che porta, tinte comprese.
-        return { slot: sl, id: it ? it.id : null, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
+        return { slot: c.slot, id: it ? it.id : null, slotName: c.slotName, icona: it ? (Gear.SLOT_ICON[it.slot] || c.icona) : c.icona,
                  nome: it ? it.name : '—', colore: it ? it.color : '#6f7890', rango: it ? it.rank : 0,
-                 carattere: it ? it.carattere : '', desc: it ? it.desc : '' };
+                 carattere: it ? it.carattere : '', desc: it ? it.desc : '',
+                 // la mano libera perche' l'altra tiene un due mani: si dice, invece di lasciarla muta
+                 dueMani: due ? 1 : 0,
+                 // e una casella che questa impalcatura NON HA (il guerriero non ha calzature, il mago
+                 // non ha scudo) si dice pure: «vuoto» farebbe cercare un paio di stivali che non esiste.
+                 nonPrevisto: (c.slot === 'boots' && (Gear.slotsFor(p.heroId) || []).indexOf('boots') < 0) ? 1 : 0,
+                 occupata: (!it && c.slot === 'manoSx' && Gear.aDueMani(Gear.BY_ID[p.gear && p.gear.manoDx], Heroes.maniDi(p.heroId))) ? 1 : 0 };
       }),
       belt: (p.belt || []).map(sl => {
         if (!sl) return null;
@@ -2686,14 +2714,24 @@ class Room {
       // v2.13 — IL BAULE. `p.owned` e' gia' l'inventario: tutto cio' che hai comprato resta tuo. Fino a
       // ieri non lo vedevi da nessuna parte se non andando dal fabbro — cioe' possedevi roba di cui non
       // sapevi niente. Qui arriva per slot, con addosso/non addosso, e si clicca per equipaggiare.
-      baule: (Gear.slotsFor(p.heroId) || []).map(sl => ({
+      // v2.18.1 — L'INVENTARIO (si chiamava «baule»). Tutto quello che possiedi, compreso quello che
+      // stai portando — che si riconosce dalla stella. Prima si guardava `p.gear[sl] === it.id`, cioe'
+      // «e' nella casella del suo slot»: con le due mani quella domanda non ha piu' senso, perche' la
+      // stessa arma puo' stare nella destra o nella sinistra. Si guarda se e' in UNA QUALUNQUE delle
+      // caselle, ed e' anche piu' vero di prima.
+      inventario: (Gear.slotsFor(p.heroId) || []).map(sl => ({
         slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
         pezzi: Object.keys(p.owned || {}).map(id => Gear.BY_ID[id])
           .filter(it => it && it.slot === sl && it.hero === Gear.corpoDi(p.heroId))   // v2.18 — per impalcatura
           .sort((a, b) => (a.rank - b.rank) || 0)
           .map(it => ({ id: it.id, nome: it.name, desc: it.desc, colore: it.color, rango: it.rank,
                         carattere: it.carattere, rarita: Gear.rarityOf(it),
-                        addosso: p.gear[sl] === it.id ? 1 : 0 })),
+                        addosso: Object.keys(p.gear || {}).some(k => p.gear[k] === it.id) ? 1 : 0,
+                        // quali mani lo accettano adesso: il client ci spegne i pulsanti invece di
+                        // lasciar cliccare e non far succedere niente.
+                        dx: Gear.puoImpugnare(p.heroId, p.gear, it.id, 'manoDx') ? 1 : 0,
+                        sx: Gear.puoImpugnare(p.heroId, p.gear, it.id, 'manoSx') ? 1 : 0,
+                        mani: (it.slot === 'weapon' || it.slot === 'shield') ? 1 : 0 })),
       })),
     };
     // v2.13 — heroId e spec viaggiano col pannello: il ritratto al centro ha bisogno di sapere CHI
@@ -2727,17 +2765,23 @@ class Room {
     // comprano dallo stesso banco perche' hanno lo stesso scheletro e gli stessi slot. Confrontare
     // `it.hero` con `p.heroId` avrebbe vietato ogni acquisto a tutte e sette.
     if (it.hero !== Gear.corpoDi(p.heroId)) return;         // la roba di un'altra impalcatura non si compra
-    if (p.gear[it.slot] === it.id) return;                  // gia' addosso
-    // v1.72 — se l'oggetto e' gia' nel MAGAZZINO l'hai gia' pagato: rimetterlo addosso non costa nulla.
-    // Il vecchio non sparisce piu' nel nulla, resta tuo — e il Banditore lo ricompra a meta'.
-    const posseduto = !!p.owned[it.id];
-    if (!posseduto && p.coins < it.cost) return;
-    if (!posseduto) p.coins -= it.cost;
-    p.owned[it.id] = 1; p.gear[it.slot] = it.id;
+    // v1.72 — se l'oggetto e' gia' nel MAGAZZINO l'hai gia' pagato. Adesso che comprare non equipaggia
+    // piu' (vedi sotto), ricomprare un pezzo che hai gia' non ha senso: si rifiuta.
+    if (p.owned[it.id]) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'compra_no', perche: 'gia-tuo', id: it.id, name: it.name } }); return; }
+    if (p.coins < it.cost) return;
+    p.coins -= it.cost;
+    // ============================================================================================
+    // v2.18.1 — COMPRARE NON E' INDOSSARE
+    // ============================================================================================
+    // Fino a ieri l'acquisto finiva addosso da solo: compravi uno spadone e te lo ritrovavi in mano,
+    // magari al posto della coppia di lame con cui stavi giocando. Con le DUE MANI non e' nemmeno piu'
+    // definito — in quale delle due dovrebbe andare? Adesso il pezzo entra nell'INVENTARIO e basta;
+    // impugnarlo e' un secondo gesto, che si fa dalla scheda del personaggio scegliendo la mano.
+    p.owned[it.id] = 1;
     this._recomputeGear(p);
     this.offerGear(p, atMarket ? 1 : 0);
     if (p._nearBnd) this.offerBandit(p, 1);                 // il magazzino e' cambiato: il banco si aggiorna
-    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: posseduto ? 1 : 0 } });
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'comprato', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank } });
   }
   // v1.79 — QUANDO NON C'E' NIENTE DA SCEGLIERE il pannello non deve restare muto: un riquadro vuoto
   // senza spiegazione si legge come un guasto. Si dice a che livello arriva la prossima scelta e quanta
@@ -2838,22 +2882,28 @@ class Room {
   // Cio' che NON fa, e che va tenuto cosi': non compra. Un id che non e' in `p.owned` viene ignorato in
   // silenzio, perche' se questa porta potesse comprare sarebbe un negozio aperto ovunque e il fabbro non
   // servirebbe piu' a niente.
-  equipaggia(pid, itemId) {
+  equipaggia(pid, itemId, mano) {
     const p = this.players.get(pid); if (!p || p.dead) return;
     // solo fra un'ondata e l'altra: in mezzo al combattimento cambiarsi l'armatura non deve essere un gesto
     if (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_MARKET) return;
     const it = Gear.BY_ID[itemId]; if (!it) return;
     if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
     if (!p.owned[it.id]) return;                            // non e' tuo: non si compra da qui
-    if (p.gear[it.slot] === it.id) return;                  // gia' addosso
-    p.gear[it.slot] = it.id;
-    this._recomputeGear(p);
+    // v2.18.1 — LA MANO. Arma e scudo non hanno piu' una casella propria: si mettono in una delle due
+    // mani, e quale si puo' lo dice `Gear.impugna` — che e' anche cio' che il client usa per spegnere
+    // le caselle vietate. Se rifiuta, si dice PERCHE': un clic che non fa niente si legge come un guasto.
+    const r = Gear.impugna(p.heroId, p.gear, it.id, mano);
+    if (!r.gear) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'equip_no', perche: r.motivo, id: it.id, name: it.name } }); return; }
+    p.gear = r.gear;
+    // L'ORDINE CONTA: `_recomputeBoons` rifa' `p.stats` da zero, e `_recomputeGear` ci scrive dentro la
+    // perforazione dell'arma. Invertirli lascerebbe la perforazione del pezzo precedente — o zero.
+    this._recomputeBoons(p); this._recomputeGear(p);
     // si rimanda SOLO il pannello, non `_inviaPannello`: quello rifa' anche il giro delle offerte
     // (rango, carta, «niente da scegliere») e rimettersi una corazza non e' un motivo per riaprire una
     // scelta gia' fatta. Qui cambiano il baule e le derivate, ed e' quello che si rimanda.
     this.offerShop(p);
     if (p._nearGear) this.offerGear(p, 1);                  // e se sei davanti al fabbro, anche il suo banco
-    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank, free: 1 } });
+    this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, mano, id: it.id, name: it.name, color: it.color, rank: it.rank, free: 1 } });
   }
   vendiGear(pid, itemId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
@@ -2863,7 +2913,7 @@ class Room {
     const it = Gear.BY_ID[itemId]; if (!it) return;
     if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
     if (!p.owned[it.id]) return;                            // non ce l'hai
-    if (p.gear[it.slot] === it.id) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'vendi_no', perche: 'addosso' } }); return; }
+    if (Object.keys(p.gear || {}).some(k => p.gear[k] === it.id)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'vendi_no', perche: 'addosso' } }); return; }
     const reso = Gear.prezzoVendita(it);
     delete p.owned[it.id];
     p.coins += reso;
@@ -2908,7 +2958,18 @@ class Room {
     // v2.18 — il bonus di classe e la piastra del paladino entrano QUI, nel ricalcolo, e non altrove:
     // e' l'unico punto che ricostruisce il personaggio da zero, quindi e' l'unico che non lascia in
     // giro un bonus di un'arma che non impugni piu'.
+    // due armi leggere in mano: serve al bonus dell'assassino, e si calcola qui una volta sola.
+    { const a1 = Gear.armaPrincipale(p.gear), a2 = Gear.armaSecondaria(p.gear);
+      p._doppiaLeggera = !!(a1 && a2 && a1.carattere === 'leggera' && a2.carattere === 'leggera'); }
     bonusDiClasse(p, this._caratteraArma(p));
+    // v2.18.1 — LA SECONDA ARMA. Non raddoppia il danno (sarebbe due personaggi in uno): alza la
+    // CADENZA della meta' del proprio peso, che e' come funziona il combattere con due lame — piu'
+    // colpi, non colpi piu' grossi. Il maestro d'armi ci aggiunge il suo 8% da `Ambidestro`.
+    { const a2 = Gear.armaSecondaria(p.gear);
+      if (a2) {
+        const q = a2.carattere === 'leggera' ? 0.22 : a2.carattere === 'equilibrata' ? 0.15 : 0.10;
+        p.stats.fireRateMult *= (1 + q) * (p.heroId === 'maestro' ? 1.08 : 1);
+      } }
     const accese = {};
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
     for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }
@@ -3637,7 +3698,7 @@ class Room {
       if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; }
       // v1.88 — TUTTO l'equipaggiamento viaggia, non solo arma e scudo: adesso ogni pezzo cambia
       // qualcosa nel disegno del personaggio, quindi il client deve sapere cosa hai addosso.
-      o.wp = p.gear ? p.gear.weapon : null; o.sh = p.gear ? p.gear.shield : null;
+      { const a = Gear.armaPrincipale(p.gear), sc = Gear.scudoDi(p.gear); o.wp = a ? a.id : null; o.sh = sc ? sc.id : null; }
       o.arm = (p.gear && p.gear.armor) || null; o.stv = (p.gear && p.gear.boots) || null;   // null esplicito: lo slot che la classe non ha
       if (p.dead) o.d = 1;
       if (p.down) { o.dn = 1; o.dt = +Math.max(0, p.downT).toFixed(1); }

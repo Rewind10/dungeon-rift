@@ -124,22 +124,31 @@
 
   // Sei fasce, non piu' cinque: la prima e' il titolo con cui si comincia (livelli 1-2), l'ultima e' la
   // specializzazione e non ha un nome fisso.
-  // v2.18 — SETTE SCALE DI TITOLI, e la sesta non e' piu' vuota. Era `null` perche' al sesto rango
-  // parlava la specializzazione; le specializzazioni non esistono piu' (vedi SPECS qui sotto), quindi
-  // l'ultimo gradino ha un nome suo. I ranghi restano puramente scenici — `puntiPerRango()` torna 0.
-  const RANK_NAMES = {
-    barbaro:   ['Predone', 'Razziatore', 'Berserker', 'Distruttore', 'Furia del Nord', 'Flagello'],
-    paladino:  ['Scudiero', 'Cavaliere', 'Giurato', 'Campione', 'Baluardo', 'Luce della Faglia'],
-    maestro:   ['Schermidore', 'Duellante', 'Spadaccino', 'Maestro di Scherma', 'Lama Doppia', 'Mano Perfetta'],
-    assassino: ['Tagliagole', 'Sicario', 'Lama Silente', 'Ombra', 'Spettro', 'Nome Dimenticato'],
-    arciere:   ['Battitore', 'Tiratore', 'Cacciatore', 'Arciere Scelto', 'Occhio Lungo', 'Freccia Nera'],
-    mago:      ['Apprendista', 'Mago Giovane', 'Mago', 'Mago Anziano', 'Magister', 'Arcimago'],
-    warlock:   ['Iniziato', 'Patteggiato', 'Invocatore', 'Malediziere', 'Signore del Patto', 'Voce dell Abisso'],
-  };
+  // ============================================================================================
+  // v2.18.1 — I RANGHI NON ESISTONO PIU'
+  // ============================================================================================
+  // Parole di Paolo, dopo la prima partita con le sette classi: *«I RANGHI NON esistono più: la classe
+  // di partenza rimane la stessa, invece il Barbaro è diventato un Razziatore»*.
+  //
+  // Aveva ragione, e la v2.18 aveva sbagliato per inerzia. Quando gli eroi erano tre e senza nome
+  // proprio, i titoli di rango (Predone → Razziatore → Berserker…) davano al personaggio un'identita'
+  // che cresceva. Adesso l'identita' ce l'ha dal primo minuto: **si chiama Barbaro**, l'ha scelto lui
+  // guardando un artwork e cinque barre. Sostituirgliela con un sinonimo a ogni scaglione non aggiunge
+  // niente e toglie l'unica cosa che era chiara.
+  //
+  // Quindi: il titolo mostrato accanto al livello E' IL NOME DELLA CLASSE, sempre. `RANK_NAMES` resta
+  // vuoto e non cancellato — come `CARDS` dalla v1.70 e `SPECS` dalla v2.18 — perche' le funzioni che
+  // lo interrogano continuino a rispondere senza rami condizionali sparsi in giro.
+  //
+  // Le FASCE (`RANK_LEVELS`, `rankForLevel`) restano: non danno piu' un titolo e non hanno mai dato
+  // punti dalla v2.16, ma sono ancora il modo in cui il gioco misura «a che punto sei» per la barra e
+  // per la progressione. Sono un righello, non un grado.
+  const RANK_NAMES = {};
   function rankName(heroId, level, specId) {
-    const r = rankForLevel(level);
-    const scala = RANK_NAMES[heroId] || RANK_NAMES.barbaro;
-    return scala[Math.max(0, Math.min(scala.length - 1, r - 1))];
+    const H = (typeof module !== 'undefined' && module.exports) ? require('./heroes.js').HEROES
+      : ((typeof self !== 'undefined' && self.GAME && self.GAME.Heroes) || {}).HEROES;
+    const h = H && H[heroId];
+    return (h && h.name) || String(heroId || '').toUpperCase();
   }
 
   // ===== PUNTI ===============================================================================

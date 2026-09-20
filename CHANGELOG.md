@@ -2,6 +2,56 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.18.1] — 2026-09-20 · "Le due mani"
+
+Quattro cose segnalate da Paolo dopo la **prima partita** con le sette classi. Tutte e quattro erano
+dimenticanze della v2.18, non richieste nuove.
+
+**I ranghi non esistono più.** *«La classe di partenza rimane la stessa, invece il Barbaro è diventato
+un Razziatore»*. Aveva ragione, e la v2.18 aveva sbagliato per inerzia: quando gli eroi erano tre e
+senza nome proprio, i titoli di rango davano un'identità che cresceva; adesso l'identità ce l'ha dal
+primo minuto — **si chiama Barbaro**, l'ha scelto lui guardando un artwork e cinque barre. Il titolo
+accanto al livello è **il nome della classe**, sempre. `RANK_NAMES` resta vuoto e non cancellato, come
+`CARDS` e `SPECS`; l'annuncio «sei diventato…» non parte più.
+
+**«Baule» si chiama INVENTARIO** e mostra tutto quello che possiedi, con la **★** su ciò che stai
+portando. Prima il «lo sto portando» si decideva con `p.gear[slot] === id`, cioè «è nella casella del
+suo slot»: con le due mani quella domanda non ha più senso, e adesso si guarda se il pezzo è in **una
+qualunque** delle caselle.
+
+**«Addosso» si chiama EQUIPAGGIAMENTO** e le caselle stanno **attorno al personaggio**: mano destra in
+alto a sinistra, mano sinistra in alto a destra (il personaggio si guarda di fronte), armatura e
+calzature in basso. Era un elenco sotto il ritratto: diceva le stesse cose senza far vedere *dove*
+stanno.
+
+**Le due mani, per davvero.** L'equipaggiamento non è più `{arma, armatura, scudo}` ma
+`{manoDx, manoSx, armatura, calzature}`, e le regole vengono dalle tabelle del documento:
+
+- un'arma **pesante** è a due mani e occupa entrambe le caselle — **tranne per il barbaro**, che per
+  questo può portare due asce, o un'ascia e uno scudo (*«unica classe che può portare arma pesante e
+  scudo»*);
+- **due armi** insieme solo per barbaro, maestro d'armi (leggere/medie), assassino e mago (leggere);
+- lo **scudo** solo per barbaro, paladino e maestro d'armi, e non insieme a un'arma troppo pesante.
+
+La regola sta in **un posto solo** (`Gear.impugna`), usata dal server per decidere e dal client per
+spegnere i pulsanti **DX** / **SX** sulle caselle che quella mano non accetta. La seconda arma non
+raddoppia il danno — alza la **cadenza**, che è come funziona combattere con due lame.
+
+**Comprare non è più indossare.** Il pezzo comprato dal fabbro entra nell'**inventario**; impugnarlo è
+un secondo gesto, con la mano scelta. Con due mani non era nemmeno più definito: in quale delle due
+sarebbe dovuto andare?
+
+**Corretto per strada:** la scaletta delle abilità scriveva «ricarica **undefineds**» — dalla v2.18 la
+ricarica viene dallo **slot** e non sta più addosso all'abilità, e quella riga non se n'era accorta.
+Ed `equipaggia` ricalcolava nell'ordine sbagliato (`gear` prima di `boons`), azzerando la perforazione
+dell'arma appena impugnata.
+
+**Test: 3979 passati, 0 falliti.** Il test dell'equipaggiamento è stato riscritto sulle due mani e
+adesso prova le regole **classe per classe** — è quello che avrebbe visto subito un barbaro incapace di
+tenere scudo e ascia insieme.
+
+---
+
 ### [2.18.0] — 2026-09-20 · "Sette classi"
 
 La versione più grossa dalla v1.66. **I tre eroi diventano sette classi**: barbaro, paladino, maestro

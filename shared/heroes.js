@@ -183,6 +183,33 @@
   function corpoDi(heroId) { const h = HEROES[heroId]; return (h && h.corpo) || 'guerriero'; }
 
   // ============================================================================================
+  // v2.18.1 — LE DUE MANI
+  // ============================================================================================
+  // L'equipaggiamento non e' piu' «un'arma, un'armatura, uno scudo»: sono DUE MANI piu' armatura e
+  // calzature. Quello che ogni classe puo' tenerci dentro viene dalle tabelle del documento:
+  //
+  //   `doppia`  — i caratteri di arma che puo' impugnare in DUE ESEMPLARI insieme (null = niente
+  //               doppia arma). Il carattere e' quello di gear.js: leggera, equilibrata, pesante.
+  //   `scudo`   — i caratteri di arma che puo' tenere nell'altra mano INSIEME a uno scudo
+  //               (null = niente scudo).
+  //   `pesanteUnaMano` — il BARBARO e nessun altro. Un'arma pesante e' a due mani per tutti e occupa
+  //               entrambi gli slot; per lui no, ed e' proprio il suo privilegio: *«unica classe che
+  //               puo' portare arma pesante e scudo»*, e quindi anche due armi pesanti.
+  //
+  // La regola vive qui e non nel server perche' la deve sapere anche il client, per spegnere i pezzi
+  // che non puoi impugnare invece di lasciarti cliccare e non succedere niente.
+  const MANI = {
+    barbaro:   { doppia: ['leggera', 'equilibrata', 'pesante'], scudo: ['leggera', 'equilibrata', 'pesante'], pesanteUnaMano: 1 },
+    paladino:  { doppia: null,                                   scudo: ['leggera', 'equilibrata'] },
+    maestro:   { doppia: ['leggera', 'equilibrata'],             scudo: ['leggera', 'equilibrata'] },
+    assassino: { doppia: ['leggera'],                            scudo: null },
+    arciere:   { doppia: null,                                   scudo: null },
+    mago:      { doppia: ['leggera'],                            scudo: null },
+    warlock:   { doppia: null,                                   scudo: null },
+  };
+  function maniDi(heroId) { return MANI[heroId] || MANI.arciere; }
+
+  // ============================================================================================
   // LE STATISTICHE DI PARTENZA — la matrice 7 x 5
   // ============================================================================================
   // Il tetto resta 20 anche adesso che i picchi sono a 10, ed e' una decisione esplicita di Paolo
@@ -249,7 +276,7 @@
   };
 
   return {
-    HEROES, ORDER, CORPI, corpoDi, STATS, SCUOLE, SCUOLA_STAT, BONUS_CLASSE,
+    HEROES, ORDER, CORPI, corpoDi, STATS, SCUOLE, SCUOLA_STAT, BONUS_CLASSE, MANI, maniDi,
     STAT_BASE, STAT_MAX, statBase, STAT_CENTRO, PROFILO_PESO, profiloPunti,
   };
 });

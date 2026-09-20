@@ -137,7 +137,7 @@
   function showLobby(players) { A.scene('lobby'); lobbyPlayers = players || lobbyPlayers; HUD.lobby(Net.room, lobbyPlayers, Net.id, () => Net.start(), () => { HUD.hideLobby(); $('menu').classList.remove('hidden'); $('connectBtn').textContent = 'Aggiorna eroe'; $('connectBtn').onclick = () => { G.meHero = HUD.selectedHero; Net.setHero(G.meHero); $('menu').classList.add('hidden'); showLobby(lobbyPlayers); }; }); }
   function enterGame() { if (G.started) return; G.started = true; HUD.hideLobby(); $('hud').classList.remove('hidden'); HUD.buildAbilityBar(G.meHero); A.scene('wave'); }
 
-  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady(), (id) => Net.equipaggia(id)); };
+  Net.onOfferShop = (m) => { HUD.setStats(m, (id) => Net.buyStat(id), () => Net.shopReady(), (id, mano) => Net.equipaggia(id, mano)); };
   // v1.79 — LA BARRA DEL MENU DI FINE ONDATA. Le tre sezioni si sfogliano senza mandare niente al
   // server; il villaggio e la mappa successiva sono le uniche due che gli parlano.
   // v2.13.5 — le linguette non ci sono piu': la schermata mostra tutto insieme. Restano i due pulsanti
@@ -234,10 +234,10 @@
         R.levelUp(ev.who, ev.lv);                       // la scritta sopra la testa vale per tutti, anche per i compagni
         if (ev.who === Net.id) { A.levelUp && A.levelUp(); R.addShake(2); }
         break;
-      case 'rankup': R.ring(ev.x, ev.y, '#ffd27a', 9, 130, 0.8); R.burst(ev.x, ev.y, '#ffd27a', 30, 260, 0.9); R.addShake(5);
-        HUD.killfeed('★ <b style="color:#ffd27a">' + esc(ev.name || '') + '</b> è ora <b>' + esc(ev.title || '') + '</b>');
-        if (ev.who === Net.id) HUD.modeBanner('★ ' + (ev.title || '').toUpperCase(), '#ffd27a', 'Scegli la tua carta di rango a fine ondata');
-        break;
+      // v2.18.1 — l'evento 'rankup' non arriva piu' dal server: i ranghi non danno ne' titolo ne'
+      // punti, e annunciarli vorrebbe dire festeggiare una cosa che non e' successa. Il ramo resta
+      // vuoto per i salvataggi in volo di una partita iniziata prima dell'aggiornamento.
+      case 'rankup': break;
       case 'spec': R.ring(ev.x, ev.y, ev.color || '#ffd27a', 10, 180, 1); R.burst(ev.x, ev.y, ev.color || '#ffd27a', 40, 320, 1); R.addShake(8);
         HUD.killfeed((ev.icon || '★') + ' <b style="color:' + (ev.color || '#ffd27a') + '">' + esc(ev.name || '') + '</b> ha scelto: <b>' + esc(ev.title || '') + '</b>');
         break;
@@ -389,6 +389,16 @@
       case 'shop': HUD.killfeed('✨ Scegli un potere e spendi la XP'); break;
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;
+      // v2.18.1 — comprare non equipaggia piu': il pezzo entra nell'inventario e si impugna dopo.
+      case 'comprato': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6);
+        HUD.killfeed(`\u{1F6CD} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 nell'inventario`); break; }
+      case 'equip_no': { const M = { 'niente-scudo': 'questa classe non porta scudi',
+        'due-scudi': 'due scudi no', 'niente-doppia-arma': 'questa classe non combatte con due armi',
+        'carattere-non-ammesso-in-doppia': 'non con due armi cosi pesanti',
+        'scudo-non-con-questa-arma': 'con quest arma lo scudo non si puo tenere',
+        'arma-troppo-pesante-per-lo-scudo': 'l arma nell altra mano e troppo pesante per lo scudo' };
+        HUD.killfeed(`\u26D4 <b>${esc(ev.name)}</b> \u2014 ${M[ev.perche] || 'non si puo impugnare'}`); break; }
+      case 'compra_no': { HUD.killfeed(`\u26D4 <b>${esc(ev.name)}</b> \u2014 ce l hai gia nell inventario`); break; }
       case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
       // v2.12 — la rivendita. Due risposte, perche' le due cose vanno dette in modo diverso: quando il
       // pezzo e' andato si vede il lampo e il totale; quando il fabbro rifiuta si dice PERCHE'. Un

@@ -712,7 +712,10 @@
           const a = id ? AB[id] : null;
           etichetta = 'attiva ' + sc.tasto; colore = a ? a.color : '#8d97ab';
           corpo = a
-            ? '<div class="card"><span class="ic">' + a.icon + '</span><span><span class="nm">' + esc(a.name) + '</span><div class="ds">' + esc(a.breve || '') + ' · ricarica ' + a.cd + 's</div></span></div>'
+            // v2.18.1 — la RICARICA si chiede allo SLOT, non all'abilita'. Dalla v2.18 `cd` non sta piu'
+            // addosso all'oggetto (la stessa abilita' sta in slot diversi per classi diverse), e questa
+            // riga scriveva «ricarica undefineds» sulla scaletta.
+            ? '<div class="card"><span class="ic">' + a.icon + '</span><span><span class="nm">' + esc(a.name) + '</span><div class="ds">' + esc(a.breve || '') + ' · ricarica ' + (window.GAME.Abilities.cdDiSlot(sc.slot)) + 's</div></span></div>'
             : (inArrivoSlot === sc.slot ? '<span class="attesa">▲ da scegliere adesso</span>'
               : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
         } else {
@@ -790,14 +793,25 @@
     // che hai. Ed e' la destra a essere cliccabile, perche' e' li' che c'e' una decisione da prendere.
 
     // ---- CENTRO: gli slot addosso, sotto il ritratto ----
+    // v2.18.1 — le quattro caselle si riempiono al loro posto attorno al ritratto: ognuna ha un
+    // `data-slot` nell'HTML e qui si cerca quella, invece di stampare un elenco in ordine. Cosi' se
+    // domani se ne aggiunge una (un amuleto, una fascia) si mette il div dove va e basta.
     _renderAddosso() {
-      const box = $('slotAddosso'); if (!box) return;
-      const inv = this._stats && this._stats.inv;
-      if (!inv) { box.innerHTML = ''; return; }
-      box.innerHTML = (inv.gear || []).map(g =>
-        '<div class="sa" style="--c:' + g.colore + '" title="' + esc(g.nome) + (g.desc ? ' — ' + esc(g.desc) : '') + '">'
-        + '<span class="ic">' + g.icona + '</span>'
-        + '<span class="tx"><b>' + esc(g.nome) + '</b><i>' + esc(g.slotName) + '</i></span></div>').join('');
+      const inv = this._stats && this._stats.inv; if (!inv) return;
+      for (const g of (inv.gear || [])) {
+        const el = document.querySelector('.eq-slot[data-slot="' + g.slot + '"]');
+        if (!el) continue;
+        const pieno = !!g.id;
+        el.className = 'eq-slot ' + ({ manoDx: 'tl', manoSx: 'tr', armor: 'bl', boots: 'br' }[g.slot] || 'tl') + (pieno ? '' : ' vuota');
+        el.style.setProperty('--c', g.colore || '#6f7890');
+        el.title = pieno ? (g.nome + (g.desc ? ' — ' + g.desc : ''))
+          : (g.nonPrevisto ? 'Questa classe non ha questa casella' : g.occupata ? 'Occupata dall arma a due mani' : 'Vuota');
+        el.innerHTML = '<span class="et">' + esc(g.slotName) + '</span>'
+          + '<span class="nm">' + (pieno ? esc(g.nome)
+              : g.nonPrevisto ? '— non previsto —' : g.occupata ? '— due mani —' : '— vuoto —') + '</span>'
+          + (pieno && g.carattere ? '<span class="car">' + esc(g.carattere) + '</span>' : '')
+          + (g.dueMani ? '<span class="due">✊ a due mani</span>' : '');
+      }
       const belt = $('beltAddosso');
       if (belt) belt.innerHTML = '<div class="sa-belt">' + (inv.belt || []).map((b, i) => b
         ? '<span class="pz" title="' + esc(b.nome) + '">' + b.icona + ' <b>' + b.n + '/' + b.max + '</b></span>'
@@ -821,6 +835,16 @@
       };
       requestAnimationFrame(giro);
     },
+    // che tipo di pezzo (arma o scudo) sta in una delle due mani, e il suo id
+    _pezzoInMano(inv, tipo) {
+      const G = window.GAME && window.GAME.Gear; if (!G) return null;
+      for (const m of ['manoDx', 'manoSx']) {
+        const g = (inv.gear || []).find(x => x.slot === m);
+        const it = g && g.id && G.BY_ID[g.id];
+        if (it && it.slot === tipo) return it.id;
+      }
+      return null;
+    },
     _disegnaRitratto() {
       const cv = $('ritratto'); const R = window.Renderer; if (!cv || !R) return;
       const ctx = cv.getContext('2d'); if (!ctx) return;
@@ -828,9 +852,11 @@
       const inv = this._stats && this._stats.inv; if (!inv) return;
       const eq = {
         h: this._heroId || 'barbaro',
-        wp: (inv.gear.find(g => g.slot === 'weapon') || {}).id || null,
+        // v2.18.1 — arma e scudo vengono dalle MANI, non da caselle col loro nome: si cerca nelle due
+        // mani il pezzo giusto, esattamente come fa il server con `Gear.armaPrincipale`/`scudoDi`.
+        wp: this._pezzoInMano(inv, 'weapon'),
         arm: (inv.gear.find(g => g.slot === 'armor') || {}).id || null,
-        sh: (inv.gear.find(g => g.slot === 'shield') || {}).id || null,
+        sh: this._pezzoInMano(inv, 'shield'),
         stv: (inv.gear.find(g => g.slot === 'boots') || {}).id || null,
         sp: this._spec || 0,
       };
@@ -855,10 +881,10 @@
     _renderBaule() {
       const box = $('baule'); if (!box) return;
       const inv = this._stats && this._stats.inv;
-      if (!inv || !inv.baule) { box.innerHTML = ''; return; }
+      if (!inv || !inv.inventario) { box.innerHTML = ''; return; }
       box.innerHTML = '';
       let quanti = 0;
-      inv.baule.forEach(sl => {
+      inv.inventario.forEach(sl => {
         if (!sl.pezzi || !sl.pezzi.length) return;
         const g = document.createElement('div'); g.className = 'bgr';
         const h = document.createElement('div'); h.className = 'bgr-h';
@@ -871,13 +897,31 @@
           const el = document.createElement('div');
           el.className = 'bq' + (it.addosso ? ' on' : '');
           el.style.setProperty('--c', it.colore);
+          // v2.18.1 — ARMI E SCUDI CHIEDONO LA MANO. Per tutto il resto il clic basta, perche' c'e' una
+          // casella sola e non c'e' niente da scegliere. I due pulsantini si accendono solo sulle mani
+          // che davvero accettano quel pezzo (`it.dx` / `it.sx`, calcolati dal server con la stessa
+          // funzione che poi decide): un pulsante che si clicca e non fa niente e' peggio di uno spento.
           el.title = it.nome + ' — ' + rar.name + ' ' + (it.carattere || '') + '\n' + (it.desc || '')
-                   + (it.addosso ? '\n\n(lo stai portando)' : '\n\nClic per indossarlo');
+                   + (it.addosso ? '\n\n(lo stai portando)' : (it.mani ? '\n\nScegli la mano' : '\n\nClic per indossarlo'));
           el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
             + '<span class="nm">' + esc(it.nome) + '</span>'
             + '<span class="rr" style="color:' + rar.color + '">' + esc(rar.name) + '</span>'
-            + (it.addosso ? '<span class="on-b">★</span>' : '');
-          el.onclick = () => { if (!it.addosso && this._equipaggia) this._equipaggia(it.id); };
+            + (it.addosso ? '<span class="on-b">★</span>' : '')
+            + (it.mani ? '<span class="mani">'
+                + '<button class="mn' + (it.dx ? '' : ' no') + '" data-m="manoDx" title="Mano destra">DX</button>'
+                + '<button class="mn' + (it.sx ? '' : ' no') + '" data-m="manoSx" title="Mano sinistra">SX</button>'
+                + '</span>' : '');
+          if (it.mani) {
+            el.querySelectorAll('.mn').forEach(b => {
+              b.onclick = (e) => {
+                e.stopPropagation();
+                if (b.classList.contains('no')) return;
+                if (this._equipaggia) this._equipaggia(it.id, b.dataset.m);
+              };
+            });
+          } else {
+            el.onclick = () => { if (!it.addosso && this._equipaggia) this._equipaggia(it.id); };
+          }
           riga.appendChild(el);
         });
         g.appendChild(riga); box.appendChild(g);

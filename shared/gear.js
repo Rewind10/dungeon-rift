@@ -569,13 +569,107 @@
   // compra. Si cerca il minimo invece di prendere il primo della lista: l'ordinamento e' gia' giusto, ma
   // il giorno che qualcuno lo cambia questa funzione non deve diventare sbagliata in silenzio.
   function startingGear(heroId) {
-    const out = {};
-    for (const s of slotsFor(heroId)) {
-      const l = itemsFor(heroId, s); if (!l.length) continue;
-      out[s] = l.reduce((a, b) => (b.rank < a.rank ? b : a)).id;
+    const out = { manoDx: null, manoSx: null, armor: null, boots: null };
+    const minimo = (sl) => { const l = itemsFor(heroId, sl); return l.length ? l.reduce((a, b) => (b.rank < a.rank ? b : a)) : null; };
+    for (const sl of slotsFor(heroId)) {
+      const it = minimo(sl); if (!it) continue;
+      // v2.18.1 — arma e scudo non hanno piu' una casella propria: vanno nelle MANI. L'arma di partenza
+      // e' sempre di grado scarso e non e' mai pesante, quindi entra nella destra e lascia libera la
+      // sinistra; lo scudo di partenza, per chi ce l'ha, va nella sinistra — e se la classe non puo'
+      // portarlo (`impugna` rifiuta) resta semplicemente nel baule, dove il giocatore lo trova.
+      if (it.slot === 'weapon') out.manoDx = it.id;
+      else if (it.slot === 'shield') { const r = impugna(heroId, out, it.id, 'manoSx'); if (r.gear) out.manoSx = r.gear.manoSx; }
+      else out[it.slot] = it.id;
     }
     return out;
   }
+  // ============================================================================================
+  // v2.18.1 — LE DUE MANI: chi puo' tenere cosa, e dove
+  // ============================================================================================
+  // Fino a ieri l'equipaggiamento era `{weapon, armor, shield}`: una casella per tipo, e la domanda
+  // "posso impugnare questo?" non esisteva perche' la risposta era sempre si'. Adesso le caselle sono
+  // `{manoDx, manoSx, armor, boots}` e le due mani possono tenere ARMI o SCUDI, secondo le regole di
+  // classe che stanno in `Heroes.MANI`.
+  //
+  // LE TRE REGOLE, in ordine di quanto sorprendono:
+  //  1. un'arma PESANTE e' a due mani: occupa ENTRAMBE le caselle. L'unica eccezione e' il barbaro
+  //     (`pesanteUnaMano`), che per questo puo' portare due asce, o un'ascia e uno scudo.
+  //  2. due ARMI insieme si possono solo se la classe ha `doppia`, e solo dei caratteri elencati li'.
+  //  3. uno SCUDO si puo' solo se la classe ha `scudo`, e l'arma nell'altra mano dev'essere di un
+  //     carattere elencato li'.
+  //
+  // La funzione torna il NUOVO oggetto gear oppure `null` con il motivo: il server lo usa per rifiutare,
+  // il client per spegnere la casella prima ancora che ci si clicchi sopra. Una regola sola, in un posto
+  // solo — se sta in due posti, in due versioni si contraddicono.
+  const MANI_SLOT = ['manoDx', 'manoSx'];
+  function aDueMani(it, mani) {
+    return !!(it && it.slot === 'weapon' && it.carattere === 'pesante' && !(mani && mani.pesanteUnaMano));
+  }
+  function _mani(heroId) {
+    // gear.js e' caricato anche dal browser, dove i moduli sono globali: si prende Heroes da dove c'e'.
+    const H = (typeof module !== 'undefined' && module.exports) ? require('./heroes.js')
+      : (typeof self !== 'undefined' && self.GAME && self.GAME.Heroes);
+    return (H && H.maniDi) ? H.maniDi(heroId) : { doppia: null, scudo: null };
+  }
+  // Prova a mettere `itemId` nella mano `mano` ('manoDx' | 'manoSx'). Per armatura e calzature la mano
+  // si ignora: hanno una casella sola. Torna { gear, motivo } — `gear` nullo se non si puo'.
+  function impugna(heroId, gear, itemId, mano) {
+    const it = BY_ID[itemId];
+    if (!it) return { gear: null, motivo: 'inesistente' };
+    if (it.hero !== _corpo(heroId)) return { gear: null, motivo: 'classe' };
+    const g = Object.assign({}, gear || {});
+    if (it.slot === 'armor' || it.slot === 'boots') { g[it.slot] = it.id; return { gear: g, motivo: null }; }
+    if (MANI_SLOT.indexOf(mano) < 0) mano = 'manoDx';
+    const altra = mano === 'manoDx' ? 'manoSx' : 'manoDx';
+    const mani = _mani(heroId);
+    const inAltra = BY_ID[g[altra]];
+
+    if (it.slot === 'shield') {
+      if (!mani.scudo) return { gear: null, motivo: 'niente-scudo' };
+      // lo scudo sta nella mano scelta; l'arma nell'altra dev'essere di un carattere ammesso
+      if (inAltra && inAltra.slot === 'weapon' && mani.scudo.indexOf(inAltra.carattere) < 0) {
+        return { gear: null, motivo: 'arma-troppo-pesante-per-lo-scudo' };
+      }
+      if (inAltra && inAltra.slot === 'shield') return { gear: null, motivo: 'due-scudi' };
+      g[mano] = it.id;
+      return { gear: g, motivo: null };
+    }
+
+    // da qui in giu' e' un'ARMA
+    if (aDueMani(it, mani)) { g.manoDx = it.id; g.manoSx = null; return { gear: g, motivo: null }; }
+    if (inAltra) {
+      if (inAltra.slot === 'shield') {
+        if (!mani.scudo || mani.scudo.indexOf(it.carattere) < 0) return { gear: null, motivo: 'scudo-non-con-questa-arma' };
+      } else {
+        // due armi: serve la doppia, e tutti e due i caratteri devono essere ammessi
+        if (!mani.doppia) return { gear: null, motivo: 'niente-doppia-arma' };
+        if (mani.doppia.indexOf(it.carattere) < 0 || mani.doppia.indexOf(inAltra.carattere) < 0) {
+          return { gear: null, motivo: 'carattere-non-ammesso-in-doppia' };
+        }
+        // e se quella nell'altra mano e' un due mani, prima va tolta
+        if (aDueMani(inAltra, mani)) g[altra] = null;
+      }
+    }
+    g[mano] = it.id;
+    return { gear: g, motivo: null };
+  }
+  // Vero se questo pezzo si puo' mettere in quella mano, senza costruire niente. Serve al client.
+  function puoImpugnare(heroId, gear, itemId, mano) { return !!impugna(heroId, gear, itemId, mano).gear; }
+  // L'arma che conta per i danni: la destra se c'e', se no la sinistra. Uno scudo non e' un'arma.
+  function armaPrincipale(gear) {
+    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'weapon') return it; }
+    return null;
+  }
+  function armaSecondaria(gear) {
+    const pr = armaPrincipale(gear);
+    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'weapon' && it !== pr) return it; }
+    return null;
+  }
+  function scudoDi(gear) {
+    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'shield') return it; }
+    return null;
+  }
+
   // Somma dei bonus degli oggetti indossati. Si RICALCOLA sempre da zero: col cambio libero non si puo'
   // sommare il delta, o il bonus dell'oggetto sostituito resterebbe attaccato al personaggio per sempre.
   // Le chiavi elencate qui sono quelle che ESISTONO SEMPRE (anche a zero) perche' chi legge non debba
@@ -598,5 +692,6 @@
   function prezzoVendita(it) { return !it ? 0 : (it.cost > 0 ? Math.round(it.cost / 2) : VENDITA_SCARSO); }
 
   return { ITEMS, BY_ID, SLOTS, CORPO_DI, corpoDi: _corpo, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
-           itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita };
+           itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita,
+           MANI_SLOT, aDueMani, impugna, puoImpugnare, armaPrincipale, armaSecondaria, scudoDi };
 });
