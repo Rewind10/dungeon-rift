@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.18.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,62 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.1 (l'assassino mena di pugnale)
+
+L'assassino era **disegnato con due pugnali e tirava frecce**: su sette classi è l'unica in cui il
+*corpo* (`ladro`, gli archi) e la *famiglia d'arma* (mischia leggera) non coincidono, e l'arma di
+partenza seguiva il corpo. Adesso parte con i **Pugnali Sbeccati** — grado 1, leggera, mischia,
+77 danni/s, scuola `agile`. La **doppia arma non è regalata**: la seconda lama si compra dal fabbro,
+ed è lì che si accende il bonus di classe.
+
+I pezzi marcati `avvio` sono pezzi di **partenza, non merce**: appartengono a una classe sola, non
+stanno su nessun banco e non entrano nel listino (che resta 117 pezzi).
+
+**Chiuso un buco della v2.19.0**: i pezzi di grado 1 costano zero, e con l'equipaggiamento misto si
+compravano gratis dal catalogo di un'altra classe per rivenderli a 8 monete, in circolo. Adesso
+**il grado scarso non è merce**.
+
+---
+
+## 🆕 Novità v2.19.0 (le tre botteghe, e l'equipaggiamento misto)
+
+**Al villaggio si compra in tre posti.** Due case sono diventate l'**ARCHERIA** (fila di ponente,
+sotto la fucina — bersagli di paglia con le frecce piantate, rastrelliere d'archi, cuoio da conciare)
+e la **BOTTEGA ARCANA** (fila di levante — cristalli accesi, scaffali di volumi, tappeto runico).
+Dentro ci stanno l'**Arciera** e l'**Arcanista**, con l'arco incordato e il bastone dalla gemma accesa
+in mano. Ogni banco ha il suo colore — ambra, verde, viola — sull'alone a terra e sul minimappa.
+
+| Bottega | Mercante | Vende |
+|---|---|---|
+| **Fucina** | Fabbro | armi da mischia, armature, scudi |
+| **Archeria** | Arciera | archi, cuoio, calzature |
+| **Bottega Arcana** | Arcanista | bastoni, vesti, calzari |
+
+**L'equipaggiamento misto.** Chi compra cosa non è più «il tuo corpo» ma la **tabella della tua
+classe**, trascritta da `PIANO-CLASSI-SETTAGGI.md` §3 in `Gear.PERMESSI`. I due assi del documento
+erano già nel listino: la **tipologia** è il catalogo (mischia / arco / magia), il **peso** è il
+`carattere` del pezzo (leggera / equilibrata / pesante).
+
+| Classe | Fabbro | Arciera | Arcanista |
+|---|---|---|---|
+| **Barbaro** | armi tutte, armature **leggere**, scudi | armature e calzature **leggere** | — |
+| **Paladino** | tutto | — | — |
+| **Maestro d'Armi** | tutto | — | — |
+| **Assassino** | armi e armature **leggere/medie** | armi, armature, calzature **leggere/medie** | — |
+| **Arciere** | — | tutto | — |
+| **Mago** | — | — | tutto |
+| **Warlock** | armi e armature **leggere** | — | tutto |
+
+**Barbaro, assassino e warlock** girano due botteghe: è quello che «equipaggiamento misto» vuol dire.
+Ogni bottega **ricompra solo la sua roba**, e un banco che per te è vuoto lo scrive invece di aprirsi
+senza righe.
+
+**Anche le mani hanno la tipologia.** L'assassino fa doppia arma *«leggere, solo mischia»* — non due
+archi; il mago *«leggere, mago»* — non due pugnali; lo scudo sta sempre accanto a un'arma da mischia.
+Il barbaro resta l'unico con **arma pesante + scudo**.
+
+---
 
 ## 🆕 Novità v2.18.0 (da tre eroi a sette classi)
 

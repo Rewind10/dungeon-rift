@@ -148,7 +148,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
-    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.events = [];
+    this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = []; this.events = [];
     // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
     // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
     this.storia = null; this.missione = null; this._oracolo = null; this._oracoloDetto = false;
@@ -186,7 +186,7 @@ class Room {
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
-    this.merchant = null; this.darkMerchant = null; this.gearMerchant = null;
+    this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = [];
     if (market) {
       // v1.52 — sosta senza nemici: niente casse (il 30% sarebbe un mimic, cioe' un nemico in una stanza che
       // promette sicurezza) e niente Mercante Errante, che resta un incontro delle ondate normali.
@@ -629,6 +629,15 @@ class Room {
     const v = this.map && this.map.village;
     const pos = (v && v.smith) || { x: this.map.spawn.x, y: this.map.spawn.y };
     this.gearMerchant = { x: pos.x, y: pos.y, r: 18 };
+    // ==========================================================================================
+    // v2.19 — LE TRE BOTTEGHE DELL'EQUIPAGGIAMENTO
+    // ==========================================================================================
+    // `gearMerchant` resta, ed e' il fabbro: non e' nostalgia, e' che ci sono agganciati il disegno,
+    // il minimappa e una manciata di test. Accanto c'e' `gearMerchants`, la lista vera — una voce per
+    // banco, ognuna col suo CATALOGO. Da qui in giu' chi chiede «sei davanti a un negozio?» chiede a
+    // `_bottegaVicina`, che risponde QUALE: il pezzo che compri dipende da dove stai in piedi.
+    this.gearMerchants = ((v && v.botteghe) || []).map(b => ({ x: b.x, y: b.y, r: 18, cat: b.cat || 'guerriero', kind: b.kind, name: b.name }));
+    if (!this.gearMerchants.length) this.gearMerchants = [{ x: pos.x, y: pos.y, r: 18, cat: 'guerriero', kind: 'smith', name: 'Fabbro' }];
     // v1.71 — l'ERBORISTA e' la seconda bottega che apre. Sta gia' nel villaggio disegnato da mapgen:
     // qui si aggancia solo la sua posizione, esattamente come si fa col fabbro.
     const erb = (v && v.npcs) ? v.npcs.find(n => n.pot) : null;
@@ -643,7 +652,7 @@ class Room {
     // v1.74 — l'OSTESSA: l'ultima bottega. Per ora fa una cosa sola, rimetterti in piedi a pagamento.
     const inn = (v && v.npcs) ? v.npcs.find(n => n.inn) : null;
     this.innkeeper = inn ? { x: inn.x, y: inn.y, r: 18 } : null;
-    for (const p of this.players.values()) { p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; }
+    for (const p of this.players.values()) { p._nearGear = null; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; }
   }
   updateInn() {
     if (!this.innkeeper) return; const RANGE = C.MARKET_MERCH_RANGE;
@@ -677,12 +686,30 @@ class Room {
       else if (!near && p._nearHerb) { p._nearHerb = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'herb_leave' } }); }
     }
   }
+  // v2.19 — DAVANTI A QUALE BANCO SEI? Torna la bottega piu' vicina entro il raggio, o null. `extra` e'
+  // il margine che comprare e vendere si concedono in piu' sul raggio del richiamo: era gia' cosi' col
+  // fabbro (RANGE + 12), e serve perche' il pannello non si chiuda in faccia a chi si sposta di un
+  // pixel mentre clicca. Con tre banchi la distanza fra loro e' di venti tessere buone: due raggi non
+  // si sovrappongono mai, e «la piu' vicina» non e' mai una scelta ambigua.
+  _bottegaVicina(p, extra) {
+    const RANGE = C.MARKET_MERCH_RANGE + (extra || 0);
+    let best = null, bd = Infinity;
+    for (const b of (this.gearMerchants || [])) {
+      const d = MU.dist(p.x, p.y, b.x, b.y);
+      if (d <= RANGE && d < bd) { bd = d; best = b; }
+    }
+    return best;
+  }
   updateGearMerchant() {
-    if (!this.gearMerchant) return; const RANGE = C.MARKET_MERCH_RANGE;
+    if (!this.gearMerchants || !this.gearMerchants.length) return;
     for (const p of this.alivePlayers) {
-      const near = MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= RANGE;
-      if (near && !p._nearGear) { p._nearGear = true; this.offerGear(p, 1); }
-      else if (!near && p._nearGear) { p._nearGear = false; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'gear_leave' } }); }
+      const b = this._bottegaVicina(p, 0);
+      // `_nearGear` non e' piu' un si'/no ma il CATALOGO del banco davanti a cui sei: passare dal fabbro
+      // all'arciera senza uscire dal raggio di nessuno dei due non puo' succedere (sono lontani), ma se
+      // un giorno succedesse il pannello si rifarebbe da solo invece di restare quello sbagliato.
+      const cat = b ? b.cat : null;
+      if (cat && p._nearGear !== cat) { p._nearGear = cat; this.offerGear(p, 1, cat); }
+      else if (!cat && p._nearGear) { p._nearGear = null; this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'gear_leave' } }); }
     }
   }
   // ============================================================================================
@@ -777,7 +804,7 @@ class Room {
     // esatto. Stesso disegno, stesso gesto, e la si vede da qualunque strada — che era il punto.
     { const T = C.TILE, pt = (this.map && this.map.portale) || null;
       this.faglia = pt ? { x: Math.round(pt.x * T + T / 2), y: Math.round(pt.y * T + T / 2) } : null; }
-    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = false; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); this.offerInn(p, 0); }
+    for (const p of this.players.values()) { if (!p.connected) continue; p._nearGear = null; p._nearHerb = false; p._nearBnd = false; p._nearSeer = false; p._nearInn = false; this.offerGear(p, 0); this.offerPotions(p, 0); this.offerBandit(p, 0); this.offerSeer(p, 0); this.offerInn(p, 0); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market', wave: this.wave, next: this.wave + 1 } });
   }
   // Uscita dal mercato: CO-OP — il primo che entra nel portale EXIT trascina tutti.
@@ -787,8 +814,8 @@ class Room {
     for (const p of this.alivePlayers) {
       // stesso raggio della faglia di fine ondata: e' lo stesso portale, si attraversa allo stesso modo
       if (MU.dist(p.x, p.y, ex, ey) > (C.FAGLIA_RAGGIO || 46) + p.radius) continue;
-      this.gearMerchant = null; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null; this.faglia = null;
-      for (const q of this.players.values()) { q._nearGear = false; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
+      this.gearMerchant = null; this.gearMerchants = []; this.herbalist = null; this.bandit = null; this.seer = null; this.innkeeper = null; this.faglia = null;
+      for (const q of this.players.values()) { q._nearGear = null; q._nearHerb = false; q._nearBnd = false; q._nearSeer = false; q._nearInn = false; }
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'market_exit', who: p.id, name: p.name } });
       this._forceNewMap = true;
       // v2.7 — IL VILLAGGIO D'APERTURA NON HA UN MENU DIETRO. Alle ondate normali la faglia riporta al
@@ -2686,7 +2713,11 @@ class Room {
                  dueMani: due ? 1 : 0,
                  // e una casella che questa impalcatura NON HA (il guerriero non ha calzature, il mago
                  // non ha scudo) si dice pure: «vuoto» farebbe cercare un paio di stivali che non esiste.
-                 nonPrevisto: (c.slot === 'boots' && (Gear.slotsFor(p.heroId) || []).indexOf('boots') < 0) ? 1 : 0,
+                 // v2.19 — la domanda e' «la tua CLASSE ha questa casella?», non «la tua impalcatura».
+                 // Il barbaro ha un'impalcatura senza calzature ma la sua tabella gli concede un paio
+                 // leggero dall'arciera: dirgli «non previsto» sarebbe una bugia, e gli farebbe saltare
+                 // una bottega intera.
+                 nonPrevisto: (c.slot === 'boots' && (Gear.slotsClasse(p.heroId) || []).indexOf('boots') < 0) ? 1 : 0,
                  occupata: (!it && c.slot === 'manoSx' && Gear.aDueMani(Gear.BY_ID[p.gear && p.gear.manoDx], Heroes.maniDi(p.heroId))) ? 1 : 0 };
       }),
       belt: (p.belt || []).map(sl => {
@@ -2719,13 +2750,20 @@ class Room {
       // «e' nella casella del suo slot»: con le due mani quella domanda non ha piu' senso, perche' la
       // stessa arma puo' stare nella destra o nella sinistra. Si guarda se e' in UNA QUALUNQUE delle
       // caselle, ed e' anche piu' vero di prima.
-      inventario: (Gear.slotsFor(p.heroId) || []).map(sl => ({
+      // v2.19 — E ADESSO L'INVENTARIO E' MISTO. Gli slot sono quelli della CLASSE (slotsClasse), non
+      // quelli dell'impalcatura, e il filtro e' la tabella: un assassino ci vede dentro i pugnali del
+      // fabbro accanto agli archi dell'arciera, che e' esattamente il punto delle tre botteghe.
+      inventario: (Gear.slotsClasse(p.heroId) || []).map(sl => ({
         slot: sl, slotName: Gear.SLOT_NAME[sl] || sl, icona: Gear.SLOT_ICON[sl] || '▫',
         pezzi: Object.keys(p.owned || {}).map(id => Gear.BY_ID[id])
-          .filter(it => it && it.slot === sl && it.hero === Gear.corpoDi(p.heroId))   // v2.18 — per impalcatura
-          .sort((a, b) => (a.rank - b.rank) || 0)
+          .filter(it => it && it.slot === sl && Gear.puoAvere(p.heroId, it))
+          // l'ordine e' grado, poi TIPOLOGIA: con due cataloghi nello stesso slot, un elenco che li
+          // mescola a caso costringe a rileggerlo ogni volta. Prima la mischia, poi l'arco, poi la
+          // magia — l'ordine in cui stanno le botteghe in gear.js, cosi' e' lo stesso dappertutto.
+          .sort((a, b) => (a.rank - b.rank) || (Gear.BOTTEGHE.indexOf(a.hero) - Gear.BOTTEGHE.indexOf(b.hero)))
           .map(it => ({ id: it.id, nome: it.name, desc: it.desc, colore: it.color, rango: it.rank,
                         carattere: it.carattere, rarita: Gear.rarityOf(it),
+                        tipo: Gear.tipologiaDi(it),   // v2.19 — da quale bottega viene: mischia / arco / magia
                         addosso: Object.keys(p.gear || {}).some(k => p.gear[k] === it.id) ? 1 : 0,
                         // quali mani lo accettano adesso: il client ci spegne i pulsanti invece di
                         // lasciar cliccare e non far succedere niente.
@@ -2740,34 +2778,65 @@ class Room {
   }
   // v1.67 — il fabbro mostra SOLO il catalogo della classe di chi sta guardando, slot per slot. Il client
   // non filtra niente: cio' che non e' della tua classe non attraversa nemmeno la rete.
-  offerGear(p, near) {
-    const slots = Gear.slotsFor(p.heroId).map(slot => ({
+  // v2.19 — E ADESSO SONO TRE BANCHI. Il catalogo mostrato non e' piu' «il tuo», e' l'incrocio fra
+  // QUESTA bottega e la tua tabella: il fabbro mostra al warlock le sole armi leggere da mischia, e
+  // all'arciere niente. Un banco che per te e' vuoto lo dice — `vuoto: 1` — invece di aprirsi muto:
+  // un pannello senza righe si legge come un guasto, non come «qui non fa per te».
+  //
+  // `cat` arriva da chi chiama (updateGearMerchant sa davanti a quale banco sei); se manca — il vecchio
+  // pannello di fine ondata, che e' spento ma vivo — si ricade sul fabbro.
+  offerGear(p, near, cat) {
+    const bottega = cat || (typeof p._nearGear === 'string' ? p._nearGear : null) || 'guerriero';
+    // v2.19.1 — e i pezzi SCARSI di un catalogo che non e' il tuo non si mostrano proprio. Non sono
+    // in vendita (vedi `buyGear`), e una cella che si puo' guardare ma non prendere e' solo rumore.
+    // Il tuo, quello che hai addosso dal primo minuto, resta: da li' lo rimetti su o lo rivendi.
+    const inVetrina = (it) => it.cost > 0 || !!p.owned[it.id];
+    const slots = Gear.slotsBottega(p.heroId, bottega).map(slot => ({
       slot, name: Gear.SLOT_NAME[slot] || slot, icon: Gear.SLOT_ICON[slot] || '⚔️',
-      items: Gear.itemsFor(p.heroId, slot).map(it => ({
+      items: Gear.itemsBottega(p.heroId, bottega, slot).filter(inVetrina).map(it => ({
         id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost,
         carattere: it.carattere,           // v2.12 — il client ci mette la carta nella colonna giusta
-        rarity: Gear.rarityOf(it), owned: p.gear[slot] === it.id ? 1 : 0, have: p.owned[it.id] ? 1 : 0,
+        // v2.18.1 — «addosso» vuol dire in una casella QUALUNQUE, non nella casella del suo slot: con le
+        // due mani la stessa arma puo' stare a destra o a sinistra, e `p.gear[slot]` non esiste piu'.
+        rarity: Gear.rarityOf(it), owned: Object.keys(p.gear || {}).some(k => p.gear[k] === it.id) ? 1 : 0,
+        have: p.owned[it.id] ? 1 : 0,
         vendita: Gear.prezzoVendita(it),   // v2.12 — quanto ti da' il fabbro se glielo rivendi
       })),
     }));
-    this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0 });
+    const B = (this.gearMerchants || []).find(b => b.cat === bottega);
+    this.sendTo(p.id, { t: C.MSG.OFFER_GEAR, coins: p.coins, slots, near: near ? 1 : 0,
+                        cat: bottega, kind: (B && B.kind) || 'smith', name: (B && B.name) || 'Fabbro',
+                        vuoto: slots.length ? 0 : 1 });
   }
   buyGear(pid, itemId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
     // v1.52 — l'equipaggiamento si compra SOLO dal fabbro, nella mappa MERCATO (il pannello di fine
     // ondata resta disponibile solo se SHOP_GEAR_ENABLED viene riacceso).
-    const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant && MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
+    // v2.19 — e adesso si compra da UNA DELLE TRE botteghe, quella davanti a cui sei in piedi.
+    const banco = this.phase === C.PHASE_MARKET ? this._bottegaVicina(p, 12) : null;
+    const atMarket = !!banco;
     const atPanel = this.phase === C.PHASE_SHOP && C.SHOP_GEAR_ENABLED;
     if (!atMarket && !atPanel) return;
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    // v2.18 — si confronta il CORPO, non la classe. I pezzi di gear.js sono catalogati per impalcatura
-    // (guerriero / mago / ladro) e le sette classi se ne spartiscono tre: un barbaro e un paladino
-    // comprano dallo stesso banco perche' hanno lo stesso scheletro e gli stessi slot. Confrontare
-    // `it.hero` con `p.heroId` avrebbe vietato ogni acquisto a tutte e sette.
-    if (it.hero !== Gear.corpoDi(p.heroId)) return;         // la roba di un'altra impalcatura non si compra
+    // v2.19 — DUE CONTROLLI, non uno, e sono cose diverse.
+    //   1. il pezzo dev'essere di QUESTO banco: dal fabbro si comprano armi da mischia, non bastoni.
+    //      Senza questo, chi manda a mano il messaggio comprerebbe tutto il listino da un banco solo.
+    //   2. la tua TABELLA dev'essere d'accordo (Gear.puoAvere): e' la regola dell'equipaggiamento misto,
+    //      e sta in gear.js perche' la usano anche l'inventario e il client.
+    if (atMarket && it.hero !== banco.cat) return;
+    if (!Gear.puoAvere(p.heroId, it)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'compra_no', perche: 'non-per-la-tua-classe', id: it.id, name: it.name } }); return; }
     // v1.72 — se l'oggetto e' gia' nel MAGAZZINO l'hai gia' pagato. Adesso che comprare non equipaggia
     // piu' (vedi sotto), ricomprare un pezzo che hai gia' non ha senso: si rifiuta.
     if (p.owned[it.id]) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'compra_no', perche: 'gia-tuo', id: it.id, name: it.name } }); return; }
+    // ============================================================================================
+    // v2.19.1 — IL GRADO SCARSO NON E' MERCE, e senza questa riga era una zecca
+    // ============================================================================================
+    // I pezzi di grado 1 costano ZERO: sono il fondo del listino, quelli con cui si parte. Finche'
+    // ogni classe vedeva un catalogo solo la cosa non si notava, perche' il suo pezzo scarso ce
+    // l'aveva gia' addosso e `gia-tuo` bastava a chiudere la porta. Con l'equipaggiamento misto
+    // (v2.19.0) una classe vede anche i pezzi scarsi di un ALTRO catalogo, che non possiede: li
+    // comprava gratis e li rivendeva a 8 monete l'uno, all'infinito. Adesso: non si comprano.
+    if (!(it.cost > 0)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'compra_no', perche: 'non-in-vendita', id: it.id, name: it.name } }); return; }
     if (p.coins < it.cost) return;
     p.coins -= it.cost;
     // ============================================================================================
@@ -2779,7 +2848,7 @@ class Room {
     // impugnarlo e' un secondo gesto, che si fa dalla scheda del personaggio scegliendo la mano.
     p.owned[it.id] = 1;
     this._recomputeGear(p);
-    this.offerGear(p, atMarket ? 1 : 0);
+    this.offerGear(p, atMarket ? 1 : 0, banco ? banco.cat : null);
     if (p._nearBnd) this.offerBandit(p, 1);                 // il magazzino e' cambiato: il banco si aggiorna
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'comprato', x: p.x, y: p.y, slot: it.slot, id: it.id, name: it.name, color: it.color, rank: it.rank } });
   }
@@ -2887,7 +2956,7 @@ class Room {
     // solo fra un'ondata e l'altra: in mezzo al combattimento cambiarsi l'armatura non deve essere un gesto
     if (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_MARKET) return;
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
+    if (!Gear.puoAvere(p.heroId, it)) return;   // v2.19 — per tabella di classe, non per impalcatura
     if (!p.owned[it.id]) return;                            // non e' tuo: non si compra da qui
     // v2.18.1 — LA MANO. Arma e scudo non hanno piu' una casella propria: si mettono in una delle due
     // mani, e quale si puo' lo dice `Gear.impugna` — che e' anche cio' che il client usa per spegnere
@@ -2902,22 +2971,25 @@ class Room {
     // (rango, carta, «niente da scegliere») e rimettersi una corazza non e' un motivo per riaprire una
     // scelta gia' fatta. Qui cambiano il baule e le derivate, ed e' quello che si rimanda.
     this.offerShop(p);
-    if (p._nearGear) this.offerGear(p, 1);                  // e se sei davanti al fabbro, anche il suo banco
+    if (p._nearGear) this.offerGear(p, 1, p._nearGear);     // e se sei davanti a un banco, anche quello
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'geared', x: p.x, y: p.y, slot: it.slot, mano, id: it.id, name: it.name, color: it.color, rank: it.rank, free: 1 } });
   }
   vendiGear(pid, itemId) {
     const p = this.players.get(pid); if (!p || p.dead) return;
-    const atMarket = this.phase === C.PHASE_MARKET && !!this.gearMerchant &&
-      MU.dist(p.x, p.y, this.gearMerchant.x, this.gearMerchant.y) <= C.MARKET_MERCH_RANGE + 12;
-    if (!atMarket) return;                                  // si vende DAL FABBRO, come si compra
+    const banco = this.phase === C.PHASE_MARKET ? this._bottegaVicina(p, 12) : null;
+    if (!banco) return;                                     // si vende AL BANCO, come si compra
     const it = Gear.BY_ID[itemId]; if (!it) return;
-    if (it.hero !== Gear.corpoDi(p.heroId)) return;   // v2.18 — per impalcatura, non per classe
+    // v2.19 — OGNUNO RICOMPRA LA SUA ROBA. L'arciera non ti prende indietro un bastone: e' la stessa
+    // regola del comprare, letta al contrario, e tiene il pannello coerente con se' stesso (vedi solo
+    // il catalogo di questo banco, quindi puoi rivendere solo quello che vedi).
+    if (it.hero !== banco.cat) return;
+    if (!Gear.puoAvere(p.heroId, it)) return;
     if (!p.owned[it.id]) return;                            // non ce l'hai
     if (Object.keys(p.gear || {}).some(k => p.gear[k] === it.id)) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'vendi_no', perche: 'addosso' } }); return; }
     const reso = Gear.prezzoVendita(it);
     delete p.owned[it.id];
     p.coins += reso;
-    this.offerGear(p, 1);
+    this.offerGear(p, 1, banco.cat);
     if (p._nearBnd) this.offerBandit(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'venduto', x: p.x, y: p.y, who: p.id, id: it.id, name: it.name, reso, color: it.color } });
   }
@@ -3785,7 +3857,7 @@ class Room {
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0,
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, gmerchs: (this.gearMerchants || []).map(b => ({ x: Math.round(b.x), y: Math.round(b.y), k: b.cat })), pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0,
       // v2.7 — la storia viaggia nello snapshot, non solo negli eventi: due campi, e chi entra a meta'
       // di una scena la trova al punto giusto invece di non vederla affatto.
       st: this.storia ? { s: this.storia.scena, r: this.storia.riga } : null, ms: this.missione || null,

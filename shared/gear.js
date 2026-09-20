@@ -118,6 +118,125 @@
   const SLOT_NAME = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', boots: 'Calzature' };
   const SLOT_ICON = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' };
 
+  // ============================================================================================
+  // v2.19 — LE TRE BOTTEGHE, E L'EQUIPAGGIAMENTO MISTO
+  // ============================================================================================
+  // Fino a ieri la domanda «posso comprare questo?» aveva una risposta sola: «e' del tuo corpo?».
+  // Con un fabbro solo in paese funzionava, perche' il fabbro ti mostrava soltanto il tuo corpo e la
+  // domanda non si poneva mai. Adesso le botteghe sono TRE e la domanda si pone a ogni scaffale: un
+  // warlock entra dal venditore di magia E dal fabbro, e deve poter comprare da tutti e due — ma non
+  // tutto.
+  //
+  // I DUE ASSI del documento (PIANO-CLASSI-SETTAGGI.md §2) mappano su due cose che nel listino ci sono
+  // GIA', e questa e' la ragione per cui la regola si puo' scrivere adesso invece che dopo il rifacimento
+  // per peso x tipologia:
+  //   · TIPOLOGIA (mischia / arco / magia)  =  il catalogo, cioe' `it.hero` — che e' anche la bottega
+  //   · PESO (leggere / medie / pesanti)    =  `it.carattere` (leggera / equilibrata / pesante)
+  // Non e' una coincidenza: i tre cataloghi sono nati come «armi da mischia», «archi» e «bastoni», ed e'
+  // esattamente cio' che Paolo chiama tipologia.
+  //
+  // QUELLO CHE QUESTA TABELLA NON FA, e va saputo: l'arma sostituisce il COLPO ma non la SCUOLA, che
+  // resta quella della classe (Room.effWeapon). Un warlock con una sciabola mena di sciabola ma scala
+  // ancora con Carisma. Sistemarlo vuol dire legare la scuola al pezzo invece che alla classe, ed e' il
+  // rifacimento per peso x tipologia — un lavoro a se', segnato nel documento.
+  const TIPOLOGIA = { guerriero: 'mischia', ladro: 'arco', mago: 'magia' };
+  const BOTTEGHE = ['guerriero', 'ladro', 'mago'];
+  const BOTTEGA_NOME = { guerriero: 'Fabbro', ladro: 'Arciere', mago: 'Arcanista' };
+  const TUTTI = ['pesante', 'equilibrata', 'leggera'];
+  const LEGMED = ['equilibrata', 'leggera'];
+  const LEG = ['leggera'];
+
+  // Trascritta riga per riga dalle sette tabelle del documento. Si legge:
+  //   PERMESSI[classe][slot][catalogo] = i pesi ammessi di quel catalogo per quello slot.
+  // Un catalogo che non compare e' VIETATO per quello slot — non «tutto», che sarebbe il difetto opposto
+  // e piu' pericoloso: una dimenticanza aprirebbe un negozio invece di chiuderlo.
+  //
+  // LE CALZATURE non sono in nessuna delle sette tabelle, perche' il documento parla di armi, armature,
+  // doppia arma, scudo e magie. Qui seguono l'ARMATURA — stessi cataloghi, stessi pesi: e' la
+  // derivazione piu' vicina a cio' che c'e' scritto, e ha il pregio di non cambiare niente per nessuno
+  // (oggi le calzature esistono solo nei cataloghi `ladro` e `mago`, cioe' esattamente per chi gia' le
+  // aveva). E' un'ASSUNZIONE MIA, ed e' segnata come tale: se Paolo decide altro, si cambia qui.
+  const PERMESSI = {
+    // tutte, mischia · armature leggere mischia/arco · doppia tutte mischia · unico con pesante + scudo
+    barbaro:   { weapon: { guerriero: TUTTI },
+                 armor:  { guerriero: LEG, ladro: LEG },
+                 shield: { guerriero: TUTTI },
+                 boots:  { ladro: LEG } },
+    // tutte, mischia — armi e armature. Niente doppia; scudo solo con arma leggera/media.
+    paladino:  { weapon: { guerriero: TUTTI },
+                 armor:  { guerriero: TUTTI },
+                 shield: { guerriero: TUTTI },
+                 boots:  {} },
+    maestro:   { weapon: { guerriero: TUTTI },
+                 armor:  { guerriero: TUTTI },
+                 shield: { guerriero: TUTTI },
+                 boots:  {} },
+    // leggere/medie, mischia/arco — le due botteghe, ma niente pesante e niente scudo
+    assassino: { weapon: { guerriero: LEGMED, ladro: LEGMED },
+                 armor:  { guerriero: LEGMED, ladro: LEGMED },
+                 shield: {},
+                 boots:  { ladro: LEGMED } },
+    // tutte, arco
+    arciere:   { weapon: { ladro: TUTTI },
+                 armor:  { ladro: TUTTI },
+                 shield: {},
+                 boots:  { ladro: TUTTI } },
+    // tutte, mago
+    mago:      { weapon: { mago: TUTTI },
+                 armor:  { mago: TUTTI },
+                 shield: {},
+                 boots:  { mago: TUTTI } },
+    // leggere, mischia — tutte, magia
+    warlock:   { weapon: { guerriero: LEG, mago: TUTTI },
+                 armor:  { guerriero: LEG, mago: TUTTI },
+                 shield: {},
+                 boots:  { mago: TUTTI } },
+  };
+
+  // Questa classe puo' possedere questo pezzo?
+  //
+  // IL GRADO 1 NON SI FILTRA PER PESO, ed e' una scelta, non una svista. I pezzi «scarsi» sono il fondo
+  // del listino: costano zero, non si comprano, sono quelli con cui si parte — e nel catalogo di oggi
+  // esistono SOLO in versione equilibrata. Filtrarli per peso vorrebbe dire far partire il barbaro (che
+  // per tabella veste solo leggero) con addosso una casacca che gli e' vietata: uno stato che il resto
+  // del gioco non sa gestire. La tipologia invece si filtra anche al grado 1, perche' li' il catalogo
+  // c'e' e la risposta e' sensata.
+  function puoAvere(heroId, it) {
+    if (!it) return false;
+    // v2.19.1 — un pezzo di AVVIO appartiene a una classe sola, e non si presta: e' il fondo del
+    // listino di quella classe, non una riga del listino di tutti.
+    if (it.avvio) return it.avvio === heroId;
+    const P = PERMESSI[heroId];
+    // Una classe fuori tabella — i vecchi guerriero/ladro/mago dei salvataggi, o una classe che nascera'
+    // domani — torna alla regola di prima: il suo corpo, tutto. Meglio la regola vecchia che nessuna.
+    if (!P) return it.hero === _corpo(heroId);
+    const pesi = P[it.slot] && P[it.slot][it.hero];
+    if (!pesi || !pesi.length) return false;
+    if ((it.rank || 1) <= 1) return true;
+    return pesi.indexOf(it.carattere) >= 0;
+  }
+  function tipologiaDi(it) { return TIPOLOGIA[it && it.hero] || ''; }
+  // Gli slot che questa classe usa DAVVERO, cioe' quelli in cui ha almeno un pezzo ammesso. Non e'
+  // `slotsFor`, che ragiona per impalcatura: il barbaro ha un'impalcatura senza calzature ma la tabella
+  // gliene concede un paio leggero dal venditore d'archi, e l'inventario deve avere dove metterlo.
+  const SLOT_ORD = ['weapon', 'armor', 'shield', 'boots'];
+  function slotsClasse(heroId) {
+    const P = PERMESSI[heroId];
+    if (!P) return slotsFor(heroId);
+    return SLOT_ORD.filter(sl => ITEMS.some(it => it.slot === sl && puoAvere(heroId, it)));
+  }
+  // Il banco di UNA bottega per UNA classe: solo i pezzi di quel catalogo che la tabella le concede.
+  function itemsBottega(heroId, bottega, slot) {
+    // v2.19.1 — i pezzi di AVVIO non stanno su nessun banco. Costano zero (sono di grado 1) e ce li
+    // hai gia' addosso dal primo minuto: mostrarli vorrebbe dire una cella che non si puo' comprare
+    // perche' e' gia' tua, cioe' rumore.
+    return ITEMS.filter(i => i.hero === bottega && i.slot === slot && !i.avvio && puoAvere(heroId, i))
+      .sort((a, b) => (a.rank - b.rank) || (CAR_ORD(a.carattere) - CAR_ORD(b.carattere)));
+  }
+  function slotsBottega(heroId, bottega) {
+    return SLOT_ORD.filter(sl => itemsBottega(heroId, bottega, sl).length > 0);
+  }
+
   // v2.12 — CINQUE GRADI, non piu' quattro. L'indice e' `rank - 1`: chi scrive un array indicizzato per
   // rango da qualche altra parte si ricordi che adesso sono cinque (e' gia' successo: in renderer.js un
   // array di quattro valori faceva sparire l'arco del ladro al grado divino).
@@ -159,6 +278,28 @@
     { id: 'gue_w_spada_scheggiata', hero: 'guerriero', slot: 'weapon', rank: 1, carattere: 'equilibrata',
       name: 'Spada Scheggiata', color: '#7a7f8a', desc: 'Portata 88 · arco 109° · 79 danni/s · rinculo 120',
       weapon: { name: 'Spada Scheggiata', melee: true, dmg: 44, fireRate: 1.8, arcRadius: 88, arcHalf: 0.95, knockback: 120, projColor: '#bdb39a', spread: 0, bulletSpeed: 0, range: 88, pierce: 0 } },
+    // ============================================================================================
+    // v2.19.1 — I PUGNALI DELL'ASSASSINO, e perche' stanno qui dentro
+    // ============================================================================================
+    // Paolo: *«l'assassino parte con 2 spade ma lo sparo e' la freccia»*. Aveva ragione, e il difetto
+    // era esattamente nel punto in cui la v2.18 aveva preso la scorciatoia: l'assassino DICHIARA come
+    // arma di classe i «Pugnali Gemelli» (mischia, scuola `agile`) ma la sua IMPALCATURA e' `ladro`,
+    // e `startingGear` pescava il grado minimo del catalogo dell'impalcatura — l'Arco Sfibrato. Il
+    // renderer nel frattempo lo disegnava con le lame (`arma: 'pugnali'`), quindi si vedeva un uomo
+    // con due pugnali che tirava frecce. E' l'UNICA delle sette classi in cui corpo e famiglia d'arma
+    // non vanno d'accordo, ed e' per questo che e' l'unica che sbagliava.
+    //
+    // I pugnali stanno nel catalogo `guerriero` perche' li' stanno le armi DA MISCHIA, che e' la loro
+    // tipologia: metterli fra gli archi per far tornare l'impalcatura sarebbe stato rimettere a posto
+    // il sintomo e lasciare la causa.
+    //
+    // `avvio` LI RENDE UN PEZZO DI PARTENZA, NON UNA MERCE. Un grado 1 costa zero, e un grado 1 in piu'
+    // dentro il catalogo del fabbro sarebbe un'arma leggera GRATIS per barbaro, paladino, maestro e
+    // warlock. Con `avvio` il pezzo non compare su nessun banco e lo puo' avere solo la classe che ci
+    // sta scritta: e' il fondo del listino di UNO, non una riga del listino di tutti.
+    { id: 'gue_w_pugnali_sbeccati', hero: 'guerriero', slot: 'weapon', rank: 1, carattere: 'leggera', avvio: 'assassino',
+      name: 'Pugnali Sbeccati', color: '#7a7f8a', desc: 'Portata 68 · arco 132° · 77 danni/s · rinculo 48',
+      weapon: { name: 'Pugnali Sbeccati', melee: true, dmg: 22, fireRate: 3.5, arcRadius: 68, arcHalf: 1.15, knockback: 48, projColor: '#cfd8dc', spread: 0, bulletSpeed: 0, range: 68, pierce: 0 } },
     { id: 'gue_w_spadone', hero: 'guerriero', slot: 'weapon', rank: 2, carattere: 'pesante',
       name: 'Spadone', color: '#b8c0cc', desc: 'Portata 86 · arco 94° · 99 danni/s · rinculo 300',
       weapon: { name: 'Spadone', melee: true, dmg: 86, fireRate: 1.15, arcRadius: 86, arcHalf: 0.82, knockback: 300, projColor: '#ffd27a', spread: 0, bulletSpeed: 0, range: 86, pierce: 0 } },
@@ -555,7 +696,10 @@
   // e' deciso qui e non nel client, cosi' negozio, inventario e test vedono sempre la stessa sequenza.
   function itemsFor(heroId, slot) {
     const c = _corpo(heroId);
-    return ITEMS.filter(i => i.hero === c && i.slot === slot)
+    // v2.19.1 — i pezzi di AVVIO non fanno parte del catalogo. Stanno nell'elenco perche' e' li' che
+    // vivono gli oggetti, ma non sono merce: non si comprano, non si contano nella forma del listino
+    // (1 scarso + 3 per ognuno degli altri quattro gradi) e non devono comparire dove si sceglie.
+    return ITEMS.filter(i => i.hero === c && i.slot === slot && !i.avvio)
       .sort((a, b) => (a.rank - b.rank) || (CAR_ORD(a.carattere) - CAR_ORD(b.carattere)));
   }
   // I pezzi di UN grado solo. Serve a chi ragiona per grado (il salto a un'ondata, i test): prendere il
@@ -570,9 +714,14 @@
   // il giorno che qualcuno lo cambia questa funzione non deve diventare sbagliata in silenzio.
   function startingGear(heroId) {
     const out = { manoDx: null, manoSx: null, armor: null, boots: null };
+    // v2.19.1 — PRIMA si guarda se la classe ha un pezzo di AVVIO suo per quello slot, e solo dopo si
+    // ricade sul grado minimo dell'impalcatura. Serve all'assassino e finora solo a lui: e' l'unica
+    // classe la cui famiglia d'arma (mischia leggera) non coincide col suo corpo (`ladro`, gli archi),
+    // e senza questa riga il grado minimo del corpo gli metteva in mano un arco.
+    const avvioDi = (sl) => ITEMS.find(i => i.avvio === heroId && i.slot === sl) || null;
     const minimo = (sl) => { const l = itemsFor(heroId, sl); return l.length ? l.reduce((a, b) => (b.rank < a.rank ? b : a)) : null; };
     for (const sl of slotsFor(heroId)) {
-      const it = minimo(sl); if (!it) continue;
+      const it = avvioDi(sl) || minimo(sl); if (!it) continue;
       // v2.18.1 — arma e scudo non hanno piu' una casella propria: vanno nelle MANI. L'arma di partenza
       // e' sempre di grado scarso e non e' mai pesante, quindi entra nella destra e lascia libera la
       // sinistra; lo scudo di partenza, per chi ce l'ha, va nella sinistra — e se la classe non puo'
@@ -616,7 +765,10 @@
   function impugna(heroId, gear, itemId, mano) {
     const it = BY_ID[itemId];
     if (!it) return { gear: null, motivo: 'inesistente' };
-    if (it.hero !== _corpo(heroId)) return { gear: null, motivo: 'classe' };
+    // v2.19 — non piu' «e' del tuo corpo?» ma «la tua tabella te lo concede?». Con tre botteghe il corpo
+    // non basta piu' a decidere: un warlock compra dal fabbro E dall'arcanista, un arciere da nessuno dei
+    // due. La regola sta in un posto solo (`puoAvere`) e la usano negozio, inventario e questa.
+    if (!puoAvere(heroId, it)) return { gear: null, motivo: 'classe' };
     const g = Object.assign({}, gear || {});
     if (it.slot === 'armor' || it.slot === 'boots') { g[it.slot] = it.id; return { gear: g, motivo: null }; }
     if (MANI_SLOT.indexOf(mano) < 0) mano = 'manoDx';
@@ -630,6 +782,13 @@
       if (inAltra && inAltra.slot === 'weapon' && mani.scudo.indexOf(inAltra.carattere) < 0) {
         return { gear: null, motivo: 'arma-troppo-pesante-per-lo-scudo' };
       }
+      // v2.19 — e dev'essere anche della TIPOLOGIA giusta. Le tre tabelle che concedono lo scudo dicono
+      // tutte «+ scudo, mischia»: chi porta lo scudo lo porta accanto a un'arma da mischia, non accanto
+      // a un arco o a un bastone. Finche' il fabbro era l'unico negozio la cosa non poteva succedere;
+      // adesso puo'.
+      if (inAltra && inAltra.slot === 'weapon' && mani.scudoTipo && mani.scudoTipo.indexOf(tipologiaDi(inAltra)) < 0) {
+        return { gear: null, motivo: 'scudo-non-con-questa-tipologia' };
+      }
       if (inAltra && inAltra.slot === 'shield') return { gear: null, motivo: 'due-scudi' };
       g[mano] = it.id;
       return { gear: g, motivo: null };
@@ -640,11 +799,18 @@
     if (inAltra) {
       if (inAltra.slot === 'shield') {
         if (!mani.scudo || mani.scudo.indexOf(it.carattere) < 0) return { gear: null, motivo: 'scudo-non-con-questa-arma' };
+        if (mani.scudoTipo && mani.scudoTipo.indexOf(tipologiaDi(it)) < 0) return { gear: null, motivo: 'scudo-non-con-questa-tipologia' };
       } else {
         // due armi: serve la doppia, e tutti e due i caratteri devono essere ammessi
         if (!mani.doppia) return { gear: null, motivo: 'niente-doppia-arma' };
         if (mani.doppia.indexOf(it.carattere) < 0 || mani.doppia.indexOf(inAltra.carattere) < 0) {
           return { gear: null, motivo: 'carattere-non-ammesso-in-doppia' };
+        }
+        // v2.19 — e la TIPOLOGIA. «Doppia arma: leggere, solo mischia» per l'assassino, «leggere, mago»
+        // per il mago: senza questo controllo, adesso che l'assassino compra anche dal venditore d'archi,
+        // uscirebbe di bottega con due archi leggeri in mano.
+        if (mani.doppiaTipo && (mani.doppiaTipo.indexOf(tipologiaDi(it)) < 0 || mani.doppiaTipo.indexOf(tipologiaDi(inAltra)) < 0)) {
+          return { gear: null, motivo: 'tipologia-non-ammessa-in-doppia' };
         }
         // e se quella nell'altra mano e' un due mani, prima va tolta
         if (aDueMani(inAltra, mani)) g[altra] = null;
@@ -693,5 +859,7 @@
 
   return { ITEMS, BY_ID, SLOTS, CORPO_DI, corpoDi: _corpo, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
            itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita,
-           MANI_SLOT, aDueMani, impugna, puoImpugnare, armaPrincipale, armaSecondaria, scudoDi };
+           MANI_SLOT, aDueMani, impugna, puoImpugnare, armaPrincipale, armaSecondaria, scudoDi,
+           // v2.19 — le tre botteghe e l'equipaggiamento misto
+           TIPOLOGIA, BOTTEGHE, BOTTEGA_NOME, PERMESSI, puoAvere, tipologiaDi, slotsClasse, itemsBottega, slotsBottega };
 });

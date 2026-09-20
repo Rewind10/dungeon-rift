@@ -33,7 +33,7 @@
   }
   taraFont();
   window.addEventListener('resize', taraFont);
-  const G = { started: false, meHero: 'barbaro', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
+  const G = { started: false, meHero: 'barbaro', hitstop: 0, world: { players: [], mon: [], bul: [], orbs: [], met: [], crates: [], wdrops: [], xp: [], coins: [], items: [], zones: [], muri: [], trap: [], nebb: [], tele: [], rec: null, chv: null, chIn: 0, fg: null, merch: null, merchD: null, gmerch: null, gmerchs: null, me: null, bt: 0, wave: 1, phase: 'lobby', mcount: 0, pend: 0, ex: null }, lastInput: 0 };
 
   // ===== v2.11 — L'ARCHIVIO: il salvataggio vive nel browser =====================================
   // Il server lo costruisce e lo applica, ma non lo TIENE: cosi' non ha cartelle da gestire, file da
@@ -475,6 +475,7 @@
     // v1.52 FIX — merch/merchD non venivano mai copiati dallo snapshot: i mercanti erano invisibili in mappa
     // (beacon e marker sulla minimappa compresi). Ora vengono aggiornati insieme al resto del mondo.
     w.merch = next.merch || null; w.merchD = next.merchD || null; w.gmerch = next.gmerch || null;
+    w.gmerchs = next.gmerchs || null;   // v2.19 — le tre botteghe, per i marcatori del minimappa
     // ATTENZIONE — QUI SI PERDONO I CAMPI NUOVI. L'HUD non riceve lo snapshot del server: riceve
     // G.world, che e' lo stato interpolato del client, e i campi non-giocatore vanno copiati QUI a mano
     // uno per uno. Chi aggiunge un campo allo snapshot e si dimentica di questa riga vede il campo

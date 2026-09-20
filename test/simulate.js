@@ -51,6 +51,18 @@ const fs = require('fs');
 let PASS = 0, FAIL = 0;
 function assert(c, m) { if (c) PASS++; else { FAIL++; console.log('  ❌ FAIL:', m); } }
 function ok(m) { console.log('  ✅', m); }
+// v2.19 — LE BOTTEGHE SONO TRE, e comprare vuol dire essere in piedi davanti a QUELLA giusta: dal
+// fabbro non si comprano archi. Prima bastava `p.x = room.gearMerchant.x` perche' il banco era uno
+// solo; adesso il test deve dire a quale banco va, ed e' meglio che lo dica in un posto solo.
+// `cat` e' il catalogo di gear.js: 'guerriero' (fabbro), 'ladro' (arciera), 'mago' (arcanista).
+function alBanco(room, p, cat) {
+  const b = (room.gearMerchants || []).find(x => x.cat === cat) || room.gearMerchant;
+  p.x = b.x; p.y = b.y;
+  return b;
+}
+// dove dev'essere un giocatore per comprare un DATO pezzo: si deduce dal pezzo, cosi' i test che
+// parlano di statistiche non devono anche sapere la pianta del villaggio.
+function alBancoDi(room, p, it) { return alBanco(room, p, it && it.hero); }
 // v1.78 — da qui in poi un'ondata ripulita non finisce da sola: si ferma sulla fase 'cleared' e aspetta
 // che i giocatori premano EXIT. I test che chiudevano un'ondata svuotando la mappa devono premerlo, se no
 // misurano la fase sbagliata. Questo e' il gesto del giocatore, in una riga.
@@ -377,14 +389,24 @@ function testV18() {
   const aGear = Gear.startingGear('arciere');
   const arcoLeg = Gear.itemsOfRank('arciere', 'weapon', 2).find(i => i.carattere === 'leggera');
   assert(!Gear.impugna('arciere', aGear, arcoLeg.id, 'manoSx').gear, 'l arciere non combatte con due armi');
-  // l'ASSASSINO si': ma solo leggere.
+  // l'ASSASSINO si': ma solo leggere, e — v2.19 — solo DA MISCHIA.
+  // Fino alla v2.18.1 qui si provavano due archi leggeri, perche' l'assassino comprava solo dal suo
+  // corpo (`ladro`) e archi erano le uniche armi che potesse avere. La sua tabella pero' dice «doppia
+  // arma: leggere, SOLO MISCHIA», e adesso che compra anche dal fabbro la differenza si vede: due
+  // lame leggere si', due archi leggeri no. E' il primo effetto vero dell'equipaggiamento misto.
   const sGear = Gear.startingGear('assassino');
-  const eqLad = Gear.itemsOfRank('assassino', 'weapon', 2).find(i => i.carattere === 'equilibrata');
-  const lgLad = Gear.itemsOfRank('assassino', 'weapon', 2).find(i => i.carattere === 'leggera');
-  const dueLeg = Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lgLad.id }), lgLad.id, 'manoSx').gear;
-  assert(!!dueLeg, 'l assassino impugna due armi leggere');
-  assert(!Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lgLad.id }), eqLad.id, 'manoSx').gear,
+  const lamaLg = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'leggera');
+  const lamaEq = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'equilibrata');
+  const arcoLg = Gear.itemsBottega('assassino', 'ladro', 'weapon').find(i => i.carattere === 'leggera');
+  const dueLeg = Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lamaLg.id }), lamaLg.id, 'manoSx').gear;
+  assert(!!dueLeg, 'l assassino impugna due armi leggere da mischia');
+  assert(!Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lamaLg.id }), lamaEq.id, 'manoSx').gear,
     'ma non una equilibrata: la sua doppia e solo leggera');
+  assert(!Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: arcoLg.id }), arcoLg.id, 'manoSx').gear,
+    'e nemmeno due archi leggeri: la doppia e solo da mischia');
+  // e il MAGO, che ha doppia leggera «mago», non puo' accoppiarla con una lama del fabbro
+  const vergaLg = Gear.itemsBottega('mago', 'mago', 'weapon').find(i => i.carattere === 'leggera');
+  assert(!!Gear.impugna('mago', { manoDx: vergaLg.id }, vergaLg.id, 'manoSx').gear, 'il mago impugna due verghe leggere');
 
   // --- 5) l'armatura pesante rallenta, la leggera alza la cadenza ---
   const armPes = pz('armor', 5, 'pesante'), armLeg = pz('armor', 5, 'leggera');
@@ -479,10 +501,16 @@ function testV110() {
   // --- v1.67: l'emporio a livelli non esiste piu' (catalogo per classe in shared/gear.js) ---
   assert(!Loot.GEAR && !Loot.GEAR_BY_SLOT && !Loot.gearCost, 'l emporio generico a livelli e stato rimosso da loot.js');
   const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
-  const eb = room.addPlayer('z', cap, 'Z', 'mago'); room.offerGear(eb);
+  const eb = room.addPlayer('z', cap, 'Z', 'mago'); room.offerGear(eb, 0, 'mago');
   const gearMsg = sent.find(m => m.t === C.MSG.OFFER_GEAR);
   // v2.15.3 — il mago vede TRE slot: arma, armatura e calzature. Niente scudo, che resta del guerriero.
-  assert(gearMsg && gearMsg.slots.map(s => s.slot).join(',') === 'weapon,armor,boots', 'il mago vede i suoi tre slot (calzature si, scudo no)');
+  // v2.19 — e li vede DALL'ARCANISTA, perche' adesso l'offerta e' quella di UNA bottega: il catalogo
+  // va passato, se no il server risponde con quello del fabbro (dove il mago non ha niente).
+  assert(gearMsg && gearMsg.slots.map(s => s.slot).join(',') === 'weapon,armor,boots', 'il mago vede i suoi tre slot dall arcanista (calzature si, scudo no)');
+  // e dal FABBRO il mago non vede niente: il banco lo dice invece di aprirsi muto
+  sent.length = 0; room.offerGear(eb, 0, 'guerriero');
+  const gearFab = sent.find(m => m.t === C.MSG.OFFER_GEAR);
+  assert(gearFab && gearFab.vuoto === 1 && gearFab.slots.length === 0, 'e dal fabbro non vede niente, e il banco lo dichiara vuoto');
   ok('novita v1.10 verificate');
 }
 function testV111() {
@@ -862,21 +890,31 @@ function testV152() {
   }
   assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, cxw, cyw) < T * 6, 'il falo invece resta in mezzo alla piazza, che e il centro del paese');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, pw.x, pw.y) < T * 24, 'la fucina si raggiunge dalla piazza');
-  // acquisto: serve essere vicini al fabbro
+  // acquisto: serve essere vicini al banco GIUSTO
+  // v2.19 — «il banco giusto» e' la novita': il giocatore qui e' un ARCIERE, e il cuoio lo vende
+  // l'arciera, non il fabbro. Prima bastava essere vicini all'unico negozio; adesso il test dice a
+  // quale bottega va, ed e' esattamente la regola che le tre botteghe introducono.
   p.coins = 100000; p.x = room.map.spawn.x; p.y = room.map.spawn.y;
   // v2.12 — i pezzi si chiedono al catalogo per GRADO e CARATTERE: con 104 pezzi gli id scritti a mano
-  // sono una trappola, e questo test non parla di nomi, parla di distanza dal fabbro.
+  // sono una trappola, e questo test non parla di nomi, parla di distanza dal banco.
   const GearV = require('../shared/gear.js');
   const partenzaV = GearV.startingGear('arciere');
   const cuoio = GearV.itemsOfRank('arciere', 'armor', 2, 'pesante').find(i => i.carattere === 'pesante');
-  if (MU.dist(p.x, p.y, room.gearMerchant.x, room.gearMerchant.y) > C.MARKET_MERCH_RANGE + 12) {
-    room.buyGear('b', cuoio.id); assert(!p.owned[cuoio.id], 'lontano dal fabbro non si compra');
+  const bancoArc = (room.gearMerchants || []).find(b => b.cat === 'ladro');
+  assert(!!bancoArc, 'il villaggio ha la bottega dell arciera');
+  if (MU.dist(p.x, p.y, bancoArc.x, bancoArc.y) > C.MARKET_MERCH_RANGE + 12) {
+    room.buyGear('b', cuoio.id); assert(!p.owned[cuoio.id], 'lontano dal banco non si compra');
   }
-  p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
+  // e nemmeno al banco SBAGLIATO: il fabbro non vende cuoio da arciere
+  alBanco(room, p, 'guerriero');
+  room.buyGear('b', cuoio.id); assert(!p.owned[cuoio.id], 'il fabbro non vende la roba dell arciera');
+  alBancoDi(room, p, cuoio);
   // v2.18.1 — l'acquisto riempie l'INVENTARIO, non la casella: e' li' che si guarda se e andato a buon fine.
-  room.buyGear('b', cuoio.id); assert(!!p.owned[cuoio.id], 'vicino al fabbro l\'acquisto va a buon fine');
-  p._nearGear = false; room.updateGearMerchant(); assert(p._nearGear === true, 'avvicinandosi si apre il pannello del fabbro');
-  p.x = room.gearMerchant.x + 400; room.updateGearMerchant(); assert(p._nearGear === false, 'allontanandosi il pannello si chiude');
+  room.buyGear('b', cuoio.id); assert(!!p.owned[cuoio.id], 'al banco dell arciera l\'acquisto va a buon fine');
+  // v2.19 — `_nearGear` non e' piu' un si'/no: e' il CATALOGO del banco davanti a cui sei.
+  p._nearGear = null; room.updateGearMerchant(); assert(p._nearGear === 'ladro', 'avvicinandosi si apre il pannello di QUELLA bottega');
+  alBanco(room, p, 'guerriero'); room.updateGearMerchant(); assert(p._nearGear === 'guerriero', 'e cambiando bottega cambia il catalogo');
+  p.x = bancoArc.x + 400; p.y = bancoArc.y + 400; room.updateGearMerchant(); assert(!p._nearGear, 'allontanandosi il pannello si chiude');
   // uscita: CO-OP, il primo che entra nel portale porta tutti avanti
   p.x = room.map.exit.x * T + T / 2; p.y = room.map.exit.y * T + T / 2;
   const mapBefore = room.map;
@@ -985,9 +1023,14 @@ function testV157() {
 
   assert(m.w === V.w && m.h === V.h, 'la mappa e ' + m.w + 'x' + m.h + ' tile');
   // v2.0 — non piu' cinque stanze attorno a una piazza: un VILLAGGIO. Cinque botteghe e sette case.
+  // v2.19 — SETTE botteghe e CINQUE case: due abitazioni sono diventate l'archeria e la bottega
+  // arcana. Il conto qui non e' un dettaglio di contabilita' — e' cio' che impedisce che un domani
+  // qualcuno trasformi in negozio anche le ultime case senza accorgersene.
   const botteghe = V.rooms.filter(r => r.kind === 'bottega'), case_ = V.rooms.filter(r => r.kind === 'casa');
-  assert(botteghe.length === 5, 'cinque botteghe, una per mestiere (' + botteghe.length + ')');
-  assert(case_.length >= 6, 'e le case degli abitanti (' + case_.length + ')');
+  assert(botteghe.length === 7, 'sette botteghe, una per mestiere (' + botteghe.length + ')');
+  assert(case_.length >= 5, 'e le case degli abitanti (' + case_.length + ')');
+  assert(!!V.rooms.find(r => r.id === 'archeria') && !!V.rooms.find(r => r.id === 'arcano'),
+    'le due botteghe nuove hanno la loro stanza');
   // v2.6 — e una terza specie: la CASA DEL PORTALE, che non e' ne' una bottega ne' un'abitazione
   assert(V.rooms.filter(r => r.kind === 'portale').length === 1, 'e una casa del portale, una sola');
   assert(V.rooms.every(r => r.kind === 'bottega' || r.kind === 'casa' || r.kind === 'portale'), 'ogni stanza dice cosa e');
@@ -1092,10 +1135,16 @@ function testV157() {
   assert(Array.isArray(m.floors) && m.floors.length === V.rooms.length + 1, 'il renderer riceve un pavimento per stanza, piu la piazza');
   assert(m.floors.every(f => f.kind && f.col), 'ogni pavimento dichiara tipo e colore');
 
-  // --- cinque mercanti, ognuno nella SUA stanza, dietro il suo banco ---
+  // --- sette mercanti, ognuno nella SUA stanza, dietro il suo banco ---
   assert(m.props.filter(p => p.type === 'stall').length === 0, 'i banchetti sono spariti in v1.75: restano le persone');
-  assert(m.village.npcs.length === 5, 'ci sono 5 mercanti');
-  assert(m.village.npcs.filter(n => n.shop).length === 1, 'uno solo vende equipaggiamento: il fabbro');
+  assert(m.village.npcs.length === 7, 'ci sono 7 mercanti');
+  // v2.19 — TRE vendono equipaggiamento, e ognuno il SUO catalogo. Il conto e' la meta' della regola;
+  // l'altra meta' e' che i tre cataloghi siano diversi, se no sono tre porte sullo stesso negozio.
+  const venditori = m.village.npcs.filter(n => n.shop);
+  assert(venditori.length === 3, 'tre vendono equipaggiamento: fabbro, arciera, arcanista');
+  assert(new Set(venditori.map(n => n.cat)).size === 3, 'e i tre cataloghi sono diversi');
+  assert(venditori.every(n => ['guerriero', 'ladro', 'mago'].indexOf(n.cat) >= 0), 'e sono i tre di gear.js');
+  assert((m.village.botteghe || []).length === 3, 'e il villaggio le espone tutte e tre al server');
   assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
   // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO, e per ora non fa nulla: niente `crd`, quindi il
   // server non gli attacca nemmeno il richiamo di prossimita'. Le sue carte erano gia' spente
@@ -1109,7 +1158,7 @@ function testV157() {
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   assert(m.village.npcs.every(n => n.col), 'ogni mercante ha il suo colore: e cosi che lo riconosci da lontano');
-  assert(new Set(m.village.npcs.map(n => n.col)).size === 5, 'i cinque colori sono tutti diversi');
+  assert(new Set(m.village.npcs.map(n => n.col)).size === 7, 'i sette colori sono tutti diversi');
   let fuori = 0;
   for (let i2 = 0; i2 < V.stalls.length; i2++) {
     const s2 = V.stalls[i2], r = V.rooms.find(x => x.id === s2.room);
@@ -1135,14 +1184,14 @@ function testV157() {
   // che dichiara `lit`, e il velo scuro li' non si stende.
   assert(m.lit === 1, 'il villaggio e illuminato: e la sosta, non un\'ondata');
   for (const lv of [1, 5, 10, 20]) assert(!MapGen.generate(77, lv).lit, 'ma l ondata ' + lv + ' resta buia');
-  assert(m.props.filter(p => p.type === 'glowspot').length === 5, "un alone di luce per mercante");
+  assert(m.props.filter(p => p.type === 'glowspot').length === 7, "un alone di luce per mercante");
   assert(m.market === 1, 'la mappa si dichiara mercato');
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
   const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
-  assert(room.map.village && room.map.village.npcs.length === 5, 'la stanza mercato usa il villaggio');
+  assert(room.map.village && room.map.village.npcs.length === 7, 'la stanza mercato usa il villaggio');
   assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro');
   let inside = false;
@@ -1895,7 +1944,21 @@ function testV167() {
   // v2.15.3 — 117 e non piu' 104: il mago ha avuto le sue calzature. Il conto e' 13 per slot e TRE
   // slot per ognuna delle tre classi; finche' il mago ne aveva due, comprava una scala in meno degli
   // altri con le stesse monete.
-  assert(Gear.ITEMS.length === 117, 'il catalogo ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
+  // v2.19.1 — il conto e' sui pezzi DI LISTINO. I pezzi di AVVIO (`avvio`) stanno nello stesso elenco
+  // ma non sono merce: non si vendono, non si comprano e non entrano nella forma del listino. Oggi ce
+  // n'e' uno solo — i Pugnali Sbeccati dell'assassino, che parte da mischia leggera pur avendo il
+  // corpo del ladro. Il conto separato serve a questo: se domani qualcuno ne aggiunge uno per sbaglio
+  // dentro il listino, qui si vede.
+  const listino = Gear.ITEMS.filter(i => !i.avvio), avvii = Gear.ITEMS.filter(i => i.avvio);
+  assert(listino.length === 117, 'il listino ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
+  assert(avvii.length === 1 && avvii[0].id === 'gue_w_pugnali_sbeccati', 'e un pezzo di avvio, i pugnali dell assassino');
+  for (const it of avvii) {
+    assert(Gear.puoAvere(it.avvio, it), it.id + ': lo puo avere la classe a cui e destinato');
+    for (const h of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
+      if (h !== it.avvio) assert(!Gear.puoAvere(h, it), it.id + ': e nessun altro (' + h + ')');
+    for (const b of Gear.BOTTEGHE) for (const sl of ['weapon', 'armor', 'shield', 'boots'])
+      assert(!Gear.itemsBottega(it.avvio, b, sl).some(x => x.id === it.id), it.id + ': e non sta su nessun banco');
+  }
   for (const h of ['paladino', 'mago', 'arciere']) assert(Gear.slotsFor(h).length === 3, h + ': tre slot, come gli altri due');
   for (const it of Gear.ITEMS) {
     assert(Gear.slotsFor(it.hero).includes(it.slot), it.id + ' sta in uno slot che la sua classe possiede');
@@ -1972,11 +2035,13 @@ function testV167() {
   // --- 4) a runtime: cambio libero, ricalcolo da zero, niente roba di altre classi ---
   const room = new Room('v167'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
-  p.coins = 100000; p.x = room.gearMerchant.x; p.y = room.gearMerchant.y;
+  p.coins = 100000; alBanco(room, p, 'ladro');
   const partenza = Gear.startingGear('arciere');
   // v2.18.1 — comprare mette solo nell'inventario. Qui interessa l'EFFETTO del pezzo addosso, non il
   // gesto dell'acquisto (provato nel TEST 12), quindi un aiuto locale fa i due passi insieme.
-  const compraEIndossa = (id, mano) => { room.buyGear('b', id); room.equipaggia('b', id, mano || 'manoDx'); };
+  // v2.19 — e prima di comprare ci si SPOSTA al banco che vende quel pezzo: con tre botteghe la
+  // posizione fa parte dell'acquisto, e un aiuto che la ignora proverebbe a comprare archi dal fabbro.
+  const compraEIndossa = (id, mano) => { alBancoDi(room, p, Gear.BY_ID[id]); room.buyGear('b', id); room.equipaggia('b', id, mano || 'manoDx'); };
   assert(room.effWeapon(p).name === Gear.BY_ID[partenza.manoDx].name, 'l arciere parte con l arco scarso (' + Gear.BY_ID[partenza.manoDx].name + ')');
   const sp0 = room.effSpeed(p);
   const stivali = get('arciere', 'boots', 3, E);
@@ -2794,7 +2859,8 @@ function testV1752() {
   const SOLIDI = ['tavolo', 'bancone', 'incudine', 'alambicco', 'crystal_cluster', 'barrel', 'sack', 'brazier',
                   'candelabra', 'signpost', 'mortaio', 'bonfire', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
                   'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
-                  'bancarella'];                  // v2.5 — e il banco delle botteghe di contorno
+                  'bancarella',                   // v2.5 — e il banco delle botteghe di contorno
+                  'bersaglio'];                   // v2.19 — la balla di paglia dell'archeria
   const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot'];
   for (const t of SOLIDI) assert(m.props.some(p => p.type === t), 'nel villaggio c e almeno un "' + t + '"');
   for (const t of PASSANTI) assert(m.props.some(p => p.type === t), 'e almeno un "' + t + '"');
@@ -4712,7 +4778,8 @@ function testV188() {
     const w = Gear.itemsOfRank('arciere', 'weapon', 2, 'equilibrata').find(i => i.carattere === 'equilibrata').weapon;
     assert(w.fireRate === 2.3, 'l Arco Corto tiene la cadenza della classe (2,3/s)');
     const rq = new Room('v188b'); const pq = rq.addPlayer('q', conn, 'Q', 'arciere'); rq.startGame();
-    pq.coins = 9999; rq.enterMarket(); pq.x = rq.gearMerchant.x; pq.y = rq.gearMerchant.y; rq.updateGearMerchant();
+    // v2.19 — gli archi li vende l'ARCIERA, non il fabbro: al banco giusto, come farebbe un giocatore
+    pq.coins = 9999; rq.enterMarket(); alBanco(rq, pq, 'ladro'); rq.updateGearMerchant();
     const arco = Gear.itemsOfRank('arciere', 'weapon', 2, 'equilibrata').find(i => i.carattere === 'equilibrata');
     rq.buyGear('q', arco.id); rq.equipaggia('q', arco.id, 'manoDx');
     assert(rq.effWeapon(pq).dmg === arco.weapon.dmg, 'e l arma in mano arriva dall OGGETTO, non da heroes.js');
@@ -5105,8 +5172,10 @@ function testV200() {
   // --- 1) LA PIANTA ---
   // v2.6 — il villaggio e' cresciuto per fare posto alle due file: 60x46 invece di 56x40
   assert(m.w === 60 && m.h === 46, 'il villaggio e 60x46 (' + m.w + 'x' + m.h + ')');
-  assert(V.rooms.filter(r => r.kind === 'bottega').length === 5, 'cinque botteghe');
-  assert(V.rooms.filter(r => r.kind === 'casa').length >= 6, 'e almeno sei case abitate');
+  // v2.19 — sette botteghe e cinque case: l'archeria e la bottega arcana hanno preso il posto di due
+  // abitazioni (casa_a a ponente, casa_c a levante).
+  assert(V.rooms.filter(r => r.kind === 'bottega').length === 7, 'sette botteghe');
+  assert(V.rooms.filter(r => r.kind === 'casa').length >= 5, 'e almeno cinque case abitate');
   const grandi = ['taverna', 'erbe', 'fucina'];
   for (const id of grandi) { const r = V.rooms.find(q => q.id === id);
     assert((r.x1 - r.x0) >= 10 && (r.y1 - r.y0) >= 7, 'la bottega ' + id + ' e grande (' + (r.x1 - r.x0 + 1) + 'x' + (r.y1 - r.y0 + 1) + ')'); }
@@ -5939,6 +6008,190 @@ function testSchermataUnica() {
   ok('la schermata unica verificata');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// v2.19 — LE TRE BOTTEGHE E L'EQUIPAGGIAMENTO MISTO
+// ============================================================================================
+// Quello che questo test difende non e' «ci sono due negozi nuovi» (lo dice gia' il TEST 28): e' la
+// REGOLA. Con un fabbro solo la domanda «posso comprare questo?» aveva una risposta sola — «e' del
+// tuo corpo?» — e per tre classi su sette era la risposta sbagliata. Adesso la risposta e' la tabella
+// del documento, e qui si controlla riga per riga che sia quella.
+function testV219() {
+  console.log('\n[TEST 72] v2.19 — tre botteghe, e chi puo comprare cosa (equipaggiamento misto)');
+  const Gear = require('../shared/gear.js');
+  const Heroes = require('../shared/heroes.js');
+  const CLASSI = ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'];
+
+  // --- 1) LE TRE BOTTEGHE ESISTONO, e il server le aggancia tutte ---
+  const room = new Room('v219'); const p = room.addPlayer('b', { send() {} }, 'B', 'warlock'); room.startGame();
+  room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');
+  assert((room.gearMerchants || []).length === 3, 'il server aggancia tre banchi (' + (room.gearMerchants || []).length + ')');
+  assert(new Set(room.gearMerchants.map(b => b.cat)).size === 3, 'e i tre cataloghi sono distinti');
+  assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.gearMerchants[0].x, room.gearMerchants[0].y) < 1,
+    'il vecchio `gearMerchant` resta il fabbro: chi lo legge non si accorge di niente');
+  // due banchi non si sovrappongono mai: «quello piu' vicino» non e' mai una scelta ambigua
+  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+    const a = room.gearMerchants[i], b = room.gearMerchants[j];
+    assert(MU.dist(a.x, a.y, b.x, b.y) > (C.MARKET_MERCH_RANGE + 12) * 2, 'i banchi ' + a.cat + ' e ' + b.cat + ' non si sovrappongono');
+  }
+
+  // --- 2) LA TABELLA, riga per riga come sta nel documento ---
+  // Ogni voce: [classe, slot, catalogo, si puo'?]. Le righe «no» valgono quanto le «si»: una regola
+  // che apre e non chiude non e' una regola.
+  const T2 = (h, slot, cat) => Gear.itemsBottega(h, cat, slot).length;
+  // il barbaro: armi da mischia tutte, armature SOLO leggere (mischia o arco), niente magia
+  assert(T2('barbaro', 'weapon', 'guerriero') > 0 && T2('barbaro', 'weapon', 'ladro') === 0 && T2('barbaro', 'weapon', 'mago') === 0,
+    'barbaro: armi solo da mischia');
+  assert(Gear.itemsBottega('barbaro', 'guerriero', 'armor').every(i => i.rank <= 1 || i.carattere === 'leggera'),
+    'barbaro: armature leggere, come dice la sua tabella');
+  assert(T2('barbaro', 'armor', 'ladro') > 0, 'e anche quelle di cuoio leggero dell arciera: e il suo equipaggiamento misto');
+  // il paladino e il maestro: tutto da mischia e basta
+  for (const h of ['paladino', 'maestro']) {
+    assert(T2(h, 'weapon', 'guerriero') === 13 && T2(h, 'armor', 'guerriero') === 13 && T2(h, 'shield', 'guerriero') === 13,
+      h + ': il catalogo da mischia per intero');
+    assert(T2(h, 'weapon', 'ladro') + T2(h, 'weapon', 'mago') + T2(h, 'armor', 'ladro') + T2(h, 'armor', 'mago') === 0,
+      h + ': e nient altro, da nessun altro banco');
+  }
+  // l'assassino: due botteghe, ma niente pesante e niente scudo
+  assert(T2('assassino', 'weapon', 'guerriero') > 0 && T2('assassino', 'weapon', 'ladro') > 0,
+    'assassino: compra armi dal fabbro E dall arciera');
+  for (const sl of ['weapon', 'armor']) for (const cat of ['guerriero', 'ladro'])
+    assert(Gear.itemsBottega('assassino', cat, sl).every(i => i.rank <= 1 || i.carattere !== 'pesante'),
+      'assassino: niente pesante (' + cat + '/' + sl + ')');
+  assert(T2('assassino', 'shield', 'guerriero') === 0, 'assassino: niente scudo');
+  // l'arciere: solo l'arciera
+  assert(T2('arciere', 'weapon', 'ladro') === 13 && T2('arciere', 'weapon', 'guerriero') === 0 && T2('arciere', 'weapon', 'mago') === 0,
+    'arciere: solo archi');
+  assert(Gear.slotsBottega('arciere', 'guerriero').length === 0, 'e dal fabbro non ha niente da comprare');
+  // il mago: solo l'arcanista
+  assert(T2('mago', 'weapon', 'mago') === 13 && T2('mago', 'weapon', 'guerriero') === 0, 'mago: solo bastoni');
+  assert(T2('mago', 'shield', 'guerriero') === 0, 'mago: niente scudo');
+  // il warlock: tutta la magia piu' le armi LEGGERE da mischia
+  assert(T2('warlock', 'weapon', 'mago') === 13, 'warlock: tutto il catalogo arcano');
+  assert(T2('warlock', 'weapon', 'guerriero') > 0 &&
+    Gear.itemsBottega('warlock', 'guerriero', 'weapon').every(i => i.rank <= 1 || i.carattere === 'leggera'),
+    'warlock: e dal fabbro le sole armi leggere');
+  assert(T2('warlock', 'weapon', 'ladro') === 0, 'warlock: ma nessun arco');
+
+  // --- 3) NESSUNA CLASSE PARTE CON ADDOSSO QUALCOSA CHE NON POTREBBE PORTARE ---
+  // E' il controllo che vale piu' di tutti: una tabella che vieta l'equipaggiamento di partenza
+  // lascerebbe il personaggio in uno stato che il resto del gioco non sa ne' disegnare ne' calcolare.
+  for (const h of CLASSI) {
+    const sg = Gear.startingGear(h);
+    for (const k in sg) if (sg[k]) assert(Gear.puoAvere(h, Gear.BY_ID[sg[k]]), h + ': il pezzo di partenza ' + k + ' e ammesso dalla sua tabella');
+    // e ogni classe ha almeno una bottega dove comprare: una vetrina vuota per tutti non e' una bottega
+    assert(Gear.BOTTEGHE.some(b => Gear.slotsBottega(h, b).length > 0), h + ': ha almeno una bottega sua');
+  }
+
+  // --- 3bis) v2.19.1 — L'ARMA DI PARTENZA NON PUO' CONTRADDIRE LA CLASSE ---
+  // Il difetto trovato da Paolo: *«l'assassino parte con 2 spade ma lo sparo e' la freccia»*. Causa:
+  // la sua famiglia d'arma e' la mischia leggera ma il suo CORPO e' `ladro`, e `startingGear` pescava
+  // il grado minimo del corpo — un arco. E' l'unica delle sette in cui i due non coincidono, ed e'
+  // per questo che era l'unica a sbagliare. Questo controllo vale per tutte e sette, cosi' il giorno
+  // che nasce l'ottava classe il difetto non torna in silenzio.
+  for (const h of CLASSI) {
+    const classe = (Heroes.HEROES[h] || {}).weapon || {};
+    const inMano = Gear.BY_ID[Gear.startingGear(h).manoDx];
+    assert(!!inMano, h + ': parte con qualcosa in mano');
+    assert(!!inMano.weapon.melee === !!classe.melee,
+      h + ': cio con cui parte colpisce come la sua arma di classe (' + classe.name + ' -> ' + inMano.name + ')');
+  }
+  // e l'assassino in particolare: pugnali veri, scuola `agile`, e NON un arco
+  {
+    const ra = new Room('v2191'); const pa = ra.addPlayer('x', { send() {} }, 'X', 'assassino'); ra.startGame();
+    const w = ra.effWeapon(pa);
+    assert(w.melee === true, 'l assassino mena di pugnale, non tira frecce');
+    assert(w.school === 'agile', 'e il suo colpo sta nella scuola agile');
+    assert(Gear.BY_ID[pa.gear.manoDx].carattere === 'leggera', 'e cio che impugna e leggero, come dice la sua tabella');
+    // la doppia arma leggera NON e' regalata: si guadagna comprando la seconda lama dal fabbro
+    assert(!pa._doppiaLeggera, 'ma la doppia non e regalata: la mano sinistra parte libera');
+    const lama = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'leggera');
+    pa.coins = 100000; ra.wave = 3; ra.phase = C.PHASE_SHOP; ra.vaiAlVillaggio('x');
+    alBanco(ra, pa, 'guerriero'); ra.buyGear('x', lama.id); ra.equipaggia('x', lama.id, 'manoSx');
+    assert(pa.gear.manoSx === lama.id, 'la seconda lama la vende il fabbro, e si impugna a sinistra');
+    assert(pa._doppiaLeggera === true, 'e li si accende il bonus di classe della doppia leggera');
+  }
+
+  // --- 4) A RUNTIME: si compra dove si deve, e non altrove ---
+  p.coins = 100000;
+  const bastone = Gear.itemsBottega('warlock', 'mago', 'weapon').find(i => i.rank === 2);
+  const sciabola = Gear.itemsBottega('warlock', 'guerriero', 'weapon').find(i => i.rank === 2);
+  const spadone = Gear.ITEMS.find(i => i.hero === 'guerriero' && i.slot === 'weapon' && i.rank === 2 && i.carattere === 'pesante');
+  alBanco(room, p, 'guerriero');
+  room.buyGear('b', bastone.id); assert(!p.owned[bastone.id], 'dal fabbro non si comprano bastoni');
+  room.buyGear('b', spadone.id); assert(!p.owned[spadone.id], 'e nemmeno uno spadone: al warlock la tabella concede solo le leggere');
+  room.buyGear('b', sciabola.id); assert(!!p.owned[sciabola.id], 'ma la sciabola leggera si: e l equipaggiamento misto che funziona');
+  alBanco(room, p, 'mago');
+  room.buyGear('b', bastone.id); assert(!!p.owned[bastone.id], 'e il bastone si compra dall arcanista');
+  // si rivende SOLO al banco che vende quella roba
+  alBanco(room, p, 'mago'); room.phase = C.PHASE_MARKET;
+  const soldi0 = p.coins; room.vendiGear('b', sciabola.id);
+  assert(p.coins === soldi0 && !!p.owned[sciabola.id], 'l arcanista non ricompra una sciabola');
+  alBanco(room, p, 'guerriero'); room.vendiGear('b', sciabola.id);
+  assert(p.coins > soldi0 && !p.owned[sciabola.id], 'il fabbro si');
+
+  // --- 4bis) v2.19.1 — IL GRADO SCARSO NON E' MERCE (era una zecca) ---
+  // Il buco l'ha aperto l'equipaggiamento misto: una classe vede anche i pezzi scarsi di un catalogo
+  // che non e' il suo, quelli costano ZERO e la rivendita ne vale 8. Comprare e rivendere in circolo
+  // faceva monete dal nulla. Il controllo resta anche se domani i prezzi cambiano: la regola e'
+  // «costo zero = non in vendita», non «questo id».
+  {
+    const rz = new Room('v2191z'); const pz = rz.addPlayer('z', { send() {} }, 'Z', 'warlock'); rz.startGame();
+    rz.wave = 3; rz.phase = C.PHASE_SHOP; rz.vaiAlVillaggio('z');
+    alBanco(rz, pz, 'guerriero'); pz.coins = 0; rz.phase = C.PHASE_MARKET;
+    const scarso = Gear.itemsFor('paladino', 'weapon').find(i => i.rank === 1);
+    assert(scarso.cost === 0, 'il pezzo di grado 1 costa zero');
+    for (let g = 0; g < 5; g++) { rz.buyGear('z', scarso.id); rz.vendiGear('z', scarso.id); }
+    assert(pz.coins === 0 && !pz.owned[scarso.id], 'comprare e rivendere il grado scarso non fa monete dal nulla');
+    // e non si vede nemmeno sul banco, se non e' gia' tuo
+    const sz = []; pz.conn = { send(x) { try { sz.push(JSON.parse(x)); } catch (_) {} } };
+    rz.offerGear(pz, 1, 'guerriero');
+    const ofz = sz.find(m => m.t === C.MSG.OFFER_GEAR);
+    const armi = (ofz.slots.find(x => x.slot === 'weapon') || {}).items || [];
+    assert(!armi.some(i => i.id === scarso.id), 'e il banco non lo mette nemmeno in vetrina');
+    assert(armi.length > 0 && armi.every(i => i.cost > 0), 'in vetrina ci sta solo roba che si compra davvero');
+  }
+
+  // --- 5) IL PANNELLO dice DOVE sei, e quando e' vuoto lo dichiara ---
+  const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
+  const arc = room.addPlayer('a', cap, 'A', 'arciere');
+  sent.length = 0; room.offerGear(arc, 1, 'ladro');
+  const off1 = sent.find(m => m.t === C.MSG.OFFER_GEAR);
+  assert(off1 && off1.cat === 'ladro' && off1.kind === 'fletcher' && !off1.vuoto, 'il banco dell arciera si presenta, e ha roba');
+  sent.length = 0; room.offerGear(arc, 1, 'mago');
+  const off2 = sent.find(m => m.t === C.MSG.OFFER_GEAR);
+  assert(off2 && off2.cat === 'mago' && off2.vuoto === 1 && off2.slots.length === 0,
+    'e quello dell arcanista si dichiara vuoto invece di aprirsi muto');
+
+  // --- 6) LE MANI, con la tipologia: e' la regola che senza le tre botteghe non poteva sbagliarsi ---
+  const M = Heroes.MANI;
+  assert(M.assassino.doppiaTipo.join() === 'mischia' && M.mago.doppiaTipo.join() === 'magia',
+    'la doppia arma ha una tipologia: mischia per l assassino, magia per il mago');
+  for (const h of ['barbaro', 'paladino', 'maestro'])
+    assert(M[h].scudoTipo.join() === 'mischia', h + ': lo scudo sta accanto a un arma da mischia');
+  // il barbaro resta l'unico con pesante + scudo, e adesso anche con la tipologia di mezzo
+  const bg = Gear.startingGear('barbaro');
+  const asciaP = Gear.itemsBottega('barbaro', 'guerriero', 'weapon').find(i => i.carattere === 'pesante');
+  const scudo = Gear.itemsBottega('barbaro', 'guerriero', 'shield')[0];
+  const conAscia = Gear.impugna('barbaro', bg, asciaP.id, 'manoDx').gear;
+  assert(!!conAscia && !!Gear.impugna('barbaro', conAscia, scudo.id, 'manoSx').gear,
+    'il barbaro tiene ancora arma pesante e scudo insieme');
+
+  // --- 7) E CIO CHE NON E STATO TOCCATO: l inventario resta coerente con la tabella ---
+  // la sciabola l'abbiamo rivenduta al punto 5: si ricompra, se no l'inventario e' di una bottega sola
+  // e questo controllo non proverebbe niente.
+  alBanco(room, p, 'guerriero'); room.buyGear('b', sciabola.id);
+  p.conn = cap;            // il warlock era muto: gli si attacca la presa per leggere il suo pannello
+  sent.length = 0; room.offerShop(p);
+  const pan = sent.find(m => m.t === C.MSG.OFFER_SHOP);
+  assert(!!pan && !!pan.inv, 'il pannello del personaggio arriva');
+  const tuttiPezzi = [].concat.apply([], (pan.inv.inventario || []).map(sl => sl.pezzi || []));
+  assert(tuttiPezzi.every(it => Gear.puoAvere('warlock', Gear.BY_ID[it.id])),
+    'e nell inventario non compare niente che la tabella vieti');
+  assert(tuttiPezzi.some(it => it.tipo === 'magia') && tuttiPezzi.some(it => it.tipo === 'mischia'),
+    'ma ci stanno insieme i pezzi delle due botteghe: e il punto di tutto il lavoro');
+  ok('le tre botteghe e l equipaggiamento misto verificati');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

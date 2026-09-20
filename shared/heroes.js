@@ -198,14 +198,24 @@
   //
   // La regola vive qui e non nel server perche' la deve sapere anche il client, per spegnere i pezzi
   // che non puoi impugnare invece di lasciarti cliccare e non succedere niente.
+  // v2.19 — e la TIPOLOGIA, che prima non serviva e adesso si'. Finche' il fabbro era l'unico negozio,
+  // una classe poteva comprare da un catalogo solo e chiedersi «di che tipo e' l'arma nell'altra mano?»
+  // era una domanda senza risposte diverse. Con tre botteghe le risposte sono tre, e le tabelle del
+  // documento le distinguono: l'assassino fa doppia arma «leggere, SOLO MISCHIA» — non due archi; il
+  // mago «leggere, MAGO» — non due pugnali. Lo scudo, nelle tre tabelle che lo concedono, sta sempre
+  // accanto a un'arma da mischia.
+  //
+  //   `doppiaTipo` — le tipologie ammesse in doppia arma (mischia / arco / magia). Assente = nessun
+  //                  vincolo di tipologia (che oggi non capita: chi ha `doppia` ha anche questo).
+  //   `scudoTipo`  — le tipologie che l'arma nell'altra mano puo' avere accanto allo scudo.
   const MANI = {
-    barbaro:   { doppia: ['leggera', 'equilibrata', 'pesante'], scudo: ['leggera', 'equilibrata', 'pesante'], pesanteUnaMano: 1 },
-    paladino:  { doppia: null,                                   scudo: ['leggera', 'equilibrata'] },
-    maestro:   { doppia: ['leggera', 'equilibrata'],             scudo: ['leggera', 'equilibrata'] },
-    assassino: { doppia: ['leggera'],                            scudo: null },
-    arciere:   { doppia: null,                                   scudo: null },
-    mago:      { doppia: ['leggera'],                            scudo: null },
-    warlock:   { doppia: null,                                   scudo: null },
+    barbaro:   { doppia: ['leggera', 'equilibrata', 'pesante'], doppiaTipo: ['mischia'], scudo: ['leggera', 'equilibrata', 'pesante'], scudoTipo: ['mischia'], pesanteUnaMano: 1 },
+    paladino:  { doppia: null,                                  doppiaTipo: null,        scudo: ['leggera', 'equilibrata'],            scudoTipo: ['mischia'] },
+    maestro:   { doppia: ['leggera', 'equilibrata'],            doppiaTipo: ['mischia'], scudo: ['leggera', 'equilibrata'],            scudoTipo: ['mischia'] },
+    assassino: { doppia: ['leggera'],                           doppiaTipo: ['mischia'], scudo: null,                                  scudoTipo: null },
+    arciere:   { doppia: null,                                  doppiaTipo: null,        scudo: null,                                  scudoTipo: null },
+    mago:      { doppia: ['leggera'],                           doppiaTipo: ['magia'],   scudo: null,                                  scudoTipo: null },
+    warlock:   { doppia: null,                                  doppiaTipo: null,        scudo: null,                                  scudoTipo: null },
   };
   function maniDi(heroId) { return MANI[heroId] || MANI.arciere; }
 

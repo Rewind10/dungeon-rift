@@ -2,6 +2,150 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.1] — 2026-09-20 · "I pugnali dell'assassino"
+
+Paolo: *«l'assassino parte con 2 spade ma lo sparo è la freccia»*. Un fix per volta, e questo è il primo.
+
+**La causa, non il sintomo.** L'assassino dichiara come arma di classe i **Pugnali Gemelli** (mischia,
+scuola `agile`) ma la sua **impalcatura è `ladro`**, e `startingGear` pescava il grado minimo del
+catalogo dell'impalcatura — l'**Arco Sfibrato**. Il renderer nel frattempo lo disegnava con le lame
+(`arma: 'pugnali'`), quindi si vedeva un uomo con due pugnali che tirava frecce. Su sette classi è
+**l'unica** in cui corpo e famiglia d'arma non coincidono: ecco perché era l'unica che sbagliava.
+
+| Classe | Arma di classe | Parte con | |
+|---|---|---|---|
+| Barbaro | Ascia da Guerra | Spada Scheggiata | mischia = mischia |
+| Paladino | Spada Consacrata | Spada Scheggiata | mischia = mischia |
+| Maestro d'Armi | Lame Gemelle | Spada Scheggiata | mischia = mischia |
+| **Assassino** | **Pugnali Gemelli** | ~~Arco Sfibrato~~ → **Pugnali Sbeccati** | **era arco ≠ mischia** |
+| Arciere | Arco Lungo | Arco Sfibrato | arco = arco |
+| Mago | Bolla di Energia | Bastone Nodoso | magia = magia |
+| Warlock | Dardo del Patto | Bastone Nodoso | magia = magia |
+
+**I Pugnali Sbeccati**: grado 1, *leggera*, mischia — 22 danni × 3,5/s = **77 danni/s**, in linea con gli
+altri tre pezzi di partenza (78-79). Stanno nel catalogo `guerriero` perché lì stanno le armi **da
+mischia**, che è la loro tipologia: metterli fra gli archi per far tornare l'impalcatura sarebbe stato
+rimettere a posto il sintomo lasciando la causa.
+
+**Un tipo di pezzo nuovo: `avvio`.** Un grado 1 costa zero, e un grado 1 in più nel catalogo del fabbro
+sarebbe stata un'arma leggera **gratis** per barbaro, paladino, maestro e warlock. I pezzi marcati
+`avvio` non compaiono su nessun banco, non entrano nella forma del listino (che resta **117 pezzi**) e
+li può avere solo la classe che ci sta scritta. Oggi ce n'è uno solo.
+
+**La doppia arma non è regalata.** L'assassino parte con una mano sola occupata; il bonus di classe
+(*«doppia arma leggera da mischia»*) si accende comprando la **seconda lama dal fabbro** — cosa che
+prima non poteva fare, e che l'equipaggiamento misto della v2.19.0 ha reso possibile. La progressione
+è quella, ed è coerente con la tabella.
+
+---
+
+**🐛 E un buco che avevo aperto io con la v2.19.0 — chiuso.** I pezzi di **grado 1 costano zero**.
+Finché ogni classe vedeva un catalogo solo non si notava: il suo pezzo scarso ce l'aveva già addosso e
+il controllo «è già tuo» bastava a chiudere la porta. Con l'equipaggiamento misto una classe vede anche
+i pezzi scarsi di un **altro** catalogo, che non possiede — li comprava **gratis** e li rivendeva a
+**8 monete** l'uno, in circolo, all'infinito. Misurato: 5 giri = 40 monete partendo da zero.
+
+Adesso **il grado scarso non è merce**: `buyGear` rifiuta qualunque pezzo a costo zero, e il banco non
+lo mette nemmeno in vetrina se non è già tuo (quello tuo resta, per rimetterlo su o rivenderlo una
+volta sola). La regola è scritta come *«costo zero = non in vendita»*, non come un elenco di id, così
+regge anche se domani il listino cambia.
+
+**Test** — 4102 passati, 0 falliti. Due controlli nuovi che valgono per **tutte e sette** le classi, non
+solo per chi ha sbagliato oggi: (1) ciò con cui una classe parte deve colpire come la sua arma di
+classe — il giorno che nasce l'ottava, il difetto non torna in silenzio; (2) comprare e rivendere il
+grado scarso non fa monete dal nulla.
+
+### [2.19.0] — 2026-09-20 · "Le tre botteghe"
+
+Paolo: *«togliere 2 case e metterci un venditore di magia (quindi equipaggiamento da mago) e uno da
+arciere (quindi equi. da arciere). Questo perché, come ti ho scritto, ci sono classi che possono avere
+equipaggiamento misto»*.
+
+**Due case in meno, due botteghe in più.** `casa_a` (fila di ponente, sotto la fucina) è diventata
+l'**ARCHERIA**; `casa_c` (fila di levante, sotto la gilda) la **BOTTEGA ARCANA**. Le case restano
+cinque. Le due nuove stanze sono speculari alla fucina nell'impianto — bancone sulla porta, mercante
+dietro — e diverse in tutto il resto:
+
+| | Fucina | Archeria | Bottega Arcana |
+|---|---|---|---|
+| **Mercante** | Fabbro | **Arciera** | **Arcanista** |
+| **Colore** | ambra `#ffb14a` | verde `#8fd96a` | viola `#a98cff` |
+| **Pavimento** | lastre | terra battuta | lastre viola |
+| **Arredo** | incudine, colata di lava, rastrelliere | **tre bersagli di paglia con le frecce piantate**, rastrelliere d'archi, faretre, cuoio | cristalli accesi, scaffali di volumi, tappeto runico, bastoni in rastrelliera |
+| **Attrezzo in mano** | martello | **arco incordato con la freccia incoccata** | **bastone con la gemma accesa** |
+| **Impalcatura** | barbaro | arciere | mago |
+| **Catalogo** | `guerriero` | `ladro` | `mago` |
+
+Il **bersaglio** è un mobile nuovo: balla di paglia su treppiede, tre anelli dipinti e tre frecce
+sempre nello stesso punto — niente casualità, il villaggio dev'essere identico a ogni partita.
+
+**L'EQUIPAGGIAMENTO MISTO, che è la parte vera.** Era una dipendenza aperta della v2.18 — i pezzi
+restavano catalogati per le tre *impalcature*, e con un fabbro solo non si vedeva. Con tre botteghe si
+vede subito. La regola adesso c'è, ed è la trascrizione delle sette tabelle di
+`PIANO-CLASSI-SETTAGGI.md` §3, perché i **due assi** del documento sono già nel listino:
+
+- **tipologia** (mischia / arco / magia) = il catalogo, cioè la bottega;
+- **peso** (leggere / medie / pesanti) = il `carattere` del pezzo (leggera / equilibrata / pesante).
+
+`Gear.PERMESSI` è quella tabella, riga per riga. Chi compra cosa, in breve:
+
+| Classe | Fabbro | Arciera | Arcanista |
+|---|---|---|---|
+| **Barbaro** | armi tutte, **armature solo leggere**, scudi tutti | **armature e calzature leggere** | — |
+| **Paladino** | tutto | — | — |
+| **Maestro d'Armi** | tutto | — | — |
+| **Assassino** | armi e armature **leggere/medie** | armi, armature e calzature **leggere/medie** | — |
+| **Arciere** | — | tutto | — |
+| **Mago** | — | — | tutto |
+| **Warlock** | armi e armature **solo leggere** | — | tutto |
+
+Tre classi su sette (**barbaro, assassino, warlock**) fanno adesso il giro di due botteghe: è quello
+che «equipaggiamento misto» voleva dire.
+
+**Il grado 1 non si filtra per peso**, ed è una scelta esplicita: i pezzi «scarsi» costano zero, non
+si comprano, sono quelli con cui si parte, e nel listino di oggi esistono solo in versione
+*equilibrata*. Filtrarli avrebbe fatto partire il barbaro con addosso una casacca che la sua tabella
+gli vieta — uno stato che il resto del gioco non sa né disegnare né calcolare.
+
+**Le mani hanno preso la tipologia.** Finché il negozio era uno, chiedersi «di che tipo è l'arma
+nell'altra mano?» non aveva risposte diverse. Adesso sì, e le tabelle le distinguono: l'assassino fa
+doppia arma *«leggere, SOLO MISCHIA»* — **non due archi**; il mago *«leggere, mago»* — non due pugnali;
+lo scudo, nelle tre tabelle che lo concedono, sta sempre accanto a un'arma da mischia. `Heroes.MANI`
+ha quindi due chiavi nuove, `doppiaTipo` e `scudoTipo`. Il barbaro resta l'unico con **arma pesante +
+scudo**.
+
+**Sul server** `gearMerchant` resta — e resta il fabbro, perché mezzo mondo lo legge (salvataggio,
+minimappa, test) — e accanto c'è `gearMerchants`, la lista vera. `_bottegaVicina(p)` risponde *a quale*
+banco sei: `_nearGear` non è più un sì/no ma il **catalogo** del banco davanti a cui stai. Comprare,
+vendere ed equipaggiare passano tutti da `Gear.puoAvere`, che è una regola sola in un posto solo.
+
+**Ogni bottega ricompra solo la sua roba.** L'arciera non ti prende indietro un bastone: è la stessa
+regola del comprare letta al contrario, e tiene il pannello coerente con sé stesso.
+
+**Un banco vuoto lo dice.** Un arciere davanti al fabbro non ha niente da comprare: il pannello scrive
+*«Qui non c'è niente per te»* invece di aprirsi senza righe, che si legge come un guasto.
+
+**Corretto per strada** — il banco non segnava mai «addosso». `offerGear` guardava
+`p.gear[slot] === it.id`, ma dalla v2.18.1 le chiavi sono `manoDx`/`manoSx`: la casella `weapon` non
+esiste più e il confronto era sempre falso. Adesso guarda se il pezzo è in **una qualunque** delle
+caselle, come già fa l'inventario.
+
+**Tolte 45 righe morte** dal renderer: il fabbro disegnato a mano della v1.52 (forgia, incudine,
+martello che batte) era già stato sovrascritto dalla v1.57 e nessuno lo chiamava più. Adesso i
+mercanti li disegna il giro degli npc, con l'**alone del colore della bottega** sotto ai piedi — e dal
+minimappa i tre punti si distinguono a colpo d'occhio.
+
+**Test** — 4054 passati, 0 falliti. Nuovo `[TEST 72]`: le tre botteghe, la tabella riga per riga
+(comprese le righe «no»), nessuna classe che parte con addosso qualcosa di vietato, la compravendita
+al banco giusto e a quello sbagliato, il pannello vuoto, le mani con la tipologia, e l'inventario
+misto. Riscritti — non cancellati — una ventina di controlli che davano per scontato **un** negozio.
+
+**Resta aperto** (segnalato, non fatto): l'arma sostituisce il *colpo* ma non la **scuola**, che è
+ancora quella della classe. Un warlock con la sciabola mena di sciabola ma scala ancora con Carisma.
+Sistemarlo vuol dire legare la scuola al pezzo — è il rifacimento per peso × tipologia. E le
+**calzature** non sono in nessuna delle sette tabelle: qui seguono l'armatura (stessi cataloghi,
+stessi pesi), ed è un'assunzione mia, da confermare.
+
 ### [2.18.1] — 2026-09-20 · "Le due mani"
 
 Quattro cose segnalate da Paolo dopo la **prima partita** con le sette classi. Tutte e quattro erano

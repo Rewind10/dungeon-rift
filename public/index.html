@@ -314,9 +314,11 @@
   <div class="merch-hint">Cambiando il tipo di uno slot ti torna <b>metà</b> delle cariche rimaste · in partita si bevono con <b>Q</b> ed <b>E</b></div>
 </div>
 <div id="gearPanel" class="hidden">
-  <div class="merch-head" id="gearHead">🔨 <b>Fabbro dell'Emporio</b> — hai <b>0</b> 🪙</div>
+  <!-- v2.19 — l'intestazione la riscrive _renderGearNpc con la bottega in cui sei: fabbro, arciera o
+       arcanista. Questa riga si vede solo per l'istante fra l'apertura del pannello e il primo disegno. -->
+  <div class="merch-head" id="gearHead">🔨 <b>Bottega</b> — hai <b>0</b> 🪙</div>
   <div id="gearNpcCards"></div>
-  <div class="merch-hint">Clic per <b>comprare</b> o rimettere addosso · <b>Vendi</b> ricompra a metà prezzo · le statistiche sono scritte sulla cella</div>
+  <div class="merch-hint">Clic per <b>comprare</b> o rimettere addosso · <b>Vendi</b> ricompra a metà prezzo · ogni bottega ricompra solo la <b>sua</b> roba · le statistiche sono scritte sulla cella</div>
 </div>
 <div id="chatWrap"><div id="chatLog"></div><input id="chatInput" class="hidden" maxlength="120" placeholder="Messaggio… (Invio per inviare, Esc per chiudere)"></div>
 <script src="/shared/constants.js"></script>

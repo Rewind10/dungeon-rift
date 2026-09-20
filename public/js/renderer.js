@@ -845,7 +845,13 @@
       // v1.23 — mercanti sulla minimappa (sempre visibili quando presenti)
       if (world.merch) { const q = w2m(world.merch.x, world.merch.y); ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.4, 0, 7); ctx.fill(); }
       if (world.merchD) { const q = w2m(world.merchD.x, world.merchD.y); ctx.strokeStyle = '#c77dff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 4.5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ff2d6b'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); }
-      if (world.gmerch) { const q = w2m(world.gmerch.x, world.gmerch.y); ctx.strokeStyle = '#ffa63c'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffcf4a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.8, 0, 7); ctx.fill(); }  // v1.52 — fabbro del MERCATO
+      // v1.52 — il fabbro sul minimappa · v2.19 — e adesso tutte e tre le botteghe, ognuna del colore
+      // del suo catalogo: sul minimappa del villaggio sono i tre punti che si cercano davvero.
+      { const COLB = { guerriero: ['#ffa63c', '#ffcf4a'], ladro: ['#7fc94e', '#a6e86a'], mago: ['#8a6ef0', '#c8b4ff'] };
+        const lista = (world.gmerchs && world.gmerchs.length) ? world.gmerchs : (world.gmerch ? [world.gmerch] : []);
+        for (const b of lista) { const q = w2m(b.x, b.y); const cc = COLB[b.k] || COLB.guerriero;
+          ctx.strokeStyle = cc[0]; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 5 + Math.sin(this.time * 4) * 1.2, 0, 7); ctx.stroke();
+          ctx.fillStyle = cc[1]; ctx.beginPath(); ctx.arc(q.x, q.y, 2.8, 0, 7); ctx.fill(); } }
       // monsters
       for (const mo of world.mon) { const q = w2m(mo.x, mo.y); if (mo.tr) { ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(q.x, q.y, 2.6, 0, 7); ctx.fill(); } else if (mo.b) { ctx.fillStyle = mo.mg ? '#ff2d55' : '#ff5a5a'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.4, 0, 7); ctx.fill(); } else { ctx.fillStyle = mo.el ? '#ffb020' : 'rgba(255,90,90,.85)'; ctx.fillRect(q.x - 1, q.y - 1, 2, 2); } }
       // players
@@ -1205,6 +1211,28 @@
             g.fillStyle = '#5a3d22'; this._rr(g, xx - 2.2, 4, 4.4, 4, 1); g.fill();
           }
           g.lineCap = 'butt'; break; }
+        // v2.19 — IL BERSAGLIO da tiro dell'archeria. E' il mobile che dice cos'e' quella stanza: dal
+        // vano della porta si vedono tre cerchi di paglia con le frecce piantate dentro, e non serve
+        // leggere l'insegna. Le frecce sono tre e sempre nello stesso punto — niente casualita': il
+        // villaggio dev'essere identico a ogni partita, se no e' un paese che si riarreda da solo.
+        case 'bersaglio': {
+          g.fillStyle = 'rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(0, 17, 14, 5, 0, 0, 7); g.fill();
+          g.strokeStyle = '#4a331b'; g.lineWidth = 3; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(-7, 17); g.lineTo(-2, 4); g.moveTo(7, 17); g.lineTo(2, 4); g.stroke();
+          const bgP = g.createRadialGradient(-4, -8, 2, 0, -3, 15);
+          bgP.addColorStop(0, '#e6d49a'); bgP.addColorStop(1, '#9a7f45');
+          g.fillStyle = bgP; g.strokeStyle = '#3a2c12'; g.lineWidth = 2;
+          g.beginPath(); g.arc(0, -3, 14, 0, 7); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(58,44,18,.55)'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -3, 10, 0, 7); g.stroke();
+          g.strokeStyle = '#b8402e'; g.lineWidth = 2.4; g.beginPath(); g.arc(0, -3, 6.5, 0, 7); g.stroke();
+          g.fillStyle = '#b8402e'; g.beginPath(); g.arc(0, -3, 2.6, 0, 7); g.fill();
+          for (const fr of [[-5, -8, -0.5], [4, 1, 0.35], [6, -9, -0.15]]) {
+            g.save(); g.translate(fr[0], fr[1]); g.rotate(fr[2]);
+            g.strokeStyle = '#6b5432'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(0, 0); g.lineTo(13, -4); g.stroke();
+            g.fillStyle = '#d8d2c0'; g.beginPath(); g.moveTo(13, -4); g.lineTo(11, -7.4); g.lineTo(16.4, -5); g.closePath(); g.fill();
+            g.restore();
+          }
+          g.lineCap = 'butt'; break; }
         case 'barrel': { g.fillStyle = '#5a3d22'; g.strokeStyle = '#31210f'; g.lineWidth = 2; this._rr(g, -8, -11, 16, 22, 3); g.fill(); g.stroke(); g.strokeStyle = '#8a6a3a'; g.beginPath(); g.moveTo(-8, -4); g.lineTo(8, -4); g.moveTo(-8, 4); g.lineTo(8, 4); g.stroke(); break; }
         case 'web': { g.strokeStyle = 'rgba(220,225,235,.18)'; g.lineWidth = 1; g.rotate(rot); for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(i) * 16, Math.sin(i * 1.7) * 16); g.stroke(); } for (let r = 5; r <= 15; r += 5) { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); } break; }
         case 'pillar': { const th = this.theme || {}; g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 16, 15, 6, 0, 0, 7); g.fill(); g.fillStyle = th.wallTop || '#39406a'; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2; this._rr(g, -8, 12, 16, 6, 2); g.fill(); g.stroke(); const gr = g.createLinearGradient(-9, 0, 9, 0); gr.addColorStop(0, th.wall || '#2a2f4a'); gr.addColorStop(.5, th.wallTop || '#3d4570'); gr.addColorStop(1, th.wall || '#2a2f4a'); g.fillStyle = gr; this._rr(g, -9, -20, 18, 34, 2); g.fill(); g.stroke(); for (let i = -6; i <= 6; i += 4) { g.strokeStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.moveTo(i, -18); g.lineTo(i, 12); g.stroke(); } this._rr(g, -11, -26, 22, 8, 2); g.fillStyle = th.wallTop || '#3d4570'; g.fill(); g.stroke(); break; }
@@ -1529,8 +1557,13 @@
       for (const c of (world.crates || [])) this._drawCrate(ctx, c);
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
-      if (this.map && this.map.village) { for (const n of this.map.village.npcs) { if (!n.shop) this._drawVendor(ctx, n); }
-        for (const e of (this.map.village.extras || [])) this._drawVendor(ctx, e, { noLabel: 1 });   // v1.75 — gente del villaggio  // v1.56 — abitanti (il fabbro lo disegna _drawGearMerchant)
+      // v2.19 — I MERCANTI LI DISEGNA QUESTA RIGA, TUTTI E SETTE. Prima il fabbro era saltato qui e
+      // ridisegnato piu' sotto da `_drawGearMerchant`, che si pescava la posizione dallo snapshot: con
+      // un negozio solo era un dettaglio, con tre sarebbero tre casi speciali. Adesso il banco lo
+      // segnala l'ALONE (`_beaconBottega`), disegnato sotto al mercante subito prima di lui, e il
+      // mercante e' un mercante come gli altri. Un caso speciale in meno, e due negozi in piu'.
+      if (this.map && this.map.village) { for (const n of this.map.village.npcs) { if (n.shop) this._beaconBottega(ctx, n); this._drawVendor(ctx, n); }
+        for (const e of (this.map.village.extras || [])) this._drawVendor(ctx, e, { noLabel: 1 });   // v1.75 — gente del villaggio
         // v2.3 — e quelli che camminano. Il tempo e' quello della PARTITA, non quello del client: cosi'
         // in cooperativa tutti li vedono nello stesso punto senza che il server mandi una riga.
         { const gir = this.map.village.girovaghi || [], tt = (world.tick != null ? world.tick : this.time);
@@ -1545,7 +1578,9 @@
             // degli aloni piu' sotto — qui si segna solo dove sta. E' anche il motivo per cui adesso le
             // strade si leggono: le percorre della gente con la luce in mano.
             luci.push(P.x, P.y); } } }
-      if (world.gmerch) this._drawGearMerchant(ctx, world.gmerch, me);
+      // v2.19 — la riga che disegnava il fabbro dallo snapshot non c'e' piu': i mercanti li disegna
+      // il giro degli npc qui sopra, alone compreso. Lo snapshot continua a mandare le posizioni
+      // (`gmerchs`) perche' servono al minimappa, che il villaggio disegnato non ce l'ha.
       for (const wd of (world.wdrops || [])) this._drawWeapon(ctx, wd);
       // v1.81 — LE RAGNATELE. Sono pavimento, non un effetto: si disegnano sotto a tutto, con i fili
       // veri (raggi + spirali irregolari) e non un cerchio pieno, se no si confondono con le zone che
@@ -1672,51 +1707,11 @@
       ctx.fillStyle = 'rgba(255,207,74,' + (0.7 + 0.3 * Math.sin(t * 4)) + ')'; ctx.font = 'bold 17px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('🪙', x, y - 44 + bob); ctx.textAlign = 'left';
       ctx.fillStyle = '#ffe9b0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('\uD83E\uDE99 Mercante', x, y - 60 + bob); ctx.textAlign = 'left';
     },
-    // v1.52 — MERCATO: il fabbro dell'equipaggiamento. Forgia + incudine + martello, accento ambra,
-    // beacon sempre acceso (sta al centro della mappa, deve leggersi anche col buio della torcia).
-    _drawGearMerchant(ctx, mrc, me) {
-      const t = this.time, x = mrc.x, y = mrc.y;
-      const bt = 0.5 + 0.5 * Math.sin(t * 2.4), flick = 0.65 + 0.35 * Math.sin(t * 11 + x * 0.3);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const bmg = ctx.createLinearGradient(x, y - 96, x, y - 8);
-      bmg.addColorStop(0, 'rgba(255,150,60,0)'); bmg.addColorStop(1, 'rgba(255,150,60,' + (0.12 + bt * 0.14).toFixed(3) + ')');
-      ctx.fillStyle = bmg; ctx.fillRect(x - 9, y - 96, 18, 84); ctx.restore();
-      ctx.strokeStyle = 'rgba(255,170,60,' + (0.30 + bt * 0.45).toFixed(3) + ')'; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(x, y + 6, 40 + bt * 6, 0, 7); ctx.stroke();
-      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(x, y + 20, 34, 10, 0, 0, 7); ctx.fill();
-      ctx.save(); ctx.translate(x, y);
-      // forgia: braciere con carboni ardenti
-      ctx.fillStyle = '#2b2119'; ctx.strokeStyle = '#15100a'; ctx.lineWidth = 2;
-      this._rr(ctx, -46, -6, 26, 24, 4); ctx.fill(); ctx.stroke();
-      const fg = ctx.createRadialGradient(-33, -6, 1, -33, -6, 20 * flick);
-      fg.addColorStop(0, 'rgba(255,220,120,.95)'); fg.addColorStop(0.5, 'rgba(255,130,40,.6)'); fg.addColorStop(1, 'rgba(255,80,20,0)');
-      ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(-33, -6, 20 * flick, 0, 7); ctx.fill();
-      // incudine
-      ctx.fillStyle = '#3d4048'; ctx.strokeStyle = '#191b20'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-16, 18); ctx.lineTo(-9, 6); ctx.lineTo(-13, 2); ctx.lineTo(-20, 2);
-      ctx.lineTo(-22, -4); ctx.lineTo(14, -4); ctx.lineTo(18, 0); ctx.lineTo(12, 4); ctx.lineTo(9, 6);
-      ctx.lineTo(16, 18); ctx.closePath(); ctx.fill(); ctx.stroke();
-      for (let i = 0; i < 4; i++) { const a = t * 6 + i * 1.7, sx = -4 + Math.cos(a) * 12, sy = -8 - Math.abs(Math.sin(a)) * 12;
-        ctx.fillStyle = 'rgba(255,210,90,' + (0.5 + 0.5 * Math.sin(a * 2)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(sx, sy, 1.6, 0, 7); ctx.fill(); }
-      // fabbro dietro l'incudine, martello che batte
-      const sw = Math.sin(t * 3.2);
-      ctx.translate(24, 0);
-      ctx.fillStyle = '#4a3524'; ctx.strokeStyle = '#241a10'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-12, 6); ctx.quadraticCurveTo(-10, -18, 0, -23); ctx.quadraticCurveTo(10, -18, 12, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#6b4c30'; ctx.beginPath(); ctx.arc(0, -26, 8, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = '#0d0a07'; ctx.beginPath(); ctx.arc(0, -23, 6, 0, 7); ctx.fill();
-      ctx.fillStyle = '#ffb14a'; ctx.beginPath(); ctx.arc(-2.2, -23, 1.5, 0, 7); ctx.arc(2.2, -23, 1.5, 0, 7); ctx.fill();
-      ctx.save(); ctx.translate(-10, -10); ctx.rotate(-0.7 + sw * 0.55);
-      ctx.strokeStyle = '#5a3d20'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-16, -6); ctx.stroke();
-      ctx.fillStyle = '#585c66'; this._rr(ctx, -24, -12, 11, 11, 2); ctx.fill();
-      ctx.restore();
-      ctx.restore();
-      ctx.save(); ctx.textAlign = 'center';
-      ctx.font = 'bold 13px Segoe UI'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)';
-      ctx.strokeText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
-      ctx.fillStyle = '#ffe0a8'; ctx.fillText('\uD83D\uDD28 Fabbro \u2014 Emporio', x, y - 62);
-      ctx.restore(); ctx.textAlign = 'left';
-    },
+    // v2.19 — QUI C'ERA il fabbro disegnato a mano della v1.52 (forgia, incudine, martello che
+    // batte). Era gia' morto da tempo — la v1.57 aveva ridefinito `_drawGearMerchant` piu' in
+    // basso e in un oggetto letterale vince l'ultima — e con tre botteghe non torna: il banco
+    // lo fanno i mobili della stanza (fucina, archeria, bottega arcana) e il mercante e' un
+    // mercante come gli altri. Tolto: 45 righe che nessuno chiamava piu'.
     // v1.57 — MERCANTE. Taglia DOPPIA rispetto alla v1.56 e piu' dettagliato, ma stesso stile:
     // figura incappucciata, volto in ombra, occhi accesi. Ognuno tiene in mano l'oggetto del suo mestiere.
     // Il fuoco della piazza li illumina da un lato (rimlight caldo) cosi' non sembrano incollati sul fondo.
@@ -1731,9 +1726,18 @@
     // v2.18 — i mercanti non sono eroi: hanno solo bisogno di un'IMPALCATURA su cui essere disegnati.
     // Qui si nomina la classe che rappresenta quel corpo (barbaro = pesante, arciere = agile, mago =
     // arcana), e resta vero anche se domani le classi diventassero dieci.
-    _vendorBase: { smith: 'barbaro', crier: 'barbaro', innkeeper: 'arciere', herbalist: 'mago', oracolo: 'mago', patron: 'arciere' },
+    // v2.19 — e i due mercanti nuovi. L'ARCIERA sta sull'impalcatura agile, com'e' giusto per chi
+    // vende archi; l'ARCANISTA su quella arcana. E' lo stesso criterio di prima — il corpo dice il
+    // mestiere prima ancora dei colori — ed e' il motivo per cui si leggono da lontano anche di spalle:
+    // tre sagome diverse per tre botteghe diverse.
+    _vendorBase: { smith: 'barbaro', crier: 'barbaro', innkeeper: 'arciere', herbalist: 'mago', oracolo: 'mago',
+                   fletcher: 'arciere', arcanist: 'mago', patron: 'arciere' },
     _vendorPal: {
       smith:     { cloth: '#8a5a2c', clothDk: '#4a2f14', steelDk: '#4a4038', pelo: '#5a4026', skin: '#e0b183', trim: '#ffb14a' },
+      // verde cuoio e corda: l'arciera e' l'unica del paese vestita come chi sta fuori
+      fletcher:  { cloth: '#4e6b34', clothDk: '#28381a', steelDk: '#5a5a48', pelo: '#4a4a2e', skin: '#e3c396', wood: '#8a6534', trim: '#8fd96a' },
+      // viola e argento: l'arcanista e' l'unica veste del villaggio che non sia terra o cuoio
+      arcanist:  { body: '#4a3f7a', bodyDk: '#241c46', accent: '#a98cff', orlo: 'rgba(169,140,255,.8)', skin: '#e0c4a8', trim: '#a98cff' },
       crier:     { cloth: '#6b5a72', clothDk: '#33303f', steelDk: '#5a6070', pelo: '#4a4050', skin: '#e0b48f', trim: '#ff9a8a' },
       innkeeper: { cloth: '#b8863c', clothDk: '#6b4a1c', skin: '#f0c795', wood: '#8a6534', trim: '#ffd97a' },
       herbalist: { body: '#3f6b34', bodyDk: '#1f3a1b', accent: '#9fe06a', orlo: 'rgba(159,224,106,.8)', skin: '#e3c396', trim: '#9fe06a' },
@@ -1759,6 +1763,23 @@
         ctx.fillStyle = '#2a2620'; ctx.beginPath(); ctx.arc(5.4, -14.8, 1.1, 0, 7); ctx.fill();
         ctx.strokeStyle = '#7fd6c0'; ctx.lineWidth = 1.4;
         for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(1, -6); ctx.quadraticCurveTo(-3 + k, -2, -5 + k * 2, 3); ctx.stroke(); }
+      } else if (kind === 'fletcher') {             // v2.19 — l'arco incordato e la freccia sulla corda
+        ctx.strokeStyle = '#8a6534'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(-1, -1, 11, -1.15, 1.15); ctx.stroke();            // il legno
+        ctx.strokeStyle = 'rgba(235,230,210,.9)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(3.4, -11); ctx.lineTo(3.4, 9); ctx.stroke();    // la corda
+        ctx.strokeStyle = '#6b5432'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(3.4, -1); ctx.lineTo(-9, -1); ctx.stroke();     // l'asta incoccata
+        ctx.fillStyle = '#d8d2c0'; ctx.beginPath(); ctx.moveTo(-9, -1); ctx.lineTo(-6.6, -3.2); ctx.lineTo(-6.6, 1.2); ctx.closePath(); ctx.fill();
+        ctx.lineCap = 'butt';
+      } else if (kind === 'arcanist') {             // v2.19 — il bastone con la gemma accesa in cima
+        ctx.strokeStyle = '#5a4a7a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-3, 9); ctx.lineTo(3, -12); ctx.stroke(); ctx.lineCap = 'butt';
+        const gg = ctx.createRadialGradient(3.6, -14, 0.5, 3.6, -14, 8);
+        gg.addColorStop(0, 'rgba(235,225,255,.95)'); gg.addColorStop(0.45, 'rgba(169,140,255,.7)'); gg.addColorStop(1, 'rgba(120,90,220,0)');
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(3.6, -14, 8, 0, 7); ctx.fill();
+        ctx.fillStyle = '#c8b4ff'; ctx.strokeStyle = '#3b2f66'; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.moveTo(3.6, -18.5); ctx.lineTo(6.4, -14); ctx.lineTo(3.6, -9.5); ctx.lineTo(0.8, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
       } else if (kind === 'crier') {                // registro delle taglie
         ctx.fillStyle = '#e8dcc0'; ctx.strokeStyle = '#6b5024'; ctx.lineWidth = 1.4; this._rr(ctx, -4, -7, 12, 14, 1.5); ctx.fill(); ctx.stroke();
         ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
@@ -2310,17 +2331,30 @@
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.restore();
       }
     },
-    // v1.57 — il fabbro e' l'unico mercante attivo: stessa figura degli altri, piu' l'anello-beacon che
-    // segnala "qui si compra". Fucina e incudine sono diventate il suo banchetto, disegnato nella mappa.
-    _drawGearMerchant(ctx, mrc, me) {
-      const t = this.time, x = mrc.x, y = mrc.y, bt = 0.5 + 0.5 * Math.sin(t * 2.4);
+    // v1.57 — l'anello-beacon che segnala «qui si compra»: la colonna di luce che si vede dalla via e
+    // l'ellisse che pulsa ai piedi del mercante.
+    // v2.19 — SI COLORA COL COLORE DELLA BOTTEGA, e non disegna piu' il mercante. Prima era arancione
+    // fisso perche' il negozio era uno solo ed era il fabbro; adesso l'arancione e' del fabbro, il verde
+    // dell'arciera e il viola dell'arcanista — e dalla piazza si capisce dove si sta andando senza
+    // leggere le insegne. Il colore arriva dal manifesto del villaggio (`n.col`), che e' lo stesso che
+    // tinge l'alone a terra: una fonte sola, se no in due versioni si scollano.
+    _beaconBottega(ctx, n) {
+      const t = this.time, x = n.x, y = n.y, bt = 0.5 + 0.5 * Math.sin(t * 2.4);
+      const rgb = this._hex2rgb ? this._hex2rgb(n.col || '#ffb14a') : null;
+      const c = rgb ? rgb.join(',') : '255,170,60';
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const bmg = ctx.createLinearGradient(x, y - 110, x, y - 8);
-      bmg.addColorStop(0, 'rgba(255,150,60,0)'); bmg.addColorStop(1, 'rgba(255,150,60,' + (0.10 + bt * 0.12).toFixed(3) + ')');
+      bmg.addColorStop(0, 'rgba(' + c + ',0)'); bmg.addColorStop(1, 'rgba(' + c + ',' + (0.10 + bt * 0.12).toFixed(3) + ')');
       ctx.fillStyle = bmg; ctx.fillRect(x - 10, y - 110, 20, 96); ctx.restore();
-      ctx.strokeStyle = 'rgba(255,170,60,' + (0.30 + bt * 0.45).toFixed(3) + ')'; ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(' + c + ',' + (0.30 + bt * 0.45).toFixed(3) + ')'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.ellipse(x, y + 30, 46 + bt * 6, 18 + bt * 3, 0, 0, 7); ctx.stroke();
-      this._drawVendor(ctx, { x, y, kind: 'smith', name: 'Fabbro', face: (this.map && this.map.village && this.map.village.smithFace) || 0, sub: 'emporio' });
+    },
+    // '#rrggbb' -> [r,g,b]. Serve perche' gli aloni si compongono in `rgba(...)` con un'opacita' che
+    // cambia ogni frame, e un colore esadecimale li' dentro non ci sta.
+    _hex2rgb(h) {
+      const s = String(h || '').replace('#', '');
+      if (s.length !== 6) return [255, 170, 60];
+      return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
     },
     // v1.58 — FUNGO SPORIFERO. Immobile per design: tutto il movimento sta nel respiro del cappello e
     // nell'urto di quando sputa le spore. Vettoriale puro, nessun asset.

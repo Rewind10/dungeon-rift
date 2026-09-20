@@ -1313,15 +1313,34 @@
     },
     _renderGearNpc() {
       const d = this._gearNpc; if (!d) return;
+      // v2.19 — L'INTESTAZIONE DICE DOVE SEI. Con un negozio solo la scritta poteva essere fissa;
+      // adesso sono tre, e un pannello identico in tutte e tre le botteghe farebbe credere che sia
+      // sempre lo stesso banco. Il catalogo (`cat`) e il nome arrivano dal server col listino.
+      const BOT = {
+        guerriero: { ic: '🔨', nome: 'Fabbro',    sub: 'armi e armature da mischia', col: '#ffb14a' },
+        ladro:     { ic: '🏹', nome: 'Arciera',   sub: 'archi, cuoio e calzature',   col: '#8fd96a' },
+        mago:      { ic: '🔮', nome: 'Arcanista', sub: 'bastoni, vesti e calzari',   col: '#a98cff' },
+      };
+      const B = BOT[d.cat] || BOT.guerriero;
       const hd = $('gearHead');
-      if (hd) hd.innerHTML = '\uD83D\uDD28 <b>Fabbro</b> \u2014 hai <b>' + (d.coins || 0) + '</b> \uD83E\uDE99';
-      // la firma evita di ricostruire il pannello 20 volte al secondo mentre resti vicino al fabbro
+      if (hd) hd.innerHTML = B.ic + ' <b style="color:' + B.col + '">' + esc(d.name || B.nome) + '</b> <i style="opacity:.72">— ' +
+        esc(B.sub) + '</i> · hai <b>' + (d.coins || 0) + '</b> 🪙';
+      // la firma evita di ricostruire il pannello 20 volte al secondo mentre resti vicino al banco
       // v2.12 — nella firma entra anche `have`: senza, vendere un pezzo del BAULE non cambiava niente di
       // cio' che la firma guarda (id e `owned` restavano identici) e il pannello non si ridisegnava —
       // il pulsante "Vendi" restava li' su un pezzo che non avevi piu'.
-      const sig = JSON.stringify((d.slots || []).map(sl => [sl.slot, (sl.items || []).map(i => [i.id, i.owned, i.have])])) + '|' + (d.coins || 0);
+      // v2.19 — e la BOTTEGA. Passando dal fabbro all'arciera cambia tutto il listino ma non per forza
+      // le monete: senza `cat` nella firma, dentro l'archeria si vedrebbero ancora le spade.
+      const sig = (d.cat || '') + '|' + (d.vuoto || 0) + '|' + JSON.stringify((d.slots || []).map(sl => [sl.slot, (sl.items || []).map(i => [i.id, i.owned, i.have])])) + '|' + (d.coins || 0);
       if (sig === this._gearNpcSig) return; this._gearNpcSig = sig;
       const wrap = $('gearNpcCards'); if (!wrap) return;
+      // v2.19 — UN BANCO CHE PER TE E' VUOTO LO DICE. Un arciere davanti al fabbro non ha niente da
+      // comprare: un pannello che si apre senza righe si legge come un guasto, non come un no.
+      if (d.vuoto) {
+        wrap.innerHTML = '<div class="vuoto">' + B.ic + ' Qui non c\'è niente per te. ' + esc(d.name || B.nome) +
+          ' vende ' + esc(B.sub) + ', e la tua classe non può portarne.</div>';
+        return;
+      }
       this._gearSlots(wrap, d, (id) => { if (this._buyGearNpc) this._buyGearNpc(id); },
                                 (id) => { if (this._sellGearNpc) this._sellGearNpc(id); });
     },

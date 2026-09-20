@@ -927,13 +927,18 @@
       { id: 'portale', kind: 'portale', x0: 4, y0: 4,  x1: 15, y1: 9,  porta: [16, 6, 'e'], pav: 'lastre', col: '#4b3c45' },
       { id: 'taverna', kind: 'bottega', x0: 4, y0: 12, x1: 15, y1: 19, porta: [16, 15, 'e'], pav: 'legno',  col: '#5a422a' },
       { id: 'fucina',  kind: 'bottega', x0: 4, y0: 22, x1: 15, y1: 29, porta: [16, 25, 'e'], pav: 'lastre', col: '#50382a' },
-      { id: 'casa_a',  kind: 'casa',    x0: 4, y0: 32, x1: 15, y1: 36, porta: [16, 34, 'e'], pav: 'legno',  col: '#554129' },
+      // v2.19 — ERA `casa_a`. Al suo posto la BOTTEGA DELL'ARCIERE: sta sotto la fucina, sulla stessa
+      // via, perche' le due botteghe dove si compra da combattere stiano dalla stessa parte del paese e
+      // si faccia un giro solo. Pavimento di terra battuta: e' un cortile da tiro, non un'officina.
+      { id: 'archeria', kind: 'bottega', x0: 4, y0: 32, x1: 15, y1: 36, porta: [16, 34, 'e'], pav: 'terra', col: '#3d4a2c' },
       { id: 'casa_b',  kind: 'casa',    x0: 4, y0: 39, x1: 15, y1: 42, porta: [16, 40, 'e'], pav: 'legno',  col: '#554129' },
       // ---- FILA DI LEVANTE ----
       { id: 'erbe',    kind: 'bottega', x0: 44, y0: 4,  x1: 55, y1: 11, porta: [43, 7,  'o'], pav: 'terra',  col: '#454230' },
       { id: 'antro',   kind: 'bottega', x0: 44, y0: 14, x1: 55, y1: 20, porta: [43, 17, 'o'], pav: 'lastre', col: '#3c4a46' },
       { id: 'retro',   kind: 'bottega', x0: 44, y0: 23, x1: 55, y1: 29, porta: [43, 26, 'o'], pav: 'lastre', col: '#503b32' },
-      { id: 'casa_c',  kind: 'casa',    x0: 44, y0: 32, x1: 55, y1: 36, porta: [43, 34, 'o'], pav: 'legno',  col: '#554129' },
+      // v2.19 — ERA `casa_c`. Al suo posto la BOTTEGA ARCANA, in fila con l'erborista e l'antro: la
+      // via di levante e' quella di chi vende cose che non si affilano. Lastre viola, non legno.
+      { id: 'arcano',  kind: 'bottega', x0: 44, y0: 32, x1: 55, y1: 36, porta: [43, 34, 'o'], pav: 'lastre', col: '#3a3358' },
       { id: 'casa_d',  kind: 'casa',    x0: 44, y0: 39, x1: 55, y1: 42, porta: [43, 40, 'o'], pav: 'legno',  col: '#554129' },
       // ---- LE TRE CASE DELLO SPIAZZO: due a mezzogiorno e una a settentrione ----
       { id: 'casa_e',  kind: 'casa',    x0: 21, y0: 38, x1: 27, y1: 42, porta: [24, 37, 'n'], pav: 'legno', col: '#554129' },
@@ -953,8 +958,17 @@
     stalls: [
       { x: 6,    y: 15.5, kind: 'innkeeper', name: 'Ostessa',    inn: 1, sub: 'riposo',
         col: '#ffd97a', room: 'taverna' },
-      { x: 6,    y: 25.5, kind: 'smith',     name: 'Fabbro',     shop: 1,
+      // v2.19 — LE TRE BOTTEGHE DELL'EQUIPAGGIAMENTO. Erano una sola, ed e' per questo che `shop: 1`
+      // bastava: c'era un banco e vendeva quello che vendeva. Adesso sono tre e ognuna ha il suo
+      // CATALOGO (`cat`), che e' lo stesso identificatore con cui gear.js cataloga i pezzi. Chi entra
+      // vede solo la parte del catalogo che la sua tabella gli concede — e per tre classi su sette
+      // quella parte e' spalmata su due botteghe.
+      { x: 6,    y: 25.5, kind: 'smith',     name: 'Fabbro',     shop: 1, cat: 'guerriero', sub: 'armi da mischia',
         col: '#ffb14a', room: 'fucina' },
+      { x: 6,    y: 34,   kind: 'fletcher',  name: 'Arciera',    shop: 1, cat: 'ladro',     sub: 'archi e cuoio',
+        col: '#8fd96a', room: 'archeria' },
+      { x: 53.4, y: 34,   kind: 'arcanist',  name: 'Arcanista',  shop: 1, cat: 'mago',      sub: 'bastoni e vesti',
+        col: '#a98cff', room: 'arcano' },
       { x: 53.4, y: 7.4,  kind: 'herbalist', name: 'Erborista',  pot: 1, sub: 'pozioni',
         col: '#9fe06a', room: 'erbe' },
       // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO. Le sue carte erano spente da tempo
@@ -999,6 +1013,8 @@
     rastrelliera: { r: [23, 8] }, aiuola: { r: [23, 19] }, cratebox: { r: [12, 12] },
     // v2.5 — la bancarella e' un banco: ci sbatti contro come contro tutti gli altri
     bancarella: { r: [35, 15] },
+    // v2.19 — il bersaglio dell'archeria e' una balla di paglia su un treppiede: ci si gira attorno
+    bersaglio: { c: 14 },
   };
   // questi quattro il renderer li gira di 90 gradi quando il prop ha r > 0.5: l'ingombro deve girare con loro
   const GIRANO = { bancone: 1, credenza: 1, scaffale: 1, rastrelliera: 1, letto: 1, bancarella: 1 };
@@ -1158,6 +1174,46 @@
       P('barrel', r.x0 + 0.8, cy + 2.4, 0.95);
     }
 
+    // ===================== L'ARCHERIA (v2.19) =====================
+    // Speculare alla fucina — bancone sulla porta, il mercante dietro — ma di un altro mestiere, e si
+    // deve vedere da lontano: dove il fabbro ha il fuoco e il metallo, qui c'e' il legno e la corda.
+    // In fondo alla stanza la LINEA DI TIRO: tre bersagli contro la parete di ponente, con le frecce
+    // piantate dentro. E' la cosa che dice «archi» senza scrivere una parola sull'insegna.
+    {
+      const r = R('archeria'), cy = (r.y0 + r.y1) / 2;
+      P('bancone', r.x0 + 2.2, cy, 1, { r: 1 });
+      // le rastrelliere degli archi lungo la parete dietro al banco
+      P('rastrelliera', r.x0 + 0.7, r.y0 + 0.9, 1, { r: 1 }); P('rastrelliera', r.x0 + 0.7, r.y1 - 0.9, 1, { r: 1 });
+      // i tre bersagli in fondo, dalla parte opposta alla porta
+      P('bersaglio', r.x1 - 1.2, r.y0 + 0.9, 1.05); P('bersaglio', r.x1 - 1.2, cy, 1.15); P('bersaglio', r.x1 - 1.2, r.y1 - 0.9, 1.05);
+      // le faretre e il cuoio da conciare
+      P('cratebox', r.x0 + 5.4, r.y0 + 0.8, 0.9); P('cratebox', r.x0 + 6.4, r.y0 + 0.8, 0.9);
+      P('sack', r.x0 + 5.4, r.y1 - 0.8, 0.9); P('barrel', r.x0 + 6.6, r.y1 - 0.8, 0.95);
+      P('candelabra', r.x0 + 4.0, r.y0 + 0.7, 1); P('candelabra', r.x0 + 4.0, r.y1 - 0.7, 1);
+      P('flag', r.x1 - 3.6, r.y0 + 0.8, 1.2, { col: '#8fd96a' });
+      P('flag', r.x1 - 3.6, r.y1 - 0.8, 1.2, { col: '#8fd96a' });
+    }
+
+    // ===================== LA BOTTEGA ARCANA (v2.19) =====================
+    // La porta e' a ponente, quindi il banco sta a ponente e il resto della stanza e' alle spalle del
+    // mercante — come l'erborista, che e' sulla stessa via. Qui pero' non si distilla: si legge e si
+    // incide. Scaffali di volumi, l'alambicco diventa un cerchio di cristalli, e sul pavimento un
+    // tappeto con le rune, che e' l'unico posto del paese dove c'e' un disegno a terra.
+    {
+      const r = R('arcano'), cy = (r.y0 + r.y1) / 2;
+      P('bancone', r.x1 - 2.2, cy, 1, { r: 1 });
+      P('scaffale', r.x1 - 0.7, r.y0 + 0.9, 1, { r: 1, col: '#a98cff' });
+      P('scaffale', r.x1 - 0.7, r.y1 - 0.9, 1, { r: 1, col: '#a98cff' });
+      P('tappeto', r.x0 + 3.4, cy, 1.35, { col: '#3a3368' });
+      P('crystal_cluster', r.x0 + 1.2, r.y0 + 0.9, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('crystal_cluster', r.x0 + 1.2, r.y1 - 0.9, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('crystal_cluster', r.x0 + 1.2, cy, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
+      P('rastrelliera', r.x1 - 4.2, r.y0 + 0.7, 0.95, { r: 0 });   // i bastoni in piedi, come le armi dal fabbro
+      P('rastrelliera', r.x1 - 4.2, r.y1 - 0.7, 0.95, { r: 0 });
+      P('candelabra', r.x0 + 5.4, r.y0 + 0.8, 1.05); P('candelabra', r.x0 + 5.4, r.y1 - 0.8, 1.05);
+      P('cratebox', r.x1 - 5.6, r.y1 - 1.0, 0.9);
+    }
+
     // ===================== L'ERBORISTERIA =====================
     // Bancone sulla porta (che qui e' a ponente), strumenti alle spalle, e le piantagioni in fila in fondo.
     {
@@ -1283,7 +1339,7 @@
         // Ogni mercante sta nella SUA stanza, girato verso il falo' della piazza.
         const mk = (s) => { const dx = s.x - VILLAGE.fire.x, dy = s.y - VILLAGE.fire.y;
           return { x: s.x * TILE + TILE / 2, y: s.y * TILE + TILE / 2,
-                   kind: s.kind, name: s.name, shop: s.shop || 0, pot: s.pot || 0, bnd: s.bnd || 0, crd: s.crd || 0, inn: s.inn || 0, sub: s.sub || '', col: s.col || '',
+                   kind: s.kind, name: s.name, shop: s.shop || 0, cat: s.cat || '', pot: s.pot || 0, bnd: s.bnd || 0, crd: s.crd || 0, inn: s.inn || 0, sub: s.sub || '', col: s.col || '',
                    soon: s.soon || 0, seated: s.seated || 0, face: Math.atan2(-dy, -dx) }; };
         const npcs = VILLAGE.stalls.map(mk);
         // v2.0 — LA GENTE. Gli avventori della taverna e i passanti stanno qui a mano; gli abitanti
@@ -1340,8 +1396,13 @@
         RT([[17.4, 25.5], [19.4, 25.5]], 0.55, 0.10, 'cammina', 0, 'bimbo'),
         RT([[40.6, 17], [42.6, 17]], 0.50, 0.66, 'cammina', 0, 'minatore'),
       ];
-        const sm = npcs.find(n => n.shop) || npcs[0];
-      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, npcs, extras, girovaghi, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
+        // v2.19 — LE BOTTEGHE SONO TRE. `smith` resta — e resta il fabbro — perche' mezzo mondo lo
+        // legge (il salvataggio, la telecamera d'arrivo, i test): toglierlo per fare eleganza avrebbe
+        // rotto cose che non c'entrano niente con due negozi nuovi. Accanto c'e' `botteghe`, che e' la
+        // lista vera: chi sa delle tre le usa, chi non lo sa continua a vedere il fabbro di prima.
+        const botteghe = npcs.filter(n => n.shop).map(n => ({ x: n.x, y: n.y, cat: n.cat || 'guerriero', kind: n.kind, name: n.name, face: n.face }));
+        const sm = botteghe[0] || { x: npcs[0].x, y: npcs[0].y, face: npcs[0].face };
+      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, botteghe, npcs, extras, girovaghi, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
     })();
 
     return {

@@ -22,6 +22,41 @@ dette. Se una riga è qui, è legge. Se non è qui, non è ancora stata decisa.
 > La regola vive in `Gear.impugna`, in un posto solo. Comprare dal fabbro **non equipaggia più**: il
 > pezzo entra nell'inventario e si impugna scegliendo la mano. E **i ranghi non esistono più**: il
 > titolo mostrato è il nome della classe.
+>
+> ## ✅ AGGIUNTO NELLA v2.19.0 — l'equipaggiamento misto
+> Le **sette tabelle del punto 3 sono in vigore**. Due case del villaggio sono diventate l'**archeria**
+> e la **bottega arcana**: le botteghe dell'equipaggiamento sono tre, una per tipologia, e chi compra
+> cosa lo decide la tabella della sua classe (`Gear.PERMESSI`). I **due assi** del punto 2 sono letti
+> così: la **tipologia** è il catalogo (mischia = `guerriero`, arco = `ladro`, magia = `mago`), il
+> **peso** è il `carattere` del pezzo. **Barbaro, assassino e warlock** comprano da due botteghe.
+> La **doppia arma** e lo **scudo** hanno preso la tipologia (`doppiaTipo`, `scudoTipo`): l'assassino
+> non fa più doppia con due archi, il mago solo con due verghe. Test: **4054 passati, 0 falliti**.
+>
+> **Due cose da sapere, perché cambiano il gioco e non erano nella richiesta:**
+> 1. il **barbaro non compra più armature medie o pesanti** dal fabbro — la sua riga dice *«armature:
+>    leggere, mischia/arco»*, e adesso è applicata. Se non è quello che volevi, si cambia una riga.
+> 2. l'**assassino perde il pesante** (armi e armature), per la stessa ragione: *«leggere/medie»*.
+>
+> **Il grado 1 non si filtra per peso** (i pezzi «scarsi» sono il fondo del listino, costano zero e
+> non esistono in versione leggera: filtrarli renderebbe illegale l'equipaggiamento di partenza).
+>
+> ## ⚠️ ANCORA APERTE
+> · Gli **elementi delle verghe** (fuoco/gelo/fulmine/veleno): le due abilità dell'elementalista che li
+>   leggono si comportano ancora tutte come fuoco.
+> · L'arma sostituisce il **colpo** ma non la **scuola**, che resta della classe: un warlock con la
+>   sciabola mena di sciabola ma scala con Carisma. È il resto del rifacimento peso × tipologia.
+> · Le **calzature** non compaiono in nessuna delle sette tabelle: per ora seguono l'armatura (stessi
+>   cataloghi, stessi pesi). **Assunzione mia, da confermare.**
+>
+> ## ✅ RISOLTO NELLA v2.19.1 — l'assassino
+> Parte con i **Pugnali Sbeccati** (grado 1, leggera, mischia, 77 danni/s), non più con l'Arco
+> Sfibrato: era l'unica delle sette classi in cui il **corpo** (`ladro`) e la **famiglia d'arma**
+> (mischia leggera) non coincidevano, e `startingGear` seguiva il corpo. Ora c'è un tipo di pezzo
+> `avvio`: appartiene a una classe sola, non sta su nessun banco e non entra nel listino.
+> La **doppia arma non è regalata** — la seconda lama si compra dal fabbro, ed è lì che si accende il
+> bonus di classe. Chiuso anche un buco aperto dalla v2.19.0: i pezzi di **grado 1 costano zero** e si
+> compravano gratis da un catalogo non tuo per rivenderli a 8 — adesso il grado scarso non è merce.
+> Test: **4102 passati, 0 falliti**.
 
 ---
 
