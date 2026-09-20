@@ -1133,11 +1133,14 @@
     // soglia: dentro darebbero fastidio a chi attraversa.
     {
       const r = R('portale');
-      P('candelabra', r.x0 + 1.4, r.y0 + 0.9, 1.05); P('candelabra', r.x1 - 1.4, r.y0 + 0.9, 1.05);
-      P('candelabra', r.x0 + 1.4, r.y1 - 0.9, 1.05); P('candelabra', r.x1 - 1.4, r.y1 - 0.9, 1.05);
+      // v2.19.2 — i due candelabri di levante e la rastrelliera stavano nella fascia della porta:
+      // entrando nella casa della faglia ci si sfiorava contro. I candelabri si stringono verso i
+      // due angoli, la rastrelliera passa alla parete di ponente insieme alle altre.
+      P('candelabra', r.x0 + 1.4, r.y0 + 0.9, 1.05); P('candelabra', r.x1 - 3.4, r.y0 + 0.9, 1.05);
+      P('candelabra', r.x0 + 1.4, r.y1 - 0.9, 1.05); P('candelabra', r.x1 - 3.4, r.y1 - 0.9, 1.05);
       P('flag', r.x0 + 0.8, r.y0 + 2.6, 1.2, { col: '#9a5cff' });
       P('flag', r.x0 + 0.8, r.y1 - 2.6, 1.2, { col: '#9a5cff' });
-      P('rastrelliera', r.x1 - 1.2, r.y0 + 2.8, 0.9, { r: 1 });
+      P('rastrelliera', r.x0 + 4.2, r.y0 + 0.7, 0.9, { r: 0 });
       P('cratebox', r.x1 - 1.4, r.y1 - 1.2, 0.9);
       P('signpost', 18.9, 7.0, 1, { txt: 'FAGLIA' });
     }
@@ -1151,7 +1154,10 @@
       P('bancone', r.x0 + 2.2, cy, 1, { r: 1 });
       P('hanging_lantern', r.x0 + 1.6, r.y0 + 0.7, 1.05); P('hanging_lantern', r.x1 - 1.6, r.y0 + 0.7, 1.05);
       for (const [x, y] of [[r.x0 + 0.8, r.y0 + 0.9], [r.x0 + 0.8, r.y1 - 0.9]]) P('barrel', x, y, 0.95);
-      for (const [tx, ty] of [[r.x0 + 5.6, r.y0 + 1.7], [r.x0 + 9.4, r.y0 + 1.7], [r.x0 + 5.6, r.y1 - 1.7], [r.x0 + 9.4, r.y1 - 1.7]]) {
+      // v2.19.2 — la colonna di tavoli di levante era a x0+9.4, cioe' dentro la fascia della porta:
+      // il primo tavolo lo prendevi in pieno entrando. Arretrata a x0+8.6, e i quattro tavoli restano
+      // due per lato come prima.
+      for (const [tx, ty] of [[r.x0 + 5.0, r.y0 + 1.7], [r.x0 + 8.6, r.y0 + 1.7], [r.x0 + 5.0, r.y1 - 1.7], [r.x0 + 8.6, r.y1 - 1.7]]) {
         P('tavolo', tx, ty, 1); P('panca', tx - 1.3, ty, 0.95); P('panca', tx + 1.3, ty, 0.95);
       }
       // v2.6 — qui c'era un braciere nell'angolo, e fra lui e il tavolo restava una tasca larga otto
@@ -1184,14 +1190,18 @@
       P('bancone', r.x0 + 2.2, cy, 1, { r: 1 });
       // le rastrelliere degli archi lungo la parete dietro al banco
       P('rastrelliera', r.x0 + 0.7, r.y0 + 0.9, 1, { r: 1 }); P('rastrelliera', r.x0 + 0.7, r.y1 - 0.9, 1, { r: 1 });
-      // i tre bersagli in fondo, dalla parte opposta alla porta
-      P('bersaglio', r.x1 - 1.2, r.y0 + 0.9, 1.05); P('bersaglio', r.x1 - 1.2, cy, 1.15); P('bersaglio', r.x1 - 1.2, r.y1 - 0.9, 1.05);
-      // le faretre e il cuoio da conciare
-      P('cratebox', r.x0 + 5.4, r.y0 + 0.8, 0.9); P('cratebox', r.x0 + 6.4, r.y0 + 0.8, 0.9);
-      P('sack', r.x0 + 5.4, r.y1 - 0.8, 0.9); P('barrel', r.x0 + 6.6, r.y1 - 0.8, 0.95);
+      // v2.19.2 — I BERSAGLI STAVANO DAVANTI ALLA PORTA, e uno in mezzo alla soglia. Adesso stanno in
+      // FILA CONTRO LA PARETE DI SETTENTRIONE, che per un'archeria e' anche piu' giusto: sono un
+      // tiro a segno visto di lato, non tre sagome piantate sull'uscio. Entrando li vedi tutti e tre
+      // di fianco, e la soglia resta sgombra (vedi PORTA_SGOMBRA in fondo al file).
+      P('bersaglio', r.x0 + 5.6, r.y0 + 0.8, 1.05); P('bersaglio', r.x0 + 7.2, r.y0 + 0.8, 1.15); P('bersaglio', r.x0 + 8.8, r.y0 + 0.8, 1.05);
+      // le faretre e il cuoio da conciare, lungo la parete di mezzogiorno
+      P('cratebox', r.x0 + 5.6, r.y1 - 0.8, 0.9); P('sack', r.x0 + 6.8, r.y1 - 0.8, 0.9);
+      P('barrel', r.x0 + 0.8, cy + 1.6, 0.95);
       P('candelabra', r.x0 + 4.0, r.y0 + 0.7, 1); P('candelabra', r.x0 + 4.0, r.y1 - 0.7, 1);
-      P('flag', r.x1 - 3.6, r.y0 + 0.8, 1.2, { col: '#8fd96a' });
-      P('flag', r.x1 - 3.6, r.y1 - 0.8, 1.2, { col: '#8fd96a' });
+      // gli stendardi restano accanto alla porta: si attraversano, quindi non ingombrano niente
+      P('flag', r.x1 - 0.7, r.y0 + 0.8, 1.2, { col: '#8fd96a' });
+      P('flag', r.x1 - 0.7, r.y1 - 0.8, 1.2, { col: '#8fd96a' });
     }
 
     // ===================== LA BOTTEGA ARCANA (v2.19) =====================
@@ -1204,13 +1214,16 @@
       P('bancone', r.x1 - 2.2, cy, 1, { r: 1 });
       P('scaffale', r.x1 - 0.7, r.y0 + 0.9, 1, { r: 1, col: '#a98cff' });
       P('scaffale', r.x1 - 0.7, r.y1 - 0.9, 1, { r: 1, col: '#a98cff' });
-      P('tappeto', r.x0 + 3.4, cy, 1.35, { col: '#3a3368' });
-      P('crystal_cluster', r.x0 + 1.2, r.y0 + 0.9, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
-      P('crystal_cluster', r.x0 + 1.2, r.y1 - 0.9, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
-      P('crystal_cluster', r.x0 + 1.2, cy, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
+      // v2.19.2 — I CRISTALLI STAVANO DAVANTI ALLA PORTA, e il piu' grosso proprio sulla soglia.
+      // Adesso sono un CERCHIO attorno al tappeto runico, in mezzo alla stanza: e' il posto che
+      // spiega cosa sono — un circolo d'incantesimo, non tre sassi sull'uscio — e l'ingresso e' libero.
+      P('tappeto', r.x0 + 4.4, cy, 1.35, { col: '#3a3368' });
+      P('crystal_cluster', r.x0 + 4.4, r.y0 + 0.8, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('crystal_cluster', r.x0 + 4.4, r.y1 - 0.8, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('crystal_cluster', r.x0 + 6.6, cy, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
       P('rastrelliera', r.x1 - 4.2, r.y0 + 0.7, 0.95, { r: 0 });   // i bastoni in piedi, come le armi dal fabbro
       P('rastrelliera', r.x1 - 4.2, r.y1 - 0.7, 0.95, { r: 0 });
-      P('candelabra', r.x0 + 5.4, r.y0 + 0.8, 1.05); P('candelabra', r.x0 + 5.4, r.y1 - 0.8, 1.05);
+      P('candelabra', r.x0 + 7.4, r.y0 + 0.8, 1.05); P('candelabra', r.x0 + 7.4, r.y1 - 0.8, 1.05);
       P('cratebox', r.x1 - 5.6, r.y1 - 1.0, 0.9);
     }
 
@@ -1222,9 +1235,15 @@
       P('scaffale', r.x1 - 0.7, r.y0 + 1.4, 1, { r: 1 }); P('scaffale', r.x1 - 0.7, r.y1 - 1.4, 1, { r: 1 });
       P('alambicco', r.x1 - 4.0, r.y0 + 1.0, 1.05, { col: '#9fe06a' });
       P('mortaio', r.x1 - 4.0, r.y1 - 1.0, 1.1, { col: '#9fe06a' });
-      for (const [x, y] of [[r.x0 + 1.6, r.y0 + 1.4], [r.x0 + 1.6, cy], [r.x0 + 1.6, r.y1 - 1.4]])
+      // v2.19.2 — LE AIUOLE STAVANO SULL'USCIO. Il commento qui sopra dice «in fondo», ma con la porta
+      // a PONENTE il fondo e' `x1`, non `x0`: erano tre casse lunghe in colonna proprio davanti a chi
+      // entrava, e fra l'una e l'altra restavano 0,75 tessere — ci si infilava di sbieco. (Passabile,
+      // misurato: non era una stanza chiusa. Era stretta, ed e' quello che Paolo ha visto.)
+      // Adesso sono una FILA lungo la parete di mezzogiorno, in mezzo alla stanza: si leggono come
+      // piantagioni — che e' cio' che sono — e la soglia resta libera.
+      for (const [x, y] of [[r.x0 + 3.4, r.y1 - 0.9], [r.x0 + 5.6, r.y1 - 0.9], [r.x0 + 7.8, r.y1 - 0.9]])
         P('aiuola', x, y, 1, { col: '#9fe06a', glow: 1 });
-      P('barrel', r.x0 + 4.6, r.y0 + 0.8, 0.95); P('sack', r.x0 + 4.6, r.y1 - 0.8, 0.9);
+      P('barrel', r.x0 + 4.4, r.y0 + 0.8, 0.95); P('sack', r.x0 + 6.0, r.y0 + 0.8, 0.9);
     }
 
     // ===================== L'ANTRO DELL’ORACOLO =====================
@@ -1282,8 +1301,22 @@
       const M = (t, x, y, s, e) => { if (sgombro(x, y) && dentroStanza(x, y)) P(t, x, y, s, e); };
       const bassa = (r.y1 - r.y0) < 5 || (r.x1 - r.x0) < 6;   // le case piccole si arredano con meno roba
 
-      // il FOCOLARE: sta in mezzo, e' il motivo per cui la stanza e' una casa
-      P('focolare', cx, cy, 1.15);
+      // il FOCOLARE: sta in mezzo, e' il motivo per cui la stanza e' una casa.
+      // v2.19.2 — MA NON SULL'USCIO. Era l'unico mobile piazzato con `P` invece che con `M`, cioe'
+      // l'unico che saltava il controllo della soglia scritto due righe piu' sopra — e nella casa di
+      // settentrione, che e' bassa quattro tessere, «in mezzo» cadeva dentro la fascia della porta.
+      // Se il centro non e' libero, il focolare si sposta LUNGO LA PARETE, dalla parte opposta alla
+      // porta: resta il fuoco di mezzo della stanza, senza stare davanti a chi entra.
+      { let fx = cx, fy = cy;
+        if (!sgombro(fx, fy)) {
+          if (oriz) fx = lato === 'e' ? r.x0 + 1.8 : r.x1 - 1.8;
+          else fy = lato === 'n' ? r.y1 - 1.2 : r.y0 + 1.2;
+        }
+        // e se nemmeno cosi' ci sta (stanza minuscola), si scosta di lato invece che in profondita'
+        if (!sgombro(fx, fy)) { if (oriz) fy = cy + (cy - py > 0 ? 1.6 : -1.6); else fx = cx + (cx - px > 0 ? 1.8 : -1.8); }
+        P('focolare', fx, fy, 1.15);
+        abitanti._fuoco = { x: fx, y: fy };
+      }
       // SETTE CASE UGUALI SAREBBERO SETTE VOLTE LA STESSA CASA. La variazione non e' casuale: e' l'indice
       // della casa a decidere, cosi' la pianta resta la stessa a ogni partita (nel villaggio il seme non
       // cambia niente) ma da una porta all'altra si vede gente diversa che vive diversamente.
@@ -1322,7 +1355,10 @@
       // villaggio e' sempre lo stesso e ogni porta ha i suoi abitanti.
       const ALFUOCO = ['vecchio', 'paesana', 'paesano', 'monaco', 'vecchio', 'paesana', 'paesano'];
       const ALLAVORO = ['bottegaio', 'paesano', 'paesana', 'bimbo', 'minatore', 'bottegaio', 'paesana'];
-      abitanti.push({ x: cx + spec * 1.5, y: cy + 0.15, kind: ALFUOCO[k % ALFUOCO.length], face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
+      // v2.19.2 — chi si scalda sta accanto al FUOCO, non al centro geometrico: da quando il focolare
+      // puo' scostarsi dalla soglia, i due punti non coincidono piu' sempre.
+      const F = abitanti._fuoco || { x: cx, y: cy };
+      abitanti.push({ x: F.x + spec * 1.5, y: F.y + 0.15, kind: ALFUOCO[k % ALFUOCO.length], face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
       if ((r.x1 - r.x0) >= 7) abitanti.push({ x: cx - spec * 1.5, y: cy + (k % 2 ? 0.9 : -0.9), kind: ALLAVORO[k % ALLAVORO.length], face: spec > 0 ? 0 : Math.PI, act: k % 3 === 0 ? 'martella' : 'rimesta' });
     };
     { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
@@ -1334,6 +1370,42 @@
     for (const [x, y] of [[18.4, 12.4], [41.4, 12.4], [18.4, 31.4], [41.4, 31.4]]) P('web', x, y, 0.9);
     // --- e qualche masso allo sbocco delle vie, perche' il paese e' scavato, non costruito ---
     for (const [x, y] of [[18.2, 24.5], [41.6, 18.5], [21.0, 11.6], [38.4, 32.4]]) P('rock', x, y, 0.55);
+
+    // ============================================================================================
+    // v2.19.2 — LA SOGLIA E' SACRA: nessun mobile davanti a una porta
+    // ============================================================================================
+    // Paolo: *«perche' metti oggetti all'ingresso delle case e/o negozi? toglili, rendono ingombrante
+    // l'entrata»*. Aveva ragione, e non era un caso isolato: cinque stanze su tredici avevano roba
+    // solida nella fascia della porta — le due botteghe nuove con tre mobili ciascuna (uno proprio in
+    // mezzo alla soglia), piu' la casa della faglia, la taverna e la casa di settentrione.
+    //
+    // La regola c'era gia', ma valeva solo per le case (`sgombro` dentro `arredaCasa`): le botteghe
+    // erano arredate a mano, una per una, e nessuno controllava. Adesso il controllo e' UNO e vale per
+    // TUTTE le stanze, ed e' qui — dopo che i mobili sono stati messi — perche' e' l'unico punto in
+    // cui si vede il villaggio finito.
+    //
+    // E SPACCA, non corregge. Un filtro silenzioso toglierebbe un mobile senza dirlo, e chi ha
+    // arredato la stanza crederebbe di averlo messo. Il villaggio e' uguale a ogni partita: o questo
+    // errore c'e' sempre, o non c'e' mai — quindi se c'e' deve fermare tutto al primo avvio e alla
+    // prima riga di test, non nascondersi in una partita su cento.
+    //
+    // La fascia e' quella delle case: 1,5 tessere per lato della linea della porta, 2,6 di profondita'.
+    // I mobili ATTRAVERSABILI (stendardi, tappeti, teschi, lanterne appese) non contano: non ingombrano.
+    {
+      const guasti = [];
+      for (const r of VILLAGE.rooms) {
+        const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+        for (const pr of props) {
+          if (!INGOMBRI[pr.type]) continue;                 // si attraversa: non ingombra la soglia
+          const x = pr.x / TILE - 0.5, y = pr.y / TILE - 0.5;
+          if (x < r.x0 - 1 || x > r.x1 + 1 || y < r.y0 - 1 || y > r.y1 + 1) continue;   // non e' di questa stanza
+          const dentro = oriz ? (Math.abs(y - py) <= 1.5 && Math.abs(x - px) <= 2.6)
+                              : (Math.abs(x - px) <= 1.5 && Math.abs(y - py) <= 2.6);
+          if (dentro) guasti.push(r.id + ': ' + pr.type + ' a ' + x.toFixed(1) + ',' + y.toFixed(1));
+        }
+      }
+      if (guasti.length) throw new Error('mapgen: mobili davanti a una porta — ' + guasti.join(' · '));
+    }
 
     const village = (() => {
         // Ogni mercante sta nella SUA stanza, girato verso il falo' della piazza.
@@ -1488,5 +1560,7 @@
     };
   }
 
-  return { generate, generateMarket, generatePrologo, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME, PROLOGO, piantaCaverna, tessereStrozzatura };
+  // v2.19.2 — INGOMBRI esce allo scoperto: il test delle soglie deve poter distinguere un mobile
+  // solido da uno che si attraversa, ed e questa tabella a saperlo.
+  return { generate, generateMarket, generatePrologo, idx, W, H, THEMES, VILLAGE, VILLAGE_THEME, PROLOGO, INGOMBRI, piantaCaverna, tessereStrozzatura };
 });

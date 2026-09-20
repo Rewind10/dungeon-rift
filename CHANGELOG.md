@@ -2,6 +2,63 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.2] — 2026-09-20 · "Le soglie sgombre"
+
+Paolo: *«perché metti oggetti all'ingresso delle case e/o negozi? toglili, rendono ingombrante
+l'entrata, specie da arciere e mago»*.
+
+**Aveva ragione, e non solo sulle due nuove.** Misurato: **cinque stanze su tredici** avevano mobili
+solidi nella fascia della porta.
+
+| Stanza | Cosa c'era sull'uscio | Dove è finito |
+|---|---|---|
+| **Archeria** | **tre bersagli**, uno in mezzo alla soglia | in fila contro la parete di settentrione — un tiro a segno visto di lato |
+| **Bottega Arcana** | **tre cristalli**, il più grosso sulla soglia | in cerchio attorno al tappeto runico, in mezzo alla stanza |
+| Casa del portale | un candelabro e la rastrelliera | candelabri stretti negli angoli, rastrelliera a ponente |
+| Taverna | la colonna di tavoli di levante | arretrata di ottanta centimetri |
+| Casa di settentrione | il focolare | scostato lungo la parete, dalla parte opposta alla porta |
+
+**Il difetto era strutturale, non di posizionamento.** La regola della soglia esisteva già — è
+`sgombro()` dentro `arredaCasa`, 1,5 tessere per lato e 2,6 di profondità — ma **valeva solo per le
+case**. Le botteghe erano arredate a mano, una per una, e nessuno controllava. Le mie due botteghe
+nuove sono nate dentro quel vuoto.
+
+Adesso il controllo è **uno e vale per tutte le stanze**, sta nel generatore dopo che i mobili sono
+stati messi, ed è l'unico punto in cui si vede il villaggio finito. **E spacca, non corregge**: un
+filtro silenzioso toglierebbe un mobile senza dirlo, e chi ha arredato la stanza crederebbe di averlo
+messo. Il villaggio è identico a ogni partita, quindi o l'errore c'è sempre o non c'è mai: se c'è deve
+fermare tutto al primo avvio, non nascondersi in una partita su cento. *(Verificato che spacchi
+davvero, rimettendoci un bancone sulla soglia apposta.)*
+
+**Il focolare era l'unico mobile che saltava il controllo delle case**, perché veniva piazzato con `P`
+invece che con `M`. Ora, se il centro non è libero, si scosta lungo la parete dalla parte opposta alla
+porta — e **chi si scalda lo segue**, perché da adesso «il centro della stanza» e «il fuoco» non
+coincidono più sempre.
+
+**E una che avevo quasi sbagliato a segnalare.** Il primo metro — campionare i centri delle tessere —
+diceva l'erboristeria **bloccata**. Non lo era: le tre aiuole lasciavano fra loro varchi da cui si
+passa, e il campionamento grossolano semplicemente non ci cadeva dentro. Un flood fill a passo fine,
+col corpo del giocatore vero contro gli ingombri veri, dice che **tutte e tredici le stanze si entrano
+e tutti i banchi si raggiungono** — da sempre. L'erboristeria però era davvero **stretta** (0,75
+tessere: ci si infilava di sbieco), ed era quello che si vedeva: le aiuole erano in colonna proprio sul
+davanti. Il commento diceva *«le piantagioni in fila in fondo»*, ma con la porta a ponente il fondo è
+l'altro lato. Ora sono una fila lungo la parete di mezzogiorno.
+
+**Il passaggio più stretto del villaggio, prima e dopo:**
+
+| | Prima | Dopo |
+|---|---|---|
+| Erboristeria | 0,75 tessere ⚠ | 2,06 |
+| Archeria | *bloccata sulla linea* | **2,06** |
+| Bottega Arcana | *bloccata sulla linea* | **2,06** |
+| Peggiore di tutte | 0,75 | **1,17** (casa di settentrione) |
+
+**Test** — 4230 passati, 0 falliti. Nuovo `[TEST 73]`, e misura in **due modi diversi apposta**: la
+*regola* (la fascia, su tutte le stanze) e il *fatto* (flood fill a passo 8px col corpo vero, dalla
+strada fino al banco di ogni mercante), più una terza prova sulla **larghezza** — almeno una tessera
+libera, perché una soglia da cui ci si infila di sbieco è esattamente ciò che è stato segnalato. Una
+regola rispettata non dimostra ancora che si passi: il fatto si misura, non si deduce.
+
 ### [2.19.1] — 2026-09-20 · "I pugnali dell'assassino"
 
 Paolo: *«l'assassino parte con 2 spade ma lo sparo è la freccia»*. Un fix per volta, e questo è il primo.

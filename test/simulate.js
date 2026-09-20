@@ -6192,6 +6192,103 @@ function testV219() {
   ok('le tre botteghe e l equipaggiamento misto verificati');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// v2.19.2 — LE SOGLIE: davanti a una porta non ci sta niente
+// ============================================================================================
+// Paolo: *«perche' metti oggetti all'ingresso delle case e/o negozi? toglili, rendono ingombrante
+// l'entrata, specie da arciere e mago»*. Aveva ragione su cinque stanze su tredici — le due botteghe
+// nuove erano le peggiori, con tre mobili ciascuna e uno proprio in mezzo alla soglia.
+//
+// Il difetto era STRUTTURALE, non di posizionamento: la regola della soglia esisteva solo dentro
+// `arredaCasa`, e le botteghe erano arredate a mano una per una senza che nessuno controllasse.
+// Questo test misura in DUE modi diversi, e i due servono a cose diverse:
+//   1. LA REGOLA — la fascia 1,5 x 2,6 delle case, applicata a tutte le stanze. E' una regola di
+//      forma: dice «qui non si mette niente», ed e' quella che il generatore fa rispettare.
+//   2. IL FATTO — un flood fill a passo fine, col corpo del giocatore vero contro gli ingombri veri,
+//      dalla strada fino al banco. Perche' una regola rispettata non dimostra ancora che si passi:
+//      misurando a occhio con i centri delle tessere avevo creduto bloccata l'erboristeria, che
+//      invece era solo stretta. Il fatto si misura, non si deduce.
+function testSoglie() {
+  console.log('\n[TEST 73] v2.19.2 — davanti a ogni porta non ci sta niente, e si entra davvero');
+  const T = C.TILE, V = MapGen.VILLAGE, m = MapGen.generateMarket(7), RG = C.PLAYER_RADIUS;
+  const solidi = m.solids.filter(s => !s.chi);
+
+  // --- 1) LA REGOLA: nessun mobile solido nella fascia della porta ---
+  // (il generatore spacca da solo se qualcuno ne rimette uno: qui si controlla che spacchi davvero,
+  //  se no sarebbe una rete senza buchi e senza filo)
+  for (const r of V.rooms) {
+    const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+    for (const pr of m.props) {
+      if (!MapGen.INGOMBRI[pr.type]) continue;
+      const x = pr.x / T - 0.5, y = pr.y / T - 0.5;
+      if (x < r.x0 - 1 || x > r.x1 + 1 || y < r.y0 - 1 || y > r.y1 + 1) continue;
+      const dentro = oriz ? (Math.abs(y - py) <= 1.5 && Math.abs(x - px) <= 2.6)
+                          : (Math.abs(x - px) <= 1.5 && Math.abs(y - py) <= 2.6);
+      assert(!dentro, r.id + ': niente davanti alla porta (c e un ' + pr.type + ' a ' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+    }
+  }
+
+  // --- 2) IL FATTO: dalla strada si entra, e si arriva al banco ---
+  const muro = (tx, ty) => tx < 0 || ty < 0 || tx >= m.w || ty >= m.h || m.grid[ty * m.w + tx] === C.T_WALL;
+  const libero = (x, y) => {
+    if (muro(Math.floor(x / T), Math.floor(y / T))) return false;
+    for (const s of solidi) {
+      if (s.t === 'c') { if (Math.hypot(s.x - x, s.y - y) < s.r + RG) return false; }
+      else if (Math.abs(s.x - x) < s.hw + RG && Math.abs(s.y - y) < s.hh + RG) return false;
+    }
+    return true;
+  };
+  const PASSO = 8;
+  const arriva = (da, ax, ay) => {
+    const visti = new Set([da[0] + ',' + da[1]]), coda = [da];
+    while (coda.length) {
+      const [x, y] = coda.shift();
+      if (Math.hypot(x - ax, y - ay) < T * 0.9) return true;
+      for (const d of [[PASSO, 0], [-PASSO, 0], [0, PASSO], [0, -PASSO]]) {
+        const nx = x + d[0], ny = y + d[1], k = nx + ',' + ny;
+        if (visti.has(k)) continue; visti.add(k);
+        if (nx < 0 || ny < 0 || nx > m.w * T || ny > m.h * T) continue;
+        if (!libero(nx, ny)) continue;
+        coda.push([nx, ny]);
+      }
+      if (visti.size > 90000) break;
+    }
+    return false;
+  };
+  for (const r of V.rooms) {
+    const [px, py, lato] = r.porta;
+    const dx = lato === 'e' ? 1 : lato === 'o' ? -1 : 0, dy = lato === 'n' ? -1 : lato === 's' ? 1 : 0;
+    const fuori = [(px + dx) * T + T / 2, (py + dy) * T + T / 2];
+    const centro = [((r.x0 + r.x1) / 2) * T + T / 2, ((r.y0 + r.y1) / 2) * T + T / 2];
+    assert(arriva(fuori, centro[0], centro[1]), r.id + ': dalla strada si entra fino in mezzo alla stanza');
+    const st = (m.village.npcs || []).find(n => {
+      const tx = n.x / T - 0.5, ty = n.y / T - 0.5;
+      return tx >= r.x0 - 1 && tx <= r.x1 + 1 && ty >= r.y0 - 1 && ty <= r.y1 + 1;
+    });
+    if (st) assert(arriva(fuori, st.x, st.y), r.id + ': e si arriva fino al banco del mercante');
+  }
+
+  // --- 3) E IL PASSAGGIO E' LARGO, non solo esistente ---
+  // Una soglia che c'e' ma da cui ci si infila di sbieco e' esattamente cio' che Paolo ha segnalato.
+  // Il minimo e' UNA TESSERA libera nelle prime tre: sotto, e' una strettoia.
+  for (const r of V.rooms) {
+    const [px, py, lato] = r.porta;
+    const dx = lato === 'e' ? -1 : lato === 'o' ? 1 : 0, dy = lato === 'n' ? 1 : lato === 's' ? -1 : 0;
+    let minW = Infinity;
+    for (let d = 1; d <= 3; d++) {
+      const cx = (px + dx * d) * T + T / 2, cy = (py + dy * d) * T + T / 2;
+      let best = 0, run = 0;
+      for (let o = -3 * T; o <= 3 * T; o += 4) {
+        const x = dx ? cx : cx + o, y = dx ? cy + o : cy;
+        if (libero(x, y)) { run += 4; best = Math.max(best, run); } else run = 0;
+      }
+      minW = Math.min(minW, best);
+    }
+    assert(minW >= T, r.id + ': il passaggio e largo almeno una tessera (' + (minW / T).toFixed(2) + ')');
+  }
+  ok('le soglie sono sgombre, e si entra in tutte e tredici le stanze');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

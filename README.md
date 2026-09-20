@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.2 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,20 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.2 (soglie sgombre)
+
+**Davanti a una porta non ci sta niente.** Cinque stanze su tredici avevano mobili sull'uscio — le due
+botteghe nuove erano le peggiori, con tre mobili ciascuna e uno in mezzo alla soglia. I bersagli
+dell'archeria sono passati in fila contro la parete, i cristalli della bottega arcana in cerchio
+attorno al tappeto runico, e le aiuole dell'erboristeria (che lasciavano 0,75 tessere di passaggio)
+lungo la parete di mezzogiorno.
+
+La regola della soglia esisteva già ma valeva **solo per le case**: le botteghe erano arredate a mano
+e nessuno controllava. Ora il controllo è uno, vale per tutte le stanze, ed è nel generatore — che si
+**ferma** se qualcuno rimette un mobile davanti a una porta, invece di toglierlo in silenzio.
+
+---
 
 ## 🆕 Novità v2.19.1 (l'assassino mena di pugnale)
 
