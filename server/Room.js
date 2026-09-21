@@ -1681,7 +1681,18 @@ class Room {
       // v2.18.1 — le caselle possono essere VUOTE per progetto (il guerriero non ha calzature, il mago
       // non ha scudo, e la mano sinistra di chi non fa doppia arma resta libera): `base[sl]` e' null e
       // riempire con null scriverebbe `p.owned[null] = 1`, cioe' un oggetto inesistente nell'inventario.
-      for (const sl in base) if (base[sl] && !p.gear[sl]) { p.gear[sl] = base[sl]; p.owned[base[sl]] = 1; }
+      // v2.19.5 — MA NON LE MANI. Una casella vuota di armatura o calzature, in un salvataggio, vuol dire
+      // «questo campo non c'era ancora quando si e' salvato» e va riempita. Una MANO vuota invece puo'
+      // essere vuota apposta: l'arma a due mani tiene libera la sinistra, e riempirla con lo scudo di
+      // partenza — com'era — ricreava alla ripresa uno Spadone CON lo scudo, cioe' esattamente la
+      // combinazione che `Gear.impugna` vieta. Le mani si riempiono solo se sono vuote TUTTE E DUE
+      // (salvataggio vecchio, di prima delle mani), e allora con l'equipaggiamento di partenza intero.
+      const maniVuote = !p.gear.manoDx && !p.gear.manoSx;
+      for (const sl in base) {
+        if (!base[sl] || p.gear[sl]) continue;
+        if ((sl === 'manoDx' || sl === 'manoSx') && !maniVuote) continue;
+        p.gear[sl] = base[sl]; p.owned[base[sl]] = 1;
+      }
     }
     this._recomputeGear(p); this._recomputeBoons(p);
     p.hp = this.effMaxHp(p); p.hpDebt = 0;          // si riprende in forma: la sosta e' servita a quello
@@ -3770,7 +3781,11 @@ class Room {
       if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; }
       // v1.88 — TUTTO l'equipaggiamento viaggia, non solo arma e scudo: adesso ogni pezzo cambia
       // qualcosa nel disegno del personaggio, quindi il client deve sapere cosa hai addosso.
-      { const a = Gear.armaPrincipale(p.gear), sc = Gear.scudoDi(p.gear); o.wp = a ? a.id : null; o.sh = sc ? sc.id : null; }
+      { const a = Gear.armaPrincipale(p.gear), sc = Gear.scudoDi(p.gear); o.wp = a ? a.id : null; o.sh = sc ? sc.id : null;
+        // v2.19.5 — e la SECONDA ARMA, se ce n'e' una. Il disegno adesso segue cio' che si impugna
+        // davvero (non piu' la classe): senza questo campo un barbaro con due asce, o un maestro d'armi
+        // con due lame, si vedrebbe con una sola. Si manda solo quando c'e', per non gonfiare lo snapshot.
+        const a2 = Gear.armaSecondaria(p.gear); if (a2) o.wx = a2.id; }
       o.arm = (p.gear && p.gear.armor) || null; o.stv = (p.gear && p.gear.boots) || null;   // null esplicito: lo slot che la classe non ha
       if (p.dead) o.d = 1;
       if (p.down) { o.dn = 1; o.dt = +Math.max(0, p.downT).toFixed(1); }

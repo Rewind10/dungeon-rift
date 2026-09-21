@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.4 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.5 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.5 (si disegna quello che impugni)
+
+**Corretto il blocco del paladino**: impugnare un'arma a due mani (togliendo lo scudo) congelava la
+partita sull'immagine del villaggio. Era un nome condiviso nel codice di disegno fra «si disegna con lo
+scudo» e «il colore dello scudo». Corretto anche lo scudo che ricompariva da solo riprendendo una
+partita salvata con un'arma a due mani.
+
+**Barbaro, paladino e maestro d'armi disegnano ciò che hanno in mano**, non più un'arma fissa di
+classe: una lama generica per ogni arma impugnata — corta, media o lunga secondo il peso, tenuta
+davanti al corpo se è a due mani — e lo scudo solo se c'è, per chiunque lo porti.
+
+---
 
 ## 🆕 Novità v2.19.4 (l'ascia del barbaro)
 

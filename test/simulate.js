@@ -6289,6 +6289,71 @@ function testSoglie() {
   ok('le soglie sono sgombre, e si entra in tutte e tredici le stanze');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// v2.19.5 — L'ARMA A DUE MANI E LO SCUDO: due bug nella stessa combinazione
+// ============================================================================================
+// Paolo: *«se al paladino equipaggio un'arma a due mani (e rimuove lo scudo) non carica l'ondata
+// successiva, ma mostra un'immagine freezata del villaggio»*. Il blocco era nel DISEGNO (il client),
+// e lo proteggono i controlli sul renderer; qui si proteggono le due cose del SERVER trovate cercandolo.
+function testDueMani() {
+  console.log('\n[TEST 74] v2.19.5 — arma a due mani senza scudo: si salva, si riprende, si prosegue');
+  const Gear = require('../shared/gear.js'), Salva = require('../shared/salvataggio.js'), Her = require('../shared/heroes.js');
+
+  // --- 1) LA RIPRESA NON RIDA' LO SCUDO A CHI IMPUGNA UNA DUE MANI ---
+  // Il riempimento dei salvataggi vecchi riempiva OGNI casella vuota con l'equipaggiamento di partenza —
+  // comprese le mani. Ma la sinistra di chi tiene lo Spadone e' vuota APPOSTA: riempirla ricreava
+  // Spadone + scudo, la combinazione che `Gear.impugna` vieta.
+  const r = new Room('v2195'); const p = r.addPlayer('a', { send() {} }, 'A', 'paladino'); r.startGame();
+  r.wave = 3; r.phase = C.PHASE_SHOP; r.vaiAlVillaggio('a'); p.coins = 99999;
+  alBanco(r, p, 'guerriero');
+  const spadone = Gear.itemsBottega('paladino', 'guerriero', 'weapon').find(i => i.rank === 2 && i.carattere === 'pesante');
+  r.buyGear('a', spadone.id); r.equipaggia('a', spadone.id, 'manoDx');
+  assert(p.gear.manoDx === spadone.id && !p.gear.manoSx, 'lo Spadone a due mani libera la sinistra (lo scudo va via)');
+  const dati = Salva.costruisci(r, p);
+  const r2 = new Room('v2195b'); r2.addPlayer('a', { send() {} }, 'A', 'paladino'); r2.riprendi('a', dati);
+  const q = r2.players.get('a');
+  assert(q.gear.manoDx === spadone.id, 'ripresa: lo Spadone e ancora in mano');
+  assert(!q.gear.manoSx, 'ripresa: e la sinistra resta LIBERA, niente scudo rimesso di nascosto');
+  // e un salvataggio VECCHIO, di prima delle mani, deve ancora riceverle
+  const vecchio = JSON.parse(JSON.stringify(dati)); vecchio.gear = { armor: dati.gear.armor };
+  const r3 = new Room('v2195c'); r3.addPlayer('a', { send() {} }, 'A', 'paladino'); r3.riprendi('a', vecchio);
+  const v = r3.players.get('a');
+  assert(!!v.gear.manoDx && !!v.gear.manoSx, 'un salvataggio senza mani riceve arma e scudo di partenza');
+
+  // --- 2) E SI PROSEGUE: la partita arriva all'ondata successiva ---
+  p.x = r.map.exit.x * C.TILE + C.TILE / 2; p.y = r.map.exit.y * C.TILE + C.TILE / 2; r._checkMarketExit();
+  r.shopReady('a');
+  const dt = 1 / C.TICK_RATE; for (let i = 0; i < C.TICK_RATE * 4; i++) r.update(dt);
+  assert(r.phase === C.PHASE_COMBAT && r.wave === 4, 'con lo Spadone in mano si arriva all ondata 4 (fase ' + r.phase + ', ondata ' + r.wave + ')');
+
+  // --- 3) LO SNAPSHOT DICE COSA C'E' IN OGNI MANO ---
+  // Il disegno del guerriero segue l'equipaggiamento: gli servono arma principale, seconda arma, scudo.
+  const io = (r.snapshot().players || []).find(x => x.i === 'a');
+  assert(!!io, 'lo snapshot contiene il giocatore');
+  assert(io && io.wp === spadone.id && !io.sh && !io.wx, 'lo snapshot porta lo Spadone, nessuno scudo, nessuna seconda arma');
+  // un barbaro con due armi manda anche la seconda
+  const rb = new Room('v2195d'); const pb = rb.addPlayer('b', { send() {} }, 'B', 'barbaro'); rb.startGame();
+  rb.wave = 3; rb.phase = C.PHASE_SHOP; rb.vaiAlVillaggio('b'); pb.coins = 99999; alBanco(rb, pb, 'guerriero');
+  const due = Gear.itemsBottega('barbaro', 'guerriero', 'weapon').filter(i => i.carattere === 'pesante').slice(0, 2);
+  for (const it of due) rb.buyGear('b', it.id);
+  rb.equipaggia('b', due[0].id, 'manoDx'); rb.equipaggia('b', due[1].id, 'manoSx');
+  const ib = (rb.snapshot().players || []).find(x => x.i === 'b');
+  assert(!!(ib && ib.wp && ib.wx && ib.wp !== ib.wx), 'il barbaro con due pesanti manda tutte e due le armi');
+
+  // --- 4) NESSUNA IMPOSTAZIONE DI STILE HA IL NOME DI UN COLORE ---
+  // E' questa, la causa del blocco: `scudo: 1` nello stile del paladino voleva dire «si disegna con lo
+  // scudo», e `scudo` e' anche il colore che la tinta dello scudo ci scrive sopra. Senza scudo in mano,
+  // al posto del colore restava 1. Il controllo e' sui NOMI, cosi' vale anche per quelli che nasceranno.
+  const tinte = new Set(); for (const it of Gear.ITEMS) for (const k in (it.tinta || {})) tinte.add(k);
+  const src = require('fs').readFileSync(require('path').join(__dirname, '../public/js/renderer.js'), 'utf8');
+  const blocco = src.slice(src.indexOf('const STILE = {'), src.indexOf('};', src.indexOf('const STILE = {')));
+  for (const k of tinte) {
+    const re = new RegExp('\\b' + k + ':\\s*[0-9]');
+    assert(!re.test(blocco), 'nello STILE la chiave «' + k + '» non e un numero: e il nome di un colore di tinta');
+  }
+  ok('arma a due mani: si salva, si riprende senza scudo fantasma, e si arriva all ondata dopo');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

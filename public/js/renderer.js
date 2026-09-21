@@ -16,7 +16,7 @@
   // classe, il renderer come si vede.
   const STILE = {
     barbaro:   { corpo: 'guerriero', testa: 'nuda',       spalle: 'pelliccia', arma: 'ascia',      piastra: 0, criniera: '#5a3a1e', pelo: '#6a5a44', pelle: '#c08050', metallo: '#8a7a63', cloth: '#6b4a2a', clothDk: '#3a2716', orlo: '#d8a33a' },
-    paladino:  { corpo: 'guerriero', testa: 'elmoChiuso', spalle: 'acciaio',   arma: 'spadascudo', piastra: 1, scudo: 1, tabarro: '#e8edf5', cresta: '#5a6272', metallo: '#9aa3b0', cloth: '#2e4a86', clothDk: '#16264a', orlo: '#e0b64a' },
+    paladino:  { corpo: 'guerriero', testa: 'elmoChiuso', spalle: 'acciaio',   arma: 'spadascudo', piastra: 1, tabarro: '#e8edf5', cresta: '#5a6272', metallo: '#9aa3b0', cloth: '#2e4a86', clothDk: '#16264a', orlo: '#e0b64a' },
     maestro:   { corpo: 'guerriero', testa: 'elmoAperto', spalle: 'acciaio',   arma: 'doppia',     piastra: 1, fascia: '#b4463c', mantello: '#4a2622', metallo: '#7e838d', cloth: '#3a2f2a', clothDk: '#1e1917', orlo: '#c8a23a', pelle: '#c79b6a' },
     assassino: { corpo: 'ladro', arma: 'pugnali', scia: 1, cloth: '#2b2f42', clothDk: '#14172a', mant: '#191d30', capp: '#242840', pelle: '#c2a184', lama: '#cfd8dc', buio: '#0a0a14' },
     arciere:   { corpo: 'ladro', arma: 'arco',            cloth: '#3c5140', clothDk: '#1d2a22', mant: '#25342b', capp: '#33443a', pelle: '#c99a6a', legno: '#a37a41', buio: '#0d1512' },
@@ -2290,6 +2290,31 @@
       g.lineCap = 'butt';
       g.restore();
     },
+    // v2.19.5 — LA LAMA GENERICA del guerriero. `lato`: +1 mano destra, -1 sinistra, 0 davanti al corpo
+    // (un'arma a due mani, tenuta con entrambe). Il carattere ne decide le proporzioni: e' l'unica
+    // informazione che la sagoma deve dare, perche' e' quella che cambia il colpo.
+    _lamaGenerica(ctx, r, atk, carattere, lato, P, DK) {
+      const F = carattere === 'pesante' ? { L: 1.22, W: 0.105, G: 0.34, M: 0.30 }
+              : carattere === 'leggera' ? { L: 0.80, W: 0.055, G: 0.20, M: 0.20 }
+              :                           { L: 0.98, W: 0.075, G: 0.26, M: 0.24 };
+      const y = lato === 0 ? r * 0.06 : lato * r * 0.44;
+      const rot = lato === 0 ? (-0.10 + atk * 0.20) : lato * (0.30 - atk * 0.28);
+      ctx.save(); ctx.translate(r * (0.42 + 0.26 * atk), y); ctx.rotate(rot);
+      // l'impugnatura: piu' lunga se la tengono due mani
+      ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = r * 0.09; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-r * F.M, 0); ctx.lineTo(r * 0.02, 0); ctx.stroke(); ctx.lineCap = 'butt';
+      // la guardia
+      ctx.fillStyle = (P && P.orlo) || '#c8a23a'; ctx.strokeStyle = DK; ctx.lineWidth = 1.4;
+      ctx.fillRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G); ctx.strokeRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G);
+      // la lama, con la punta
+      ctx.fillStyle = '#dfe5ee'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(r * 0.06, -r * F.W); ctx.lineTo(r * (F.L - 0.10), -r * F.W * 0.55); ctx.lineTo(r * F.L, 0);
+      ctx.lineTo(r * (F.L - 0.10), r * F.W * 0.55); ctx.lineTo(r * 0.06, r * F.W); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // la sguscia: una riga scura lungo il mezzo, che la fa leggere come lama anche piccola
+      ctx.strokeStyle = 'rgba(40,48,60,.45)'; ctx.lineWidth = Math.max(1, r * 0.022);
+      ctx.beginPath(); ctx.moveTo(r * 0.10, 0); ctx.lineTo(r * (F.L - 0.16), 0); ctx.stroke();
+      ctx.restore();
+    },
     _drawVendor(ctx, n, opts) {
       const o = opts || {}, t = this.time, x = n.x, y = n.y;
       const r = C.PLAYER_RADIUS * (C.VIS_SCALE || 1);
@@ -3312,7 +3337,15 @@
         const gc = p.gz === 'slow' ? '#5ad0ff' : p.gz === 'sunder' ? '#c48cff' : '#ff7a5a';
         ctx.strokeStyle = this._rgba(gc, 0.4 + 0.35 * Math.sin(this.time * 7)); ctx.lineWidth = 2.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 7); ctx.stroke(); ctx.setLineDash([]);
       }
-      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a); this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
+      // v2.19.5 — UN PERSONAGGIO CHE NON SI DISEGNA NON DEVE FERMARE IL GIOCO. Un'eccezione qui dentro
+      // usciva da `render`, il ciclo non arrivava mai al fotogramma successivo e restava l'ultima
+      // immagine: il «villaggio congelato» segnalato da Paolo. Adesso quel personaggio salta un
+      // fotogramma e il resto va avanti. L'errore si scrive UNA volta in console, perche' va visto e
+      // corretto, non nascosto.
+      if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a);
+      try { this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); }
+      catch (e) { if (!this._erroreEroe) { this._erroreEroe = 1; console.error('[renderer] disegno del personaggio fallito:', e); } }
+      ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }
@@ -3388,6 +3421,7 @@
       const a = Math.max(0, Math.min(1, atk || 0));
       eq = eq || {};
       if (!eq.civile) { eq.pal = this._palGear(eq); eq._rk = this._gearRanks(eq); }
+      eq._hid = id;   // v2.19.5 — chi e': il corpo del guerriero ne ha bisogno per la regola delle due mani
       // v1.82 FIX — LA CACHE DEI GRADIENTI ERA CIECA ALLA PALETTE. Le chiavi erano 'h_torso|lad|<raggio>':
       // due ladri con lo stesso raggio si spartivano lo STESSO gradiente, cioe' i colori di chi veniva
       // disegnato per primo. Finche' le tinte non esistevano non si vedeva; con i mercenari il giocatore
@@ -3656,81 +3690,36 @@
       // v1.75 — CIVILE: la stessa sagoma senza scudo e senza elmo. La usano i mercanti, che condividono
       // il linguaggio degli eroi (spalle, corazza, mantello) ma non vanno in battaglia.
       const _civ = !!(eq && eq.civile);
-      // v2.18 — TRE ARMI SU QUESTA IMPALCATURA. L'ascia del barbaro e le due spade del maestro d'armi
-      // si disegnano qui; lo scudo resta al paladino (`st.scudo`), che e' l'unico dei tre a portarlo.
-      if (!_civ && st.arma === 'ascia') {
-        // ==========================================================================================
-        // v2.19.4 — L'ASCIA DA GUERRA, rifatta. Paolo: *«sembra che abbia in mano una mazza da hockey»*.
-        // ==========================================================================================
-        // Aveva ragione, e il motivo era geometrico. Il manico era un tratto sottile, e la lama erano
-        // due «petali» piccoli e sbilanciati attaccati VICINO alla punta, non IN CIMA: il petalo grosso
-        // sporgeva da una parte sola, e stecca + paletta storta da un lato e' esattamente il disegno di
-        // una mazza da hockey. Da qualunque rotazione.
-        //
-        // Adesso e' un'ascia a DOPPIA LAMA, e le regole sono tre:
-        //  1. la testa sta IN CIMA al manico, non a meta' — il manico finisce dentro l'occhio della testa;
-        //  2. le lame sono PERPENDICOLARI al manico, non allungate lungo di lui;
-        //  3. sono DUE e SIMMETRICHE. Una sagoma simmetrica attorno al manico non puo' sembrare una
-        //     stecca da nessuna angolazione, ed e' anche l'ascia dei barbari per antonomasia.
-        // Il manico e' piu' spesso, con la fasciatura dove la mano stringe e un pomolo in fondo: la mano
-        // (l'origine) sta a un terzo dal pomolo, cosi' la testa si allontana dal corpo e si legge da sola.
-        ctx.save(); ctx.translate(r * (0.62 + 0.40 * atk), r * 0.36); ctx.rotate(-0.85 + atk * 0.9); ctx.scale(1.18, 1.18);
-        const HB = -r * 0.40, HT = r * 0.70;                 // pomolo e cima del manico
-        const HX = r * 0.56;                                  // centro della testa, lungo il manico
-        // --- il manico: legno, un po' piu' chiaro al centro per dargli volume ---
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = '#2a1b0e'; ctx.lineWidth = r * 0.15;
-        ctx.beginPath(); ctx.moveTo(HB, 0); ctx.lineTo(HT, 0); ctx.stroke();
-        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = r * 0.10;
-        ctx.beginPath(); ctx.moveTo(HB, 0); ctx.lineTo(HT, 0); ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,220,170,.22)'; ctx.lineWidth = r * 0.03;
-        ctx.beginPath(); ctx.moveTo(HB + r * 0.05, -r * 0.02); ctx.lineTo(HX - r * 0.14, -r * 0.02); ctx.stroke();
-        ctx.lineCap = 'butt';
-        // --- la fasciatura di cuoio dove la mano stringe ---
-        ctx.strokeStyle = '#1a120a'; ctx.lineWidth = r * 0.028;
-        for (let k = 0; k < 4; k++) { const fx = -r * 0.16 + k * r * 0.085;
-          ctx.beginPath(); ctx.moveTo(fx, -r * 0.058); ctx.lineTo(fx + r * 0.04, r * 0.058); ctx.stroke(); }
-        // --- il pomolo di ferro in fondo ---
-        ctx.fillStyle = '#5a616c'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.arc(HB, 0, r * 0.075, 0, 7); ctx.fill(); ctx.stroke();
-        // --- le due lame a mezzaluna, simmetriche attorno al manico ---
-        const ax = this._grad('h_ascia2|' + r, () => { const q = ctx.createLinearGradient(0, -r * 0.70, 0, r * 0.70);
-          q.addColorStop(0, '#dfe5ee'); q.addColorStop(0.42, '#8a929e'); q.addColorStop(0.5, '#5f6672');
-          q.addColorStop(0.58, '#8a929e'); q.addColorStop(1, '#dfe5ee'); return q; });
-        for (const sg of [-1, 1]) {
-          ctx.fillStyle = ax; ctx.strokeStyle = DK; ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(HX - r * 0.11, sg * r * 0.08);                                        // il collo, contro l'occhio
-          ctx.quadraticCurveTo(HX - r * 0.22, sg * r * 0.30, HX - r * 0.34, sg * r * 0.58);   // si allarga verso il corno
-          ctx.quadraticCurveTo(HX, sg * r * 0.80, HX + r * 0.34, sg * r * 0.58);             // il FILO, a mezzaluna
-          ctx.quadraticCurveTo(HX + r * 0.22, sg * r * 0.30, HX + r * 0.11, sg * r * 0.08);   // e torna al collo
-          ctx.closePath(); ctx.fill(); ctx.stroke();
-          // il filo affilato: una riga chiara appena dentro il bordo esterno, che e' cio' che fa leggere
-          // «lama» e non «piastra» anche a sedici pixel
-          ctx.strokeStyle = 'rgba(245,250,255,.85)'; ctx.lineWidth = r * 0.035;
-          ctx.beginPath(); ctx.moveTo(HX - r * 0.28, sg * r * 0.56);
-          ctx.quadraticCurveTo(HX, sg * r * 0.74, HX + r * 0.28, sg * r * 0.56); ctx.stroke();
-        }
-        // --- l'occhio della testa, dove il manico entra, e la punta in cima ---
-        ctx.fillStyle = '#3d434d'; ctx.strokeStyle = DK; ctx.lineWidth = 1.8;
-        this._rr(ctx, HX - r * 0.13, -r * 0.11, r * 0.26, r * 0.22, r * 0.04); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#b8c0cc';
-        ctx.beginPath(); ctx.moveTo(HX + r * 0.13, -r * 0.06); ctx.lineTo(HX + r * 0.30, 0); ctx.lineTo(HX + r * 0.13, r * 0.06);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.restore();
-      } else if (!_civ && st.arma === 'doppia') {
-        for (const sg of [-1, 1]) {
-          ctx.save(); ctx.translate(r * (0.42 + 0.26 * atk), sg * r * 0.44); ctx.rotate(sg * (0.30 - atk * 0.28));
-          ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = r * 0.09; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(-r * 0.22, 0); ctx.lineTo(r * 0.02, 0); ctx.stroke(); ctx.lineCap = 'butt';
-          ctx.fillStyle = _P.orlo || '#c8a23a'; ctx.fillRect(r * 0.00, -r * 0.13, r * 0.05, r * 0.26);
-          ctx.fillStyle = '#dfe5ee'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
-          ctx.beginPath(); ctx.moveTo(r * 0.06, -r * 0.07); ctx.lineTo(r * 0.92, -r * 0.03); ctx.lineTo(r * 1.02, 0);
-          ctx.lineTo(r * 0.92, r * 0.03); ctx.lineTo(r * 0.06, r * 0.07); ctx.closePath(); ctx.fill(); ctx.stroke();
-          ctx.restore();
-        }
-      }
-      if (!_civ && st.scudo) {
+      // ============================================================================================
+      // v2.19.5 — IL GUERRIERO IMPUGNA CIO' CHE HA IN MANO, non cio' che dice la sua classe
+      // ============================================================================================
+      // Fino alla v2.19.4 le armi di questa impalcatura venivano dallo STILE della classe: il barbaro
+      // aveva sempre l'ascia, il maestro sempre due spade, il paladino sempre lo scudo. Paolo ha trovato
+      // i due modi in cui questo si rompe:
+      //  · *«hai disegnato il barbaro con un'ascia, ma se equipaggia una spada e' un'incongruenza»*;
+      //  · il paladino che impugna un'arma a DUE MANI si toglie lo scudo — e il gioco si CONGELAVA.
+      //    Lo stile diceva `scudo: 1` («questa classe si disegna con lo scudo»), e `scudo` e' anche il
+      //    nome del COLORE che la tinta dello scudo impugnato ci scrive sopra. Senza scudo in mano, al
+      //    posto del colore restava il numero 1, `_shade(1)` lanciava a ogni fotogramma, e il ciclo di
+      //    disegno si fermava sull'ultima immagine buona: il villaggio fermo.
+      // Stessa radice: il disegno guardava la classe invece dell'equipaggiamento. Adesso guarda cosa c'e'
+      // nelle mani — `wp` (arma principale), `wx` (seconda arma), `sh` (scudo), mandati dal server —
+      // e lo disegna con UNA LAMA GENERICA, come Paolo ha chiesto (*«fallo piu' generico»*): non
+      // un'ascia, una spada o un maglio, ma «un'arma», che non contraddice nessun pezzo del listino.
+      // Cio' che la lama dice e' il PESO, che e' l'unica cosa che conta al colpo: la leggera e' corta e
+      // sottile, l'equilibrata e' la spada di mezzo, la pesante e' lunga e larga — e se e' a due mani
+      // la tengono tutte e due, davanti al corpo invece che di lato.
+      const _G = window.GAME && window.GAME.Gear, _H = window.GAME && window.GAME.Heroes;
+      const _pz = (id) => (_G && id && _G.BY_ID[id]) || null;
+      const arma1 = _civ ? null : _pz(eq && eq.wp), arma2 = _civ ? null : _pz(eq && eq.wx);
+      const scudoIt = _civ ? null : _pz(eq && eq.sh);
+      const mani = (_H && _H.maniDi && eq && eq._hid) ? _H.maniDi(eq._hid) : null;
+      const dueMani = !!(arma1 && _G && _G.aDueMani && _G.aDueMani(arma1, mani));
+      if (arma1) this._lamaGenerica(ctx, r, atk, arma1.carattere, dueMani ? 0 : 1, _P, DK);
+      if (arma2) this._lamaGenerica(ctx, r, atk, arma2.carattere, -1, _P, DK);
+      // lo scudo si disegna SE C'E', e per chiunque lo impugni — non solo per il paladino: la tabella
+      // lo concede anche al barbaro e al maestro d'armi, e finora loro lo portavano invisibile.
+      if (scudoIt) {
       ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
       // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
       // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
@@ -3738,7 +3727,9 @@
       // spessa: e' l'unico pezzo d'armatura che cambia la sagoma vista dall'alto, ed e' anche il pezzo
       // che nel gioco para davvero — la forma dice quanto copre, e la dice senza numeri.
       const srk = (eq._rk && eq._rk.s) || 1;
-      const scCol = _P.scudo || '#8d97a5', orlo = _P.orlo || '#c8a23a';
+      // v2.19.5 — il colore si usa solo se E' un colore. Non si fida del nome della chiave: e' proprio
+      // un nome condiviso fra un'impostazione e un colore che ha congelato la partita.
+      const scCol = (typeof _P.scudo === 'string') ? _P.scudo : '#8d97a5', orlo = (typeof _P.orlo === 'string') ? _P.orlo : '#c8a23a';
       const RS = r * (0.86 + 0.052 * (srk - 1)), TH = r * (0.26 + 0.052 * (srk - 1));
       const A0 = -(1.15 + 0.145 * (srk - 1)), A1 = -A0;
       const sgd = this._grad('h_scudo|' + r + '|' + srk + '|' + scCol, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, this._shade(scCol, -78)); q.addColorStop(0.55, scCol); q.addColorStop(1, this._shade(scCol, 60)); return q; });

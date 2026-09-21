@@ -2,6 +2,61 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.5] — 2026-09-21 · "Si disegna quello che impugni"
+
+Due segnalazioni di Paolo, e la stessa radice sotto tutte e due.
+
+**🐛 Il villaggio congelato.** *«Se al paladino equipaggio un'arma a due mani (e rimuove lo scudo)
+non carica l'ondata successiva, ma mostra un'immagine freezata del villaggio.»*
+
+Riprodotto dal vero — client vero, server vero, lo stesso gesto: impugnato lo Spadone, il disegno del
+personaggio lanciava un errore **a ogni fotogramma**, il ciclo di disegno si fermava e restava l'ultima
+immagine buona. Anche il movimento si bloccava. Il server invece andava avanti regolarmente.
+
+La causa era un **nome condiviso**, ed era mio (v2.18). Nella tabella di stile del paladino c'era
+`scudo: 1` — cioè «questa classe si disegna con lo scudo». Ma `scudo` è anche il nome del **colore** che
+la tinta dello scudo impugnato scrive sulla tavolozza. Con lo scudo in mano il colore sovrascriveva il
+numero e tutto funzionava; tolto lo scudo, al posto del colore restava `1`, e schiarire il colore `1`
+è impossibile. Controllato: era l'**unica** collisione fra impostazioni di stile e colori di tinta.
+
+**🐛 E un secondo, trovato cercando il primo.** Riprendendo una partita salvata, la mano sinistra
+lasciata **vuota apposta** dall'arma a due mani veniva «riempita» con lo scudo di partenza: il paladino
+tornava in gioco con **Spadone e scudo insieme**, la combinazione che le regole vietano. (Era anche il
+motivo per cui il blocco non si vedeva ricaricando: lo scudo tornava da solo e ne nascondeva l'assenza.)
+Ora le mani si riempiono solo se sono vuote **tutte e due** — cioè in un salvataggio di prima delle mani.
+
+**🎨 Il barbaro con l'ascia.** *«Questo genera un'incongruenza se equipaggia una spada. Fallo più
+generico.»* Stessa radice del blocco: il personaggio in gioco era disegnato secondo la **classe** — il
+barbaro sempre con l'ascia, il maestro sempre con due spade, il paladino sempre con lo scudo — invece
+che secondo **cosa impugna davvero**.
+
+Adesso il corpo del guerriero (barbaro, paladino, maestro d'armi) disegna le sue **mani**:
+
+- l'arma principale e l'eventuale seconda arma come una **lama generica** — né ascia, né spada, né
+  maglio: *un'arma*, che non contraddice nessun pezzo del listino. Ciò che la lama dice è il **peso**,
+  l'unica cosa che conta al colpo: la leggera è corta e sottile, l'equilibrata è la lama di mezzo, la
+  pesante è lunga e larga — e se è **a due mani** la si tiene davanti al corpo, non di lato;
+- lo **scudo solo se c'è**, e per chiunque lo imbracci: prima il barbaro e il maestro, a cui la
+  tabella lo concede, lo portavano **invisibile**.
+
+Per disegnare la seconda arma il server manda un campo nuovo, `wx`, solo quando c'è.
+
+**E una rete di sicurezza.** Anche con la causa tolta, un errore di disegno non deve mai più fermare
+la partita: il disegno di ogni personaggio è isolato, e se uno fallisce salta quel fotogramma mentre
+tutto il resto va avanti. L'errore si scrive **una volta** in console, perché va visto e corretto, non
+nascosto.
+
+**Verificato dal vero** il percorso esatto della segnalazione: impugnato lo Spadone dal vivo →
+portale → pannello → PROSSIMA MAPPA → **ondata 4**, schermo vivo, zero errori (prima: errore
+all'istante). Disegnate otto combinazioni — barbaro con spada, pesante + scudo, due pesanti,
+leggera; paladino con spada + scudo e con lo Spadone; maestro con due lame e con lama + scudo — tutte
+senza errori, ognuna con in mano quello che ha.
+
+**Test** — 4249 passati, 0 falliti. Nuovo `[TEST 74]`: la ripresa non ridà lo scudo a chi tiene una
+due mani (e un salvataggio vecchio riceve ancora le mani), la partita arriva all'ondata successiva, lo
+snapshot porta arma, seconda arma e scudo — e **nessuna impostazione dello stile può avere il nome di un
+colore di tinta**. Verificato che quest'ultimo scatta davvero, rimettendo apposta `scudo: 1`.
+
 ### [2.19.4] — 2026-09-21 · "L'ascia del barbaro"
 
 Paolo: *«l'estetica del barbaro non mi piace molto, sembra che abbia in mano una mazza da hockey»*.
