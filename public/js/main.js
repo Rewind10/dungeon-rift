@@ -394,12 +394,27 @@
         HUD.killfeed(`\u{1F6CD} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 nell'inventario`); break; }
       case 'equip_no': { const M = { 'niente-scudo': 'questa classe non porta scudi',
         'due-scudi': 'due scudi no', 'niente-doppia-arma': 'questa classe non combatte con due armi',
-        'carattere-non-ammesso-in-doppia': 'non con due armi cosi pesanti',
-        'scudo-non-con-questa-arma': 'con quest arma lo scudo non si puo tenere',
-        'arma-troppo-pesante-per-lo-scudo': 'l arma nell altra mano e troppo pesante per lo scudo' };
-        HUD.killfeed(`\u26D4 <b>${esc(ev.name)}</b> \u2014 ${M[ev.perche] || 'non si puo impugnare'}`); break; }
-      case 'compra_no': { HUD.killfeed(`\u26D4 <b>${esc(ev.name)}</b> \u2014 ce l hai gia nell inventario`); break; }
-      case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`); break; }
+        'carattere-non-ammesso-in-doppia': 'non con due armi così pesanti',
+        'scudo-non-con-questa-arma': 'con quest\u2019arma lo scudo non si può tenere',
+        'arma-troppo-pesante-per-lo-scudo': 'l\u2019arma che impugni è a due mani o troppo pesante: lo scudo non ci sta',
+        // v2.19 — i motivi nati con l'equipaggiamento misto non avevano ancora una frase
+        'tipologia-non-ammessa-in-doppia': 'la doppia arma di questa classe è solo di un tipo',
+        'scudo-non-con-questa-tipologia': 'lo scudo va accanto a un\u2019arma da mischia',
+        'classe': 'la tua classe non può portarlo' };
+        const txt = `\u26D4 <b>${esc(ev.name)}</b> \u2014 ${M[ev.perche] || 'non si può impugnare'}`;
+        // v2.19.3 — NEL PANNELLO, non solo al centro dello schermo. Col menu aperto il riquadro dei
+        // messaggi di gioco sta SOTTO il menu: il rifiuto partiva e nessuno lo vedeva.
+        HUD.avvisoInventario(txt, 'no'); HUD.killfeed(txt); break; }
+      case 'compra_no': {
+        // v2.19.3 — diceva sempre «ce l'hai già», anche quando il motivo era un altro
+        const M = { 'gia-tuo': 'ce l\u2019hai già nell\u2019inventario',
+                    'non-per-la-tua-classe': 'la tua classe non può portarlo',
+                    'non-in-vendita': 'il grado scarso non è in vendita' };
+        HUD.killfeed(`\u26D4 <b>${esc(ev.name)}</b> \u2014 ${M[ev.perche] || 'non si può comprare'}`); break; }
+      case 'geared': { A.evo(); R.ring(ev.x, ev.y, ev.color || '#ffcf4a', 8, 80, 0.6); R.burst(ev.x, ev.y, ev.color || '#ffcf4a', 18, 190, 0.6); const st = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' }[ev.slot] || '🔨'; HUD.killfeed(`${st} <b style="color:${ev.color}">${esc(ev.name)}</b> equipaggiato!`);
+        // v2.19.3 — e la conferma nel pannello, in verde, con la mano: «fatto» deve vedersi come «no»
+        const dove = ev.mano === 'manoSx' ? ' — mano sinistra' : ev.mano === 'manoDx' ? ' — mano destra' : '';
+        HUD.avvisoInventario(`\u2714 <b>${esc(ev.name)}</b> in uso${dove}`, 'ok'); break; }
       // v2.12 — la rivendita. Due risposte, perche' le due cose vanno dette in modo diverso: quando il
       // pezzo e' andato si vede il lampo e il totale; quando il fabbro rifiuta si dice PERCHE'. Un
       // rifiuto muto sul pulsante "Vendi" si legge come un pulsante rotto.

@@ -2,6 +2,39 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.3] — 2026-09-21 · "Si vede cosa porti"
+
+Paolo, con due screenshot: un paladino con lo **Spadone** in mano prova a imbracciare lo **scudo**. Lo
+scudo giustamente non entra — lo Spadone è a due mani — *«ma è successo questo»*: al centro un
+personaggio tagliato sul bordo, e nell'inventario scudo e Spadone praticamente identici.
+*«Semplifichiamo: al centro metti l'artwork del personaggio. Rendi più evidente l'equipaggiamento
+indossato. Nell'immagine si capisce poco che lo scudo non è equipaggiato.»*
+
+**La regola non era rotta, il pannello sì.** Tre difetti, tutti nello stesso posto:
+
+1. **Il ritratto era rotto.** Era il personaggio ridisegnato dal motore di gioco sessanta volte al
+   secondo; dopo le sagome nuove della v2.18 usciva tagliato. **Ora c'è l'artwork della classe**, lo
+   stesso della schermata di scelta — un'immagine invece di un disegno continuo.
+2. **"In uso" era una stellina gialla di nove pixel.** Ora è un **bordo verde pieno** con alone, e una
+   fascia **IN USO · DX / SX / 2 MANI** sopra la cella. I pulsanti della mano in cui il pezzo sta già
+   sono **verdi pieni** — prima i DX/SX dello Spadone impugnato erano blu come quelli di un pezzo da
+   prendere, e sembrava che fosse ancora da impugnare.
+3. **Il rifiuto partiva e nessuno lo vedeva.** Il messaggio *«l'arma è troppo pesante per lo scudo»*
+   andava nel riquadro dei messaggi di gioco, che col menu aperto sta **sotto** il menu. Hai cliccato e
+   non è successo niente, senza un perché. Ora l'esito compare **sopra l'inventario**: rosso se
+   rifiutato (col motivo), verde se fatto (con la mano). E un pulsante spento, cliccato, dice perché è
+   spento invece di tacere.
+
+**Due frasi sbagliate corrette per strada.** L'inventario diceva *«porti addosso l'unica roba che hai»*
+mentre spada e scudo erano lì sotto inutilizzati: contava le **caselle** (sempre quattro) invece dei
+pezzi indossati. E il rifiuto d'acquisto diceva sempre *«ce l'hai già»*, anche quando il motivo era
+un altro (le ragioni nate con la v2.19 non avevano ancora una frase).
+
+**Test** — 4230 passati, 0 falliti. Verificato nel browser con il **pannello vero del server** nello
+stato esatto dello screenshot: artwork caricato, Spadone e casacca verdi, clic su SX dello scudo →
+richiesta partita → rifiuto del server → riga rossa nel pannello col motivo giusto. Nessun errore in
+console. I sette artwork rispondono tutti.
+
 ### [2.19.2] — 2026-09-20 · "Le soglie sgombre"
 
 Paolo: *«perché metti oggetti all'ingresso delle case e/o negozi? toglili, rendono ingombrante

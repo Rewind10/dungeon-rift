@@ -229,7 +229,10 @@
       <div class="col-cx">
         <h3>EQUIPAGGIAMENTO</h3>
         <div id="ritrattoWrap">
-          <canvas id="ritratto" width="300" height="300"></canvas>
+          <!-- v2.19.3 — al centro l'ARTWORK della classe, lo stesso della schermata di scelta. Era il
+               personaggio ridisegnato dal motore di gioco: dopo le sagome nuove della v2.18 usciva
+               tagliato sul bordo, e comunque una figura di 16 pixel ingrandita non dice chi sei. -->
+          <img id="ritratto" class="ritr-art" alt="" draggable="false">
           <div class="eq-slot tl" data-slot="manoDx"></div>
           <div class="eq-slot tr" data-slot="manoSx"></div>
           <div class="eq-slot bl" data-slot="armor"></div>
@@ -241,7 +244,11 @@
       <!-- ---- DESTRA: cosa hai. Il baule si clicca, i poteri si guardano ---- -->
       <div class="col-dx">
         <h3>INVENTARIO</h3>
-        <p class="shop-hint" id="bauleNota">Tutto quello che possiedi. La <b>★</b> è quello che stai portando. Per armi e scudi scegli <b>la mano</b>; il resto si indossa con un clic.</p>
+        <p class="shop-hint" id="bauleNota">Tutto quello che possiedi. Quello col bordo <b style="color:#5fe08a">verde</b> lo stai portando. Per armi e scudi scegli <b>la mano</b>; il resto si indossa con un clic.</p>
+        <!-- v2.19.3 — l'esito di ogni tentativo di indossare, QUI e non al centro dello schermo. Prima un
+             rifiuto finiva nel riquadro dei messaggi di gioco, che col menu aperto sta sotto il menu:
+             cliccavi, non succedeva niente, e non si capiva perche'. -->
+        <div id="bauleAvviso" class="hidden"></div>
         <div id="baule"></div>
         <!-- v2.13.5 — niente titolo sopra la scaletta dei poteri: le righe dicono gia' «Liv. 3 / non
              comune», e un titolo sopra una lista che si spiega da sola e' una riga di testo in piu' in

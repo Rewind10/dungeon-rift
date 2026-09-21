@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.2 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.3 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.3 (si vede cosa porti)
+
+Nella schermata del personaggio, al centro c'è l'**artwork della classe** (lo stesso della scelta
+iniziale) al posto del personaggio ridisegnato, che usciva tagliato. Nell'**inventario** quello che
+stai portando ha il **bordo verde** e la fascia **IN USO · DX / SX / 2 MANI**; i pulsanti della mano
+in cui sta già sono verdi. E ogni tentativo di indossare risponde **sopra l'inventario** — rosso col
+motivo se non si può, verde con la mano se è fatto — invece di finire sotto il menu dove non si vedeva.
+
+---
 
 ## 🆕 Novità v2.19.2 (soglie sgombre)
 

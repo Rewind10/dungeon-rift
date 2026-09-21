@@ -549,7 +549,7 @@
       this._renderBaule();
       this._renderAddosso();
       this._aggiornaBarra();
-      this._avviaRitratto();
+      this._mettiArtwork();
     },
     _aggiornaBarra() {
       const sosp = this._scelteInSospeso();
@@ -820,58 +820,40 @@
     },
 
     // ---- CENTRO: il ritratto ----
-    // Non e' un'illustrazione: e' il personaggio VERO, disegnato dalla stessa funzione che lo disegna in
-    // partita (`Renderer._hero`), con addosso gli id dell'equipaggiamento che porta. Quindi le `tinta`
-    // dei 104 pezzi si vedono qui esattamente come si vedono sulla mappa, e l'alone del divino pure —
-    // se un giorno cambia il disegno del personaggio, cambia anche qui, senza che nessuno se ne ricordi.
-    _avviaRitratto() {
-      const cv = $('ritratto'); if (!cv || !window.Renderer) return;
-      if (this._ritrattoOn) return;
-      this._ritrattoOn = true;
-      const giro = () => {
-        if ($('upgradeScreen').classList.contains('hidden')) { this._ritrattoOn = false; return; }
-        this._disegnaRitratto();
-        requestAnimationFrame(giro);
-      };
-      requestAnimationFrame(giro);
+    // v2.19.3 — E' L'ARTWORK DELLA CLASSE, non piu' il personaggio ridisegnato dal motore.
+    // Fino alla v2.19.2 qui girava un requestAnimationFrame che chiamava `Renderer._hero` sessanta volte
+    // al secondo, con addosso gli id dell'equipaggiamento. L'idea era buona (vedere le tinte dei pezzi),
+    // ma dopo le sagome nuove della v2.18 la figura usciva tagliata sul bordo, e anche intera era una
+    // sagoma da 16 pixel ingrandita: vista da vicino non diceva chi eri. Paolo: *«semplifichiamo: al
+    // centro metti l'artwork relativo al personaggio»*. E' lo stesso della schermata di scelta — la
+    // faccia che hai scelto — e costa un'immagine invece di un disegno continuo.
+    _mettiArtwork() {
+      const img = $('ritratto'); if (!img) return;
+      const id = this._heroId || 'barbaro';
+      const src = '/assets/classi/' + id + '.png';
+      if (img.getAttribute('src') !== src) { img.setAttribute('src', src); img.alt = id; }
     },
-    // che tipo di pezzo (arma o scudo) sta in una delle due mani, e il suo id
-    _pezzoInMano(inv, tipo) {
-      const G = window.GAME && window.GAME.Gear; if (!G) return null;
-      for (const m of ['manoDx', 'manoSx']) {
-        const g = (inv.gear || []).find(x => x.slot === m);
-        const it = g && g.id && G.BY_ID[g.id];
-        if (it && it.slot === tipo) return it.id;
+    // v2.19.3 — IN QUALE MANO STA un pezzo, letto da cio' che il server dice di avere addosso. Serve a
+    // scrivere «in uso · destra» invece di una stellina, e ad accendere il pulsante della mano giusta.
+    // Un'arma a due mani le occupa tutte e due anche se la sinistra, nei dati, e' vuota.
+    _maniDi(inv, id) {
+      const out = [];
+      for (const g of (inv.gear || [])) {
+        if (g.id === id && (g.slot === 'manoDx' || g.slot === 'manoSx')) {
+          out.push(g.slot);
+          if (g.dueMani) out.push(g.slot === 'manoDx' ? 'manoSx' : 'manoDx');
+        }
       }
-      return null;
+      return out;
     },
-    _disegnaRitratto() {
-      const cv = $('ritratto'); const R = window.Renderer; if (!cv || !R) return;
-      const ctx = cv.getContext('2d'); if (!ctx) return;
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      const inv = this._stats && this._stats.inv; if (!inv) return;
-      const eq = {
-        h: this._heroId || 'barbaro',
-        // v2.18.1 — arma e scudo vengono dalle MANI, non da caselle col loro nome: si cerca nelle due
-        // mani il pezzo giusto, esattamente come fa il server con `Gear.armaPrincipale`/`scudoDi`.
-        wp: this._pezzoInMano(inv, 'weapon'),
-        arm: (inv.gear.find(g => g.slot === 'armor') || {}).id || null,
-        sh: this._pezzoInMano(inv, 'shield'),
-        stv: (inv.gear.find(g => g.slot === 'boots') || {}).id || null,
-        sp: this._spec || 0,
-      };
-      const t = performance.now() / 1000;
-      ctx.save();
-      // v2.13.5 — il centro sta a meta' e il raggio resta sotto un terzo del lato: il disegno del
-      // personaggio esce fino a 1,7 raggi (l'alone del divino), e con un raggio piu' grande la figura
-      // veniva tagliata dal bordo del riquadro.
-      ctx.translate(cv.width / 2, cv.height * 0.50);
-      // il raggio: grande quanto ci sta, cosi' si vedono i dettagli che in partita sono di 16 pixel
-      const r = Math.min(cv.width, cv.height) * 0.30;
-      // guarda verso il basso-destra e ondeggia piano: fermo sembrerebbe un cadavere in piedi
-      ctx.rotate(0.5 + Math.sin(t * 0.7) * 0.12);
-      try { R._hero(ctx, eq.h, r, t, false, 0, eq); } catch (_) { /* il ritratto non deve poter rompere il menu */ }
-      ctx.restore();
+    // v2.19.3 — L'ESITO, DENTRO IL PANNELLO. Ogni tentativo di indossare risponde qui, sopra la griglia,
+    // e sparisce da solo. `tipo` = 'no' (rosso, rifiutato) oppure 'ok' (verde, fatto).
+    avvisoInventario(testo, tipo) {
+      const el = $('bauleAvviso'); if (!el) return;
+      el.className = 'ba-' + (tipo === 'ok' ? 'ok' : 'no');
+      el.innerHTML = testo;
+      clearTimeout(this._avvisoT);
+      this._avvisoT = setTimeout(() => { el.className = 'hidden'; }, 3800);
     },
 
     // ---- DESTRA: il baule ----
@@ -895,27 +877,38 @@
           quanti++;
           const rar = RAR[it.rarita] || RAR.common;
           const el = document.createElement('div');
+          // v2.19.3 — IN USO SI DEVE VEDERE DA LONTANO. Era una stellina gialla di nove pixel in un
+          // angolo, e con lo Spadone in mano e lo scudo nel baule le due celle sembravano uguali.
+          // Adesso: bordo VERDE pieno, alone verde, e una fascia che dice «in uso» e in quale mano.
+          const mani = it.addosso ? this._maniDi(inv, it.id) : [];
           el.className = 'bq' + (it.addosso ? ' on' : '');
           el.style.setProperty('--c', it.colore);
           // v2.18.1 — ARMI E SCUDI CHIEDONO LA MANO. Per tutto il resto il clic basta, perche' c'e' una
           // casella sola e non c'e' niente da scegliere. I due pulsantini si accendono solo sulle mani
           // che davvero accettano quel pezzo (`it.dx` / `it.sx`, calcolati dal server con la stessa
           // funzione che poi decide): un pulsante che si clicca e non fa niente e' peggio di uno spento.
+          const doveMani = mani.length >= 2 ? 'due mani' : mani[0] === 'manoSx' ? 'sinistra' : mani[0] === 'manoDx' ? 'destra' : '';
           el.title = it.nome + ' — ' + rar.name + ' ' + (it.carattere || '') + '\n' + (it.desc || '')
-                   + (it.addosso ? '\n\n(lo stai portando)' : (it.mani ? '\n\nScegli la mano' : '\n\nClic per indossarlo'));
+                   + (it.addosso ? '\n\nIN USO' + (doveMani ? ' — ' + doveMani : '') : (it.mani ? '\n\nScegli la mano' : '\n\nClic per indossarlo'));
           el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
             + '<span class="nm">' + esc(it.nome) + '</span>'
             + '<span class="rr" style="color:' + rar.color + '">' + esc(rar.name) + '</span>'
-            + (it.addosso ? '<span class="on-b">★</span>' : '')
+            + (it.addosso ? '<span class="on-b">IN USO' + (doveMani ? ' · ' + (doveMani === 'due mani' ? '2 MANI' : doveMani === 'destra' ? 'DX' : 'SX') : '') + '</span>' : '')
+            // i pulsanti della mano: VERDE dove il pezzo sta gia' (non si clicca: e' li'), blu dove si
+            // puo' mettere, spento dove non si puo'. Prima i due pulsanti dello Spadone in mano erano
+            // blu come quelli di un pezzo da prendere, e sembrava che fosse ancora da impugnare.
             + (it.mani ? '<span class="mani">'
-                + '<button class="mn' + (it.dx ? '' : ' no') + '" data-m="manoDx" title="Mano destra">DX</button>'
-                + '<button class="mn' + (it.sx ? '' : ' no') + '" data-m="manoSx" title="Mano sinistra">SX</button>'
+                + '<button class="mn' + (mani.includes('manoDx') ? ' qui' : (it.dx ? '' : ' no')) + '" data-m="manoDx" title="' + (mani.includes('manoDx') ? 'È già nella mano destra' : 'Mano destra') + '">DX</button>'
+                + '<button class="mn' + (mani.includes('manoSx') ? ' qui' : (it.sx ? '' : ' no')) + '" data-m="manoSx" title="' + (mani.includes('manoSx') ? 'È già nella mano sinistra' : 'Mano sinistra') + '">SX</button>'
                 + '</span>' : '');
           if (it.mani) {
             el.querySelectorAll('.mn').forEach(b => {
               b.onclick = (e) => {
                 e.stopPropagation();
-                if (b.classList.contains('no')) return;
+                if (b.classList.contains('qui')) { this.avvisoInventario('<b>' + esc(it.nome) + '</b> è già in quella mano', 'ok'); return; }
+                // v2.19.3 — un pulsante spento cliccato DICE perche' e' spento, invece di non fare niente.
+                // Il motivo vero lo sa il server: glielo si chiede lo stesso, e la risposta (`equip_no`)
+                // arriva qui sopra in rosso. Non costa niente — non cambia niente — e toglie il dubbio.
                 if (this._equipaggia) this._equipaggia(it.id, b.dataset.m);
               };
             });
@@ -929,8 +922,12 @@
       const nota = $('bauleNota');
       // un baule con dentro solo cio' che hai addosso non e' un baule: si dice, invece di mostrare
       // una griglia che sembra rotta.
-      if (nota) nota.innerHTML = quanti > (inv.gear || []).length
-        ? 'Tutto quello che hai comprato resta tuo. <b>Clic per indossarlo</b> — non costa niente, l\'hai già pagato.'
+      // v2.19.3 — si confrontavano i pezzi posseduti con le CASELLE (sempre quattro), non con i pezzi
+      // indossati: un paladino con Spadone, casacca, spada e scudo leggeva «porti addosso l'unica roba
+      // che hai» mentre spada e scudo stavano li' sotto, inutilizzati. Si contano quelli in uso davvero.
+      const inUso = new Set((inv.gear || []).map(g => g.id).filter(Boolean)).size;
+      if (nota) nota.innerHTML = quanti > inUso
+        ? 'Tutto quello che possiedi. Col bordo <b style="color:#5fe08a">verde</b> quello che stai portando; per armi e scudi scegli <b>la mano</b>.'
         : 'Qui finisce tutto quello che compri dal <b>fabbro</b>, al villaggio. Per adesso porti addosso l\'unica roba che hai.';
     },
     // v1.51 — barra dei POTERI ATTIVI, sopra la barra abilita'. Aggiornata solo quando il server manda
