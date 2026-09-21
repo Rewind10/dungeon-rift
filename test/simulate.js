@@ -390,23 +390,28 @@ function testV18() {
   const arcoLeg = Gear.itemsOfRank('arciere', 'weapon', 2).find(i => i.carattere === 'leggera');
   assert(!Gear.impugna('arciere', aGear, arcoLeg.id, 'manoSx').gear, 'l arciere non combatte con due armi');
   // l'ASSASSINO si': ma solo leggere, e — v2.19 — solo DA MISCHIA.
-  // Fino alla v2.18.1 qui si provavano due archi leggeri, perche' l'assassino comprava solo dal suo
-  // corpo (`ladro`) e archi erano le uniche armi che potesse avere. La sua tabella pero' dice «doppia
-  // arma: leggere, SOLO MISCHIA», e adesso che compra anche dal fabbro la differenza si vede: due
-  // lame leggere si', due archi leggeri no. E' il primo effetto vero dell'equipaggiamento misto.
-  const sGear = Gear.startingGear('assassino');
-  const lamaLg = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'leggera');
-  const lamaEq = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'equilibrata');
+  // v2.19.6 — QUESTO TEST CONSIDERAVA GIUSTO IL BUG. Per provare «due armi» metteva lo STESSO oggetto
+  // in tutte e due le mani, cioe' proprio cio' che Paolo ha segnalato: *«un'arma puoi metterla sia a
+  // destra che a sinistra, ma non e' possibile»*. Adesso le due armi sono due OGGETTI (il pugnale e lo
+  // stiletto: per questo i pugnali stanno in coppia), e lo stesso oggetto nell'altra mano si SPOSTA.
+  // E da mischia l'assassino ha solo PUGNALI: le equilibrate e le sciabole non sono piu' sue.
+  const pugnaliLg = Gear.itemsBottega('assassino', 'guerriero', 'weapon');
+  assert(pugnaliLg.length > 0 && pugnaliLg.every(i => i.famiglia === 'pugnale'), 'dal fabbro l assassino vede solo pugnali');
+  assert(!pugnaliLg.some(i => i.carattere === 'equilibrata'), 'e nessuna arma equilibrata');
+  const pA = pugnaliLg.find(i => i.rank === 2 && /Pugnale/.test(i.name)), pB = pugnaliLg.find(i => i.rank === 2 && /Stiletto/.test(i.name));
+  const dueLeg = Gear.impugna('assassino', { manoDx: pA.id, manoSx: null }, pB.id, 'manoSx').gear;
+  assert(!!dueLeg && dueLeg.manoDx === pA.id && dueLeg.manoSx === pB.id, 'l assassino impugna due pugnali: uno per mano');
+  const sposta = Gear.impugna('assassino', { manoDx: pA.id, manoSx: null }, pA.id, 'manoSx').gear;
+  assert(!!sposta && sposta.manoSx === pA.id && sposta.manoDx !== pA.id, 'lo STESSO pugnale nell altra mano si sposta, non si duplica');
   const arcoLg = Gear.itemsBottega('assassino', 'ladro', 'weapon').find(i => i.carattere === 'leggera');
-  const dueLeg = Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lamaLg.id }), lamaLg.id, 'manoSx').gear;
-  assert(!!dueLeg, 'l assassino impugna due armi leggere da mischia');
-  assert(!Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: lamaLg.id }), lamaEq.id, 'manoSx').gear,
-    'ma non una equilibrata: la sua doppia e solo leggera');
-  assert(!Gear.impugna('assassino', Object.assign({}, sGear, { manoDx: arcoLg.id }), arcoLg.id, 'manoSx').gear,
+  const arcoLg2 = Gear.itemsBottega('assassino', 'ladro', 'weapon').filter(i => i.carattere === 'leggera')[1];
+  assert(!Gear.impugna('assassino', { manoDx: arcoLg.id, manoSx: null }, arcoLg2.id, 'manoSx').gear,
     'e nemmeno due archi leggeri: la doppia e solo da mischia');
-  // e il MAGO, che ha doppia leggera «mago», non puo' accoppiarla con una lama del fabbro
-  const vergaLg = Gear.itemsBottega('mago', 'mago', 'weapon').find(i => i.carattere === 'leggera');
-  assert(!!Gear.impugna('mago', { manoDx: vergaLg.id }, vergaLg.id, 'manoSx').gear, 'il mago impugna due verghe leggere');
+  // (il grado 1 non si filtra per peso, e non e' in vendita: si guardano i gradi che si comprano)
+  assert(Gear.itemsBottega('assassino', 'ladro', 'weapon').filter(i => i.rank > 1).every(i => i.carattere === 'leggera'), 'e dall arciera solo archi leggeri');
+  // e il MAGO, che ha doppia leggera «mago»: due verghe DIVERSE
+  const verghe = Gear.itemsBottega('mago', 'mago', 'weapon').filter(i => i.carattere === 'leggera');
+  assert(!!Gear.impugna('mago', { manoDx: verghe[0].id }, verghe[1].id, 'manoSx').gear, 'il mago impugna due verghe leggere');
 
   // --- 5) l'armatura pesante rallenta, la leggera alza la cadenza ---
   const armPes = pz('armor', 5, 'pesante'), armLeg = pz('armor', 5, 'leggera');
@@ -1949,9 +1954,21 @@ function testV167() {
   // n'e' uno solo — i Pugnali Sbeccati dell'assassino, che parte da mischia leggera pur avendo il
   // corpo del ladro. Il conto separato serve a questo: se domani qualcuno ne aggiunge uno per sbaglio
   // dentro il listino, qui si vede.
-  const listino = Gear.ITEMS.filter(i => !i.avvio), avvii = Gear.ITEMS.filter(i => i.avvio);
-  assert(listino.length === 117, 'il listino ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
-  assert(avvii.length === 1 && avvii[0].id === 'gue_w_pugnali_sbeccati', 'e un pezzo di avvio, i pugnali dell assassino');
+  // v2.19.6 — e i pezzi di una classe SOLA (`solo`: i pugnali dell'assassino) stanno fuori anche loro:
+  // sono in vendita, ma non fanno parte della forma comune del listino.
+  const listino = Gear.ITEMS.filter(i => !i.avvio && !i.solo), avvii = Gear.ITEMS.filter(i => i.avvio);
+  const soloUno = Gear.ITEMS.filter(i => i.solo);
+  assert(listino.length === 117, 'il listino comune ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
+  assert(avvii.length === 3 && avvii.every(i => i.avvio === 'assassino'),
+    'tre pezzi di avvio, tutti dell assassino: i due pugnali e il giaco di cuoio');
+  assert(soloUno.length === 8 && soloUno.every(i => i.famiglia === 'pugnale' && i.solo.indexOf('assassino') >= 0),
+    'e otto pugnali in vendita, due per grado dal 2 al 5');
+  for (let rk = 2; rk <= 5; rk++) {
+    const coppia = soloUno.filter(i => i.rank === rk);
+    const normale = Gear.itemsOfRank('paladino', 'weapon', rk)[0];
+    assert(coppia.length === 2 && coppia.every(i => i.cost === Math.round(normale.cost / 2)),
+      'grado ' + rk + ': una coppia di pugnali costa quanto un arma');
+  }
   for (const it of avvii) {
     assert(Gear.puoAvere(it.avvio, it), it.id + ': lo puo avere la classe a cui e destinato');
     for (const h of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
@@ -6102,13 +6119,66 @@ function testV219() {
     assert(w.melee === true, 'l assassino mena di pugnale, non tira frecce');
     assert(w.school === 'agile', 'e il suo colpo sta nella scuola agile');
     assert(Gear.BY_ID[pa.gear.manoDx].carattere === 'leggera', 'e cio che impugna e leggero, come dice la sua tabella');
-    // la doppia arma leggera NON e' regalata: si guadagna comprando la seconda lama dal fabbro
-    assert(!pa._doppiaLeggera, 'ma la doppia non e regalata: la mano sinistra parte libera');
-    const lama = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.carattere === 'leggera');
+    // v2.19.6 — L'ASSASSINO PARTE CON DUE PUGNALI. Nella v2.19.1 la doppia era «da guadagnare»
+    // comprando la seconda lama; Paolo ha deciso il contrario: *«l'assassino con 2 pugnali, altrimenti e'
+    // troppo svantaggiato»*. E il bonus di classe della doppia leggera deve esserci DAL PRIMO COLPO:
+    // questo controllo, scritto al rovescio, passava solo perche' alla partenza i bonus non si
+    // calcolavano affatto (vedi il blocco sulla partenza, piu' sotto).
+    assert(!!pa.gear.manoSx && pa.gear.manoSx !== pa.gear.manoDx, 'parte con DUE pugnali, due oggetti diversi');
+    assert(pa._doppiaLeggera === true, 'e il bonus della doppia leggera c e dal primo colpo');
+    assert(Gear.BY_ID[pa.gear.armor].carattere === 'leggera' && Gear.BY_ID[pa.gear.armor].hero === 'guerriero',
+      'e addosso ha una corazza leggera da mischia');
+    assert((Gear.BY_ID[pa.gear.armor].bonus.dmgReduce || 0) > 0, 'che protegge davvero (gli stracci non riducevano niente)');
+    // la coppia si migliora un pugnale alla volta, dal fabbro
+    const lama = Gear.itemsBottega('assassino', 'guerriero', 'weapon').find(i => i.rank === 2);
     pa.coins = 100000; ra.wave = 3; ra.phase = C.PHASE_SHOP; ra.vaiAlVillaggio('x');
     alBanco(ra, pa, 'guerriero'); ra.buyGear('x', lama.id); ra.equipaggia('x', lama.id, 'manoSx');
-    assert(pa.gear.manoSx === lama.id, 'la seconda lama la vende il fabbro, e si impugna a sinistra');
-    assert(pa._doppiaLeggera === true, 'e li si accende il bonus di classe della doppia leggera');
+    assert(pa.gear.manoSx === lama.id, 'un pugnale nuovo dal fabbro, impugnato a sinistra');
+    assert(pa._doppiaLeggera === true, 'e la doppia leggera resta accesa');
+  }
+
+  // --- 3ter) v2.19.6 — LA SECONDA ARMA DA' DANNO, e non dipende dall'ordine delle mani ---
+  // Paolo: *«impugnare 2 armi non porta bonus al danno: se uso 2 pugnali non posso fare lo stesso danno,
+  // o addirittura meno, di uno solo»*. Tre cose da non perdere piu':
+  {
+    const armaDps = (room, pl) => room.effDamage(pl) / room.effFireDelay(pl);
+    const conArmi = (h, dx, sx) => {
+      const rr = new Room('d' + h + dx + sx); const pl = rr.addPlayer('x', { send() {} }, 'X', h); rr.startGame();
+      for (const id of [dx, sx]) if (id) pl.owned[id] = 1;
+      pl.gear.manoDx = dx || null; pl.gear.manoSx = sx || null; rr._recomputeBoons(pl); rr._recomputeGear(pl);
+      return { d: rr.effDamage(pl), dps: armaDps(rr, pl) };
+    };
+    const P = Gear.ITEMS.filter(i => i.famiglia === 'pugnale' && i.rank === 3);
+    const uno = conArmi('assassino', P[0].id, null), due = conArmi('assassino', P[0].id, P[1].id);
+    // 1. due armi fanno PIU' di una, e si vede nel numero «danno» del pannello (non solo in cadenza)
+    assert(due.d > uno.d * 1.3, 'due pugnali: il DANNO sale davvero (' + Math.round(uno.d) + ' -> ' + Math.round(due.d) + ')');
+    assert(due.dps > uno.dps * 1.4, 'e il danno al secondo pure (' + Math.round(uno.dps) + ' -> ' + Math.round(due.dps) + ')');
+    // 2. l'ordine delle mani non conta: l'arma principale e' la piu' forte, dovunque sia
+    const W = (car, rk) => Gear.itemsOfRank('maestro', 'weapon', rk).find(i => i.carattere === car).id;
+    const ab = conArmi('maestro', W('leggera', 3), W('equilibrata', 2)), ba = conArmi('maestro', W('equilibrata', 2), W('leggera', 3));
+    assert(Math.abs(ab.dps - ba.dps) < 0.01, 'le stesse due armi fanno lo stesso danno in qualunque mano (' + Math.round(ab.dps) + ' e ' + Math.round(ba.dps) + ')');
+    // 3. con due armi non si fa MAI meno che con la migliore delle due da sola
+    for (const [h, a, b] of [['maestro', W('leggera', 3), W('pesante', 2)], ['barbaro', W('pesante', 3), W('leggera', 2)], ['assassino', P[0].id, Gear.ITEMS.find(i => i.famiglia === 'pugnale' && i.rank === 2).id]]) {
+      const sa = conArmi(h, a, null).dps, sb = conArmi(h, b, null).dps, dd = conArmi(h, a, b).dps;
+      assert(dd >= Math.max(sa, sb) - 0.01, h + ': due armi non fanno mai meno della migliore da sola');
+    }
+    // e l'arma a DUE MANI non riceve la quota della seconda mano: e' un'arma sola
+    const pes = conArmi('paladino', W('pesante', 3), null);
+    const rq = new Room('dq'); const pq = rq.addPlayer('x', { send() {} }, 'X', 'paladino'); rq.startGame();
+    pq.owned[W('pesante', 3)] = 1; pq.gear.manoDx = W('pesante', 3); pq.gear.manoSx = null; rq._recomputeBoons(pq);
+    assert(!pq._bonusSeconda, 'l arma a due mani non prende il bonus della seconda mano');
+  }
+
+  // --- 3quater) v2.19.6 — I BONUS CI SONO DAL PRIMO COLPO, per tutte e sette le classi ---
+  // Alla partenza si ricalcolava l'equipaggiamento ma non i bonus: arciere e mago partivano senza il loro
+  // +8% di classe (dalla v2.18), l'assassino senza il 69% del suo danno. Il controllo: il danno alla
+  // partenza e' identico a quello dopo un ricalcolo completo.
+  for (const h of CLASSI) {
+    const rr = new Room('p' + h); const pl = rr.addPlayer('x', { send() {} }, 'X', h); rr.startGame();
+    const a = rr.effDamage(pl) / rr.effFireDelay(pl);
+    rr._recomputeBoons(pl); rr._recomputeGear(pl);
+    const b = rr.effDamage(pl) / rr.effFireDelay(pl);
+    assert(Math.abs(a - b) < 0.01, h + ': alla partenza il danno ha gia tutti i suoi bonus (' + Math.round(a) + ' contro ' + Math.round(b) + ')');
   }
 
   // --- 4) A RUNTIME: si compra dove si deve, e non altrove ---

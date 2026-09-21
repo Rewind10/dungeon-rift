@@ -163,9 +163,20 @@ Righe trascritte come le ha scritte Paolo.
 | **Magie** | no |
 
 ### ASSASSINO — **DESTREZZA / FORZA**
+
+> ✅ **Aggiornato nella v2.19.6, su decisione di Paolo:** *«crea dei pugnali e rimuovi le armi
+> bilanciate, perché non si è mai visto un assassino con la sciabola»* e *«l'assassino con 2 pugnali,
+> altrimenti è troppo svantaggiato. Dovrebbe anche avere la corazza leggera da mischia, dato che subisce
+> troppi danni»*. Quindi, rispetto alla riga qui sotto:
+> - **Armi da mischia: solo PUGNALI**, una famiglia sua (due per grado, a metà prezzo: una coppia costa
+>   quanto un'arma). Niente equilibrate, niente sciabole. **Archi: solo leggeri.**
+> - **Parte con due pugnali** (Pugnale e Stiletto Sbeccato) e col **Giaco di Cuoio Nero** — leggero, da
+>   mischia, +10 PV, −4% danni subiti, +3% passo — al posto degli Stracci, che non proteggevano niente.
+> - Le **armature** restano come da tabella (leggere/medie, mischia/arco).
+
 | | |
 |---|---|
-| **Armi** | leggere/medie, mischia/arco |
+| **Armi** | leggere/medie, mischia/arco — *v2.19.6: pugnali + archi leggeri* |
 | **Armature** | leggere/medie, mischia/arco |
 | **Doppia arma** | leggere, **solo mischia** — **bonus di classe al danno con doppia arma leggera da mischia** |
 | **Spada + scudo** | no |
@@ -205,6 +216,36 @@ di riferimento.
 | **Doppia arma** | no |
 | **Spada + scudo** | no |
 | **Magie** | sì — scalano con Carisma |
+
+---
+
+### ✅ La doppia arma — come rende (v2.19.6)
+
+> *«Impugnare 2 armi non porta bonus al danno… se uso 2 pugnali non posso fare lo stesso danno, o
+> addirittura meno, di uno solo. Cerca di bilanciare il danno delle 2 armi su 2 mani (attenzione che è
+> diverso da quello di un'arma pesante sola che occupa 2 mani).»*
+
+- **L'arma principale è la più forte delle due**, in qualunque mano sia: l'ordine destra/sinistra non
+  cambia il danno.
+- **La seconda arma aggiunge danno** (visibile nel numero «danno»), pari a una quota del proprio danno
+  al secondo: **leggera 55% · equilibrata 35% · pesante 25%**. Il maestro d'armi ci aggiunge il suo 8%.
+- **L'arma pesante a due mani non prende nulla**: è un'arma sola, non una coppia.
+- **Un oggetto sta in una mano sola**: metterlo nell'altra lo sposta.
+
+Il risultato, misurato, in multipli di un'arma a una mano dello stesso grado (**D**):
+
+| Combinazione | Rende |
+|---|---|
+| un'arma a una mano (+ scudo) | 1,00 D |
+| assassino, un pugnale | 0,80 D |
+| **assassino, due pugnali** (con il suo bonus di classe) | **1,38 D** — e la coppia costa quanto *una* arma |
+| **maestro, due armi** | **1,37 D** — ma due armi intere |
+| barbaro, due pesanti | 1,29 D |
+| arma pesante **a due mani** | 1,00 D — *invariata, vedi sotto* |
+
+> ⚠️ **Segnalato, non deciso:** nel listino un'arma pesante a due mani ha lo **stesso danno al
+> secondo** di una a una mano (è il «bivio» della v2.12: ogni grado ha lo stesso danno, cambiano colpo,
+> portata e rinculo). Ma costa lo scudo. Se deve rendere di più, è una scelta a parte.
 
 ---
 

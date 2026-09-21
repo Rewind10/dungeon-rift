@@ -260,7 +260,8 @@ class Room {
     // personaggio nasce. E i PV vanno riallineati subito, se no un mago (che in Costituzione sta sotto
     // il centro) nascerebbe con 100 PV su un massimo di 91 e la barra partirebbe oltre il fondo.
     applicaProfilo(p);
-    this._recomputeGear(p); p.hp = this.effMaxHp(p); p._needFull = true; this.players.set(pid, p); return p;
+    // v2.19.6 — anche chi entra a partita iniziata parte coi bonus calcolati (vedi `startGame`)
+    this._recomputeBoons(p); this._recomputeGear(p); p.hp = this.effMaxHp(p); p._needFull = true; this.players.set(pid, p); return p;
   }
   removePlayer(pid) { const p = this.players.get(pid); if (p) { p.connected = false; p.conn = null; } }
   setInput(pid, i) { const p = this.players.get(pid); if (!p) return;
@@ -285,7 +286,13 @@ class Room {
 //     ritroverebbe di livello 1 col nome di un veterano. Prima si sgombra, poi si riparte.
     this.mercData = null; for (const [k, mp] of this.players) if (mp.merc) this.players.delete(k);
     this.wave = 0; this.monsters.length = 0; this.bullets.length = 0;
-    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.scuola = null; p.titolo = null; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) if (p.gear[k]) p.owned[p.gear[k]] = 1; this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
+    for (const p of this.players.values()) { p.dead = false; p.down = false; p.hp = p.maxHp; p.kills = 0; p.buffs = {}; p.weapon2 = null; p.lives = C.START_LIVES; p.xpPool = 0; p.level = 1; p.points = 0; p.cards = []; p.spec = null; p.rankOffer = null; p.specOffer = null; p.perk = newPerk(); p.manaShield = 0; p.swingCount = 0; p.furiaBonus = 0; p.buys = {}; p.boon = newBoon(); p.boonsOwned = {}; p.scaglioniDovuti = []; p.abil = [null, null, null]; p.abilDovute = []; p.scuola = null; p.titolo = null; p.cdAb = [0, 0, 0]; p.cdAbMax = [0, 0, 0]; p.carica = null; p.turbine = null; p.salva = null; p.scudoAb = null; p.veloCrit = 0; p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.cardOn = {}; p.defianceUsed = 0; p.hpDebt = 0; p.stats = newStats(); applicaProfilo(p); p.boonShot = 0; p.defianceLeft = 0; p.aegisT = 0; p.combo = 0; p.comboBest = 0; p.comboT = 0; p.synActive = {}; p.comboRewT = 0; p.damageDealt = 0; p.coins = 0; p.gear = Gear.startingGear(p.heroId); p.belt = Pot.newBelt(); p.potCd = 0; p.owned = {}; p.bounty = null; p.bountyOffer = null; p.noLifeLost = true; for (const k in p.gear) if (p.gear[k]) p.owned[p.gear[k]] = 1;
+      // v2.19.6 — I BONUS SI CALCOLANO ANCHE ALLA PARTENZA. Qui si ricalcolava solo l'equipaggiamento, e
+      // non i bonus (`_recomputeBoons`): il bonus di classe e quello della seconda arma arrivavano solo al
+      // primo ricalcolo — un cambio d'arma, una carta. Misurato: arciere e mago partivano senza il loro +8%
+      // (dalla v2.18), e l'assassino coi due pugnali senza il 69% del suo danno. L'ORDINE conta: i bonus
+      // rifanno `p.stats` da zero, e l'equipaggiamento ci scrive sopra la perforazione dell'arma.
+      this._recomputeBoons(p); this._recomputeGear(p); p.hp = this.effMaxHp(p); this._abilitaDiProva(p); this._slotDovuto(p, p.level); this.sendBoons(p); }
     this.runStart = this.time;
     // v2.17 — ANCHE L'ONDATA 1 E' UNA PROVA, se si e' arrivati qui dal pannello delle prove (che si
     // riconosce da `abilProva`: il menu manda sempre le attive scelte, anche vuote). Serve a provare le
@@ -3045,14 +3052,16 @@ class Room {
     { const a1 = Gear.armaPrincipale(p.gear), a2 = Gear.armaSecondaria(p.gear);
       p._doppiaLeggera = !!(a1 && a2 && a1.carattere === 'leggera' && a2.carattere === 'leggera'); }
     bonusDiClasse(p, this._caratteraArma(p));
-    // v2.18.1 — LA SECONDA ARMA. Non raddoppia il danno (sarebbe due personaggi in uno): alza la
-    // CADENZA della meta' del proprio peso, che e' come funziona il combattere con due lame — piu'
-    // colpi, non colpi piu' grossi. Il maestro d'armi ci aggiunge il suo 8% da `Ambidestro`.
-    { const a2 = Gear.armaSecondaria(p.gear);
-      if (a2) {
-        const q = a2.carattere === 'leggera' ? 0.22 : a2.carattere === 'equilibrata' ? 0.15 : 0.10;
-        p.stats.fireRateMult *= (1 + q) * (p.heroId === 'maestro' ? 1.08 : 1);
-      } }
+    // v2.18.1 — LA SECONDA ARMA.
+    // v2.19.6 — ADESSO DA' DANNO, non cadenza. Prima alzava solo la cadenza, e il numero «danno» del
+    // pannello restava fermo: con due armi il giocatore leggeva lo stesso danno di una, e aveva ragione
+    // a pensare che non servisse. La regola (e i numeri) stanno in `Gear.bonusSecondaMano`: la seconda
+    // aggiunge una quota del proprio danno al secondo — 55% se leggera, 35% equilibrata, 25% pesante.
+    // Il maestro d'armi ci aggiunge il suo 8% da `Ambidestro`, sulla quota della seconda mano.
+    // Non si somma MAI all'arma a due mani: quella e' un'arma sola, e la seconda mano non ce l'ha.
+    { const extra = Gear.bonusSecondaMano(p.gear) * (p.heroId === 'maestro' ? 1.08 : 1);
+      p._bonusSeconda = extra;
+      if (extra > 0) p.stats.dmgMult *= (1 + extra); }
     const accese = {};
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
     for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }

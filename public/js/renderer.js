@@ -3821,11 +3821,20 @@
       ctx.beginPath(); ctx.moveTo(-r * 0.10, -r * 0.58); ctx.quadraticCurveTo(-r * 1.20, -r * (0.62 + sway), -r * 1.10, 0);
       ctx.quadraticCurveTo(-r * 1.20, r * (0.62 - sway), -r * 0.10, r * 0.58); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = clothDk; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+      // v2.19.6 — ANCHE QUI SI DISEGNA CIO' CHE SI IMPUGNA. Lo stile diceva «l'assassino ha i pugnali»,
+      // e basta: l'assassino che impugnava un arco restava disegnato coi pugnali mentre tirava frecce —
+      // il difetto che Paolo aveva trovato al contrario. Adesso decide l'arma in mano (`wp`): da mischia
+      // = lame, altrimenti = arco. La seconda lama si vede solo se c'e' una seconda arma (`wx`). Se
+      // l'equipaggiamento non e' noto (niente `wp`), si ricade sullo stile, come prima.
+      const _GL = window.GAME && window.GAME.Gear;
+      const _aL = _GL && eq && eq.wp ? _GL.BY_ID[eq.wp] : null;
+      const lame = _aL ? !!(_aL.weapon && _aL.weapon.melee) : st.arma === 'pugnali';
+      const dueLame = _aL ? !!(eq && eq.wx) : st.arma === 'pugnali';
       ctx.strokeStyle = skin; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.38;
       if (eq && eq.civile) {                                    // v1.75 — senza arco le braccia stanno gia' giu'
         ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 0.58, -r * 0.22); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, r * 0.45); ctx.lineTo(r * 0.58, r * 0.22); ctx.stroke();
-      } else if (st.arma === 'pugnali') {
+      } else if (lame) {
         // ASSASSINO: le braccia stanno avanti e in fuori, una lama per mano. Non regge niente sopra la
         // testa, quindi la sagoma e' piu' bassa e larga di quella dell'arciere — si distinguono da li'.
         ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * (0.52 + draw * 0.34), -r * 0.40); ctx.stroke();
@@ -3840,8 +3849,8 @@
       ctx.strokeStyle = '#5a3d1e'; ctx.lineWidth = r * 0.20; ctx.beginPath(); ctx.moveTo(-r * 0.45, r * 0.42); ctx.lineTo(r * 0.30, -r * 0.42); ctx.stroke();
       ctx.strokeStyle = DK; ctx.lineWidth = 2;
       const _civL = !!(eq && eq.civile);   // v1.75 — il civile non porta arco ne' faretra
-      if (!_civL && st.arma === 'pugnali') {
-        for (const sg of [-1, 1]) {
+      if (!_civL && lame) {
+        for (const sg of (dueLame ? [-1, 1] : [1])) {
           ctx.save(); ctx.translate(r * (0.52 + draw * 0.34), sg * r * 0.40); ctx.rotate(sg * 0.18 - draw * 0.2 * sg);
           ctx.fillStyle = '#2a1d10'; ctx.strokeStyle = DK; ctx.lineWidth = 1.4; this._rr(ctx, -r * 0.16, -r * 0.05, r * 0.20, r * 0.10, 2); ctx.fill(); ctx.stroke();
           ctx.fillStyle = st.lama || '#cfd8dc'; ctx.strokeStyle = DK; ctx.lineWidth = 1.5;
@@ -3850,7 +3859,7 @@
           ctx.restore();
         }
       }
-      if (!_civL && st.arma !== 'pugnali') {
+      if (!_civL && !lame) {
       ctx.fillStyle = '#5a3d1e'; ctx.save(); ctx.translate(-r * 0.52, r * 0.40); ctx.rotate(-0.5);        // faretra
       this._rr(ctx, -r * 0.10, -r * 0.34, r * 0.20, r * 0.62, 3); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#ded4ab'; ctx.lineWidth = 1.8;

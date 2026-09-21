@@ -172,7 +172,10 @@
                  shield: { guerriero: TUTTI },
                  boots:  {} },
     // leggere/medie, mischia/arco — le due botteghe, ma niente pesante e niente scudo
-    assassino: { weapon: { guerriero: LEGMED, ladro: LEGMED },
+    // v2.19.6 — le ARMI no: niente equilibrate, e niente sciabole del fabbro (*«non si e' mai visto un
+    // assassino con la sciabola»*). Da mischia prende i PUGNALI, che non stanno in questa tabella
+    // perche' sono suoi per famiglia (`solo`); resta l'arco LEGGERO, che la sua riga concede.
+    assassino: { weapon: { ladro: LEG },
                  armor:  { guerriero: LEGMED, ladro: LEGMED },
                  shield: {},
                  boots:  { ladro: LEGMED } },
@@ -206,6 +209,9 @@
     // v2.19.1 — un pezzo di AVVIO appartiene a una classe sola, e non si presta: e' il fondo del
     // listino di quella classe, non una riga del listino di tutti.
     if (it.avvio) return it.avvio === heroId;
+    // v2.19.6 — e un pezzo con `solo` e' IN VENDITA, ma solo per le classi elencate (i pugnali).
+    // Scavalca la tabella per peso e tipologia: e' una famiglia d'arma disegnata per chi la porta.
+    if (it.solo) return it.solo.indexOf(heroId) >= 0;
     const P = PERMESSI[heroId];
     // Una classe fuori tabella — i vecchi guerriero/ladro/mago dei salvataggi, o una classe che nascera'
     // domani — torna alla regola di prima: il suo corpo, tutto. Meglio la regola vecchia che nessuna.
@@ -297,9 +303,56 @@
     // dentro il catalogo del fabbro sarebbe un'arma leggera GRATIS per barbaro, paladino, maestro e
     // warlock. Con `avvio` il pezzo non compare su nessun banco e lo puo' avere solo la classe che ci
     // sta scritta: e' il fondo del listino di UNO, non una riga del listino di tutti.
-    { id: 'gue_w_pugnali_sbeccati', hero: 'guerriero', slot: 'weapon', rank: 1, carattere: 'leggera', avvio: 'assassino',
-      name: 'Pugnali Sbeccati', color: '#7a7f8a', desc: 'Portata 68 · arco 132° · 77 danni/s · rinculo 48',
-      weapon: { name: 'Pugnali Sbeccati', melee: true, dmg: 22, fireRate: 3.5, arcRadius: 68, arcHalf: 1.15, knockback: 48, projColor: '#cfd8dc', spread: 0, bulletSpeed: 0, range: 68, pierce: 0 } },
+    // v2.19.6 — DUE PUGNALI, NON UNO. Paolo: *«l'assassino con 2 pugnali, altrimenti e' troppo
+    // svantaggiato»*. Sono DUE OGGETTI DIVERSI e non lo stesso messo in due mani: un oggetto e' uno,
+    // e si impugna o a destra o a sinistra (anche questo segnalato da Paolo, e corretto in `impugna`).
+    // Il pugnale e lo stiletto fanno lo stesso danno al secondo per strade diverse: il primo colpisce
+    // un po' piu' forte, il secondo un po' piu' spesso e di punta (arco piu' stretto).
+    // L'id del primo resta quello della v2.19.1, cosi' i salvataggi di ieri lo ritrovano.
+    { id: 'gue_w_pugnali_sbeccati', hero: 'guerriero', slot: 'weapon', rank: 1, carattere: 'leggera', avvio: 'assassino', famiglia: 'pugnale',
+      name: 'Pugnale Sbeccato', color: '#7a7f8a', desc: 'Portata 68 · arco 132° · 63 danni/s · rinculo 48',
+      weapon: { name: 'Pugnale Sbeccato', melee: true, dmg: 18, fireRate: 3.5, arcRadius: 68, arcHalf: 1.15, knockback: 48, projColor: '#cfd8dc', spread: 0, bulletSpeed: 0, range: 68, pierce: 0 } },
+    { id: 'gue_w_stiletto_sbeccato', hero: 'guerriero', slot: 'weapon', rank: 1, carattere: 'leggera', avvio: 'assassino', famiglia: 'pugnale',
+      name: 'Stiletto Sbeccato', color: '#7a7f8a', desc: 'Portata 64 · arco 109° · 65 danni/s · rinculo 40',
+      weapon: { name: 'Stiletto Sbeccato', melee: true, dmg: 17, fireRate: 3.8, arcRadius: 64, arcHalf: 0.95, knockback: 40, projColor: '#cfd8dc', spread: 0, bulletSpeed: 0, range: 64, pierce: 0 } },
+    // ============================================================================================
+    // v2.19.6 — I PUGNALI DELL'ASSASSINO, dal grado 2 al 5
+    // ============================================================================================
+    // Paolo: *«crea dei pugnali e rimuovi le armi bilanciate, perche' non si e' mai visto un assassino
+    // con la sciabola»*. Li vende il FABBRO (sono armi da mischia) ma li vede solo l'assassino (`solo`).
+    //
+    // DUE PER GRADO, perche' si impugnano in coppia e un oggetto non puo' stare in due mani: senza la
+    // coppia, al grado 5 l'assassino avrebbe un pugnale del 5 e l'altra mano ferma al 4.
+    //
+    // A META' PREZZO (`costoMult: 0.5`): una COPPIA costa quanto un'arma degli altri. E' il patto:
+    // un pugnale da solo fa l'80% di un'arma normale dello stesso grado, e la coppia la supera.
+    //   grado:            1     2     3     4     5
+    //   arma normale D:  79    97   117   130   160   danni/s (le leggere da mischia del fabbro)
+    //   un pugnale:      63    77    95   105   130   ~0,8 D
+    { id: 'gue_w_pugnale', hero: 'guerriero', slot: 'weapon', rank: 2, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Pugnale', color: '#b8c0cc', desc: 'Portata 72 · arco 132° · 77 danni/s · rinculo 55',
+      weapon: { name: 'Pugnale', melee: true, dmg: 22, fireRate: 3.5, arcRadius: 72, arcHalf: 1.15, knockback: 55, projColor: '#dfe6ee', spread: 0, bulletSpeed: 0, range: 72, pierce: 0 } },
+    { id: 'gue_w_stiletto', hero: 'guerriero', slot: 'weapon', rank: 2, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Stiletto', color: '#b8c0cc', desc: 'Portata 68 · arco 109° · 76 danni/s · rinculo 46',
+      weapon: { name: 'Stiletto', melee: true, dmg: 20, fireRate: 3.8, arcRadius: 68, arcHalf: 0.95, knockback: 46, projColor: '#dfe6ee', spread: 0, bulletSpeed: 0, range: 68, pierce: 0 } },
+    { id: 'gue_w_daga_d_ombra', hero: 'guerriero', slot: 'weapon', rank: 3, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: "Daga d'Ombra", color: '#3aa0ff', desc: 'Portata 78 · arco 132° · 95 danni/s · rinculo 62',
+      weapon: { name: "Daga d'Ombra", melee: true, dmg: 27, fireRate: 3.5, arcRadius: 78, arcHalf: 1.15, knockback: 62, projColor: '#bfe0ff', spread: 0, bulletSpeed: 0, range: 78, pierce: 0 } },
+    { id: 'gue_w_misericordia', hero: 'guerriero', slot: 'weapon', rank: 3, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Misericordia', color: '#3aa0ff', desc: 'Portata 74 · arco 109° · 95 danni/s · rinculo 52',
+      weapon: { name: 'Misericordia', melee: true, dmg: 25, fireRate: 3.8, arcRadius: 74, arcHalf: 0.95, knockback: 52, projColor: '#bfe0ff', spread: 0, bulletSpeed: 0, range: 74, pierce: 0 } },
+    { id: 'gue_w_kris_serpentino', hero: 'guerriero', slot: 'weapon', rank: 4, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Kris Serpentino', color: '#ffb020', desc: 'Portata 84 · arco 132° · 105 danni/s · rinculo 70',
+      weapon: { name: 'Kris Serpentino', melee: true, dmg: 30, fireRate: 3.5, arcRadius: 84, arcHalf: 1.15, knockback: 70, projColor: '#ffe0a0', spread: 0, bulletSpeed: 0, range: 84, pierce: 0 } },
+    { id: 'gue_w_stiletto_del_vuoto', hero: 'guerriero', slot: 'weapon', rank: 4, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Stiletto del Vuoto', color: '#ffb020', desc: 'Portata 80 · arco 109° · 103 danni/s · rinculo 58',
+      weapon: { name: 'Stiletto del Vuoto', melee: true, dmg: 27, fireRate: 3.8, arcRadius: 80, arcHalf: 0.95, knockback: 58, projColor: '#ffe0a0', spread: 0, bulletSpeed: 0, range: 80, pierce: 0 } },
+    { id: 'gue_w_zanna_della_faglia', hero: 'guerriero', slot: 'weapon', rank: 5, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: 'Zanna della Faglia', color: '#ffe9a8', desc: 'Portata 90 · arco 132° · 130 danni/s · rinculo 78',
+      weapon: { name: 'Zanna della Faglia', melee: true, dmg: 37, fireRate: 3.5, arcRadius: 90, arcHalf: 1.15, knockback: 78, projColor: '#fff4cf', spread: 0, bulletSpeed: 0, range: 90, pierce: 0 } },
+    { id: 'gue_w_pungiglione_d_ossidiana', hero: 'guerriero', slot: 'weapon', rank: 5, carattere: 'leggera', solo: ['assassino'], famiglia: 'pugnale', costoMult: 0.5,
+      name: "Pungiglione d'Ossidiana", color: '#ffe9a8', desc: 'Portata 86 · arco 109° · 129 danni/s · rinculo 64',
+      weapon: { name: "Pungiglione d'Ossidiana", melee: true, dmg: 34, fireRate: 3.8, arcRadius: 86, arcHalf: 0.95, knockback: 64, projColor: '#fff4cf', spread: 0, bulletSpeed: 0, range: 86, pierce: 0 } },
     { id: 'gue_w_spadone', hero: 'guerriero', slot: 'weapon', rank: 2, carattere: 'pesante',
       name: 'Spadone', color: '#b8c0cc', desc: 'Portata 86 · arco 94° · 99 danni/s · rinculo 300',
       weapon: { name: 'Spadone', melee: true, dmg: 86, fireRate: 1.15, arcRadius: 86, arcHalf: 0.82, knockback: 300, projColor: '#ffd27a', spread: 0, bulletSpeed: 0, range: 86, pierce: 0 } },
@@ -340,6 +393,15 @@
     { id: 'gue_a_casacca_rattoppata', hero: 'guerriero', slot: 'armor', rank: 1, carattere: 'equilibrata',
       name: 'Casacca Rattoppata', color: '#7a7f8a', desc: '+6 PV · −2% danni subiti',
       bonus: { maxHpFlat: 6, dmgReduce: 0.02 }, tinta: { metallo: '#6b6f78', cloth: '#4a4438', clothDk: '#2a251d', steelDk: '#33373d' } },
+    // v2.19.6 — IL GIACO DI CUOIO NERO. Paolo: *«dovrebbe avere la corazza leggera da mischia, dato
+    // che subisce troppi danni»*. Partiva con gli Stracci del ladro: +6 PV e ZERO riduzione del danno,
+    // cioe' niente addosso, su una classe da mischia con la Costituzione a 4. Questo e' leggero come
+    // vuole la sua tabella e da mischia come vuole il suo mestiere: un filo sopra la casacca del
+    // guerriero in protezione, e un filo di passo in piu', perche' e' leggero. Solo suo (`avvio`).
+    { id: 'gue_a_giaco_di_cuoio_nero', hero: 'guerriero', slot: 'armor', rank: 1, carattere: 'leggera', avvio: 'assassino',
+      name: 'Giaco di Cuoio Nero', color: '#7a7f8a', desc: '+10 PV · -4% danni subiti · +3% passo',
+      bonus: { maxHpFlat: 10, dmgReduce: 0.04, speedMult: 0.03 },
+      tinta: { cloth: '#2e2a30', clothDk: '#16131a', mant: '#1c1820', capp: '#26222a' } },
     { id: 'gue_a_corazza_di_ferro', hero: 'guerriero', slot: 'armor', rank: 2, carattere: 'pesante',
       name: 'Corazza di Ferro', color: '#b8c0cc', desc: '+50 PV · −13% danni subiti · −6% passo · −6% cadenza',
       bonus: { maxHpFlat: 50, dmgReduce: 0.13, speedMult: -0.06, fireRateMult: -0.06 }, tinta: { metallo: '#68707a', cloth: '#344a24', clothDk: '#1e2b12', steelDk: '#303640' } },
@@ -688,6 +750,9 @@
     if (!riga) throw new Error('gear.js: nessun listino per lo slot ' + it.slot + ' (' + it.id + ')');
     it.cost = riga[it.rank - 1];
     if (typeof it.cost !== 'number') throw new Error('gear.js: nessun prezzo per ' + it.id + ' al grado ' + it.rank);
+    // v2.19.6 — un pezzo puo' costare una FRAZIONE del listino (i pugnali: meta', perche' si comprano in
+    // coppia). Il listino resta uno: la frazione e' scritta sul pezzo, non un prezzo a parte.
+    if (it.costoMult) it.cost = Math.round(it.cost * it.costoMult);
   }
 
   const BY_ID = {}; for (const it of ITEMS) BY_ID[it.id] = it;
@@ -699,7 +764,7 @@
     // v2.19.1 — i pezzi di AVVIO non fanno parte del catalogo. Stanno nell'elenco perche' e' li' che
     // vivono gli oggetti, ma non sono merce: non si comprano, non si contano nella forma del listino
     // (1 scarso + 3 per ognuno degli altri quattro gradi) e non devono comparire dove si sceglie.
-    return ITEMS.filter(i => i.hero === c && i.slot === slot && !i.avvio)
+    return ITEMS.filter(i => i.hero === c && i.slot === slot && !i.avvio && !i.solo)
       .sort((a, b) => (a.rank - b.rank) || (CAR_ORD(a.carattere) - CAR_ORD(b.carattere)));
   }
   // I pezzi di UN grado solo. Serve a chi ragiona per grado (il salto a un'ondata, i test): prendere il
@@ -719,6 +784,9 @@
     // classe la cui famiglia d'arma (mischia leggera) non coincide col suo corpo (`ladro`, gli archi),
     // e senza questa riga il grado minimo del corpo gli metteva in mano un arco.
     const avvioDi = (sl) => ITEMS.find(i => i.avvio === heroId && i.slot === sl) || null;
+    // v2.19.6 — le armi di avvio possono essere DUE (i pugnali dell'assassino): la seconda va nella
+    // sinistra, se la classe la puo' tenere li' — lo decide `impugna`, come per chiunque.
+    const avviiArma = ITEMS.filter(i => i.avvio === heroId && i.slot === 'weapon');
     const minimo = (sl) => { const l = itemsFor(heroId, sl); return l.length ? l.reduce((a, b) => (b.rank < a.rank ? b : a)) : null; };
     for (const sl of slotsFor(heroId)) {
       const it = avvioDi(sl) || minimo(sl); if (!it) continue;
@@ -726,7 +794,10 @@
       // e' sempre di grado scarso e non e' mai pesante, quindi entra nella destra e lascia libera la
       // sinistra; lo scudo di partenza, per chi ce l'ha, va nella sinistra — e se la classe non puo'
       // portarlo (`impugna` rifiuta) resta semplicemente nel baule, dove il giocatore lo trova.
-      if (it.slot === 'weapon') out.manoDx = it.id;
+      if (it.slot === 'weapon') {
+        out.manoDx = it.id;
+        if (avviiArma.length >= 2) { const r2 = impugna(heroId, out, avviiArma[1].id, 'manoSx'); if (r2.gear) out.manoSx = r2.gear.manoSx; }
+      }
       else if (it.slot === 'shield') { const r = impugna(heroId, out, it.id, 'manoSx'); if (r.gear) out.manoSx = r.gear.manoSx; }
       else out[it.slot] = it.id;
     }
@@ -774,6 +845,11 @@
     if (MANI_SLOT.indexOf(mano) < 0) mano = 'manoDx';
     const altra = mano === 'manoDx' ? 'manoSx' : 'manoDx';
     const mani = _mani(heroId);
+    // v2.19.6 — UN OGGETTO STA IN UNA MANO SOLA. Paolo: *«un'arma puoi metterla sia a destra che a
+    // sinistra, ma non e' possibile: o mano destra o sinistra»*. Si poteva, e non dava nemmeno niente
+    // (la seconda arma era riconosciuta per identita', quindi lo stesso oggetto contava una volta).
+    // Adesso metterlo nell'altra mano lo SPOSTA: la mano da cui viene resta libera.
+    if (g[altra] === it.id) g[altra] = null;
     const inAltra = BY_ID[g[altra]];
 
     if (it.slot === 'shield') {
@@ -822,14 +898,47 @@
   // Vero se questo pezzo si puo' mettere in quella mano, senza costruire niente. Serve al client.
   function puoImpugnare(heroId, gear, itemId, mano) { return !!impugna(heroId, gear, itemId, mano).gear; }
   // L'arma che conta per i danni: la destra se c'e', se no la sinistra. Uno scudo non e' un'arma.
+  // v2.19.6 — L'ARMA PRINCIPALE E' LA PIU' FORTE, in qualunque mano sia. Era «la destra se c'e'»:
+  // con due armi diverse bastava metterle nell'ordine sbagliato per perdere un quarto del danno — due
+  // stessi oggetti davano 103 o 130 danni al secondo a seconda di quale stava a destra. Una scelta
+  // che non si vede non e' una scelta: e' una trappola. A parita', vince la destra.
+  function _dps(it) { return it && it.weapon ? (it.weapon.dmg || 0) * (it.weapon.fireRate || 1) : 0; }
+  function _armiInMano(gear) {
+    const out = [];
+    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'weapon') out.push(it); }
+    return out;
+  }
   function armaPrincipale(gear) {
-    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'weapon') return it; }
-    return null;
+    const a = _armiInMano(gear);
+    if (a.length < 2) return a[0] || null;
+    return _dps(a[1]) > _dps(a[0]) ? a[1] : a[0];
   }
   function armaSecondaria(gear) {
-    const pr = armaPrincipale(gear);
-    for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'weapon' && it !== pr) return it; }
-    return null;
+    const a = _armiInMano(gear);
+    if (a.length < 2) return null;
+    return _dps(a[1]) > _dps(a[0]) ? a[0] : a[1];
+  }
+  // ============================================================================================
+  // v2.19.6 — QUANTO RENDE LA SECONDA ARMA
+  // ============================================================================================
+  // Paolo: *«impugnare 2 armi non porta bonus al danno. Se uso 2 pugnali non posso fare lo stesso danno,
+  // o addirittura meno, di uno solo»*. Era cosi': la seconda arma alzava solo la CADENZA, e il numero
+  // «danno» del pannello restava fermo — misurato, 36 con una sciabola e 36 con due.
+  //
+  // Adesso la seconda arma aggiunge DANNO: una quota del proprio danno al secondo, che dipende da
+  // quanto e' maneggevole tenerla nella mano debole. Due pugnali si completano; due mazze pesanti si
+  // intralciano. La quota si applica al danno della principale, quindi il colpo resta quello
+  // dell'arma piu' forte e si fa piu' pesante.
+  //
+  // NON VALE per l'arma pesante a due mani, e non e' una dimenticanza: quella e' UN'arma sola, non
+  // una coppia. Il suo pregio e' il colpo singolo e il rinculo, e costa lo scudo.
+  const MANO_SECONDA = { leggera: 0.55, equilibrata: 0.35, pesante: 0.25 };
+  function bonusSecondaMano(gear) {
+    const a1 = armaPrincipale(gear), a2 = armaSecondaria(gear);
+    if (!a1 || !a2) return 0;
+    const q = MANO_SECONDA[a2.carattere] != null ? MANO_SECONDA[a2.carattere] : MANO_SECONDA.equilibrata;
+    const d1 = _dps(a1); if (!d1) return 0;
+    return q * _dps(a2) / d1;
   }
   function scudoDi(gear) {
     for (const m of MANI_SLOT) { const it = BY_ID[gear && gear[m]]; if (it && it.slot === 'shield') return it; }
@@ -860,6 +969,7 @@
   return { ITEMS, BY_ID, SLOTS, CORPO_DI, corpoDi: _corpo, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
            itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita,
            MANI_SLOT, aDueMani, impugna, puoImpugnare, armaPrincipale, armaSecondaria, scudoDi,
+           MANO_SECONDA, bonusSecondaMano,
            // v2.19 — le tre botteghe e l'equipaggiamento misto
            TIPOLOGIA, BOTTEGHE, BOTTEGA_NOME, PERMESSI, puoAvere, tipologiaDi, slotsClasse, itemsBottega, slotsBottega };
 });

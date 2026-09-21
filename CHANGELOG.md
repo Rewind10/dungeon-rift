@@ -2,6 +2,64 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.6] — 2026-09-21 · "Due pugnali"
+
+Cinque richieste di Paolo, e **due bug** trovati misurando.
+
+**🗡️ L'assassino parte con due pugnali**, due oggetti diversi: il Pugnale Sbeccato e lo Stiletto
+Sbeccato. Stesso danno al secondo per strade diverse — il primo colpisce un po' più forte, il secondo
+un po' più spesso e di punta.
+
+**🛡️ E con una corazza leggera da mischia**: il **Giaco di Cuoio Nero** (+10 PV, −4% danni subiti,
++3% passo) al posto degli Stracci, che davano +6 PV e **zero** riduzione del danno — cioè niente, su una
+classe da mischia con la Costituzione a 4.
+
+**🗡️ I pugnali, e via le sciabole.** *«Non si è mai visto un assassino con la sciabola.»* Una famiglia
+d'arma sua, venduta dal fabbro ma visibile solo a lui: **due pugnali per grado** dal 2 al 5 (Pugnale e
+Stiletto, Daga d'Ombra e Misericordia, Kris Serpentino e Stiletto del Vuoto, Zanna della Faglia e
+Pungiglione d'Ossidiana), **a metà prezzo** — una coppia costa quanto un'arma degli altri. Due per
+grado perché un oggetto non può stare in due mani: senza la coppia, al grado 5 l'altra mano resterebbe
+al 4. L'assassino non vede più armi equilibrate né sciabole; dall'arciera, solo archi leggeri.
+
+**⚔️ La seconda arma adesso dà danno.** Misurato: prima alzava solo la **cadenza**, e il numero «danno»
+del pannello non si muoveva mai — un maestro faceva 36 con una sciabola e 36 con due. Adesso aggiunge
+una quota del **proprio** danno al secondo, secondo quanto è maneggevole nella mano debole: **leggera
+55%, equilibrata 35%, pesante 25%**. L'arma pesante **a due mani** non prende niente: è un'arma sola.
+
+**⚔️ E l'ordine delle mani non conta più.** L'arma principale era sempre quella a destra: con le stesse
+due armi si faceva 103 o 130 danni al secondo a seconda di come le avevi messe. Adesso la principale è
+**la più forte**, dovunque sia — ed è anche il motivo per cui con due armi non si fa mai meno che con
+la migliore da sola.
+
+**🐛 Un oggetto sta in una mano sola.** *«Un'arma puoi metterla sia a destra che a sinistra, ma non è
+possibile.»* Si poteva, e non dava niente. Adesso metterla nell'altra mano la **sposta**. (Un test di
+ieri, per provare la doppia arma, metteva proprio lo stesso oggetto in due mani: considerava giusto il
+bug. Riscritto con due oggetti.)
+
+**🐛 I bonus mancavano alla partenza — per tutti, dalla v2.18.** Trovato perché un controllo che doveva
+fallire passava. All'inizio della partita si ricalcolava l'equipaggiamento ma **non i bonus**: il
+bonus di classe e quello della seconda arma arrivavano solo al primo cambio d'arma o alla prima carta.
+Misurato: **arciere e mago partivano senza il loro +8%**, l'assassino coi due pugnali senza il 69% del
+suo danno. Corretto sia all'inizio della partita sia per chi entra a partita iniziata.
+
+**Il bilancio**, misurato, in multipli di un'arma a una mano dello stesso grado:
+
+| | Rende |
+|---|---|
+| assassino, un pugnale | 0,80 |
+| **assassino, due pugnali** | **1,38** — il «danno» sale da 18 a 29 |
+| **maestro, due armi** | **1,37** — ma paga due armi intere |
+| barbaro, due pesanti | 1,29 |
+| arma pesante a due mani | 0,99 — invariata |
+
+Il disegno segue: l'assassino mostra due lame, una, o l'arco, secondo cosa impugna.
+
+**Test** — 4354 passati, 0 falliti. Nuovi controlli: due armi alzano il **danno** (non solo la
+cadenza); le stesse due armi rendono uguale in qualunque mano; con due armi non si fa mai meno della
+migliore da sola; l'arma a due mani non prende la quota della seconda mano; lo stesso oggetto si
+sposta invece di duplicarsi; e **per tutte e sette le classi** il danno alla partenza è già quello
+completo.
+
 ### [2.19.5] — 2026-09-21 · "Si disegna quello che impugni"
 
 Due segnalazioni di Paolo, e la stessa radice sotto tutte e due.

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.5 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.6 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.6 (due pugnali)
+
+**L'assassino** parte con **due pugnali** e una **corazza leggera da mischia**, e dal fabbro compra solo
+**pugnali** — due per grado, a metà prezzo — invece di sciabole e armi equilibrate.
+
+**La doppia arma dà danno** (prima solo cadenza, e il numero «danno» non si muoveva): la seconda arma
+aggiunge il 55% del proprio danno se leggera, il 35% se equilibrata, il 25% se pesante. L'arma
+principale è la più forte delle due in qualunque mano sia, e un oggetto sta in una mano sola.
+
+**Corretto**: alla partenza mancavano i bonus di classe (arciere e mago partivano senza il loro +8%).
+
+---
 
 ## 🆕 Novità v2.19.5 (si disegna quello che impugni)
 
