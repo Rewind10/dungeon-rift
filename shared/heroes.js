@@ -102,7 +102,9 @@
         arcRadius: 86, arcHalf: 1.05, knockback: 90, projColor: '#dfe5ee',
         spread: 0, bulletSpeed: 0, range: 86, pierce: 0,
       },
-      passives: [{ id: 'ambidestro', name: 'Ambidestro', desc: 'Con due armi la cadenza sale dell 8%.' }],
+      // v2.19.9 — la frase diceva «la cadenza sale dell'8%»: dalla v2.19.6 la seconda arma da' DANNO, e
+      // l'8% del maestro si applica li'. La scheda di scelta ora mostra le passive: devono dire il vero.
+      passives: [{ id: 'ambidestro', name: 'Ambidestro', desc: 'La seconda arma gli rende l 8% in piu.' }],
       abilities: {},
       strengths: 'Il ritmo piu alto fra le armi da mischia.', weakness: 'Niente scudo, niente piastra pesante.',
     },

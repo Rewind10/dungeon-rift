@@ -2,6 +2,40 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.9] — 2026-09-21 · "La scheda che spiega"
+
+Paolo, sulla schermata di scelta: *«creala più grossa, lo spazio c'è. Aumenta di 1 punto il font del
+testo nel menu, è troppo piccolo. Aggiungi le competenze di classe piuttosto che la descrizione, così
+uno capisce la differenza tra i vari personaggi. Indica anche con quale abilità scala.»*
+
+**Più grande.** La colonna della scelta prende più spazio della guida dei comandi (1,45 a 1), e la
+scheda non è più un quadrato: è alta almeno 520 px, con l'artwork più largo.
+
+**Un punto in più a tutto il testo del menu**: scheda, campi, comandi, guida, titoli.
+
+**Le competenze al posto della descrizione.** Sette righe per classe:
+
+| Riga | Cosa dice |
+|---|---|
+| 📈 Scala con | la statistica del **danno** e, se ha magie, quella delle **magie** |
+| ⚔️ Armi | cosa può impugnare (per tipo e peso; i pugnali dell'assassino per nome) |
+| 🥼 Armature | cosa può indossare |
+| 🤲 Due armi | se e con cosa combatte a due armi |
+| 🛡️ Scudo | se lo porta, e con quali armi accanto |
+| ✨ Abilità | l'abilità del livello 1 |
+| ⭐ Passiva | il bonus di classe |
+
+Non sono un testo scritto a parte: **si leggono dalle stesse tabelle che il gioco usa per decidere**
+(`Gear.PERMESSI`, `Heroes.MANI`, la scuola dell'arma di classe, la firma). Se un giorno cambia una
+regola, la scheda cambia con lei — non può dire una cosa mentre il gioco ne fa un'altra.
+
+**Corretta per strada** la passiva del maestro d'armi: diceva *«con due armi la cadenza sale
+dell'8%»*, ma dalla v2.19.6 la seconda arma dà danno, e l'8% si applica lì.
+
+> ⚠️ **Segnalato, non cambiato:** il documento dà al maestro d'armi **Destrezza / Forza**, ma nel gioco
+> il suo danno cresce solo con la **Forza** (la sua arma è della scuola «mischia»); la Destrezza gli
+> dà soltanto un po' di passo. La scheda dice la verità del gioco: **danno: Forza**.
+
 ### [2.19.8] — 2026-09-21 · "Colpisci quello che vedi"
 
 **⚔️ Il fendente colpisce quello che si vede, più 5 pixel.** *«A volte i nemici sembrano non prendere

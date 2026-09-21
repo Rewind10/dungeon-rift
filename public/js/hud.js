@@ -84,6 +84,48 @@
     // Le barre degli attributi sono la ragione vera di questa schermata: con cinque statistiche e 14
     // punti in tutta la partita, sapere DA DOVE parte una classe e' l'informazione che decide la
     // scelta, e nei tre riquadri di prima non c'era posto per dirla.
+    // v2.19.9 — LE COMPETENZE DI UNA CLASSE, lette dalle regole vere. Ogni riga e' [etichetta, valore].
+    _competenze(id) {
+      const G = window.GAME.Gear || {}, H = window.GAME.Heroes || {}, Ab = window.GAME.Abilities || {};
+      const h = (H.HEROES || {})[id] || {};
+      const P = (G.PERMESSI || {})[id] || {}, M = (H.maniDi ? H.maniDi(id) : {}) || {};
+      const TIPO = { guerriero: 'mischia', ladro: 'archi', mago: 'magia' };
+      const peso = (l) => !l ? '' : l.length >= 3 ? 'tutte' : (l.indexOf('equilibrata') >= 0 ? 'leggere e medie' : 'leggere');
+      const pesoA = (l) => !l ? '' : l.length >= 3 ? 'tutte' : (l.indexOf('equilibrata') >= 0 ? 'leggere e medie' : 'leggere');
+      const elenca = (slot) => {
+        const pz = [];
+        // i pugnali sono una famiglia sua (`solo`), non una riga della tabella: vanno detti per nome
+        if (slot === 'weapon' && (G.ITEMS || []).some(it => it.solo && it.solo.indexOf(id) >= 0 && it.famiglia === 'pugnale')) pz.push('pugnali');
+        for (const cat of ['guerriero', 'ladro', 'mago']) {
+          const l = (P[slot] || {})[cat]; if (!l || !l.length) continue;
+          // gli archi sono maschili, armi e armature femminili: «archi leggeri», «armature leggere»
+          if (slot === 'weapon' && cat === 'ladro') pz.push('archi ' + (l.length >= 3 ? 'di ogni peso' : l.indexOf('equilibrata') >= 0 ? 'leggeri e medi' : 'leggeri'));
+          else pz.push(pesoA(l) + (cat === 'guerriero' ? ' da mischia' : cat === 'ladro' ? ' da arco' : ' magiche'));
+        }
+        return pz.length ? pz.join(' · ') : '—';
+      };
+      const tipi = (l) => (l || []).map(t => t === 'magia' ? 'magiche' : t === 'arco' ? 'archi' : 'da mischia').join(', ');
+      const doppia = !M.doppia ? 'no' : peso(M.doppia) + (M.doppiaTipo ? ' ' + tipi(M.doppiaTipo) : '');
+      const scudo = !M.scudo ? 'no' : (M.scudo.indexOf('pesante') >= 0 ? 'sì, anche con arma pesante' : 'sì, con arma leggera o media');
+      const NOME = { st_for: 'Forza', st_cos: 'Costituzione', st_des: 'Destrezza', st_int: 'Intelligenza', st_car: 'Carisma' };
+      const scuolaArma = (h.weapon && h.weapon.school) || 'melee';
+      const statDanno = (H.SCUOLA_STAT || {})[scuolaArma];
+      const scala = (h.statMagia && h.statMagia === statDanno)
+        ? 'danno e magie: <b>' + NOME[statDanno] + '</b>'
+        : 'danno: <b>' + (NOME[statDanno] || '—') + '</b>' + (h.statMagia ? ' · magie: <b>' + NOME[h.statMagia] + '</b>' : '');
+      const f = Ab.firma ? Ab.firma(id) : null;
+      const pas = (h.passives || [])[0];
+      const righe = [
+        ['📈 Scala con', scala],
+        ['⚔️ Armi', elenca('weapon')],
+        ['🥼 Armature', elenca('armor')],
+        ['🤲 Due armi', doppia],
+        ['🛡️ Scudo', scudo],
+      ];
+      if (f) righe.push(['✨ Abilità', '<b>' + f.name + '</b> — ' + (f.breve || '')]);
+      if (pas) righe.push(['⭐ Passiva', '<b>' + pas.name + '</b> — ' + pas.desc]);
+      return righe;
+    },
     buildHeroSelect(cb) {
       const box = $('heroScelta'); if (!box) return;
       this._heroCb = cb || this._heroCb;
@@ -108,12 +150,18 @@
           + '</div>'
         : '';
       box.style.setProperty('--pick', h.accent);
+      // v2.19.9 — AL POSTO DELLA DESCRIZIONE, LE COMPETENZE. Paolo: *«aggiungi le competenze di classe
+      // piuttosto che la descrizione, cosi' uno capisce la differenza tra i vari personaggi. Indica anche
+      // con quale abilita' scala»*. Non sono un testo scritto a parte: si leggono dalle STESSE tabelle che
+      // il gioco usa per decidere (gear.js e heroes.js), cosi' la scheda non puo' mai dire una cosa e il
+      // gioco farne un'altra.
+      const comp = this._competenze(id).map(r => `<div class="cp"><span class="ck">${r[0]}</span><span class="cv">${r[1]}</span></div>`).join('');
       box.innerHTML = `<div class="hcard" style="--pick:${h.accent}">
         <div class="art"><img src="/assets/classi/${id}.png" alt="" draggable="false"><div class="vign"></div></div>
         <div class="info">
           <div><h3>${h.name}</h3><p class="epi">${h.title}</p></div>
           <div class="stats">${stats}</div>
-          <p class="dsc">${h.desc || ''}</p>
+          <div class="comp">${comp}</div>
           ${scuole}
         </div></div>`;
       const pal = $('heroPallini');
