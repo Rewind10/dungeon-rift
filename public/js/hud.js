@@ -202,7 +202,9 @@
       if (!me) return;
       this._misuraBarra();
       const set = (i, cd, pronta) => { const el = $('ab' + i); if (!el) return; const c = el.querySelector('.cd');
-        if (cd > 0.1) { c.classList.remove('hidden'); c.textContent = cd < 10 ? cd.toFixed(1) : String(Math.ceil(cd)); el.classList.remove('ready'); }
+        // v2.19.7 — una ricarica «infinita» (>= 9000) e' l'abilita' una-volta-per-ondata gia' usata:
+        // al posto di un numero che non scende si scrive «usata», che e' la verita'.
+        if (cd > 0.1) { c.classList.remove('hidden'); c.textContent = cd >= 9000 ? 'usata' : (cd < 10 ? cd.toFixed(1) : String(Math.ceil(cd))); el.classList.remove('ready'); }
         else { c.classList.add('hidden'); if (pronta !== false) el.classList.add('ready'); } };
       set(0, me.cd || 0);
       const f = $('ab1'); if (f) f.classList.add('ready');
@@ -637,7 +639,7 @@
             // il TASTO non si ripete qui: sta gia' nella riga sopra la banda, e ripetuto tre volte
             // sulle tre carte mandava a capo la riga senza aggiungere niente.
             + '<div class="rar">' + (this._boons.abil
-                ? ('\u26a1 attiva' + (b.cd ? ' \u00b7 ricarica ' + b.cd + 's' : ''))
+                ? ('\u26a1 attiva' + (b.unaPerOndata ? ' \u00b7 una volta per ondata' : (b.cd ? ' \u00b7 ricarica ' + b.cd + 's' : '')))
                 : (esc(r.name || '') + ' \u00b7 ' + chi)) + '</div>'
             + '<div class="ds">' + esc(b.desc || '') + '</div>'
             + '</div>';
@@ -715,7 +717,7 @@
             // v2.18.1 — la RICARICA si chiede allo SLOT, non all'abilita'. Dalla v2.18 `cd` non sta piu'
             // addosso all'oggetto (la stessa abilita' sta in slot diversi per classi diverse), e questa
             // riga scriveva «ricarica undefineds» sulla scaletta.
-            ? '<div class="card"><span class="ic">' + a.icon + '</span><span><span class="nm">' + esc(a.name) + '</span><div class="ds">' + esc(a.breve || '') + ' · ricarica ' + (window.GAME.Abilities.cdDiSlot(sc.slot)) + 's</div></span></div>'
+            ? '<div class="card"><span class="ic">' + a.icon + '</span><span><span class="nm">' + esc(a.name) + '</span><div class="ds">' + esc(a.breve || '') + (a.unaPerOndata ? ' · una volta per ondata' : ' · ricarica ' + (window.GAME.Abilities.cdDiSlot(sc.slot)) + 's') + '</div></span></div>'
             : (inArrivoSlot === sc.slot ? '<span class="attesa">▲ da scegliere adesso</span>'
               : (liv >= sc.lvl ? '<span class="vuota">— saltata</span>' : '<span class="vuota">si sblocca al livello ' + sc.lvl + '</span>'));
         } else {

@@ -4574,12 +4574,18 @@ function testV185() {
       assert(s2.some(a => a.nuova) && s3.some(a => a.nuova), h + ': al 7 e al 13 una candidata e sua e di nessun altro');
       assert(s2.some(a => a.serbatoio) && s3.some(a => a.serbatoio), h + ': e l altra viene dal serbatoio');
     }
-    // il mago senza scuola scelta vede, al livello 1, LE TRE FIRME delle tre scuole: e' la sua scelta.
-    // Al 7 e al 13 invece non vede niente finche' non ha scelto — sono le scuole a decidere.
-    assert(Ab.perSlot('mago', 1).length === 3, 'il mago senza scuola sceglie fra le tre scuole');
-    assert(Ab.perSlot('mago', 2).length === 0 && Ab.perSlot('mago', 3).length === 0,
-      'ma al 7 e al 13 non ha niente finche non ha scelto la scuola');
-    assert(Ab.scuoleMago().length === 3, 'e le scuole fra cui sceglie sono tre');
+    // v2.19.7 — IL MAGO HA UNA SCUOLA SOLA. Paolo: *«togli evocatore e negromante, lascia solo mago
+    // elementalista»*. Fino a ieri qui si controllava la scelta fra tre firme al livello 1; adesso non c'e'
+    // niente da scegliere: riceve la firma dell'elementalista come ogni altra classe riceve la sua.
+    assert(Ab.scuoleMago().length === 1 && Ab.scuoleMago()[0].id === 'elementale', 'il mago ha una scuola sola: elementale');
+    assert(!Ab.sceglieAlPrimo('mago'), 'e al livello 1 non sceglie niente');
+    assert(Ab.perSlot('mago', 1).length === 1 && Ab.perSlot('mago', 1)[0].id === 'ab_scarica', 'la sua firma e la Scarica Elementale');
+    assert(Ab.perSlot('mago', 2).length === 2 && Ab.perSlot('mago', 3).length === 2, 'e al 7 e al 13 ha le sue due candidate');
+    assert(!['ab_evoca', 'ab_branco', 'ab_evoca_magg', 'ab_rialzata', 'ab_dito'].some(id => [1, 2, 3].some(sl => Ab.perSlot('mago', sl).some(a => a.id === id))),
+      'e nessuna abilita di evocatore o negromante');
+    // v2.19.7 — il warlock: lo zombie e' la firma, il Patto non c'e' piu'
+    assert(Ab.firma('warlock').id === 'ab_zombie' && Ab.firma('warlock').unaPerOndata, 'la firma del warlock e lo zombie, una volta per ondata');
+    assert(![1, 2, 3].some(sl => Ab.perSlot('warlock', sl).some(a => a.id === 'ab_patto')), 'e il Patto non lo ha piu');
     // LA REGOLA DEI 10 SECONDI e le sue tre eccezioni, affermate per nome: se qualcuno le "uniforma"
     // per pulizia, qui si rompe e legge perche' non andava fatto.
     for (const id in Ab.BY_ID) {
@@ -4596,16 +4602,12 @@ function testV185() {
 
   // --- 2) lo slot si apre al livello giusto, e si sceglie fra DUE ---
   {
-    // v2.16 — il PRIMO slot si apre al livello 1, cioe' prima di entrare: si passa da `avviaSenzaAbilita`
-    // per vederlo davvero in coda, perche' l'aiuto in cima al file lo sceglierebbe da solo.
+    // v2.19.7 — il mago non sceglie piu' la scuola al livello 1: la firma gli arriva in mano da sola,
+    // e nella coda delle scelte non entra niente.
     const r = new Room('v185a'); const p = r.addPlayer('a', conn, 'A', 'mago'); avviaSenzaAbilita(r, 1);
-    assert(p.level === 1 && (p.abilDovute || []).join(',') === '1', 'al livello 1 si deve gia lo slot 1');
-    r.phase = C.PHASE_SHOP; r.offerBoon(p);
-    assert(p.boonOffer.length === 3, 'e il pannello offre le TRE scuole del mago');
-    assert(p.boonOffer.every(id => Ab.slotDi('mago', id, Ab.scuolaDiFirma(id)) === 1), 'sono le tre firme del livello 1');
-    r.pickBoon('a', p.boonOffer[1]);
-    assert(!!p.abil[0] && !p.abil[1], 'presa quella scelta, e solo quella');
-    assert((p.abilDovute || []).length === 0, 'e lo slot esce dalla coda');
+    assert(p.level === 1 && p.abil[0] === 'ab_scarica', 'al livello 1 il mago ha gia la sua firma in mano');
+    assert((p.abilDovute || []).length === 0, 'e non c e niente da scegliere');
+    assert(p.scuola === 'elementale' && p.titolo === 'Elementalista', 'col titolo di Elementalista');
     r.addXp(p, Lv2.xpForLevel(7) - p.xpPool);
     assert((p.abilDovute || []).join(',') === '2', 'al 7 si deve lo slot 2');
     // v2.18 — e al 13 IL TERZO SLOT ENTRA, perche' adesso ha due candidate dentro. Fino alla 2.17
@@ -6424,6 +6426,80 @@ function testDueMani() {
   ok('arma a due mani: si salva, si riprende senza scudo fantasma, e si arriva all ondata dopo');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// ============================================================================================
+// v2.19.7 — LO ZOMBIE DEL WARLOCK, IL MAGO ELEMENTALISTA, E L'ARMA A DUE MANI
+// ============================================================================================
+function testZombie() {
+  console.log('\n[TEST 75] v2.19.7 — lo zombie del warlock, una volta per ondata, e che si muove davvero');
+  const Gear = require('../shared/gear.js');
+  const dt = 1 / C.TICK_RATE;
+  const nuova = (id, h) => { const r = new Room(id); const p = r.addPlayer('w', { send() {} }, 'W', h || 'warlock'); r.startGame(); return { r, p }; };
+  const zombiDi = (r, p) => [...r.players.values()].filter(q => q.zombi && q.evocatoBy === p.id && !q.dead);
+
+  // --- 1) si alza, e una volta sola per ondata ---
+  const { r, p } = nuova('z1');
+  assert(p.abil[0] === 'ab_zombie', 'il warlock parte con lo zombie in mano');
+  r.phase = C.PHASE_COMBAT;
+  assert(r._usaAbilita(p, 1) === true && zombiDi(r, p).length === 1, 'lo evoca: uno zombie in campo');
+  assert(r._usaAbilita(p, 1) === false && zombiDi(r, p).length === 1, 'la seconda volta nella stessa ondata no');
+  assert(p.cdAb[0] >= 9000, 'e la casella resta spenta (niente numero che scende)');
+
+  // --- 2) SI MUOVE. Il bug di Paolo: «dopo il cooldown evocavi un altro personaggio che restava fermo
+  // impalato». L'IA la riceveva solo il PRIMO alleato. Qui: zombie + mercenario insieme, e un nemico
+  // lontano — tutti e due devono andarci incontro.
+  const q = zombiDi(r, p)[0];
+  const mc = r.addPlayer('mc', { send() {} }, 'Merc', 'barbaro'); mc.merc = true; mc.mercOwner = p.id; mc.lives = 1;
+  const m = r.spawnMonster('grunt', p.x + 300, p.y, { scaling: Waves.scaling(3, 1) });
+  // Si controlla CHI RICEVE L'IA, ad ogni istante: e' il difetto vero. Misurare i pixel percorsi era
+  // instabile — lo zombie e' lento e a volte, giustamente, resta accanto al padrone.
+  const ricevuti = { z: 0, m: 0 }, N = C.TICK_RATE * 2;
+  const origSet = r.setInput.bind(r);
+  r.setInput = (pid, inp) => { if (pid === q.id) ricevuti.z++; if (pid === mc.id) ricevuti.m++; return origSet(pid, inp); };
+  for (let i = 0; i < N; i++) r.update(dt);
+  r.setInput = origSet;
+  assert(ricevuti.z >= N - 1, 'lo zombie riceve gli ordini dell IA a ogni istante (' + ricevuti.z + '/' + N + ')');
+  assert(ricevuti.m >= N - 1, 'e anche il mercenario, in campo insieme a lui (' + ricevuti.m + '/' + N + ')');
+  assert(r.mercenario === mc, 'il «mercenario» e il mercenario, non lo zombie');
+
+  // --- 3) la morte dello zombie non e' la morte del mercenario ---
+  r.mercData = { owner: p.id, caduto: false };
+  r.downPlayer(q);
+  assert(q.dead && !r.mercData.caduto, 'lo zombie che muore non segna il mercenario come caduto');
+
+  // --- 4) si sgretola a fine ondata, e all'ondata dopo se ne alza un altro ---
+  const { r: r2, p: p2 } = nuova('z2');
+  r2.phase = C.PHASE_COMBAT; r2._usaAbilita(p2, 1);
+  assert(zombiDi(r2, p2).length === 1, 'zombie in campo');
+  r2.pending = 0; r2.waveList = []; for (const mo of r2.monsters) mo.dead = true; r2.monsters.length = 0;
+  r2._checkWaveClear();
+  assert(zombiDi(r2, p2).length === 0 && ![...r2.players.values()].some(x => x.zombi), 'a fine ondata lo zombie si sgretola');
+  r2.nextWave();
+  assert(p2.cdAb[0] === 0, 'all ondata dopo la casella si riaccende');
+  r2.phase = C.PHASE_COMBAT;
+  assert(r2._usaAbilita(p2, 1) === true && zombiDi(r2, p2).length === 1, 'e se ne alza uno nuovo');
+
+  // --- 5) lo snapshot lo dichiara zombie (il client lo disegna col pupazzo degli zombie) ---
+  const snap = r2.snapshot();
+  const sz = (snap.players || []).find(x => x.i === zombiDi(r2, p2)[0].id);
+  assert(sz && sz.zb === 1, 'lo snapshot porta il segno dello zombie');
+
+  // --- 6) L'ARMA A DUE MANI RENDE DI PIU' (+35%) — e il barbaro, che la tiene a una mano, no ---
+  const dps = (h, dx, sx) => { const rr = new Room('dm' + h + dx); const pl = rr.addPlayer('x', { send() {} }, 'X', h); rr.startGame();
+    for (const id of [dx, sx]) if (id) pl.owned[id] = 1; pl.gear.manoDx = dx; pl.gear.manoSx = sx || null;
+    rr._recomputeBoons(pl); rr._recomputeGear(pl); return rr.effDamage(pl) / rr.effFireDelay(pl); };
+  for (let rk = 2; rk <= 5; rk++) {
+    const pes = Gear.itemsOfRank('paladino', 'weapon', rk).find(i => i.carattere === 'pesante').id;
+    const eq = Gear.itemsOfRank('paladino', 'weapon', rk).find(i => i.carattere === 'equilibrata').id;
+    const k = dps('paladino', pes, null) / dps('paladino', eq, null);
+    assert(k > 1.28 && k < 1.42, 'grado ' + rk + ': l arma a due mani rende ~1,35 volte una a una mano (' + k.toFixed(2) + ')');
+  }
+  const pesB = Gear.itemsOfRank('barbaro', 'weapon', 3).find(i => i.carattere === 'pesante').id;
+  const rb = new Room('dmb'); const pb = rb.addPlayer('x', { send() {} }, 'X', 'barbaro'); rb.startGame();
+  pb.owned[pesB] = 1; pb.gear.manoDx = pesB; rb._recomputeBoons(pb);
+  assert(!pb._bonusDueMani, 'il barbaro, che tiene la pesante a una mano, non prende il bonus delle due mani');
+  ok('zombie: si alza una volta per ondata, si muove insieme al mercenario, si sgretola a fine ondata');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

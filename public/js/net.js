@@ -56,16 +56,17 @@
         const vivi = new Set();
         for (const p of s.players) {
           vivi.add(p.i);
-          if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h, mc: p.mc || 0, pal: p.pal || null });
+          if (p.n !== undefined) P.set(p.i, { n: p.n, h: p.h, mc: p.mc || 0, pal: p.pal || null, zb: p.zb || 0 });   // v2.19.7 — `zb`: lo zombie
           // v1.85 — l'id dell'abilita' viaggia solo quando cambia: qui resta appiccicato al giocatore.
           // v2.16 — le abilita' viaggiano come UN elenco (`ab`) invece di due campi sciolti (aq/ae):
           // con tre slot sarebbero diventati sei campi, e con quattro otto.
           if (p.ab !== undefined) { const e = P.get(p.i) || {}; e.ab = p.ab; P.set(p.i, e); }
           const st = P.get(p.i);
-          if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; p.ab = st.ab || null; }   // v1.82 — anche mercenario e tinta
+          if (st) { p.n = st.n; p.h = st.h; p.mc = st.mc; p.pal = st.pal; p.zb = st.zb || 0; p.ab = st.ab || null; }   // v1.82 — anche mercenario e tinta
           p.d = p.d || 0; p.dn = p.dn || 0; p.dt = p.dt || 0; p.bf = p.bf || 0; p.bar = p.bar || 0;
           p.dash = p.dash || 0; p.ph = p.ph || 0; p.iv = p.iv || 0; p.cu = p.cu || 0;
           p.arm = p.arm || null; p.stv = p.stv || null;   // v1.88 — armatura e calzature
+          p.wx = p.wx || null;                              // v2.19.5 — la seconda arma, se c'e'
           p.tb = p.tb || []; p.w2 = p.w2 || null; p.w2l = p.w2l || 0; p.evo = p.evo || 0;
           p.cmb = p.cmb || 0; p.cmt = p.cmt || 0; p.eg = p.eg || 0;
           p.nm = p.nm || 0; p.nmd = p.nmd || 0; p.ng = p.ng || 0; p.gz = p.gz || 0;

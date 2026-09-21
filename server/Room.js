@@ -168,7 +168,13 @@ class Room {
   // Sbagliare lista qui non da' errore: cambia il bilanciamento in silenzio. E' successo con la curva
   // dell'XP nella 1.79, e non deve succedere di nuovo — i test lo verificano uno per uno.
   get veri() { const a = []; for (const p of this.players.values()) if (p.connected && !p.dead && !p.merc) a.push(p); return a; }
-  get mercenario() { for (const p of this.players.values()) if (p.merc && !p.dead) return p; return null; }
+  // v2.19.7 — IL MERCENARIO, NON UN EVOCATO. Gli evocati usano la macchina del mercenario (`merc`), e
+  // questo getter li restituiva come se fossero lui: il primo evocato vivo «era» il mercenario. Tre
+  // effetti: solo lui riceveva l'IA (gli altri restavano fermi — lo «zombie impalato» di Paolo), la sua
+  // morte segnava il mercenario vero come caduto, e la sua presenza impediva al mercenario di schierarsi.
+  get mercenario() { for (const p of this.players.values()) if (p.merc && !p.evocato && !p.dead) return p; return null; }
+  // tutti gli alleati guidati dall'IA: il mercenario e ogni evocato
+  get alleatiIA() { const out = []; for (const p of this.players.values()) if (p.merc && !p.dead) out.push(p); return out; }
   get anyConnected() { for (const p of this.players.values()) if (p.connected) return true; return false; }
   get anyRevivable() { for (const p of this.players.values()) if (p.connected && !p.merc && (!p.dead || (p.down && p.lives > 1))) return true; return false; }
   broadcast(o) { const s = JSON.stringify(o); for (const p of this.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} }
@@ -365,6 +371,7 @@ class Room {
   }
   nextWave() {
     this.wave++;
+    this._nuovaOndataAbilita();
     this.mode = Waves.modeForWave(this.wave);
     this.phase = Waves.isBossWave(this.wave) ? C.PHASE_BOSS : C.PHASE_COMBAT;
     // v1.52 — uscendo dal MERCATO la mappa va rigenerata comunque, altrimenti si combatterebbe nella
@@ -1098,7 +1105,7 @@ class Room {
       p.hp = 0; p.dead = true; p.down = false;
       this.events.push({ t: 'merc_down', x: p.x, y: p.y, name: p.name, hero: p.heroId });
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'merc_down', x: p.x, y: p.y, name: p.name, hero: p.heroId } });
-      if (this.mercData) this.mercData.caduto = true;
+      if (this.mercData && !p.evocato) this.mercData.caduto = true;   // v2.19.7 — un evocato non e' il mercenario
       return;
     }
     // v1.51 — ULTIMA OCCASIONE: consuma una carica e rimette in piedi invece di far cadere.
@@ -1694,6 +1701,17 @@ class Room {
       // partenza — com'era — ricreava alla ripresa uno Spadone CON lo scudo, cioe' esattamente la
       // combinazione che `Gear.impugna` vieta. Le mani si riempiono solo se sono vuote TUTTE E DUE
       // (salvataggio vecchio, di prima delle mani), e allora con l'equipaggiamento di partenza intero.
+      // v2.19.7 — LE ABILITA' DI UN SALVATAGGIO VECCHIO. Le scuole del mago sono diventate una, e il
+      // warlock ha lo zombie al posto del Patto: un salvataggio di ieri puo' portare un'abilita' che la
+      // classe non ha piu'. Quella del livello 1 si sostituisce con la firma di oggi; quelle del 7 e del
+      // 13 si tolgono e tornano da scegliere, cosi' il giocatore decide invece di trovarsene una a caso.
+      if (p.heroId === 'mago' && !Ab.SCUOLE_MAGO[p.scuola]) { p.scuola = 'elementale'; p.titolo = Ab.TITOLO_SCUOLA.elementale; }
+      if (Array.isArray(p.abil)) for (let i = 0; i < p.abil.length; i++) {
+        const id = p.abil[i]; if (!id) continue;
+        if (Ab.slotDi(p.heroId, id, p.scuola) === i + 1) continue;
+        if (i === 0) { const f = Ab.firma(p.heroId, p.scuola); p.abil[0] = f ? f.id : null; p.cdAb[0] = 0; }
+        else { p.abil[i] = null; p.abilDovute = p.abilDovute || []; if (p.abilDovute.indexOf(i + 1) < 0) p.abilDovute.push(i + 1); }
+      }
       const maniVuote = !p.gear.manoDx && !p.gear.manoSx;
       for (const sl in base) {
         if (!base[sl] || p.gear[sl]) continue;
@@ -1770,6 +1788,9 @@ class Room {
     if (!p || p.dead || p.down || p.merc) return false;
     const a = this.abilitaDi(p, slot); if (!a) return false;
     if ((p.cdAb[slot - 1] || 0) > 0) return false;
+    // v2.19.7 — UNA VOLTA PER ONDATA (lo zombie del warlock): non c'e' ricarica a tempo, c'e' un
+    // «gia' usata in questa ondata». Si azzera quando parte la prossima (vedi `_nuovaOndataAbilita`).
+    if (a.unaPerOndata && p._usataOndata && p._usataOndata[a.id] === this.wave) return false;
     // Un'abilita' puo' RIFIUTARSI di partire (il Marchio senza bersaglio): in quel caso non consuma
     // la ricarica. Trenta secondi buttati per una mira sbagliata sarebbero una punizione, non una regola.
     if (this._eseguiAbilita(p, a) === false) return false;
@@ -1778,6 +1799,14 @@ class Room {
     // per il maestro d'armi e slot 3 per il barbaro, cioe' 45s contro 60s). Chiederla allo slot e'
     // l'unica risposta giusta, e vale anche per chi arriva qui con un'abilita' messa a mano — una
     // partita ripresa, un test, la modalita' di prova.
+    if (a.unaPerOndata) {
+      // niente numero che scende: la casella resta «spenta» fino all'ondata dopo. `cdAb` alto la fa
+      // vedere spenta al client senza un meccanismo nuovo; l'azzera `_nuovaOndataAbilita`.
+      p._usataOndata = p._usataOndata || {}; p._usataOndata[a.id] = this.wave;
+      p.cdAb[slot - 1] = 9999; p.cdAbMax[slot - 1] = 9999;
+      this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
+      return true;
+    }
     const t = Math.max(1, (a.cd || Ab.cdDiSlot(slot)) * (p.stats.cdrMult || 1));
     p.cdAb[slot - 1] = t; p.cdAbMax[slot - 1] = t;
     this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
@@ -1829,9 +1858,12 @@ class Room {
     let messi = 0;
     for (let k = 0; k < quanti; k++) {
       const id = 'evo_' + (this.mercCount++);
-      const q = this.addPlayer(id, { send() {} }, 'Evocato', a.corpo === 'ladro' ? 'arciere' : a.corpo === 'mago' ? 'mago' : 'barbaro');
+      const q = this.addPlayer(id, { send() {} }, a.corpo === 'zombie' ? 'Zombie' : 'Evocato', a.corpo === 'ladro' ? 'arciere' : a.corpo === 'mago' ? 'mago' : 'barbaro');
       if (!q) continue;
       q.merc = true; q.evocato = 1; q.evocatoBy = p.id; q.mercOwner = p.id; q.lives = 1;
+      // v2.19.7 — LO ZOMBIE del warlock: si disegna come quelli nemici (ma col colore del padrone) e si
+      // sgretola a fine ondata. Per il resto e' un evocato come gli altri: stessa IA, stessa scala.
+      if (a.corpo === 'zombie') { q.zombi = 1; q.unaOndata = 1; }
       q.pal = Merc.palette(q.heroId, 2);
       q.level = p.level; q.points = 0; q.buys = Object.assign({}, p.buys); q.xpPool = 0;
       this._recomputeBoons(q);
@@ -1839,6 +1871,7 @@ class Room {
       // all'ondata 18, e nessuno deve tenere allineata una seconda tabella di scala.
       q.stats.maxHpMult = (a.hpQuota || 1) * (a.grande ? 1.35 : 1);
       q.stats.dmgMult = (a.dmgQuota || 0.6) * this.abilPow(p);
+      if (q.zombi) q.stats.speedMult *= 0.82;          // lo zombie arranca: e' un corpo che non dovrebbe camminare
       q.maxHp = p.hero.hp; q.hp = this.effMaxHp(q);
       const bx = (sx != null ? sx : p.x + Math.cos(p.aim) * 70) + MU.rand(-34, 34);
       const by = (sy != null ? sy : p.y + Math.sin(p.aim) * 70) + MU.rand(-34, 34);
@@ -2114,6 +2147,12 @@ class Room {
       // ---------- MAGO · EVOCAZIONE E NEGROMANZIA ----------
       case 'ab_evoca': case 'ab_branco': case 'ab_evoca_magg': case 'ab_rialzata':
         return this._evoca(p, a);
+      // v2.19.7 — lo zombie del warlock. Uno solo in campo: se per qualche via ne esiste gia' uno suo,
+      // il nuovo lo sostituisce (e' la stessa regola del tetto degli evocati, portata a uno).
+      case 'ab_zombie': {
+        for (const q of this.players.values()) if (q.zombi && q.evocatoBy === p.id && !q.dead) { q.dead = true; q.hp = 0; }
+        return this._evoca(p, a);
+      }
       case 'ab_nube': {
         this.nebbie.push({ eid: NEXT++, owner: p.id, x: p.x + Math.cos(p.aim) * 140, y: p.y + Math.sin(p.aim) * 140,
           r: a.r, t: a.dur, max: a.dur, lento: a.lento, dps: this._abilDmg(p, a.dmgMult), tick: a.tick, acc: 0,
@@ -3061,7 +3100,11 @@ class Room {
     // Non si somma MAI all'arma a due mani: quella e' un'arma sola, e la seconda mano non ce l'ha.
     { const extra = Gear.bonusSecondaMano(p.gear) * (p.heroId === 'maestro' ? 1.08 : 1);
       p._bonusSeconda = extra;
-      if (extra > 0) p.stats.dmgMult *= (1 + extra); }
+      if (extra > 0) p.stats.dmgMult *= (1 + extra);
+      // v2.19.7 — e l'arma A DUE MANI, che la seconda mano non ce l'ha: +35% (vedi `Gear.bonusDueMani`)
+      const dm = Gear.bonusDueMani(p.heroId, p.gear);
+      p._bonusDueMani = dm;
+      if (dm > 0) p.stats.dmgMult *= (1 + dm); }
     const accese = {};
     for (const id in p.cardOn) { const n = p.boonsOwned[id] || 0; if (!p.cardOn[id] || n <= 0) continue; accese[id] = n; }
     for (const id in accese) { const b = Loot.BOON_BY_ID[id]; if (!b) continue; for (let i = 0; i < accese[id]; i++) b.apply(p); }
@@ -3198,7 +3241,8 @@ class Room {
     // v1.9 — PAUSA: durante il negozio/scelta poteri il mondo e congelato (nessuna simulazione).
     const running = (this.phase !== C.PHASE_SHOP && this.phase !== C.PHASE_LOBBY && this.phase !== C.PHASE_GAMEOVER && this.phase !== C.PHASE_VICTORY);
     if (running) {
-      { const mc = this.mercenario; if (mc) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); } }
+      // v2.19.7 — l'IA a OGNI alleato, non solo al primo: mercenario e zombie possono stare in campo insieme
+      for (const mc of this.alleatiIA) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); }
       this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
@@ -3294,6 +3338,24 @@ class Room {
       const timedOut = conn > 1 && this.shopTimer <= 0;
       if (all || timedOut) this._afterShop(); }
   }
+  // v2.19.7 — LO ZOMBIE SI SGRETOLA A FINE ONDATA (decisione di Paolo). Se ne va senza essere «morto in
+  // battaglia»: niente evento di caduta, niente mercenario segnato come perso — torna polvere e basta.
+  _sgretolaZombie() {
+    for (const [k, q] of this.players) if (q.unaOndata) {
+      this.events.push({ t: 'sgretola', x: q.x, y: q.y });
+      this.players.delete(k);
+    }
+  }
+  // e le abilita' «una volta per ondata» tornano disponibili quando ne parte una nuova
+  _nuovaOndataAbilita() {
+    for (const p of this.players.values()) {
+      if (!p.abil || !p.cdAb) continue;
+      for (let i = 0; i < p.abil.length; i++) {
+        const a = p.abil[i] && Ab.BY_ID[p.abil[i]];
+        if (a && a.unaPerOndata) { p.cdAb[i] = 0; p.cdAbMax[i] = 0; }
+      }
+    }
+  }
   _checkWaveClear() {
     if (Waves.isBossWave(this.wave)) { if (this.pending <= 0 && this.monsters.length === 0) return this._waveDone(); return; }
     // v1.78 — qui c'erano i due rami delle modalita' Sopravvivenza (finisce a tempo) e Tesoro (finisce
@@ -3310,6 +3372,7 @@ class Room {
     if (this.wave >= Waves.FINAL_WAVE) return this._waveDone();
     this.waveDur = this.time - this.waveT0;
     this.phase = C.PHASE_CLEARED; this.exitT = C.EXIT_TIMEOUT;
+    this._sgretolaZombie();                   // v2.19.7 — lo zombie del warlock finisce con l'ondata
     // v2.18 — FINE ONDATA, FINE SCUDO. Lo Scudo di Mana non ha piu' una durata: *«il mago porta lo
     // scudo fino al termine dell'ondata, non puo' protrarsi all'altra ondata»*. Qui e' dove l'ondata
     // finisce, ed e' l'unico posto che deve saperlo. Si spegne in silenzio, senza l'esplosione della
@@ -3787,7 +3850,7 @@ class Room {
       // v1.82 — il mercenario viaggia con la sua TINTA. Il renderer aveva gia' il gancio (`eq.pal` nei tre
       // eroi) e non lo usava nessuno: adesso lo usa lui. Stessa sagoma, stesso vestito, tono diverso —
       // non un clone del tuo personaggio, ma nemmeno un'altra cosa.
-      if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; }
+      if (nuovo && p.merc) { o.mc = 1; o.pal = p.pal || null; if (p.zombi) o.zb = 1; }   // v2.19.7 — lo zombie si disegna da zombie
       // v1.88 — TUTTO l'equipaggiamento viaggia, non solo arma e scudo: adesso ogni pezzo cambia
       // qualcosa nel disegno del personaggio, quindi il client deve sapere cosa hai addosso.
       { const a = Gear.armaPrincipale(p.gear), sc = Gear.scudoDi(p.gear); o.wp = a ? a.id : null; o.sh = sc ? sc.id : null;

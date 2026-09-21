@@ -241,11 +241,31 @@ Il risultato, misurato, in multipli di un'arma a una mano dello stesso grado (**
 | **assassino, due pugnali** (con il suo bonus di classe) | **1,38 D** — e la coppia costa quanto *una* arma |
 | **maestro, due armi** | **1,37 D** — ma due armi intere |
 | barbaro, due pesanti | 1,29 D |
-| arma pesante **a due mani** | 1,00 D — *invariata, vedi sotto* |
+| arma pesante **a due mani** | **1,35 D** — *v2.19.7: +35%* |
 
-> ⚠️ **Segnalato, non deciso:** nel listino un'arma pesante a due mani ha lo **stesso danno al
-> secondo** di una a una mano (è il «bivio» della v2.12: ogni grado ha lo stesso danno, cambiano colpo,
-> portata e rinculo). Ma costa lo scudo. Se deve rendere di più, è una scelta a parte.
+> ✅ **Deciso nella v2.19.7:** l'arma pesante a due mani rende **+35%**, perché costa lo scudo.
+
+---
+
+### ✅ Decisioni della v2.19.7
+
+> *«L'arma a 2 mani deve fare più danno, altrimenti non ha senso rinunciare allo scudo.»*
+> *«Togli evocatore e negromante, lascia solo mago elementalista: sono troppo simili.»*
+> *«Si potrebbe assegnare l'evocazione al Warlock come abilità primaria al posto di Patto, che è un po'
+> un doppione di Maledizione Contagiosa… senza cooldown ma solo 1 volta per ondata… il personaggio
+> evocato deve essere uno zombie (simile a quelli nemici).»*
+
+- **Arma pesante a due mani: +35% di danno** → circa 1,35 volte un'arma a una mano, quanto due armi
+  (1,37). Le due vie che rinunciano allo scudo si equivalgono. Il barbaro, che la tiene a una mano,
+  non la prende.
+- **Il mago ha una scuola sola: elementalista.** Niente più scelta al livello 1: riceve la Scarica
+  Elementale come ogni classe riceve la sua firma. Evocazione e negromanzia non esistono più.
+- **Warlock: lo Zombie del Patto è la firma**, al posto del Patto. **Una volta per ondata**, niente
+  ricarica. Lo zombie ha il pupazzo di quelli nemici con **occhi, alone e cerchio viola** del warlock,
+  per distinguerlo a colpo d'occhio. PV e danno sono quote del warlock (crescono col Carisma).
+- Decise da Paolo alla domanda: lo zombie **si sgretola a fine ondata**; zombie e **mercenario possono
+  stare in campo insieme**, ognuno con la sua IA.
+- La Maledizione Contagiosa resta al 13: maledice da sola, non aveva bisogno del Patto.
 
 ---
 

@@ -201,6 +201,20 @@
       breve: 'Freccia che scarica un fulmine in linea',
       salti: 6, dmgMult: 2.2, calo: 0.90, gittata: 520, salto: 200 },
     // ---- WARLOCK ----------------------------------------------------------------------------
+    // ============================================================================================
+    // v2.19.7 — LO ZOMBIE DEL PATTO, la nuova firma del warlock
+    // ============================================================================================
+    // Paolo: *«si potrebbe assegnare l'evocazione al warlock, al posto di Patto, che e' un po' un
+    // doppione di Maledizione Contagiosa. L'evocazione non avra' cooldown ma sara' possibile solo 1
+    // volta per ondata. Il personaggio evocato deve essere uno zombie, simile a quelli nemici.»*
+    //   · `unaPerOndata`: nessuna ricarica a tempo — si usa una volta, e torna all'ondata dopo;
+    //   · lo zombie si SGRETOLA a fine ondata (scelta di Paolo): mai piu' di uno in campo;
+    //   · PV e danno sono quote del warlock, e crescono col suo Carisma (tramite la potenza magica).
+    // Il Patto resta definito qui sotto ma non lo ha piu' nessuna classe.
+    ab_zombie: { name: 'Zombie del Patto', icon: '🧟', color: '#c06bff',
+      desc: 'Alzi uno zombie che combatte per te fino alla fine dell ondata. Una volta per ondata, niente ricarica.',
+      breve: 'Uno zombie alleato, una volta per ondata',
+      evoca: 1, quanti: 1, hpQuota: 1.4, dmgQuota: 0.70, corpo: 'zombie', gittata: 420, unaPerOndata: 1 },
     ab_patto: { name: 'Patto', icon: '⛓️', color: '#c06bff',
       desc: 'Maledici un nemico: prende il 35% di danni in piu, e se muore maledetto il tuo colpo successivo vale doppio.',
       breve: 'Maledizione che pesa sul bersaglio',
@@ -210,7 +224,7 @@
       breve: 'Zona di buio che rallenta e consuma',
       r: 190, dur: DUR, lento: 0.45, dmgMult: 0.35, tick: 0.25 },
     ab_contagio: { name: 'Maledizione Contagiosa', icon: '🔗', color: '#c06bff',
-      desc: 'Quando un maledetto muore, la maledizione salta al nemico piu vicino. Si incatena con il Patto.',
+      desc: 'Maledici un nemico: prende piu danni, e quando muore la maledizione salta al nemico piu vicino.',
       breve: 'La maledizione salta di morto in morto',
       dur: DUR, mult: 1.35, salto: 240, gittata: 560 },
     // ---- MAGO · ELEMENTALE ------------------------------------------------------------------
@@ -271,16 +285,17 @@
     maestro:   { firma: 'ab_danza',        2: ['ab_parata', 'ab_turbine'],      3: ['ab_impeto', 'ab_carica'] },
     assassino: { firma: 'ab_ombra',        2: ['ab_lame_verdi', 'ab_tagliola'], 3: ['ab_mortale', 'ab_marchio'] },
     arciere:   { firma: 'ab_pioggia',      2: ['ab_ancorato', 'ab_salva'],      3: ['ab_fulmine', 'ab_tempo'] },
-    warlock:   { firma: 'ab_patto',        2: ['ab_fame', 'ab_catena'],         3: ['ab_contagio', 'ab_scudo'] },
+    warlock:   { firma: 'ab_zombie',       2: ['ab_fame', 'ab_catena'],         3: ['ab_contagio', 'ab_scudo'] },
   };
   // Il MAGO e' l'unico con tre percorsi: la scuola scelta al livello 1 filtra anche il 7 e il 13.
   // Non e' una complicazione in piu': e' la conseguenza diretta di dare a ogni scuola le sue abilita'.
+  // v2.19.7 — UNA SCUOLA SOLA. Evocazione e negromanzia sono tolte (Paolo: *«troppo simili»*); le loro
+  // abilita' restano definite sopra ma non le offre piu' nessuno. La struttura a scuole resta, con una
+  // voce: se un giorno ne nasce un'altra, si aggiunge qui.
   const SCUOLE_MAGO = {
     elementale:  { firma: 'ab_scarica',  2: ['ab_impronta', 'ab_muro'],  3: ['ab_palla', 'ab_meteora'] },
-    evocazione:  { firma: 'ab_evoca',    2: ['ab_branco', 'ab_scudo'],   3: ['ab_evoca_magg', 'ab_catena'] },
-    negromanzia: { firma: 'ab_rialzata', 2: ['ab_nube', 'ab_muro'],      3: ['ab_dito', 'ab_catena'] },
   };
-  const TITOLO_SCUOLA = { elementale: 'Elementalista', evocazione: 'Evocatore', negromanzia: 'Negromante' };
+  const TITOLO_SCUOLA = { elementale: 'Elementalista' };
 
   // ============================================================================================
   // Si costruisce BY_ID una volta sola, unendo serbatoio e nuove e stampandoci sopra id, cd e livello.
@@ -299,7 +314,9 @@
   function slotPerLivello(L) { return L === LVL_1 ? 1 : L === LVL_2 ? 2 : L === LVL_3 ? 3 : null; }
 
   function _tabella(heroId, scuola) {
-    if (heroId === 'mago') return SCUOLE_MAGO[scuola] || null;   // senza scuola il mago non ha ancora nulla
+    // v2.19.7 — senza scuola (o con una che non esiste piu', da un salvataggio vecchio) il mago e'
+    // elementalista: e' l'unica.
+    if (heroId === 'mago') return SCUOLE_MAGO[scuola] || SCUOLE_MAGO.elementale;
     return PER_CLASSE[heroId] || null;
   }
   // Le candidate di uno slot, gia' vestite con lo slot e la ricarica di QUESTO slot. Torna una lista
@@ -310,7 +327,7 @@
     // lista tornerebbe vuota, il server non metterebbe mai la scelta in coda, e il mago resterebbe senza
     // scuola — e quindi senza abilita' nemmeno al 7 e al 13, che dalla scuola dipendono.
     let ids;
-    if (heroId === 'mago' && slot === 1 && !scuola) {
+    if (heroId === 'mago' && slot === 1 && !scuola && Object.keys(SCUOLE_MAGO).length > 1) {
       ids = Object.keys(SCUOLE_MAGO).map(k => SCUOLE_MAGO[k].firma);
     } else {
       const t = _tabella(heroId, scuola);
@@ -329,7 +346,8 @@
     }));
   }
   // Vero se questa classe sceglie qualcosa al livello 1 (solo il mago: la sua scuola).
-  function sceglieAlPrimo(heroId) { return heroId === 'mago'; }
+  // v2.19.7 — con una scuola sola non c'e' piu' niente da scegliere: il mago riceve la firma come tutti.
+  function sceglieAlPrimo(heroId) { return heroId === 'mago' && Object.keys(SCUOLE_MAGO).length > 1; }
   // La scuola del mago a cui appartiene una firma, o null. Serve al server quando il giocatore sceglie:
   // l'id che arriva e' quello dell'ABILITA', e da li' si risale al titolo da assegnargli.
   function scuolaDiFirma(id) { for (const k in SCUOLE_MAGO) if (SCUOLE_MAGO[k].firma === id) return k; return null; }

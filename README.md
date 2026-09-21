@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.6 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.7 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,17 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.7 (lo zombie del patto)
+
+- **Arma a due mani: +35% di danno**, perché costa lo scudo (il barbaro, che la tiene a una mano, escluso).
+- **Il mago è solo Elementalista**: niente più scelta della scuola; evocatore e negromante tolti.
+- **Il warlock alza uno zombie** al posto del Patto: una volta per ondata, si sgretola a fine ondata, può
+  stare in campo col mercenario. Ha l'aspetto degli zombie nemici, con occhi e cerchio viola.
+- **Corretto**: gli alleati dopo il primo non ricevevano l'IA e restavano fermi, e un evocato veniva
+  scambiato per il mercenario.
+
+---
 
 ## 🆕 Novità v2.19.6 (due pugnali)
 

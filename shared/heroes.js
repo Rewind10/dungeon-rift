@@ -140,23 +140,20 @@
     // ---- IMPALCATURA ARCANA ----------------------------------------------------------------
     mago: {
       id: 'mago', corpo: 'mago', famiglia: 'arcana',
-      name: 'MAGO', title: 'Custode della Faglia',
+      name: 'MAGO', title: 'Elementalista',
       color: '#2a3a6a', color2: '#141c36', accent: '#5aa8ff', hp: 100, speed: 200, radius: 16,
       statPrim: 'st_int', statMagia: 'st_int',
-      desc: 'Danno puro da lontano, e niente addosso per incassare. Prima di scendere sceglie la sua scuola, e ne prende il titolo.',
+      // v2.19.7 — UNA SCUOLA SOLA. Paolo: *«togli evocatore e negromante, lascia solo mago elementalista:
+      // evocatore e negromante sono troppo simili»*. Niente piu' scelta al livello 1.
+      desc: 'Danno puro da lontano, e niente addosso per incassare. Elementalista: piega fuoco, gelo, fulmine e veleno, e al livello 13 scatena la Palla di Fuoco.',
       weapon: {
         name: 'Bolla di Energia', school: 'magic', dmg: 64, fireRate: 1.5, spread: 0.02,
         bulletSpeed: 430, range: 620, pierce: 0, projColor: '#5aa8ff', knockback: 45, bubble: true, r: 9,
       },
       passives: [{ id: 'bonus_staffa', name: 'Staffa', desc: 'Le staffe fanno l 8% di danno in piu.' }],
       abilities: {},
-      // Le tre scuole. Non sono classi: danno un TITOLO e decidono l'abilita' del livello 1 (e, di
-      // conseguenza, quelle del 7 e del 13, perche' ogni scuola ha le sue).
-      scuole: [
-        { id: 'elementale', titolo: 'Elementalista', desc: 'fuoco, gelo, fulmine o veleno' },
-        { id: 'evocazione', titolo: 'Evocatore', desc: 'manda avanti ciò che chiama' },
-        { id: 'negromanzia', titolo: 'Negromante', desc: 'i morti non restano a terra' },
-      ],
+      // v2.19.7 — le scuole erano tre (elementale, evocazione, negromanzia) e si sceglievano al livello
+      // 1. Ne resta una: la chiave `scuole` e' tolta, e la schermata di scelta non mostra piu' il riquadro.
       strengths: 'Colpi pesanti che si vedono arrivare da lontano.', weakness: 'Lento a ripetere, fragile.',
     },
     warlock: {
@@ -164,7 +161,8 @@
       name: 'WARLOCK', title: 'Patto della Faglia',
       color: '#3a1f52', color2: '#1a0e28', accent: '#c06bff', hp: 120, speed: 196, radius: 16,
       statPrim: 'st_car', statMagia: 'st_car',
-      desc: 'Maledice, logora, e si nutre di ciò che muore intorno a lui. Le sue magie scalano con il Carisma, non con l’Intelligenza.',
+      // v2.19.7 — l'evocazione passa al warlock: uno ZOMBIE, una volta per ondata, al posto del Patto.
+      desc: 'Maledice, logora, e una volta per ondata alza uno zombie che combatte per lui. Le sue magie scalano con il Carisma, non con l’Intelligenza.',
       weapon: {
         name: 'Dardo del Patto', school: 'pact', dmg: 46, fireRate: 2.0, spread: 0.03,
         bulletSpeed: 520, range: 640, pierce: 0, projColor: '#c06bff', knockback: 40, bubble: true, r: 7,

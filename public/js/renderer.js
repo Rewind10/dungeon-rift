@@ -3342,10 +3342,33 @@
       // immagine: il «villaggio congelato» segnalato da Paolo. Adesso quel personaggio salta un
       // fotogramma e il resto va avanti. L'errore si scrive UNA volta in console, perche' va visto e
       // corretto, non nascosto.
+      // v2.19.7 — LO ZOMBIE DEL WARLOCK. Si disegna col pupazzo degli zombie nemici (Paolo: *«simile a
+      // quelli nemici»*), ma con gli occhi e un cerchio a terra del viola del warlock: nella mischia deve
+      // leggersi a colpo d'occhio come «mio», altrimenti non si capisce chi colpire.
+      if (p.zb) {
+        const pul = 0.5 + 0.5 * Math.sin(this.time * 3 + x * 0.01);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(192,107,255,' + (0.55 + 0.3 * pul).toFixed(3) + ')'; ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.ellipse(0, r * 0.55, r * 1.15, r * 0.5, 0, 0, 7); ctx.stroke();
+        ctx.globalCompositeOperation = 'lighter';
+        const al = ctx.createRadialGradient(0, 0, 2, 0, 0, r * 1.6);
+        al.addColorStop(0, 'rgba(192,107,255,' + (0.18 + 0.10 * pul).toFixed(3) + ')'); al.addColorStop(1, 'rgba(192,107,255,0)');
+        ctx.fillStyle = al; ctx.beginPath(); ctx.arc(0, 0, r * 1.6, 0, 7); ctx.fill();
+        ctx.restore();
+        const zm = this._zmv || (this._zmv = {}); const pv = zm[p.i] || (zm[p.i] = { x, y, on: 0 });
+        const mv = Math.hypot(x - pv.x, y - pv.y); pv.on = mv > 0.4 ? 1 : Math.max(0, pv.on - 0.1); pv.x = x; pv.y = y;
+        const flip = Math.cos(p.a) < 0 ? -1 : 1, back = Math.sin(p.a) < -0.35;
+        const atkZ = Math.max(0, (this.atk[p.i] || 0)) / 0.20;
+        const pronto = PUPPETS.ghoul && PUPPETS.ghoul.ready;
+        try { this._front(ctx, pronto ? 'ghoul' : 'zombie', r * 1.05, '#3f4a3a', '#1a1f18', '#d59cff', this.time, atkZ, back, flip, pv.on > 0, p.bf > 0, false); }
+        catch (e) { if (!this._erroreEroe) { this._erroreEroe = 1; console.error('[renderer] disegno dello zombie fallito:', e); } }
+        ctx.restore(); ctx.globalAlpha = 1;
+      } else {
       if (p.ph) ctx.globalAlpha = 0.55; ctx.save(); ctx.rotate(p.a);
       try { this._hero(ctx, p.h, r, this.time, !!p.dash, Math.max(0, (this.atk[p.i] || 0)) / 0.20, p); }
       catch (e) { if (!this._erroreEroe) { this._erroreEroe = 1; console.error('[renderer] disegno del personaggio fallito:', e); } }
-      ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
+      ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
+      }   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
       const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }

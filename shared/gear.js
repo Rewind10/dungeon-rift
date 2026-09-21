@@ -933,6 +933,16 @@
   // NON VALE per l'arma pesante a due mani, e non e' una dimenticanza: quella e' UN'arma sola, non
   // una coppia. Il suo pregio e' il colpo singolo e il rinculo, e costa lo scudo.
   const MANO_SECONDA = { leggera: 0.55, equilibrata: 0.35, pesante: 0.25 };
+  // v2.19.7 — L'ARMA A DUE MANI RENDE DI PIU'. Paolo: *«l'arma a 2 mani deve fare piu' danno, altrimenti
+  // non ha senso rinunciare allo scudo»*. +35%: la porta a circa 1,35 volte un'arma a una mano dello
+  // stesso grado, quanto rendono due armi (1,37) — le due vie che rinunciano allo scudo si equivalgono,
+  // e la differenza la fa lo stile (un colpo grosso e il rinculo, contro tanti colpi). Il barbaro non la
+  // prende: lui la pesante la tiene a UNA mano, e le rinunce che la giustificano non le fa.
+  const BONUS_DUE_MANI = 0.35;
+  function bonusDueMani(heroId, gear) {
+    const a1 = armaPrincipale(gear);
+    return (a1 && aDueMani(a1, _mani(heroId))) ? BONUS_DUE_MANI : 0;
+  }
   function bonusSecondaMano(gear) {
     const a1 = armaPrincipale(gear), a2 = armaSecondaria(gear);
     if (!a1 || !a2) return 0;
@@ -969,7 +979,7 @@
   return { ITEMS, BY_ID, SLOTS, CORPO_DI, corpoDi: _corpo, PREZZI, SLOT_NAME, SLOT_ICON, RANK_RARITY, CARATTERI, VENDITA_SCARSO,
            itemsFor, itemsOfRank, slotsFor, maxRank, startingGear, bonusOf, rarityOf, caratteroOf, prezzoVendita,
            MANI_SLOT, aDueMani, impugna, puoImpugnare, armaPrincipale, armaSecondaria, scudoDi,
-           MANO_SECONDA, bonusSecondaMano,
+           MANO_SECONDA, bonusSecondaMano, BONUS_DUE_MANI, bonusDueMani,
            // v2.19 — le tre botteghe e l'equipaggiamento misto
            TIPOLOGIA, BOTTEGHE, BOTTEGA_NOME, PERMESSI, puoAvere, tipologiaDi, slotsClasse, itemsBottega, slotsBottega };
 });

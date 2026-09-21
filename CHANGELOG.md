@@ -2,6 +2,47 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.7] — 2026-09-21 · "Lo zombie del patto"
+
+**⚔️ L'arma a due mani rende di più: +35%.** *«Deve fare più danno, altrimenti non ha senso rinunciare
+allo scudo.»* Ora rende circa **1,35 volte** un'arma a una mano dello stesso grado, quanto due armi
+(1,37): le due vie che rinunciano allo scudo si equivalgono, e cambia lo stile — un colpo grosso col
+rinculo, contro tanti colpi. Il barbaro, che la pesante la tiene a una mano, non lo prende.
+
+| grado | una mano + scudo | **due mani** | due armi (maestro) |
+|---|---|---|---|
+| 2 | 93 | **134** | 157 |
+| 3 | 108 | **156** | 160 |
+| 4 | 122 | **176** | 179 |
+| 5 | 148 | **212** | 219 |
+
+**🔥 Il mago è solo Elementalista.** *«Evocatore e negromante sono troppo simili.»* Niente più scelta
+della scuola al livello 1: riceve la Scarica Elementale come ogni classe riceve la sua firma. Nella
+schermata di scelta è sparito il riquadro delle tre scuole e la descrizione dice cosa fa. Il suo titolo
+è Elementalista. I salvataggi di un evocatore o di un negromante riprendono da elementalista: la firma
+si sostituisce da sola, e le abilità del 7 e del 13 che non esistono più tornano da scegliere.
+
+**🧟 Il warlock alza uno zombie**, al posto del Patto (che era un doppione della Maledizione
+Contagiosa). **Una volta per ondata**, senza ricarica: sulla barra la casella dice «usata» fino
+all'ondata dopo. Lo zombie **si sgretola a fine ondata**, e **può stare in campo insieme al mercenario**
+(decisioni di Paolo). Si disegna col pupazzo degli zombie nemici, ma con **occhi, alone e cerchio
+viola** del warlock: nella mischia si capisce subito che è tuo. PV e danno sono quote del warlock,
+e crescono col suo Carisma.
+
+**🐛 Perché l'evocazione restava «ferma impalata».** Il gioco dava l'intelligenza artificiale **a un
+solo alleato**: il primo che trovava vivo. Dal secondo in poi gli evocati non ricevevano mai un ordine e
+restavano lì. E lo stesso difetto aveva altri due effetti, trovati cercando il primo: un evocato veniva
+**scambiato per il mercenario** — la sua morte segnava il mercenario vero come «caduto», e la sua
+presenza impediva al mercenario di scendere in campo. Adesso ogni alleato ha la sua IA, e il
+mercenario è il mercenario.
+
+**Test** — 4373 passati, 0 falliti. Nuovo `[TEST 75]`: lo zombie si alza, **non** una seconda volta
+nella stessa ondata, riceve gli ordini dell'IA **a ogni istante insieme al mercenario**, la sua morte non
+tocca il mercenario, si sgretola a fine ondata e se ne alza un altro all'ondata dopo; l'arma a due mani
+rende ~1,35 a ogni grado, e il barbaro non prende quel bonus. Verificato che il controllo sull'IA scatta
+rimettendo apposta il vecchio difetto (il secondo alleato: 0 ordini su 60). Riscritti i controlli che
+davano per giuste le tre scuole del mago.
+
 ### [2.19.6] — 2026-09-21 · "Due pugnali"
 
 Cinque richieste di Paolo, e **due bug** trovati misurando.
