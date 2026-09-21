@@ -2,6 +2,38 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.8] — 2026-09-21 · "Colpisci quello che vedi"
+
+**⚔️ Il fendente colpisce quello che si vede, più 5 pixel.** *«A volte i nemici sembrano non prendere
+danni.»* Misurato: il gioco **disegna i nemici 1,45 volte più grandi** (1,86 gli élite) del cerchio con
+cui il server calcolava il colpo. Uno scheletro che a schermo entrava di **6 pixel** dentro il bordo bianco
+del fendente veniva mancato; un élite nemmeno entrandoci di **12**. Adesso il colpo si misura sul **corpo
+disegnato** del nemico — stessa formula del disegno — e, come chiesto, conta colpito anche chi sta fino a
+**5 pixel oltre** il bordo bianco, in profondità e ai lati.
+
+| bordo del nemico rispetto al bordo bianco | prima | adesso |
+|---|---|---|
+| dentro di 6 px (normale) | mancato | **colpito** |
+| dentro di 12 px (élite) | mancato | **colpito** |
+| lo tocca | mancato | **colpito** |
+| 4 px fuori | mancato | **colpito** |
+| 12 px fuori | mancato | mancato |
+
+**🗡️ Assassino: Forza 4, Costituzione 6** (erano 6 e 4). Da **112 a 127 PV**, stesso danno: i pugnali
+crescono con la Destrezza. La schermata di scelta legge la tabella, quindi mostra già i valori nuovi.
+
+**🖱️ Il mirino arriva più lontano: 200 → 320 pixel.** E davanti al **mercante errante** il cursore torna
+libero, come nel villaggio: lui compare in piena ondata, col cursore agganciato al mirino, quindi il suo
+pannello si apriva ma non c'era un puntatore per cliccarlo.
+
+**🧙 Il mercante errante vende un oggetto solo**, poi raccoglie le sue cose e se ne va fino alla prossima
+ondata (con una nuvola dove stava e una riga che lo dice). **La vita extra costa 1000 monete** (era 180).
+
+**Test** — 4390 passati, 0 falliti. Nuovo `[TEST 76]`: il bordo disegnato del nemico messo a distanze
+note dal bordo bianco, per nemici normali ed élite, davanti e ai lati — colpito fino a 5 px oltre,
+mancato più in là. Il test del mercante controlla che dopo un acquisto se ne vada e che la vita costi
+1000.
+
 ### [2.19.7] — 2026-09-21 · "Lo zombie del patto"
 
 **⚔️ L'arma a due mani rende di più: +35%.** *«Deve fare più danno, altrimenti non ha senso rinunciare

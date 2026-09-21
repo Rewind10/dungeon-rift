@@ -235,7 +235,8 @@
     barbaro:   { st_for: 10, st_cos: 8, st_des: 2,  st_int: 1,  st_car: 1 },
     paladino:  { st_for: 6,  st_cos: 7, st_des: 2,  st_int: 1,  st_car: 6 },
     maestro:   { st_for: 7,  st_cos: 6, st_des: 6,  st_int: 2,  st_car: 1 },
-    assassino: { st_for: 6,  st_cos: 4, st_des: 10, st_int: 1,  st_car: 1 },
+    // v2.19.8 — Forza 6 -> 4 e Costituzione 4 -> 6 (Paolo: *«subisce troppi danni»*). Il totale resta 22.
+    assassino: { st_for: 4,  st_cos: 6, st_des: 10, st_int: 1,  st_car: 1 },
     arciere:   { st_for: 2,  st_cos: 5, st_des: 10, st_int: 3,  st_car: 2 },
     mago:      { st_for: 1,  st_cos: 5, st_des: 5,  st_int: 10, st_car: 1 },
     warlock:   { st_for: 3,  st_cos: 5, st_des: 4,  st_int: 3,  st_car: 8 },

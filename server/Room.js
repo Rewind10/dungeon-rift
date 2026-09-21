@@ -862,7 +862,8 @@ class Room {
       { id: 'heal', name: 'Bende del Viandante', icon: '❤️', color: '#ff5a7a', cost: 45, kind: 'heal', desc: 'Ripristina il 55% dei PV' },
       { id: 'maxhp', name: 'Talismano Vitale', icon: '🧿', color: '#4bd66b', cost: 130, kind: 'maxhp', val: 30, desc: '+30 PV massimi (permanente)' },
       { id: 'boon', name: 'Reliquia Arcana', icon: '🎴', color: '#b061ff', cost: 120, kind: 'boon', desc: 'Scegli subito un Potere' },
-      { id: 'life', name: 'Cuore di Fenice', icon: '💗', color: '#ff77cc', cost: 180, kind: 'life', desc: '+1 vita' },
+      // v2.19.8 — 180 -> 1000. Paolo: *«si', lo so che e' tanto, ma una vita extra e' un grosso vantaggio»*.
+      { id: 'life', name: 'Cuore di Fenice', icon: '💗', color: '#ff77cc', cost: 1000, kind: 'life', desc: '+1 vita' },
       { id: 'dmg', name: 'Olio Affilante', icon: '⚔️', color: '#ff8a5b', cost: 110, kind: 'dmg', val: 0.12, desc: '+12% danno (permanente)' },
       { id: 'speed', name: 'Sandali del Vento', icon: '👟', color: '#8bd6ff', cost: 85, kind: 'speed', val: 0.08, desc: '+8% velocita (permanente)' },
       { id: 'shield', name: 'Egida Tascabile', icon: '🛡️', color: '#7dffea', cost: 95, kind: 'shield', val: 0.06, desc: '-6% danni subiti (permanente)' },
@@ -903,7 +904,13 @@ class Room {
     else if (w.kind === 'shield') { p.stats.dmgReduce = Math.min(0.85, (p.stats.dmgReduce || 0) + w.val); }
     else if (w.kind === 'boon') { this.phase === C.PHASE_SHOP || this.offerBoon(p); }
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'merchant_buy', id: w.id, name: w.name, icon: w.icon, color: w.color, x: p.x, y: p.y } });
-    this.sendTo(pid, { t: C.MSG.OFFER_MERCHANT, wares: this.merchant.wares, near: 1, coins: p.coins });
+    // v2.19.8 — UN OGGETTO SOLO, POI SE NE VA. Paolo: *«dal mercante errante puoi prendere 1 solo
+    // oggetto per ondata, poi sparisce»*. Venduto il primo pezzo, il mercante lascia la mappa: il banco
+    // si chiude per chi ci stava davanti, e fino alla prossima ondata non torna.
+    const mx = this.merchant.x, my = this.merchant.y;
+    this.merchant = null;
+    for (const q of this.players.values()) if (q._nearMerch) { q._nearMerch = false; this.sendTo(q.id, { t: C.MSG.EVENT, ev: { t: 'merchant_leave' } }); }
+    this.broadcast({ t: C.MSG.EVENT, ev: { t: 'merchant_gone', x: mx, y: my } });
   }
 
   // ===== MERCANTE NERO (v1.12) — patti RISCHIO/RICOMPENSA, appare a caso e nascosto =====
@@ -1285,11 +1292,19 @@ class Room {
       // NOTA: il raggio del mostro e' m.radius, NON m.r (m.r non esiste). Scriverlo sbagliato non da'
       // errore: 'd > rad + undefined' e 'diff > half + NaN' sono entrambi FALSE, quindi il fendente
       // colpiva TUTTI i mostri della mappa, anche alle spalle. Se ne e' accorto il test del bersaglio dietro.
-      const mr = m.radius || 12;
-      const d = MU.dist(p.x, p.y, m.x, m.y); if (d > rad + mr) continue;
+      // v2.19.8 — SI COLPISCE CIO' CHE SI VEDE, piu' 5 pixel. Paolo: *«a volte i nemici sembrano non
+      // prendere danni»*. Misurato: il client disegna i mostri 1,45 volte piu' grandi del raggio con cui
+      // qui si faceva il conto (1,86 gli elite), quindi un mostro che a schermo entrava di 6 pixel nel
+      // bordo bianco del fendente veniva mancato, e un elite nemmeno entrandoci di 12. Adesso il conto
+      // usa il corpo DISEGNATO (stessa formula del renderer) e — come chiesto, per dare un filo di
+      // vantaggio a chi combatte in mischia — conta colpito anche un nemico che sta fino a 5 pixel OLTRE
+      // il bordo bianco. Vale sia in profondita' sia ai lati del settore.
+      const mrv = ((m.def && m.def.radius) || m.radius || 12) * (C.VIS_SCALE || 1) * (m.elite ? 1.28 : 1);
+      const MARGINE = C.MELEE_MARGINE != null ? C.MELEE_MARGINE : 5;
+      const d = MU.dist(p.x, p.y, m.x, m.y); if (d > rad + mrv + MARGINE) continue;
       const a = Math.atan2(m.y - p.y, m.x - p.x);
       const diff = Math.abs(((a - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI);
-      const tol = d > 1 ? Math.atan2(mr * 0.8, d) : Math.PI;
+      const tol = d > 1 ? Math.atan2(mrv + MARGINE, d) : Math.PI;
       if (diff > half + tol) continue;
       hit.push({ m, d });
     }

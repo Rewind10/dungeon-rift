@@ -269,6 +269,13 @@ Il risultato, misurato, in multipli di un'arma a una mano dello stesso grado (**
 
 ---
 
+### ✅ Decisioni della v2.19.8
+
+- **Assassino: Forza 4, Costituzione 6** (erano 6 e 4) — *«subisce troppi danni»*. Totale invariato (22).
+  Effetto misurato: 112 → **127 PV**, stesso danno (i pugnali crescono con la Destrezza).
+
+---
+
 ## 4. 🎲 LE STATISTICHE DI PARTENZA — la matrice 7 × 5
 
 Proposta mia, **corretta e approvata da Paolo**. Sostituisce `Heroes.STAT_BASE`, che oggi e' 3 × 4.

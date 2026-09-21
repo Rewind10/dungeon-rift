@@ -368,6 +368,9 @@
       case 'roll_hit': R.addShake(4); R.burst(ev.x, ev.y, '#cfc7b0', 8, 130, 0.3); R.ring(ev.x, ev.y, '#8a8270', 4, 30, 0.25); break;  // rimbalzo sul muro
       case 'split': R.ring(ev.x, ev.y, ev.c || '#a6ff3a', 5, 40, 0.4); R.burst(ev.x, ev.y, ev.c || '#a6ff3a', 16, 160, 0.5); break;  // v1.58 — la melma si divide
       case 'merchant_leave': if (ev.dark) { G._darkOpen = false; HUD.hideMerchant(true); } else { G._merchOpen = false; HUD.hideMerchant(false); } break;
+      // v2.19.8 — il mercante errante se ne va dopo una vendita: una nuvola dove stava, e una riga che lo dice
+      case 'merchant_gone': R.burst(ev.x, ev.y, '#ffd97a', 22, 150, 0.7); R.ring(ev.x, ev.y, '#ffd97a', 10, 90, 0.6);
+        HUD.killfeed('\uD83E\uDDD9 Il mercante errante raccoglie le sue cose e se ne va'); break;
       case 'merchant_buy': A.buy(); R.ring(ev.x, ev.y, ev.color || '#ffd24a', 8, 60, 0.5); R.burst(ev.x, ev.y, ev.color || '#ffd24a', 16, 160, 0.5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> acquistato dal mercante!`); break;
       case 'dark_buy': A.evo(); R.ring(ev.x, ev.y, ev.color || '#7b2cbf', 10, 90, 0.6); R.burst(ev.x, ev.y, ev.color || '#a4133c', 22, 200, 0.6); R.addShake(5); HUD.killfeed(`${ev.icon} <b style="color:${ev.color}">${esc(ev.name)}</b> \u2014 ${esc(ev.note || 'patto siglato')}`); break;
       case 'nova': R.ring(ev.x, ev.y, '#7dffea', 6, 110, 0.45); break;
@@ -522,11 +525,17 @@
       // lock il cursore non esiste, quindi quei pulsanti non si potevano premere: era un bug vero, non un
       // fastidio. Dentro il villaggio torna il cursore del sistema e il mirino non si disegna nemmeno.
       const inVillaggio = (Net.latest() || {}).phase === C.PHASE_MARKET;
-      Input.setGuinzaglio(!inVillaggio);
-      if (Input.locked && (inVillaggio || !inPartita())) Input.sgancia();
-      // il cursore del sistema sul canvas si rivede quando serve cliccare: nel villaggio, e quando il
-      // gioco non e' in mano al giocatore. In combattimento resta nascosto — li' il puntatore e' il mirino.
-      $('game').classList.toggle('libero', inVillaggio || !inPartita());
+      // v2.19.8 — E ANCHE DAVANTI AL MERCANTE ERRANTE. Paolo: *«non si possono cliccare gli oggetti del
+      // mercante errante»*. Lui compare in piena ondata, cioe' col guinzaglio acceso e il cursore agganciato:
+      // il pannello si apriva, ma non c'era un puntatore per premerlo, e il mirino si fermava a 200 pixel.
+      // Finche' il suo banco e' aperto vale la regola del villaggio: cursore libero, niente guinzaglio.
+      const alBanco = !!(G._merchOpen || G._darkOpen);
+      const cursoreLibero = inVillaggio || alBanco;
+      Input.setGuinzaglio(!cursoreLibero);
+      if (Input.locked && (cursoreLibero || !inPartita())) Input.sgancia();
+      // il cursore del sistema sul canvas si rivede quando serve cliccare: nel villaggio, davanti a un
+      // mercante, e quando il gioco non e' in mano al giocatore. In combattimento resta nascosto.
+      $('game').classList.toggle('libero', cursoreLibero || !inPartita());
       if (!frozen) R.updateFx(dt);
       R.render(frozen ? 0 : dt, G.world);
       const snap = Net.latest();

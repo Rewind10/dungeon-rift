@@ -32,7 +32,10 @@
     keys: {}, mouse: { x: 0, y: 0, down: false, right: false }, dashEdge: false,
     // il MIRINO: scostamento in pixel dal centro dello schermo, cioe' dal personaggio.
     mira: { x: 140, y: 0 },
-    MIRA_R: 200,              // il guinzaglio
+    // v2.19.8 — 200 -> 320. Paolo: *«il raggio di movimento del mouse e' troppo corto»*. A 200 pixel il
+    // mirino restava dentro un terzo dello schermo; a 320 arriva quasi al bordo in verticale su uno
+    // schermo 1080 e resta comunque un guinzaglio (col pointer lock il mouse non esce dalla finestra).
+    MIRA_R: 320,              // il guinzaglio
     guinzaglio: true,         // v2.11.1 — acceso in combattimento, spento nel villaggio (lo decide main.js)
     locked: false,            // il browser ci ha dato il pointer lock?
     alBordo: false,           // sta premendo contro il limite

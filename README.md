@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.7 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.8 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,16 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.8 (colpisci quello che vedi)
+
+- **Il fendente colpisce quello che si vede**: prima i nemici erano disegnati più grandi della loro zona
+  colpibile, e chi toccava il bordo bianco veniva mancato. Ora conta il corpo disegnato, più 5 pixel.
+- **Assassino**: Forza 4, Costituzione 6 (127 PV invece di 112, stesso danno).
+- **Mirino** fino a 320 pixel; davanti al mercante errante il cursore torna libero per cliccare.
+- **Mercante errante**: un oggetto solo per ondata, poi se ne va. La vita extra costa 1000 monete.
+
+---
 
 ## 🆕 Novità v2.19.7 (lo zombie del patto)
 

@@ -534,9 +534,17 @@ function testV111() {
   // avvicina: acquisto valido
   p.x = room.merchant.x + 10; p.y = room.merchant.y; p.hp = 1; const before = p.coins; room.buyMerchant('b', ware.id);
   assert(p.coins === before - ware.cost, 'vicino al mercante si acquista e si scalano le monete');
-  // maxhp permanente
+  // v2.19.8 — e dopo UN acquisto il mercante se ne va (Paolo: *«1 solo oggetto per ondata, poi sparisce»*)
+  assert(room.merchant === null, 'venduto un oggetto, il mercante errante se ne va');
+  const altro = room.merchantWaresPool()[0]; const c1 = p.coins; room.buyMerchant('b', altro.id);
+  assert(p.coins === c1, 'e non si puo comprare un secondo oggetto');
+  // la vita extra costa 1000
+  assert(room.merchantWaresPool().find(w => w.kind === 'life').cost === 1000, 'la vita extra costa 1000 monete');
+  // maxhp permanente (su un mercante nuovo, perche' il primo e' partito)
+  room.spawnMerchant(); p.x = room.merchant.x + 10; p.y = room.merchant.y;
   const mh = room.merchantWaresPool().find(w => w.kind === 'maxhp'); room.merchant.wares.push(mh); const hp0 = room.effMaxHp(p); p.coins = 100000; room.buyMerchant('b', 'maxhp'); assert(room.effMaxHp(p) > hp0, 'il talismano vitale aumenta i PV massimi');
   // prossimita: updateMerchant invia OFFER quando entri nel raggio
+  room.spawnMerchant();
   sent.length = 0; p._nearMerch = false; p.x = room.merchant.x; p.y = room.merchant.y; room.updateMerchant(dt);
   assert(sent.some(m => m.t === C.MSG.OFFER_MERCHANT && m.near), 'avvicinandosi arriva l\'offerta del mercante');
   // --- ZONE telegrafate (Hades-style) ---
@@ -5990,6 +5998,10 @@ function testSchermataUnica() {
     // contrario del suo mestiere. Il confronto qui e' fra chi sta sopra (paladino, COS 7) e chi sta
     // sotto (assassino, COS 4): il mago adesso ha COS 5 ed e' appena sopra il centro.
     assert(Math.abs(Her.STAT_CENTRO - 4.4) < 1e-9, 'il centro del profilo e 4,4: la media di 22 su cinque caselle');
+    // v2.19.8 — l'assassino ha COS 6 (Paolo: *«subisce troppi danni»*): nessuna delle sette sta piu' sotto
+    // il centro in Costituzione. Il «sotto» si prova con un profilo messo a mano e poi rimesso a posto.
+    const cosAss = Her.STAT_BASE.assassino.st_cos;
+    Her.STAT_BASE.assassino.st_cos = 3;
     assert(Her.profiloPunti('paladino', 'st_cos') > 0 && Her.profiloPunti('assassino', 'st_cos') < 0,
       'il profilo conta lo SCARTO dal centro: sopra si guadagna, sotto si perde');
     const r1 = new Room('v215a'); const g = r1.addPlayer('g', conn, 'G', 'paladino'); r1.startGame();
@@ -5998,7 +6010,9 @@ function testSchermataUnica() {
     // fragile. Il confronto e' col nudo PIU' l'equipaggiamento di partenza, se no passerebbe da solo.
     assert(hp0 > g.maxHp + g.gearBonus.maxHpFlat, 'il guerriero (COS 8) nasce piu duro: ' + hp0 + ' PV');
     const r2 = new Room('v215b'); const m = r2.addPlayer('m', conn, 'M', 'assassino'); r2.startGame();
-    assert(r2.effMaxHp(m) < m.maxHp + m.gearBonus.maxHpFlat, 'e l assassino (COS 4) piu fragile: ' + r2.effMaxHp(m) + ' PV');
+    assert(r2.effMaxHp(m) < m.maxHp + m.gearBonus.maxHpFlat, 'e chi sta sotto il centro (COS 3, messo a mano) e piu fragile: ' + r2.effMaxHp(m) + ' PV');
+    Her.STAT_BASE.assassino.st_cos = cosAss;
+    assert(Her.STAT_BASE.assassino.st_for === 4 && Her.STAT_BASE.assassino.st_cos === 6, 'l assassino ha Forza 4 e Costituzione 6');
     // (b) ma la riduzione non va mai sotto zero: il motore la ignorerebbe (`if (dr > 0)`) e il pannello
     // mostrerebbe un'armatura negativa che non esiste. Chi sta sotto il centro paga in PV, non in bugie.
     for (const h of Heroes.ORDER) {
@@ -6500,6 +6514,36 @@ function testZombie() {
   ok('zombie: si alza una volta per ondata, si muove insieme al mercenario, si sgretola a fine ondata');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// v2.19.8 — IL FENDENTE COLPISCE CIO' CHE SI VEDE, PIU' 5 PIXEL. I mostri sono disegnati 1,45 volte il
+// loro raggio (1,86 gli elite) e il fendente contava sul raggio piccolo: un nemico che a schermo toccava
+// il bordo bianco veniva mancato. Qui si mette il BORDO DISEGNATO del nemico a distanze note dal bordo
+// bianco del fendente, davanti e ai lati.
+function testFendente() {
+  console.log('\n[TEST 76] v2.19.8 — il fendente colpisce il nemico che si vede dentro il bordo, fino a 5 px oltre');
+  const Mon = require('../shared/monsters.js');
+  const colpito = (elite, oltre, lato) => {
+    const r = new Room('f' + Math.random()); const p = r.addPlayer('a', { send() {} }, 'A', 'barbaro'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const w = r.effWeapon(p), vis = Mon.MONSTERS.skeleton.radius * C.VIS_SCALE * (elite ? 1.28 : 1);
+    let d, a;
+    if (!lato) { d = w.arcRadius + oltre + vis; a = p.aim; }
+    else { d = w.arcRadius * 0.7; a = p.aim + w.arcHalf + Math.atan2(vis + oltre, d); }
+    const m = r.spawnMonster('skeleton', p.x, p.y, {}); if (elite) m.elite = true;
+    m.x = p.x + Math.cos(a) * d; m.y = p.y + Math.sin(a) * d; const h = m.hp;
+    r._meleeSwing(p, w, 10, false); return m.hp < h;
+  };
+  for (const el of [false, true]) {
+    const nome = el ? 'elite' : 'normale';
+    assert(colpito(el, -6), nome + ': entra di 6 px nel bordo bianco -> colpito');
+    assert(colpito(el, 0), nome + ': tocca il bordo bianco -> colpito');
+    assert(colpito(el, 4), nome + ': 4 px oltre il bordo -> colpito (il margine della mischia)');
+    assert(!colpito(el, 12), nome + ': 12 px oltre il bordo -> mancato (il fendente non diventa infinito)');
+    assert(colpito(el, 4, true), nome + ': ai lati del settore, 4 px oltre -> colpito');
+    assert(!colpito(el, 14, true), nome + ': ai lati, 14 px oltre -> mancato');
+  }
+  ok('il fendente colpisce quello che si vede, con 5 pixel di margine');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
