@@ -2,6 +2,30 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.4] — 2026-09-21 · "L'ascia del barbaro"
+
+Paolo: *«l'estetica del barbaro non mi piace molto, sembra che abbia in mano una mazza da hockey»*.
+
+**Il perché era geometrico.** Il manico era un tratto sottile, e la lama erano due «petali» piccoli e
+sbilanciati attaccati **vicino** alla punta, non **in cima**; quello grosso sporgeva da una parte sola.
+Stecca più paletta storta da un lato è il disegno di una mazza da hockey, da qualunque rotazione.
+
+**Adesso è un'ascia da guerra a doppia lama**, con tre regole scritte nel codice:
+
+1. la **testa sta in cima** al manico — il manico finisce dentro l'occhio della testa;
+2. le lame sono **perpendicolari** al manico, non allungate lungo di lui;
+3. sono **due e simmetriche**: una sagoma simmetrica attorno al manico non può sembrare una stecca da
+   nessuna angolazione, ed è anche l'ascia dei barbari per antonomasia.
+
+In più: manico più spesso con un filo di luce per dargli volume, **fasciatura di cuoio** dove la mano
+stringe, **pomolo di ferro** in fondo, **filo chiaro** lungo il bordo delle lame (è quello che fa
+leggere «lama» e non «piastra» anche a sedici pixel) e una piccola punta in cima. La mano sta a un
+terzo dal pomolo, così la testa si allontana dal corpo e si legge da sola.
+
+Controllato nelle tre pose (a riposo, a metà colpo, colpo pieno) sia ingrandito sia **alla dimensione
+vera del gioco**, dove la sagoma a doppia lama si riconosce subito. Solo il disegno: nessuna regola,
+nessun numero.
+
 ### [2.19.3] — 2026-09-21 · "Si vede cosa porti"
 
 Paolo, con due screenshot: un paladino con lo **Spadone** in mano prova a imbracciare lo **scudo**. Lo

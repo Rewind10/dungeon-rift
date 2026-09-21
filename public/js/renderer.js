@@ -3659,15 +3659,64 @@
       // v2.18 — TRE ARMI SU QUESTA IMPALCATURA. L'ascia del barbaro e le due spade del maestro d'armi
       // si disegnano qui; lo scudo resta al paladino (`st.scudo`), che e' l'unico dei tre a portarlo.
       if (!_civ && st.arma === 'ascia') {
-        ctx.save(); ctx.translate(r * (0.70 + 0.40 * atk), r * 0.34); ctx.rotate(-0.85 + atk * 0.9); ctx.scale(1.18, 1.18);
-        ctx.strokeStyle = '#4a3520'; ctx.lineWidth = r * 0.11; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(-r * 0.55, r * 0.18); ctx.lineTo(r * 0.55, -r * 0.18); ctx.stroke(); ctx.lineCap = 'butt';
-        const ax = this._grad('h_ascia|' + r, () => { const q = ctx.createLinearGradient(r * 0.2, -r * 0.5, r * 0.8, r * 0.2); q.addColorStop(0, '#c6cdd8'); q.addColorStop(1, '#666e7a'); return q; });
-        ctx.fillStyle = ax; ctx.strokeStyle = DK; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(r * 0.42, -r * 0.10); ctx.quadraticCurveTo(r * 0.86, -r * 0.72, r * 1.02, -r * 0.16);
-        ctx.quadraticCurveTo(r * 0.86, r * 0.10, r * 0.42, r * 0.08); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(r * 0.40, -r * 0.06); ctx.quadraticCurveTo(r * 0.12, -r * 0.56, r * 0.00, -r * 0.14);
-        ctx.quadraticCurveTo(r * 0.16, r * 0.02, r * 0.40, r * 0.06); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // ==========================================================================================
+        // v2.19.4 — L'ASCIA DA GUERRA, rifatta. Paolo: *«sembra che abbia in mano una mazza da hockey»*.
+        // ==========================================================================================
+        // Aveva ragione, e il motivo era geometrico. Il manico era un tratto sottile, e la lama erano
+        // due «petali» piccoli e sbilanciati attaccati VICINO alla punta, non IN CIMA: il petalo grosso
+        // sporgeva da una parte sola, e stecca + paletta storta da un lato e' esattamente il disegno di
+        // una mazza da hockey. Da qualunque rotazione.
+        //
+        // Adesso e' un'ascia a DOPPIA LAMA, e le regole sono tre:
+        //  1. la testa sta IN CIMA al manico, non a meta' — il manico finisce dentro l'occhio della testa;
+        //  2. le lame sono PERPENDICOLARI al manico, non allungate lungo di lui;
+        //  3. sono DUE e SIMMETRICHE. Una sagoma simmetrica attorno al manico non puo' sembrare una
+        //     stecca da nessuna angolazione, ed e' anche l'ascia dei barbari per antonomasia.
+        // Il manico e' piu' spesso, con la fasciatura dove la mano stringe e un pomolo in fondo: la mano
+        // (l'origine) sta a un terzo dal pomolo, cosi' la testa si allontana dal corpo e si legge da sola.
+        ctx.save(); ctx.translate(r * (0.62 + 0.40 * atk), r * 0.36); ctx.rotate(-0.85 + atk * 0.9); ctx.scale(1.18, 1.18);
+        const HB = -r * 0.40, HT = r * 0.70;                 // pomolo e cima del manico
+        const HX = r * 0.56;                                  // centro della testa, lungo il manico
+        // --- il manico: legno, un po' piu' chiaro al centro per dargli volume ---
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#2a1b0e'; ctx.lineWidth = r * 0.15;
+        ctx.beginPath(); ctx.moveTo(HB, 0); ctx.lineTo(HT, 0); ctx.stroke();
+        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = r * 0.10;
+        ctx.beginPath(); ctx.moveTo(HB, 0); ctx.lineTo(HT, 0); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,220,170,.22)'; ctx.lineWidth = r * 0.03;
+        ctx.beginPath(); ctx.moveTo(HB + r * 0.05, -r * 0.02); ctx.lineTo(HX - r * 0.14, -r * 0.02); ctx.stroke();
+        ctx.lineCap = 'butt';
+        // --- la fasciatura di cuoio dove la mano stringe ---
+        ctx.strokeStyle = '#1a120a'; ctx.lineWidth = r * 0.028;
+        for (let k = 0; k < 4; k++) { const fx = -r * 0.16 + k * r * 0.085;
+          ctx.beginPath(); ctx.moveTo(fx, -r * 0.058); ctx.lineTo(fx + r * 0.04, r * 0.058); ctx.stroke(); }
+        // --- il pomolo di ferro in fondo ---
+        ctx.fillStyle = '#5a616c'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(HB, 0, r * 0.075, 0, 7); ctx.fill(); ctx.stroke();
+        // --- le due lame a mezzaluna, simmetriche attorno al manico ---
+        const ax = this._grad('h_ascia2|' + r, () => { const q = ctx.createLinearGradient(0, -r * 0.70, 0, r * 0.70);
+          q.addColorStop(0, '#dfe5ee'); q.addColorStop(0.42, '#8a929e'); q.addColorStop(0.5, '#5f6672');
+          q.addColorStop(0.58, '#8a929e'); q.addColorStop(1, '#dfe5ee'); return q; });
+        for (const sg of [-1, 1]) {
+          ctx.fillStyle = ax; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(HX - r * 0.11, sg * r * 0.08);                                        // il collo, contro l'occhio
+          ctx.quadraticCurveTo(HX - r * 0.22, sg * r * 0.30, HX - r * 0.34, sg * r * 0.58);   // si allarga verso il corno
+          ctx.quadraticCurveTo(HX, sg * r * 0.80, HX + r * 0.34, sg * r * 0.58);             // il FILO, a mezzaluna
+          ctx.quadraticCurveTo(HX + r * 0.22, sg * r * 0.30, HX + r * 0.11, sg * r * 0.08);   // e torna al collo
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          // il filo affilato: una riga chiara appena dentro il bordo esterno, che e' cio' che fa leggere
+          // «lama» e non «piastra» anche a sedici pixel
+          ctx.strokeStyle = 'rgba(245,250,255,.85)'; ctx.lineWidth = r * 0.035;
+          ctx.beginPath(); ctx.moveTo(HX - r * 0.28, sg * r * 0.56);
+          ctx.quadraticCurveTo(HX, sg * r * 0.74, HX + r * 0.28, sg * r * 0.56); ctx.stroke();
+        }
+        // --- l'occhio della testa, dove il manico entra, e la punta in cima ---
+        ctx.fillStyle = '#3d434d'; ctx.strokeStyle = DK; ctx.lineWidth = 1.8;
+        this._rr(ctx, HX - r * 0.13, -r * 0.11, r * 0.26, r * 0.22, r * 0.04); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#b8c0cc';
+        ctx.beginPath(); ctx.moveTo(HX + r * 0.13, -r * 0.06); ctx.lineTo(HX + r * 0.30, 0); ctx.lineTo(HX + r * 0.13, r * 0.06);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.restore();
       } else if (!_civ && st.arma === 'doppia') {
         for (const sg of [-1, 1]) {

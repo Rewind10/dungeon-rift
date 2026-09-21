@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.3 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.19.4 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,14 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.19.4 (l'ascia del barbaro)
+
+Il barbaro in partita ha un'**ascia da guerra a doppia lama** al posto della vecchia sagoma, che con una
+lama sola e sbilanciata vicino alla punta sembrava una mazza da hockey. Testa in cima al manico, due
+lame a mezzaluna simmetriche col filo chiaro, fasciatura sull'impugnatura e pomolo in fondo.
+
+---
 
 ## 🆕 Novità v2.19.3 (si vede cosa porti)
 
