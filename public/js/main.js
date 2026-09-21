@@ -70,9 +70,35 @@
       ' Lv.' + e.livello + '<small style="display:block;opacity:.7;font-weight:400">salvata ' + quandoTesto(e.quando) + '</small>';
     return d;
   }
+  // ============================================================================================
+  // v2.19.10 — IL NOME PRESELEZIONATO VIENE DALLA CLASSE. Paolo: *«nomi casuali di eroi del fantasy,
+  // vincolati alla classe: che so, Gandalf per il mago, o il nome di un paladino famoso. Ovviamente poi
+  // e' modificabile.»* Cambiando classe con le frecce il nome cambia con lei — ma SOLO finche' il
+  // giocatore non l'ha toccato: se ha scritto il suo, resta il suo. Il confronto e' con l'ultimo nome
+  // proposto da qui, non con l'elenco, cosi' anche chi scrive «Gandalf» a mano sul barbaro se lo tiene.
+  // Tutti i nomi stanno nei 16 caratteri del campo.
+  const NOMI_CLASSE = {
+    barbaro:   ['Conan', 'Kull', 'Sonja', 'Fafhrd', 'Wulfgar', 'Beowulf', 'Grom'],
+    paladino:  ['Lancillotto', 'Galahad', 'Artù', 'Orlando', 'Uther', 'Sturm', 'Parsifal'],
+    maestro:   ['Aragorn', 'Boromir', 'Geralt', 'Inigo', 'Musashi', 'Brienne', 'Rinaldo'],
+    assassino: ['Entreri', 'Ezio', 'Garrett', 'Arya', 'Corvo', 'Altaïr', 'Ombra'],
+    arciere:   ['Legolas', 'Robin', 'Bard', 'Merida', 'Tanis', 'Faramir', 'Guglielmo'],
+    mago:      ['Gandalf', 'Merlino', 'Raistlin', 'Elminster', 'Rincewind', 'Radagast', 'Dumbledore'],
+    warlock:   ['Morgana', 'Elric', 'Thulsa', 'Saruman', 'Malefica', 'Nekros', 'Vecna'],
+  };
+  let nomeProposto = null;
+  function proponiNome(hero) {
+    const el = $('nameInput'); if (!el) return;
+    const cur = el.value.trim();
+    if (cur && cur !== nomeProposto) return;              // l'ha scritto il giocatore: non si tocca
+    const l = NOMI_CLASSE[hero] || NOMI_CLASSE.barbaro;
+    let n = l[Math.floor(Math.random() * l.length)];
+    if (n === nomeProposto && l.length > 1) n = l[(l.indexOf(n) + 1) % l.length];
+    el.value = n; nomeProposto = n;
+  }
   function initMenu() {
-    $('nameInput').value = 'Eroe' + Math.floor(Math.random() * 900 + 100);
-    HUD.buildHeroSelect(id => { G.meHero = id; }); G.meHero = HUD.selectedHero;
+    HUD.buildHeroSelect(id => { G.meHero = id; proponiNome(id); }); G.meHero = HUD.selectedHero;
+    proponiNome(G.meHero);
     $('connectBtn').onclick = () => { G.provaOnda = 0; G.riprendiDati = null; entra($('roomInput').value.trim()); };
     // v2.11 — RIPRENDI. Entra in una stanza tutta sua (come la modalita' di prova: il salvataggio e' di
     // uno solo, e portarlo in una stanza con altri non vorrebbe dire niente) e appena il server risponde

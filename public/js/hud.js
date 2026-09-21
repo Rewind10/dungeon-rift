@@ -100,7 +100,8 @@
           const l = (P[slot] || {})[cat]; if (!l || !l.length) continue;
           // gli archi sono maschili, armi e armature femminili: «archi leggeri», «armature leggere»
           if (slot === 'weapon' && cat === 'ladro') pz.push('archi ' + (l.length >= 3 ? 'di ogni peso' : l.indexOf('equilibrata') >= 0 ? 'leggeri e medi' : 'leggeri'));
-          else pz.push(pesoA(l) + (cat === 'guerriero' ? ' da mischia' : cat === 'ladro' ? ' da arco' : ' magiche'));
+          // v2.19.10 — «da arciere», non «da arco» (Paolo): e' l'armatura di chi tira, non dell'arco
+          else pz.push(pesoA(l) + (cat === 'guerriero' ? ' da mischia' : cat === 'ladro' ? ' da arciere' : ' magiche'));
         }
         return pz.length ? pz.join(' · ') : '—';
       };

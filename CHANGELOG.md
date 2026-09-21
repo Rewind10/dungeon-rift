@@ -2,6 +2,27 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.10] — 2026-09-21 · "Un nome da eroe"
+
+**Il nome proposto viene dalla classe.** *«Nomi casuali di eroi del fantasy, vincolati alla classe: che
+so, Gandalf per il mago, o un paladino famoso. Ovviamente poi è modificabile.»* Al posto di «Eroe352»
+il campo propone un nome a caso fra sette per classe:
+
+| Classe | Nomi |
+|---|---|
+| Barbaro | Conan, Kull, Sonja, Fafhrd, Wulfgar, Beowulf, Grom |
+| Paladino | Lancillotto, Galahad, Artù, Orlando, Uther, Sturm, Parsifal |
+| Maestro d'armi | Aragorn, Boromir, Geralt, Inigo, Musashi, Brienne, Rinaldo |
+| Assassino | Entreri, Ezio, Garrett, Arya, Corvo, Altaïr, Ombra |
+| Arciere | Legolas, Robin, Bard, Merida, Tanis, Faramir, Guglielmo |
+| Mago | Gandalf, Merlino, Raistlin, Elminster, Rincewind, Radagast, Dumbledore |
+| Warlock | Morgana, Elric, Thulsa, Saruman, Malefica, Nekros, Vecna |
+
+Cambiando classe con le frecce il nome cambia con lei — **finché il giocatore non l'ha scritto lui**:
+un nome scritto a mano resta, qualunque classe si scelga dopo.
+
+**«Da arciere», non «da arco»**, nella riga delle armature della scheda di scelta.
+
 ### [2.19.9] — 2026-09-21 · "La scheda che spiega"
 
 Paolo, sulla schermata di scelta: *«creala più grossa, lo spazio c'è. Aumenta di 1 punto il font del
