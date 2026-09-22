@@ -24,6 +24,23 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novità v2.19.11 (la scarica e la palla di fuoco)
+
+- **Lo sparo del mago e del warlock non è più una bolla**: è una **scarica di energia** a forma di
+  saetta, **azzurra** per il mago e **viola** per il warlock. Il colore è della classe, non del bastone:
+  lo stesso scettro spara azzurro in mano all'uno e viola in mano all'altro.
+- **Suono nuovo** per le due scuole arcane: schiocco, corpo ronzante e coda. Niente più tonfo basso.
+- **Le bacchette hanno solo danno e frequenza.** La scarica è identica per tutti i tredici bastoni
+  (larghezza, velocità, gittata): cambia solo quanto pesa il colpo e quanto spesso parte.
+- **La Palla di Fuoco è la firma del mago (livello 1) ed è una sfera che vola**: parte, corre a 900 px/s
+  e scoppia dove arriva, con danno ad area in un raggio di 150. Al 13 c'è la **Combustione**: per dieci
+  secondi i nemici che uccidi scoppiano, a catena. La Scarica Elementale è stata tolta.
+- **Davanti ai banchi non c'è più niente.** Il cristallo piantato davanti all'arcanista è sparito, e
+  con lui l'incudine del fabbro, le casse del Capitano e il fuoco dell'oracolo: adesso una regola
+  controlla che la corsia dalla porta al mercante sia libera in ogni bottega.
+
+---
+
 ## 🆕 Novità v2.19.10 (un nome da eroe)
 
 Il nome proposto nel menu è un eroe del fantasy legato alla classe (Gandalf, Lancillotto, Legolas…) e

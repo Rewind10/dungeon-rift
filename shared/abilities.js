@@ -228,22 +228,37 @@
       breve: 'La maledizione salta di morto in morto',
       dur: DUR, mult: 1.35, salto: 240, gittata: 560 },
     // ---- MAGO · ELEMENTALE ------------------------------------------------------------------
-    // Le due che leggono l'ELEMENTO dell'arma impugnata. Attenzione: gli elementi delle verghe (fuoco,
-    // gelo, fulmine, veleno) NON ESISTONO ANCORA — oggi le armi del mago si distinguono quasi solo per
-    // il raggio della bolla. Finche' non esistono, `elemento` resta 'fuoco' per tutti e queste due si
-    // comportano come le loro versioni di fuoco. E' scritto nel documento come dipendenza.
-    ab_scarica: { name: 'Scarica Elementale', icon: '🔥', color: '#ff8a3b',
-      desc: 'Un esplosione dell elemento dell arma che impugni: fuoco, gelo, fulmine o veleno. Una abilita, quattro facce.',
-      breve: 'Esplosione dell elemento che impugni',
-      raggio: 160, dmgMult: 2.4, elementale: 1 },
+    // Quelle che leggono l'ELEMENTO dell'arma impugnata. Attenzione: gli elementi delle verghe (fuoco,
+    // gelo, fulmine, veleno) NON ESISTONO ANCORA — e dalla 2.19.11 i bastoni del mago si distinguono
+    // solo per danno e cadenza, quindi non c'e' nemmeno piu' il raggio della bolla a fare da surrogato.
+    // Finche' non esistono, `elemento` resta 'fuoco' per tutti e queste si comportano come le loro
+    // versioni di fuoco. E' scritto nel documento come dipendenza.
     ab_impronta: { name: 'Impronta Elementale', icon: '💠', color: '#5aa8ff',
-      desc: 'Ogni bolla lascia a terra una pozza dell elemento impugnato: brucia, rallenta, stordisce o avvelena.',
-      breve: 'Le bolle lasciano pozze elementali',
+      desc: 'Ogni scarica lascia a terra una pozza dell elemento impugnato: brucia, rallenta, stordisce o avvelena.',
+      breve: 'Le scariche lasciano pozze elementali',
       dur: DUR, r: 62, durPozza: 3, dmgMult: 0.30, tick: 0.25, elementale: 1 },
+    // v2.19.11 — LA PALLA DI FUOCO E' LA FIRMA DEL MAGO, ED E' UNA SFERA CHE VIAGGIA.
+    // Paolo: *«La scarica elementare non mi piace, ESIGO che l'abilita' del mago sia una palla di
+    // fuoco con danno ad area. Deve essere una sfera di fuoco convincente, muoversi (tipo la bolla,
+    // molto piu' veloce) e generare danno ad area»*.
+    // Due cose sono cambiate, e vanno tenute insieme:
+    //   · non e' piu' un colpo istantaneo nel punto mirato — e' un PROIETTILE (`proiettile: 1`) che
+    //     parte, corre a 900 px/s e scoppia dove sbatte: su un nemico, su un muro, o a fine gittata;
+    //   · ha preso il posto della Scarica Elementale al livello 1, quindi la sua taratura e' quella
+    //     di una firma (2,4x, non 3x), ed e' il colpo che il mago ha da subito e per tutta la partita.
     ab_palla: { name: 'Palla di Fuoco', icon: '☄️', color: '#ff7a3b',
-      desc: 'Danno ad area dell elemento impugnato: il fuoco esplode, il gelo congela la zona, il fulmine rimbalza fra i colpiti, il veleno lascia la pozza.',
-      breve: 'Danno ad area, dell elemento che impugni',
-      raggio: 175, dmgMult: 3.0, gittata: 560, elementale: 1 },
+      desc: 'Scagli una sfera di fuoco: corre dritta e scoppia dove arriva, bruciando tutti attorno al punto d impatto.',
+      breve: 'Una sfera di fuoco che vola e scoppia ad area',
+      proiettile: 1, raggio: 150, dmgMult: 2.4, gittata: 620, velocita: 900, elementale: 1 },
+    // v2.19.11 — al posto della Palla di Fuoco, promossa a firma, il livello 13 offre la COMBUSTIONE.
+    // Non e' un altro colpo ad area — di quelli il mago ne ha gia' due (la Palla e la Meteora): e' una
+    // reazione a catena. Per dieci secondi ogni nemico che il mago uccide scoppia, e lo scoppio puo'
+    // uccidere il vicino, che scoppia a sua volta. Il rimbalzo si ferma alla terza generazione, che e'
+    // il freno indispensabile: senza, un'ondata fitta si incendierebbe tutta in un fotogramma solo.
+    ab_combustione: { name: 'Combustione', icon: '💥', color: '#ff9a3b',
+      desc: 'Per dieci secondi ogni nemico che uccidi scoppia in fiamme, e lo scoppio puo incendiare il vicino.',
+      breve: 'I nemici che uccidi scoppiano, a catena',
+      dur: DUR, raggio: 130, dmgMult: 1.10 },
     // ---- MAGO · EVOCAZIONE ------------------------------------------------------------------
     // Le evocazioni NON hanno durata: *«altre come evocazioni non hanno limiti temporali»*. Restano
     // finche' non muoiono. Si appoggiano alla macchina del mercenario (un alleato con IA, PV e arma).
@@ -293,7 +308,7 @@
   // abilita' restano definite sopra ma non le offre piu' nessuno. La struttura a scuole resta, con una
   // voce: se un giorno ne nasce un'altra, si aggiunge qui.
   const SCUOLE_MAGO = {
-    elementale:  { firma: 'ab_scarica',  2: ['ab_impronta', 'ab_muro'],  3: ['ab_palla', 'ab_meteora'] },
+    elementale:  { firma: 'ab_palla',  2: ['ab_impronta', 'ab_muro'],  3: ['ab_combustione', 'ab_meteora'] },
   };
   const TITOLO_SCUOLA = { elementale: 'Elementalista' };
 

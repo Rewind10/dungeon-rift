@@ -1928,13 +1928,13 @@ function testV166() {
   const colpiti = mob.filter(m => m.hp < 9999);
   assert(colpiti.length <= C.MELEE_MAX_TARGETS, 'un fendente colpisce al massimo ' + C.MELEE_MAX_TARGETS + ' bersagli (colpiti ' + colpiti.length + ')');
   if (colpiti.length > 1) { const danni = colpiti.map(m => 9999 - m.hp).sort((a, b) => b - a); assert(danni[danni.length - 1] < danni[0], 'i bersagli secondari incassano meno del primo'); }
-  // --- 5) proiettili riconoscibili: bolla per il mago, freccia per il ladro ---
+  // --- 5) proiettili riconoscibili: scarica per il mago, freccia per il ladro ---
   const r4 = new Room('v166d'); const mg = r4.addPlayer('d', { send() {} }, 'D', 'mago'); r4.startGame();
   r4.bullets.length = 0; mg.fireCd = 0; r4.firePlayerWeapon(mg);
-  const bolla = r4.bullets.find(b => !b.hostile); assert(bolla && bolla.bubble && !bolla.arrow, 'il mago spara bolle');
+  const scar = r4.bullets.find(b => !b.hostile); assert(scar && scar.scarica && !scar.arrow, 'il mago spara scariche');
   const r5 = new Room('v166e'); const ld = r5.addPlayer('e', { send() {} }, 'E', 'arciere'); r5.startGame();
   r5.bullets.length = 0; ld.fireCd = 0; r5.firePlayerWeapon(ld);
-  const frec = r5.bullets.find(b => !b.hostile); assert(frec && frec.arrow && !frec.bubble, 'il ladro spara frecce');
+  const frec = r5.bullets.find(b => !b.hostile); assert(frec && frec.arrow && !frec.scarica, 'il ladro spara frecce');
   const snap = r5.snapshot(); const sb = snap.bul.find(b => b.ar);
   assert(sb && sb.a != null, 'lo snapshot porta l orientamento della freccia (serve al client per disegnarla)');
   // --- 6) le armi non si raccolgono piu' dalla mappa e non si comprano ---
@@ -2041,10 +2041,17 @@ function testV167() {
     assert(gp.knockback > ge.knockback && ge.knockback > gl.knockback, 'guerriero grado ' + r + ': il rinculo e della PESANTE');
     assert(ge.arcRadius > gp.arcRadius && ge.arcRadius > gl.arcRadius, 'guerriero grado ' + r + ': la portata e della EQUILIBRATA');
     assert(gl.arcHalf > ge.arcHalf && ge.arcHalf > gp.arcHalf, 'guerriero grado ' + r + ': l arco largo e della LEGGERA');
+    // v2.19.11 — IL MAGO NON HA PIU' TRE ASSI, NE HA DUE. Paolo: *«togli dalle bacchette l'ampiezza
+    // della bolla e lascia solo danno e frequenza»*. Quindi qui non si controlla piu' chi ha la bolla
+    // piu' grande: si controlla che la larghezza, la velocita' e la gittata NON siano un asse —
+    // devono essere identiche fra i tre caratteri — e che il bivio sia tutto su danno e cadenza.
     const mp = get('mago', 'weapon', r, P).weapon, me2 = get('mago', 'weapon', r, E).weapon, ml = get('mago', 'weapon', r, L).weapon;
-    assert(mp.r > me2.r && me2.r > ml.r, 'mago grado ' + r + ': la bolla grande e della PESANTE');
-    assert(me2.range > mp.range && me2.range > ml.range, 'mago grado ' + r + ': la gittata e della EQUILIBRATA');
-    assert(ml.bulletSpeed > me2.bulletSpeed && me2.bulletSpeed > mp.bulletSpeed, 'mago grado ' + r + ': la bolla veloce e della LEGGERA');
+    assert(mp.r === me2.r && me2.r === ml.r, 'mago grado ' + r + ': la scarica e larga uguale per tutti e tre');
+    assert(mp.range === me2.range && me2.range === ml.range, 'mago grado ' + r + ': la gittata e uguale per tutti e tre');
+    assert(mp.bulletSpeed === me2.bulletSpeed && me2.bulletSpeed === ml.bulletSpeed, 'mago grado ' + r + ': la scarica viaggia uguale per tutti e tre');
+    assert(mp.pierce === me2.pierce && me2.pierce === ml.pierce, 'mago grado ' + r + ': la perforazione non e un asse del mago');
+    assert(mp.dmg > me2.dmg && me2.dmg > ml.dmg, 'mago grado ' + r + ': il colpo che pesa e della PESANTE');
+    assert(ml.fireRate > me2.fireRate && me2.fireRate > mp.fireRate, 'mago grado ' + r + ': la cadenza e della LEGGERA');
     const lp = get('arciere', 'weapon', r, P).weapon, le = get('arciere', 'weapon', r, E).weapon, ll = get('arciere', 'weapon', r, L).weapon;
     assert(lp.range > le.range && le.range > ll.range, 'ladro grado ' + r + ': la gittata e della PESANTE');
     assert(le.pierce >= lp.pierce && le.pierce > ll.pierce, 'ladro grado ' + r + ': la perforazione e della EQUILIBRATA');
@@ -4587,7 +4594,7 @@ function testV185() {
     // niente da scegliere: riceve la firma dell'elementalista come ogni altra classe riceve la sua.
     assert(Ab.scuoleMago().length === 1 && Ab.scuoleMago()[0].id === 'elementale', 'il mago ha una scuola sola: elementale');
     assert(!Ab.sceglieAlPrimo('mago'), 'e al livello 1 non sceglie niente');
-    assert(Ab.perSlot('mago', 1).length === 1 && Ab.perSlot('mago', 1)[0].id === 'ab_scarica', 'la sua firma e la Scarica Elementale');
+    assert(Ab.perSlot('mago', 1).length === 1 && Ab.perSlot('mago', 1)[0].id === 'ab_palla', 'la sua firma e la Palla di Fuoco');
     assert(Ab.perSlot('mago', 2).length === 2 && Ab.perSlot('mago', 3).length === 2, 'e al 7 e al 13 ha le sue due candidate');
     assert(!['ab_evoca', 'ab_branco', 'ab_evoca_magg', 'ab_rialzata', 'ab_dito'].some(id => [1, 2, 3].some(sl => Ab.perSlot('mago', sl).some(a => a.id === id))),
       'e nessuna abilita di evocatore o negromante');
@@ -4613,7 +4620,7 @@ function testV185() {
     // v2.19.7 — il mago non sceglie piu' la scuola al livello 1: la firma gli arriva in mano da sola,
     // e nella coda delle scelte non entra niente.
     const r = new Room('v185a'); const p = r.addPlayer('a', conn, 'A', 'mago'); avviaSenzaAbilita(r, 1);
-    assert(p.level === 1 && p.abil[0] === 'ab_scarica', 'al livello 1 il mago ha gia la sua firma in mano');
+    assert(p.level === 1 && p.abil[0] === 'ab_palla', 'al livello 1 il mago ha gia la sua firma in mano');
     assert((p.abilDovute || []).length === 0, 'e non c e niente da scegliere');
     assert(p.scuola === 'elementale' && p.titolo === 'Elementalista', 'col titolo di Elementalista');
     r.addXp(p, Lv2.xpForLevel(7) - p.xpPool);
@@ -6372,7 +6379,34 @@ function testSoglie() {
     }
     assert(minW >= T, r.id + ': il passaggio e largo almeno una tessera (' + (minW / T).toFixed(2) + ')');
   }
-  ok('le soglie sono sgombre, e si entra in tutte e tredici le stanze');
+  // --- 4) v2.19.11 — E LA CORSIA DEL BANCO E' SGOMBRA FINO AL MERCANTE ---
+  // Paolo: *«nel negozio di magia hai piazzato un ostacolo proprio davanti al bancone del mago»*.
+  // La soglia era libera — i tre controlli qui sopra passavano tutti — e tre passi piu' avanti c'era
+  // un cristallo in mezzo alla strada. Quindi il fatto da misurare non e' «si entra», e' «si ARRIVA
+  // AL BANCO camminando dritto»: la striscia che contiene la riga del mercante, da un passo dentro la
+  // porta fino a un passo e mezzo dal banco, dev'essere larga almeno una tessera per tutto il tragitto.
+  // Si misura la striscia CHE CONTIENE la riga del mercante, non la piu' larga della stanza: una
+  // corsia larga due tessere ma rasente al muro di settentrione non e' la corsia del banco.
+  for (const st of V.stalls) {
+    const r = V.rooms.find(q => q.id === st.room); if (!r) continue;
+    const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+    const verso = oriz ? Math.sign(st.x - px) : Math.sign(st.y - py);
+    const da = (oriz ? px : py) + verso, a2 = (oriz ? st.x : st.y) - verso * 1.5;
+    let minW = Infinity, dove = 0;
+    for (let q = da; verso > 0 ? q <= a2 : q >= a2; q += verso * 0.5) {
+      const cx = oriz ? q * T + T / 2 : st.x * T + T / 2, cy2 = oriz ? st.y * T + T / 2 : q * T + T / 2;
+      if (!libero(cx, cy2)) { minW = 0; dove = q; break; }
+      let w = 0;                                              // quanto e' larga la striscia QUI, attorno alla riga del banco
+      for (const s2 of [1, -1]) for (let o = 4; o <= 2.5 * T; o += 4) {
+        if (!libero(oriz ? cx : cx + o * s2, oriz ? cy2 + o * s2 : cy2)) break;
+        w += 4;
+      }
+      if (w < minW) { minW = w; dove = q; }
+    }
+    assert(minW >= T, r.id + ': dalla porta al banco di ' + st.name + ' la corsia e larga almeno una tessera ('
+      + (minW / T).toFixed(2) + ' a ' + dove.toFixed(1) + ')');
+  }
+  ok('le soglie sono sgombre, si entra in tutte e tredici le stanze, e ai banchi si arriva camminando dritto');
 }
 
 // ============================================================================================
@@ -6544,6 +6578,120 @@ function testFendente() {
   ok('il fendente colpisce quello che si vede, con 5 pixel di margine');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================================
+// v2.19.11 — LA SCARICA, LE BACCHETTE E LA PALLA DI FUOCO
+// ============================================================================================
+// Quattro richieste di Paolo in un colpo solo, e ognuna qui ha il suo fatto misurato:
+//   1. lo sparo non e' piu' una bolla ma una SCARICA, azzurra per il mago e viola per il warlock;
+//   2. le bacchette non hanno piu' l'ampiezza della bolla: solo danno e frequenza (TEST 37);
+//   3. la firma del mago e' una PALLA DI FUOCO che VIAGGIA e fa danno AD AREA;
+//   4. davanti al bancone dell'arcanista non c'e' piu' niente (TEST 73).
+function testScarica() {
+  console.log('\n[TEST 77] v2.19.11 — la scarica, le bacchette appiattite e la palla di fuoco che vola');
+
+  // --- 1) NESSUNA BOLLA E' SOPRAVVISSUTA, e la scarica e' una sola per tutti i bastoni ----------
+  const bast = Gear.ITEMS.filter(i => i.hero === 'mago' && i.slot === 'weapon');
+  assert(bast.length === 13, 'i bastoni del mago sono sempre tredici');
+  for (const it of bast) {
+    assert(!it.weapon.bubble, it.id + ': non e piu una bolla');
+    assert(it.weapon.scarica, it.id + ': e una scarica');
+    assert(it.weapon.r === bast[0].weapon.r, it.id + ': la scarica e larga come quella di tutti gli altri');
+    assert(it.weapon.bulletSpeed === bast[0].weapon.bulletSpeed, it.id + ': viaggia come quella di tutti gli altri');
+    assert(it.weapon.range === bast[0].weapon.range, it.id + ': ha la gittata di tutti gli altri');
+    assert(!/[Bb]olla/.test(it.desc), it.id + ': la scheda non parla piu di bolle (' + it.desc + ')');
+  }
+  // e le due armi di classe sono scariche pure loro
+  assert(Heroes.HEROES.mago.weapon.scarica && !Heroes.HEROES.mago.weapon.bubble, 'l arma di partenza del mago e una scarica');
+  assert(Heroes.HEROES.warlock.weapon.scarica && !Heroes.HEROES.warlock.weapon.bubble, 'l arma di partenza del warlock e una scarica');
+
+  // --- 2) IL COLORE E' DELLA CLASSE, NON DEL BASTONE --------------------------------------------
+  // Lo stesso identico scettro comprato dallo stesso arcanista: azzurro in mano al mago, viola in
+  // mano al warlock. E' la richiesta di Paolo, e in cooperativa e' l'unico modo di capire chi spara.
+  const sceltro = 'mag_w_scettro_di_piombo';
+  const colore = (heroId) => {
+    const r = new Room('sc' + heroId); const p = r.addPlayer('a', { send() {} }, 'A', heroId); r.startGame();
+    p.owned[sceltro] = 1; p.gear.manoDx = sceltro; p.gear.manoSx = null; r._recomputeGear(p);
+    p.stats.critChance = 0;                              // il critico tinge il colpo di giallo: qui si misura il colore dell arma
+    r.bullets.length = 0; p.fireCd = 0; r.firePlayerWeapon(p);
+    const b = r.bullets.find(x => !x.hostile); return b && b.color;
+  };
+  const cM = colore('mago'), cW = colore('warlock');
+  assert(cM === Heroes.HEROES.mago.weapon.projColor, 'con lo scettro in mano il mago spara AZZURRO (' + cM + ')');
+  assert(cW === Heroes.HEROES.warlock.weapon.projColor, 'con lo STESSO scettro il warlock spara VIOLA (' + cW + ')');
+  assert(cM !== cW, 'e i due colori sono diversi');
+
+  // --- 3) LA PALLA DI FUOCO PARTE, VOLA E SCOPPIA AD AREA ----------------------------------------
+  const pf = Ab.BY_ID.ab_palla;
+  assert(Ab.firma('mago').id === 'ab_palla', 'la firma del mago e la Palla di Fuoco');
+  assert(pf.proiettile && pf.velocita > 700 && pf.raggio > 100, 'la Palla di Fuoco e un proiettile veloce con un raggio d area');
+  const r = new Room('pf1'); const p = r.addPlayer('a', { send() {} }, 'A', 'mago'); r.startGame();
+  r.monsters.length = 0; r.pending = 0; r.waveList = []; r.bullets.length = 0;
+  // una direzione LIBERA: se la sfera parte contro un muro scoppia sul posto — giusto che lo faccia,
+  // ma qui si sta misurando il volo, non il muro.
+  const DIST = 300; let ang = null;
+  for (let k = 0; k < 32 && ang === null; k++) {
+    const t = k / 32 * Math.PI * 2, tx = p.x + Math.cos(t) * DIST, ty = p.y + Math.sin(t) * DIST;
+    if (!r.isWallAt(tx, ty) && r.losClear(p.x, p.y, tx, ty) && !r.isWallAt(tx, ty + pf.raggio * 0.5) && !r.isWallAt(tx, ty + pf.raggio * 3)) ang = t;
+  }
+  assert(ang !== null, 'c e almeno una direzione sgombra da cui tirare');
+  p.aim = ang;
+  const bx = p.x + Math.cos(ang) * DIST, by = p.y + Math.sin(ang) * DIST;
+  // tre bersagli: due vicini al punto d'impatto, uno molto piu' in la'
+  const vicino = r.spawnMonster('skeleton', bx, by, {});
+  const accanto = r.spawnMonster('skeleton', bx, by + pf.raggio * 0.5, {});
+  const lontano = r.spawnMonster('skeleton', bx, by + pf.raggio * 3, {});
+  for (const m of [vicino, accanto, lontano]) { m.hp = 99999; m.maxHp = 99999; }
+  const hp0 = [vicino.hp, accanto.hp, lontano.hp];
+  p.abil[0] = 'ab_palla'; p.cdAb[0] = 0;
+  assert(r.useAbil(p, 1) !== false, 'l abilita parte');
+  const pal = r.bullets.find(b => b.palla);
+  assert(pal, 'e mette in campo un PROIETTILE, non un colpo istantaneo');
+  assert(pal.dmg === 0 && pal.boomDmg > 0, 'la sfera non morde: tutto il danno sta nell esplosione');
+  assert(Math.round(Math.hypot(pal.vx, pal.vy)) === pf.velocita, 'e viaggia a ' + pf.velocita + ' px/s');
+  assert(vicino.hp === hp0[0], 'nell istante in cui parte non ha ancora fatto male a nessuno');
+  // la si lascia volare: deve arrivare addosso al primo nemico e scoppiare li'
+  let giri = 0; while (r.bullets.some(b => b.palla) && giri < 200) { r.updateBullets(1 / 60); giri++; }
+  assert(giri > 3, 'ci ha messo del tempo ad arrivare (' + giri + ' tick): si vede volare');
+  assert(vicino.hp < hp0[0], 'chi era sul punto d impatto ha preso il colpo');
+  assert(accanto.hp < hp0[1], 'e anche chi gli stava accanto, dentro il raggio: e danno AD AREA');
+  assert(lontano.hp === hp0[2], 'chi era fuori dal raggio non ha preso niente');
+  assert(hp0[0] - vicino.hp === hp0[1] - accanto.hp, 'dentro l area il danno e lo stesso per tutti');
+
+  // e scoppia anche se non incontra nessuno: a fine gittata, non si spegne per aria
+  const r2 = new Room('pf2'); const q = r2.addPlayer('a', { send() {} }, 'A', 'mago'); r2.startGame();
+  r2.monsters.length = 0; r2.pending = 0; r2.waveList = []; r2.bullets.length = 0;
+  q.abil[0] = 'ab_palla'; q.cdAb[0] = 0; q.aim = 0; r2.useAbil(q, 1);
+  let ev = null; for (let i = 0; i < 200 && !ev; i++) { r2.events.length = 0; r2.updateBullets(1 / 60); ev = r2.events.find(e => e.t === 'palla'); }
+  assert(ev, 'senza bersagli scoppia comunque, a fine gittata');
+
+  // --- 4) COMBUSTIONE: chi muore per mano sua scoppia, e la catena ha un freno -------------------
+  const r3 = new Room('cmb'); const c = r3.addPlayer('a', { send() {} }, 'A', 'mago'); r3.startGame();
+  r3.monsters.length = 0; r3.pending = 0; r3.waveList = [];
+  const ab = Ab.BY_ID.ab_combustione;
+  const vittima = r3.spawnMonster('skeleton', 900, 900, {});
+  const testimone = r3.spawnMonster('skeleton', 900 + ab.raggio * 0.5, 900, {});
+  testimone.hp = 99999; testimone.maxHp = 99999;
+  const t0 = testimone.hp;
+  r3.damageMonster(vittima, 99999, 0, 0, 0, c);
+  assert(testimone.hp === t0, 'senza Combustione, chi muore non fa male a nessuno');
+  c.abil[2] = 'ab_combustione'; c.cdAb[2] = 0; r3.useAbil(c, 3);
+  assert(c.buffs.combustione > 0, 'la Combustione si accende');
+  const vittima2 = r3.spawnMonster('skeleton', 900, 900, {});
+  r3.damageMonster(vittima2, 99999, 0, 0, 0, c);
+  assert(testimone.hp < t0, 'con la Combustione addosso, il nemico che cade SCOPPIA e brucia il vicino');
+
+  // il freno della catena: venti nemici appiccicati non devono ne bloccare ne annidarsi senza fine
+  const r4 = new Room('cmb2'); const d = r4.addPlayer('a', { send() {} }, 'A', 'mago'); r4.startGame();
+  r4.monsters.length = 0; r4.pending = 0; r4.waveList = [];
+  d.abil[2] = 'ab_combustione'; d.cdAb[2] = 0; r4.useAbil(d, 3);
+  const folla = []; for (let i = 0; i < 20; i++) folla.push(r4.spawnMonster('skeleton', 1200 + i * 6, 1200, {}));
+  for (const m of folla) { m.hp = 1; m.maxHp = 1; }
+  r4.damageMonster(folla[0], 99, 0, 0, 0, d);
+  assert(!r4._combGen, 'la catena si e richiusa: il contatore delle generazioni e tornato a zero');
+  ok('la scarica ha il colore della classe, le bacchette hanno solo danno e cadenza, la palla di fuoco vola e scoppia');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

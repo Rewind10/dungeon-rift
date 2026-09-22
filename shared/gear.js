@@ -31,9 +31,14 @@
    essere una scala mascherata:
 
                     Guerriero        Mago               Ladro
-     Pesante        rinculo          bolla grande       gittata
-     Equilibrata    portata          gittata            perforazione
-     Leggera        arco largo       bolla veloce       cadenza
+     Pesante        rinculo          colpo che pesa     gittata
+     Equilibrata    portata          la via di mezzo    perforazione
+     Leggera        arco largo       cadenza            cadenza
+
+   v2.19.11 — IL MAGO FA ECCEZIONE, e per volonta' di Paolo: *«togli dalle bacchette l'ampiezza della
+   bolla e lascia solo danno e frequenza»*. I suoi bastoni non hanno piu' ne' larghezza ne' velocita'
+   ne' gittata proprie — la scarica e' sempre la stessa — quindi il suo bivio e' tutto qui: un colpo
+   che pesa contro tanti colpi che arrivano. Il vincolo del 4% sul danno al secondo vale lo stesso.
 
    ================================ CINQUE GRADI ================================
    Deciso da Paolo: «nulla di gratuito, e l'equipaggiamento iniziale lo definirei come scarso, cosi' ha
@@ -274,6 +279,12 @@
     boots:  [0, 140, 320, 580, 1000],
   };
 
+  // v2.19.11 — LA SCARICA. Il tiro arcano non e' piu' una bolla che varia di bastone in bastone: e' un
+  // LAMPO DI ENERGIA sempre uguale, e questi tre numeri sono gli unici che lo descrivono. Stanno qui,
+  // uno solo per tutti, perche' e' l'unico modo di essere certi che nessun bastone si porti dietro una
+  // larghezza sua — che e' proprio quello che Paolo ha chiesto di togliere.
+  const SCARICA_R = 7, SCARICA_V = 760, SCARICA_G = 640;
+
   // `weapon` sostituisce INTERAMENTE l'arma dell'eroe (la scuola resta quella della classe, altrimenti
   // le statistiche smetterebbero di funzionare). `bonus` e' additivo e viene ricalcolato da zero.
   const ITEMS = [
@@ -480,47 +491,53 @@
       bonus: { dmgReduce: 0.12, maxHpFlat: 24, frontale: 0.52, speedMult: 0.1, fireRateMult: 0.11 }, tinta: { scudo: '#8274b6', orlo: '#ead8ff' } },
 
     // ============================== MAGO ==============================
-    // ARMI. Dentro ogni grado il danno al secondo e' lo stesso a meno del 4%: cio' che cambia e'
-    // la GRANDEZZA della bolla contro la sua velocita' contro la gittata.
+    // ARMI. v2.19.11 — Paolo: *«devi togliere dalle bacchette l'ampiezza della bolla (lo sparo) e
+    // lasciare solo danno e frequenza»*. Fatto alla lettera: LA SCARICA E' SEMPRE LA STESSA — stessa
+    // larghezza, stessa velocita', stessa gittata, e il colore lo da' la classe (azzurro il mago,
+    // viola il warlock), non il bastone. Del bastone restano due numeri soli: quanto pesa il colpo e
+    // quanto spesso parte.
+    // Dentro ogni grado il danno al secondo e' lo stesso a meno del 4%: e' il BIVIO — un colpo grosso
+    // e raro (pesante) oppure tanti colpi leggeri (leggera), con la bacchetta equilibrata in mezzo,
+    // che tiene la cadenza della classe (1,5 colpi/s).
     { id: 'mag_w_bastone_nodoso', hero: 'mago', slot: 'weapon', rank: 1, carattere: 'equilibrata',
-      name: 'Bastone Nodoso', color: '#7a7f8a', desc: 'Bolla r9 · 420 px/s · gittata 520 · 78 danni/s',
-      weapon: { name: 'Bastone Nodoso', dmg: 52, fireRate: 1.5, spread: 0.02, bulletSpeed: 420, range: 520, pierce: 0, projColor: '#8fa0a8', knockback: 30, bubble: true, r: 9 } },
+      name: 'Bastone Nodoso', color: '#7a7f8a', desc: '52 a colpo · 1,5 colpi/s · 78 danni/s',
+      weapon: { name: 'Bastone Nodoso', dmg: 52, fireRate: 1.5, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_scettro_di_piombo', hero: 'mago', slot: 'weapon', rank: 2, carattere: 'pesante',
-      name: 'Scettro di Piombo', color: '#b8c0cc', desc: 'Bolla r16 · 330 px/s · gittata 520 · 99 danni/s',
-      weapon: { name: 'Scettro di Piombo', dmg: 99, fireRate: 1, spread: 0.02, bulletSpeed: 330, range: 520, pierce: 0, projColor: '#00f0c8', knockback: 72, bubble: true, r: 16 } },
+      name: 'Scettro di Piombo', color: '#b8c0cc', desc: '99 a colpo · 1 colpi/s · 99 danni/s',
+      weapon: { name: 'Scettro di Piombo', dmg: 99, fireRate: 1, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_bacchetta_di_frassino', hero: 'mago', slot: 'weapon', rank: 2, carattere: 'equilibrata',
-      name: 'Bacchetta di Frassino', color: '#b8c0cc', desc: 'Bolla r10 · 450 px/s · gittata 640 · 99 danni/s',
-      weapon: { name: 'Bacchetta di Frassino', dmg: 66, fireRate: 1.5, spread: 0.02, bulletSpeed: 450, range: 640, pierce: 0, projColor: '#00f0c8', knockback: 45, bubble: true, r: 10 } },
+      name: 'Bacchetta di Frassino', color: '#b8c0cc', desc: '66 a colpo · 1,5 colpi/s · 99 danni/s',
+      weapon: { name: 'Bacchetta di Frassino', dmg: 66, fireRate: 1.5, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_verga_scintillante', hero: 'mago', slot: 'weapon', rank: 2, carattere: 'leggera',
-      name: 'Verga Scintillante', color: '#b8c0cc', desc: 'Bolla r6 · 700 px/s · gittata 520 · 98 danni/s',
-      weapon: { name: 'Verga Scintillante', dmg: 41, fireRate: 2.4, spread: 0.02, bulletSpeed: 700, range: 520, pierce: 0, projColor: '#00f0c8', knockback: 23, bubble: true, r: 6 } },
+      name: 'Verga Scintillante', color: '#b8c0cc', desc: '41 a colpo · 2,4 colpi/s · 98 danni/s',
+      weapon: { name: 'Verga Scintillante', dmg: 41, fireRate: 2.4, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_scettro_runico', hero: 'mago', slot: 'weapon', rank: 3, carattere: 'pesante',
-      name: 'Scettro Runico', color: '#3aa0ff', desc: 'Bolla r18 · 350 px/s · gittata 540 · 115 danni/s · perfora 1',
-      weapon: { name: 'Scettro Runico', dmg: 115, fireRate: 1, spread: 0.02, bulletSpeed: 350, range: 540, pierce: 1, projColor: '#c48cff', knockback: 96, bubble: true, r: 18 } },
+      name: 'Scettro Runico', color: '#3aa0ff', desc: '115 a colpo · 1 colpi/s · 115 danni/s',
+      weapon: { name: 'Scettro Runico', dmg: 115, fireRate: 1, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_bastone_d_ebano', hero: 'mago', slot: 'weapon', rank: 3, carattere: 'equilibrata',
-      name: 'Bastone d’Ebano', color: '#3aa0ff', desc: 'Bolla r11 · 480 px/s · gittata 680 · 116 danni/s',
-      weapon: { name: 'Bastone d’Ebano', dmg: 77, fireRate: 1.5, spread: 0.02, bulletSpeed: 480, range: 680, pierce: 0, projColor: '#c48cff', knockback: 60, bubble: true, r: 11 } },
+      name: 'Bastone d’Ebano', color: '#3aa0ff', desc: '77 a colpo · 1,5 colpi/s · 116 danni/s',
+      weapon: { name: 'Bastone d’Ebano', dmg: 77, fireRate: 1.5, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_verga_crepitante', hero: 'mago', slot: 'weapon', rank: 3, carattere: 'leggera',
-      name: 'Verga Crepitante', color: '#3aa0ff', desc: 'Bolla r6.5 · 760 px/s · gittata 540 · 115 danni/s',
-      weapon: { name: 'Verga Crepitante', dmg: 48, fireRate: 2.4, spread: 0.02, bulletSpeed: 760, range: 540, pierce: 0, projColor: '#c48cff', knockback: 30, bubble: true, r: 6.5 } },
+      name: 'Verga Crepitante', color: '#3aa0ff', desc: '48 a colpo · 2,4 colpi/s · 115 danni/s',
+      weapon: { name: 'Verga Crepitante', dmg: 48, fireRate: 2.4, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_bastone_del_vuoto', hero: 'mago', slot: 'weapon', rank: 4, carattere: 'pesante',
-      name: 'Bastone del Vuoto', color: '#ffb020', desc: 'Bolla r21 · 370 px/s · gittata 560 · 130 danni/s · perfora 2',
-      weapon: { name: 'Bastone del Vuoto', dmg: 130, fireRate: 1, spread: 0.02, bulletSpeed: 370, range: 560, pierce: 2, projColor: '#7ffbe4', knockback: 120, bubble: true, r: 21 } },
+      name: 'Bastone del Vuoto', color: '#ffb020', desc: '130 a colpo · 1 colpi/s · 130 danni/s',
+      weapon: { name: 'Bastone del Vuoto', dmg: 130, fireRate: 1, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_scettro_del_conclave', hero: 'mago', slot: 'weapon', rank: 4, carattere: 'equilibrata',
-      name: 'Scettro del Conclave', color: '#ffb020', desc: 'Bolla r12 · 510 px/s · gittata 720 · 131 danni/s · perfora 1',
-      weapon: { name: 'Scettro del Conclave', dmg: 87, fireRate: 1.5, spread: 0.02, bulletSpeed: 510, range: 720, pierce: 1, projColor: '#7ffbe4', knockback: 75, bubble: true, r: 12 } },
+      name: 'Scettro del Conclave', color: '#ffb020', desc: '87 a colpo · 1,5 colpi/s · 130 danni/s',
+      weapon: { name: 'Scettro del Conclave', dmg: 87, fireRate: 1.5, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_verga_delle_schegge', hero: 'mago', slot: 'weapon', rank: 4, carattere: 'leggera',
-      name: 'Verga delle Schegge', color: '#ffb020', desc: 'Bolla r7 · 820 px/s · gittata 560 · 130 danni/s',
-      weapon: { name: 'Verga delle Schegge', dmg: 54, fireRate: 2.4, spread: 0.02, bulletSpeed: 820, range: 560, pierce: 0, projColor: '#7ffbe4', knockback: 38, bubble: true, r: 7 } },
+      name: 'Verga delle Schegge', color: '#ffb020', desc: '54 a colpo · 2,4 colpi/s · 130 danni/s',
+      weapon: { name: 'Verga delle Schegge', dmg: 54, fireRate: 2.4, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_rovina_delle_ere', hero: 'mago', slot: 'weapon', rank: 5, carattere: 'pesante',
-      name: 'Rovina delle Ere', color: '#ffe9a8', desc: 'Bolla r24 · 390 px/s · gittata 580 · 158 danni/s · perfora 3',
-      weapon: { name: 'Rovina delle Ere', dmg: 158, fireRate: 1, spread: 0.02, bulletSpeed: 390, range: 580, pierce: 3, projColor: '#ffd9ff', knockback: 144, bubble: true, r: 24 } },
+      name: 'Rovina delle Ere', color: '#ffe9a8', desc: '158 a colpo · 1 colpi/s · 158 danni/s',
+      weapon: { name: 'Rovina delle Ere', dmg: 158, fireRate: 1, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_scettro_delle_stelle_morte', hero: 'mago', slot: 'weapon', rank: 5, carattere: 'equilibrata',
-      name: 'Scettro delle Stelle Morte', color: '#ffe9a8', desc: 'Bolla r14 · 540 px/s · gittata 760 · 158 danni/s · perfora 2',
-      weapon: { name: 'Scettro delle Stelle Morte', dmg: 105, fireRate: 1.5, spread: 0.02, bulletSpeed: 540, range: 760, pierce: 2, projColor: '#ffd9ff', knockback: 90, bubble: true, r: 14 } },
+      name: 'Scettro delle Stelle Morte', color: '#ffe9a8', desc: '105 a colpo · 1,5 colpi/s · 158 danni/s',
+      weapon: { name: 'Scettro delle Stelle Morte', dmg: 105, fireRate: 1.5, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
     { id: 'mag_w_verga_del_vuoto', hero: 'mago', slot: 'weapon', rank: 5, carattere: 'leggera',
-      name: 'Verga del Vuoto', color: '#ffe9a8', desc: 'Bolla r7.5 · 880 px/s · gittata 580 · 158 danni/s',
-      weapon: { name: 'Verga del Vuoto', dmg: 66, fireRate: 2.4, spread: 0.02, bulletSpeed: 880, range: 580, pierce: 0, projColor: '#ffd9ff', knockback: 45, bubble: true, r: 7.5 } },
+      name: 'Verga del Vuoto', color: '#ffe9a8', desc: '66 a colpo · 2,4 colpi/s · 158 danni/s',
+      weapon: { name: 'Verga del Vuoto', dmg: 66, fireRate: 2.4, spread: 0.02, bulletSpeed: SCARICA_V, range: SCARICA_G, pierce: 0, projColor: '#5aa8ff', knockback: 45, scarica: true, r: SCARICA_R } },
 
     { id: 'mag_a_saio_liso', hero: 'mago', slot: 'armor', rank: 1, carattere: 'equilibrata',
       name: 'Saio Liso', color: '#7a7f8a', desc: '+6 PV',

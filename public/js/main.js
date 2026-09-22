@@ -286,6 +286,15 @@
       case 'gazed': { const gi = { weaken: ['\uD83D\uDC41 SGUARDO DEBILITANTE', '#ff7a5a', 'Attacco indebolito'], slow: ['\uD83D\uDC41 SGUARDO GELIDO', '#5ad0ff', 'Velocit\u00e0 ridotta'], sunder: ['\uD83D\uDC41 SGUARDO CORROSIVO', '#c48cff', 'Difesa ridotta'] }[ev.kind] || ['\uD83D\uDC41 SGUARDO', '#c48cff', 'Debuff']; if (ev.who === Net.id) { R.floater(ev.x, ev.y - 22, gi[0], gi[1], true); R.addShake(3); HUD.modeBanner(gi[0], gi[1], gi[2] + ' finch\u00e9 sei nel campo visivo'); } R.ring(ev.x, ev.y, gi[1], 5, 40, 0.4); break; }
       case 'mkill': R.spawnDeath(ev); A.kill(ev.boss); R.burst(ev.x, ev.y, ev.boss ? '#ff7a3b' : (ev.elite ? '#ffb020' : '#9fd6a0'), ev.boss ? 40 : 12, ev.boss ? 260 : 140, ev.boss ? 0.9 : 0.5); R.ring(ev.x, ev.y, ev.boss ? '#ff7a3b' : '#fff', 6, ev.boss ? 130 : 40, 0.4); if (ev.boss) { R.addShake(ev.mega ? 22 : 14); HUD.killfeed('💀 <b style="color:#ff7a3b">' + (ev.mega ? 'MEGA BOSS' : 'BOSS') + ' ABBATTUTO!</b>'); } break;
       case 'explosion': A.explosion(); R.ring(ev.x, ev.y, '#ff9a3b', 8, ev.r, 0.35); R.burst(ev.x, ev.y, '#ff7a2b', 20, 220, 0.5); R.fire(ev.x, ev.y, 18, 90); R.addShake(6); break;
+      // v2.19.11 — LA PALLA DI FUOCO. Tre eventi, uno per momento: parte, scoppia, e (col livello 13)
+      // incendia chi cade. Prima l'abilita' mandava `palla` e NESSUNO lo raccoglieva: il danno c'era e
+      // il fuoco no. Lo scoppio e' volutamente piu' grosso di `explosion` — due anelli, una vampata
+      // larga come il raggio vero e lo scossone — perche' e' il colpo da battaglia del mago.
+      case 'palla_via': A.ability && A.ability('grenade'); R.burst(ev.x + Math.cos(ev.a) * 18, ev.y + Math.sin(ev.a) * 18, '#ffb14a', 6, 120, 0.25); break;
+      case 'palla': A.explosion(); R.ring(ev.x, ev.y, '#fff2c8', 10, (ev.r || 150) * 0.45, 0.22); R.ring(ev.x, ev.y, '#ff7a2b', 8, ev.r || 150, 0.42);
+        R.burst(ev.x, ev.y, '#ffcf5a', 30, 300, 0.55); R.burst(ev.x, ev.y, '#ff5a1b', 18, 190, 0.7); R.fire(ev.x, ev.y, 26, (ev.r || 150) * 0.7); R.addShake(8); break;
+      case 'combusto': A.explosion(); R.ring(ev.x, ev.y, '#ff9a3b', 6, ev.r || 130, 0.35); R.burst(ev.x, ev.y, '#ffb14a', 16, 200, 0.5); R.fire(ev.x, ev.y, 12, (ev.r || 130) * 0.6); R.addShake(4); break;
+      case 'combustione': if (ev.who === Net.id) HUD.modeBanner('\uD83D\uDCA5 COMBUSTIONE', '#ff9a3b', 'Per ' + (ev.dur || 10) + 's i nemici che uccidi scoppiano'); R.ring(ev.x, ev.y, '#ff9a3b', 6, 60, 0.4); break;
       case 'slam_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.72); R.ring(ev.x, ev.y, '#ffb020', 3, (ev.r || 60) * 0.4, 0.5); break; // v1.43 — il Bruto ALZA le braccia (telegrafo dello slam)
       case 'slam': if (ev.e != null) R.hitAttack(ev.e, 0.6); // v1.44 — SCHIANTO più IMPATTANTE: doppia onda + polvere + crepe + hit-stop + scossone forte
         R.ring(ev.x, ev.y, '#fff2c8', 9, (ev.r || 96) * 0.55, 0.22); R.ring(ev.x, ev.y, '#ffb020', 7, ev.r, 0.4); R.ring(ev.x, ev.y, '#8a5a2b', 4, (ev.r || 96) * 1.15, 0.5);

@@ -276,6 +276,41 @@ Il risultato, misurato, in multipli di un'arma a una mano dello stesso grado (**
 
 ---
 
+### ✅ Decisioni della v2.19.11 — il mago (e in parte il warlock)
+
+> *«L'effetto dello sparo (la bolla) non mi piace per niente, sembra che spara bolle di sapone. Quello
+> che vorrei è l'effetto, per il mago, di una scarica di energia (non elettrica) azzurra e per il
+> warlock viola. Magari un effetto tipo un lampo. Cambia anche il suono che non mi piace per niente.»*
+> *«Devi togliere dalle bacchette l'ampiezza della bolla (lo sparo) e lasciare solo danno e frequenza.»*
+> *«La scarica elementare non mi piace, ESIGO che l'abilità del mago sia una palla di fuoco con danno ad
+> area. Deve essere una sfera di fuoco convincente, muoversi (tipo la bolla molto più veloce) e generare
+> danno ad area.»*
+> *«Attenzione anche nel negozio di magia, hai piazzato un ostacolo proprio davanti al bancone del mago.»*
+
+- **Il tiro arcano è una SCARICA**, non più una bolla: una saetta con nucleo bianco e alone colorato.
+- **Il colore è della classe**: **azzurro** il mago (`#5aa8ff`), **viola** il warlock (`#c06bff`).
+  Vince su quello del bastone — lo stesso scettro spara azzurro all'uno e viola all'altro.
+- **Suono nuovo** per le scuole `magic` e `pact`: schiocco a banda stretta, corpo ronzante, coda. Il
+  vecchio tonfo basso è tolto: era lui a far sentire la goccia.
+- **Le bacchette del mago hanno due soli assi: danno e cadenza.** Larghezza della scarica (r 7),
+  velocità (760 px/s), gittata (640) e perforazione (0) sono **uguali per tutti e tredici i bastoni**.
+  È l'unica classe con due assi invece di tre, e per volontà esplicita di Paolo.
+- **La firma del mago è la PALLA DI FUOCO**, al livello 1. È un **proiettile**: 900 px/s, gittata 620,
+  scoppia dove arriva con **danno ad area** (raggio 150, 2,4× il colpo). La sfera non fa danno da sola:
+  tutto il danno è nello scoppio.
+- **La Scarica Elementale è tolta.** Non esiste più.
+- **Al livello 13, al posto della Palla, la COMBUSTIONE**: per dieci secondi i nemici che uccidi
+  scoppiano (raggio 130, 1,1× il colpo), a catena, con il freno alla terza generazione.
+- **Davanti al banco di un mercante non ci sta niente.** Regola nuova, accanto a quella della soglia:
+  la corsia dalla porta al mercante è larga 1,2 tessere e dev'essere vuota, controllata alla
+  generazione del villaggio. Oltre al cristallo dell'arcanista ha trovato l'incudine del fabbro, due
+  casse dal Capitano e il fuoco dell'oracolo.
+
+**Nota storica:** la v2.19.7 aveva dato al mago la Scarica Elementale come firma. Quella riga è
+superata da questa.
+
+---
+
 ## 4. 🎲 LE STATISTICHE DI PARTENZA — la matrice 7 × 5
 
 Proposta mia, **corretta e approvata da Paolo**. Sostituisce `Heroes.STAT_BASE`, che oggi e' 3 × 4.
@@ -355,6 +390,10 @@ fare». Nessuna di queste esiste nel codice: **vanno tutte scritte**.
 | ⛓️ **Warlock** | **Patto** | Maledici un nemico: prende il 35% di danni in più, e se muore maledetto il tuo colpo successivo vale doppio. |
 
 ### Il mago sceglie la scuola, e ne prende il titolo
+
+> 🔴 **SUPERATO.** Dalla v2.19.7 il mago ha **una scuola sola** (elementalista) e non sceglie più
+> niente al livello 1; dalla v2.19.11 la sua firma è la **Palla di Fuoco** e la Scarica Elementale
+> **non esiste più**. La tabella qui sotto resta come storia di come ci si è arrivati.
 
 | Scuola | Titolo | Abilità del livello 1 |
 |---|---|---|
@@ -527,11 +566,14 @@ Scarica Elementale**: una abilita' scritta, quattro facce. Serviva a distinguerl
 cui divide il riquadro al livello 13: erano entrambe danno ad area lanciato a distanza e la scelta
 sarebbe stata finta. Cosi' la differenza e' netta e si aggancia al sistema degli elementi delle verghe.
 
-> ⚠️ **Dipendenza da non dimenticare.** Due abilita' dell'elementalista — **Scarica Elementale** (liv. 1)
-> e **Palla di Fuoco** (liv. 13) — leggono l'**elemento dell'arma impugnata**, e quel sistema **non
-> esiste ancora**: oggi le verghe del mago si distinguono quasi solo per il raggio della bolla. Gli
-> elementi (fuoco / gelo / fulmine / veleno) vanno fatti **prima** di queste due, o le due abilita' non
-> hanno su cosa poggiare.
+> ⚠️ **Dipendenza da non dimenticare.** Le abilita' dell'elementalista leggono l'**elemento dell'arma
+> impugnata**, e quel sistema **non esiste ancora**: oggi si comportano tutte come fuoco. Gli elementi
+> (fuoco / gelo / fulmine / veleno) vanno fatti **prima**, o quelle abilita' non hanno su cosa poggiare.
+>
+> 🔵 **Aggiornato alla v2.19.11.** Le abilita' che li leggono adesso sono la **Palla di Fuoco** (liv. 1,
+> proiettile che scoppia ad area) e l'**Impronta Elementale** (liv. 7); la Scarica Elementale e' tolta.
+> E il surrogato citato qui sotto non c'e' piu': i bastoni del mago **non hanno piu' il raggio della
+> bolla**, si distinguono solo per danno e cadenza.
 
 ---
 

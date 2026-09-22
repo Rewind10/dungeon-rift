@@ -1135,7 +1135,13 @@ class Room {
     // fabbro e il bonus di classe.
     const it = Gear.armaPrincipale(p.gear);
     if (!it || !it.weapon) return p.hero.weapon;
-    if (!it._w || it._w.school !== p.hero.weapon.school) it._w = Object.assign({}, it.weapon, { school: p.hero.weapon.school });
+    if (!it._w || it._w.school !== p.hero.weapon.school) {
+      it._w = Object.assign({}, it.weapon, { school: p.hero.weapon.school });
+      // v2.19.11 — LA SCARICA HA IL COLORE DELLA CLASSE, non del bastone: azzurra per il mago, viola
+      // per il warlock. Paolo li vuole distinguibili a occhio anche quando impugnano lo stesso
+      // scettro comprato dallo stesso arcanista — e in cooperativa succede.
+      if (it._w.scarica) it._w.projColor = p.hero.weapon.projColor;
+    }
     return it._w;
   }
   // v2.18 — il CARATTERE dell'arma impugnata (pesante / equilibrata / leggera), che e' cio' su cui si
@@ -1252,7 +1258,7 @@ class Room {
     // risucchia verso dentro. Conta i colpi per conto suo, se no due abilita' si contenderebbero lo
     // stesso contatore e il ritmo di entrambe cambierebbe a seconda di quale hai preso.
     let implode = false; if (p.boon.implodeEvery > 0) { p.impShot = (p.impShot || 0) + 1; if (p.impShot % p.boon.implodeEvery === 0) implode = true; }
-    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: ((ov.range || w.range) * (1 + (p.perk.gittata || 0))) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, bubble: !!w.bubble, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison ? Math.max(1, Math.round((ov.dmg != null ? ov.dmg : dmg) * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow, homing: p.boon.homing, implode, frattura: p.boon.frattura }, {}));
+    const mkBullet = (a, ov = {}) => this.bullets.push(Object.assign({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), vy: Math.sin(a) * (ov.speed || w.bulletSpeed) * (1 + (p.perk.bulletSpeed || 0)), r: ((ov.r || w.r || C.BULLET_RADIUS) * (1 + (p.perk.bollaDensa || 0))) + p.boon.bulletSize, dmg: ov.dmg != null ? ov.dmg : dmg, color: crit ? '#fff36b' : (ov.color || w.projColor), life: ((ov.range || w.range) * (1 + (p.perk.gittata || 0))) / (ov.speed || w.bulletSpeed), crit, pierce: (ov.pierce || 0) + p.stats.pierce + p.boon.pierce, hitSet: ((ov.pierce || 0) + p.stats.pierce + p.boon.pierce) > 0 ? new Set() : null, knock: (ov.knock != null ? ov.knock : w.knockback) * p.stats.knockMult, bounce: (ov.bounce || 0) + p.boon.bounce, bleed: 0, scarica: !!w.scarica, arrow: !!w.arrow, explosive: explosive || !!p.perk.detona, boomR: p.perk.detona ? p.perk.detonaR : 0, boomQ: p.perk.detona ? p.perk.detonaQ : 0, chain: p.boon.chain + (p.perk.catena || 0), chainFull: p.perk.catenaPiena ? 1 : 0, poison: p.boon.poison ? Math.max(1, Math.round((ov.dmg != null ? ov.dmg : dmg) * (p.boon.poisonQuota || 0.05))) : 0, slow: p.boon.slow, homing: p.boon.homing, implode, frattura: p.boon.frattura }, {}));
     const volley = () => {
     if (p.weapon2) {
       const tr = this.weaponTier(p);
@@ -2130,33 +2136,35 @@ class Room {
         return true;
       }
       // ---------- MAGO · ELEMENTALE ----------
-      case 'ab_scarica': {
-        const dmg = this._abilDmg(p, a.dmgMult); let n = 0;
-        for (const m of this.monsters) {
-          if (m.dead) continue;
-          if (MU.dist(p.x, p.y, m.x, m.y) > a.raggio + m.radius) continue;
-          this.damageMonster(m, dmg, p.x, p.y, 120 * p.stats.knockMult, p, this._effettoElemento(p)); n++;
-        }
-        this.events.push({ t: 'scarica', x: p.x, y: p.y, r: a.raggio, n, el: this._elementoDi(p), who: p.id });
-        return true;
-      }
       case 'ab_impronta': {
         p.buffs.impronta = a.dur; p.improntaR = a.r; p.improntaDur = a.durPozza;
         p.improntaDmg = this._abilDmg(p, a.dmgMult); p.improntaTick = a.tick;
         this.events.push({ t: 'impronta', x: p.x, y: p.y, who: p.id, dur: a.dur, el: this._elementoDi(p) });
         return true;
       }
+      // v2.19.11 — LA PALLA DI FUOCO NON E' PIU' UN COLPO ISTANTANEO. Prima sceglieva un punto (il
+      // mostro mirato, o la distanza di mira) e faceva danno li' nello stesso fotogramma: nessuno la
+      // vedeva partire, e infatti non c'era nemmeno un disegno — l'evento `palla` non lo raccoglieva
+      // nessuno nel client. Adesso e' una SFERA CHE VIAGGIA: parte dalla mano, corre a `velocita`
+      // px/s nella direzione di mira e SCOPPIA dove arriva — addosso al primo nemico che tocca, su un
+      // muro, oppure a fine gittata. Il danno e' tutto nell'esplosione: la sfera in se' non morde
+      // nessuno, altrimenti chi si becca il colpo diretto pagherebbe due volte.
       case 'ab_palla': {
-        const tg = this._bersaglioMirato(p, a.gittata);
-        const bx = tg ? tg.x : p.x + Math.cos(p.aim) * Math.min(a.gittata, 340);
-        const by = tg ? tg.y : p.y + Math.sin(p.aim) * Math.min(a.gittata, 340);
-        const dmg = this._abilDmg(p, a.dmgMult); let n = 0;
-        for (const m of this.monsters) {
-          if (m.dead) continue;
-          if (MU.dist(bx, by, m.x, m.y) > a.raggio + m.radius) continue;
-          this.damageMonster(m, dmg, bx, by, 140 * p.stats.knockMult, p, this._effettoElemento(p)); n++;
-        }
-        this.events.push({ t: 'palla', x: bx, y: by, r: a.raggio, n, el: this._elementoDi(p), who: p.id });
+        const dmg = this._abilDmg(p, a.dmgMult), vel = a.velocita || 900;
+        this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y,
+          vx: Math.cos(p.aim) * vel, vy: Math.sin(p.aim) * vel,
+          r: 15, dmg: 0, color: a.color || '#ff7a3b', life: (a.gittata || 620) / vel,
+          crit: false, pierce: 0, knock: 0, palla: 1, boomR: a.raggio, boomDmg: dmg });
+        this.events.push({ t: 'palla_via', x: p.x, y: p.y, a: p.aim, who: p.id });
+        return true;
+      }
+      // v2.19.11 — COMBUSTIONE: per dieci secondi chi muore per mano sua scoppia. Vive tutta dentro
+      // `killMonster`, che e' l'unico punto in cui "questo l'ho ucciso io" e' un fatto e non una
+      // supposizione.
+      case 'ab_combustione': {
+        p.buffs.combustione = a.dur;
+        p.combR = a.raggio; p.combDmg = this._abilDmg(p, a.dmgMult);
+        this.events.push({ t: 'combustione', x: p.x, y: p.y, who: p.id, dur: a.dur });
         return true;
       }
       // ---------- MAGO · EVOCAZIONE E NEGROMANZIA ----------
@@ -2505,6 +2513,17 @@ class Room {
       this.zones.push({ eid: 0, x: m.x, y: m.y, r: e.r || 100, dmg: Math.max(1, Math.round((m.dmg || m.def.dmg) * (e.mul || 2))), t: rit, max: rit, col: m.def.eye, done: false });
       this.events.push({ t: 'zone_tell', x: m.x, y: m.y, r: e.r || 100, delay: rit, c: m.def.eye });
       this.events.push({ t: 'larva_pop', x: m.x, y: m.y, c: m.def.eye });
+    }
+    // v2.19.11 — COMBUSTIONE (mago, livello 13): chi cade per mano di chi ce l'ha addosso SCOPPIA.
+    // `_combGen` conta la generazione della catena: lo scoppio che uccide il vicino puo' propagarsi,
+    // ma solo fino alla terza. Senza quel freno una folla fitta si incendierebbe tutta in un colpo
+    // solo — e per giunta ricorsivamente, dentro la stessa chiamata.
+    if (src && src.buffs && src.buffs.combustione > 0 && (this._combGen || 0) < 3) {
+      this._combGen = (this._combGen || 0) + 1;
+      const r = src.combR || 130, d = src.combDmg || 1;
+      this.events.push({ t: 'combusto', x: m.x, y: m.y, r });
+      this._explodeAt(m.x, m.y, r, d, src);
+      this._combGen--;
     }
     this._chiaveCade(m);                                          // v1.84 — se aveva la chiave, cade con lui
     this.events.push({ t: 'mkill', x: m.x, y: m.y, id: m.type, f: +(m.facing || 0).toFixed(2), boss: m.boss, elite: m.elite, mega: m.mega });
@@ -3639,7 +3658,7 @@ class Room {
           if (best) {
             const a = Math.atan2(best.y - p.y, best.x - p.x), w = this.effWeapon(p);
             this.bullets.push({ eid: NEXT++, hostile: false, owner: p.id, x: p.x, y: p.y, vx: Math.cos(a) * 470, vy: Math.sin(a) * 470,
-              r: 8, dmg: Math.round(this.effDamage(p) * 0.5), color: '#c48cff', life: 1.2, pierce: 0, knock: 30, bubble: true });
+              r: 8, dmg: Math.round(this.effDamage(p) * 0.5), color: p.hero.weapon.projColor || '#c48cff', life: 1.2, pierce: 0, knock: 30, scarica: true });
             this.events.push({ t: 'runa', x: p.x, y: p.y, a });
           }
         }
@@ -3752,17 +3771,23 @@ class Room {
     for (const b of this.bullets) { if (b.dead) continue; const bdt = b.hostile ? dt * tf : dt; if (b.grenade) { b.vx *= 0.96; b.vy *= 0.96; b.fuse -= dt; }
       if (b.homing > 0 && !b.grenade) { let tgt = null, bd = 260 * 260; for (const mm of this.monsters) { if (mm.dead) continue; const dd = MU.dist2(b.x, b.y, mm.x, mm.y); if (dd < bd) { bd = dd; tgt = mm; } } if (tgt) { const sp = Math.hypot(b.vx, b.vy) || 1; const cur = Math.atan2(b.vy, b.vx); const des = Math.atan2(tgt.y - b.y, tgt.x - b.x); const na = MU.turnToward(cur, des, Math.min(0.32, 0.14 * b.homing)); b.vx = Math.cos(na) * sp; b.vy = Math.sin(na) * sp; } }
       b.x += b.vx * bdt; b.y += b.vy * bdt; b.life -= bdt;
-      if (this.isWallAt(b.x, b.y)) { if (b.bounce > 0) { b.bounce--; if (this.isWallAt(b.x - b.vx * bdt, b.y)) b.vx *= -1; if (this.isWallAt(b.x, b.y - b.vy * bdt)) b.vy *= -1; } else if (b.grenade) { b.fuse = Math.min(b.fuse, 0.02); } else { b.dead = true; this.events.push({ t: 'spark', x: b.x, y: b.y, c: b.color }); } }
+      if (this.isWallAt(b.x, b.y)) { if (b.bounce > 0) { b.bounce--; if (this.isWallAt(b.x - b.vx * bdt, b.y)) b.vx *= -1; if (this.isWallAt(b.x, b.y - b.vy * bdt)) b.vy *= -1; } else if (b.grenade) { b.fuse = Math.min(b.fuse, 0.02); } else if (b.palla) { this._sfondaPalla(b); continue; } else { b.dead = true; this.events.push({ t: 'spark', x: b.x, y: b.y, c: b.color }); } }
+      // v2.19.11 — la Palla di Fuoco scoppia anche a fine gittata: non si spegne per aria.
+      if (b.life <= 0 && b.palla) { this._sfondaPalla(b); continue; }
       if (b.life <= 0 && !b.grenade) b.dead = true; if (b.grenade && b.fuse <= 0) { this._explode(b); b.dead = true; continue; } if (b.dead) continue;
       if (b.hostile) { for (const p of this.alivePlayers) { if (p.buffs.iframe || p.buffs.i_invuln) continue; if (MU.circleHit(b.x, b.y, b.r, p.x, p.y, p.radius)) { this.damagePlayer(p, b.dmg, b.x, b.y, 1); if (b.curse) this.cursePlayer(p); b.dead = true; break; } } }
-      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue; const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : Math.round(b.dmg * 0.25));
-          // v1.79.2 — FRATTURA ARCANA: se la bolla ha ucciso, si spacca in due bolle minori. Le figlie
+      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue;
+          // v2.19.11 — la Palla di Fuoco non morde: scoppia. Tutto il suo danno e' nell'area, e chi
+          // l'ha presa in faccia lo prende li' dentro come tutti gli altri.
+          if (b.palla) { this._sfondaPalla(b); break; }
+          const src = this.players.get(b.owner); this.damageMonster(m, b.dmg, b.x, b.y, b.knock || 0, src, { crit: b.crit, stun: b.stun, slow: b.slow, poison: b.poison }); if (b.bleed) { m.bleed = (m.bleed || 0) + b.bleed; m.bleedT = 3; m.bleedSrc = b.owner; } if (b.chain && src && !m.dead) this._chain(m, src, b.chain, b.chainFull ? b.dmg : Math.round(b.dmg * 0.25));
+          // v1.79.2 — FRATTURA ARCANA: se il colpo ha ucciso, si spacca in due scariche minori. Le figlie
           // portano `figlia` e non si dividono a loro volta: senza quel freno una folla fitta genererebbe
           // una reazione a catena senza fine.
           if (m.dead && b.frattura && !b.figlia && src) {
             const ang0 = Math.atan2(b.vy, b.vx), vel = Math.hypot(b.vx, b.vy) || 320;
             for (const dv of [-0.45, 0.45]) { const a2 = ang0 + dv;
-              this.bullets.push({ eid: NEXT++, hostile: false, owner: b.owner, x: m.x, y: m.y, vx: Math.cos(a2) * vel, vy: Math.sin(a2) * vel, r: Math.max(4, b.r * 0.7), dmg: Math.max(1, Math.round(b.dmg * 0.5)), color: b.color, life: 0.55, crit: false, pierce: 0, knock: 0, bubble: b.bubble, figlia: 1 }); }
+              this.bullets.push({ eid: NEXT++, hostile: false, owner: b.owner, x: m.x, y: m.y, vx: Math.cos(a2) * vel, vy: Math.sin(a2) * vel, r: Math.max(4, b.r * 0.7), dmg: Math.max(1, Math.round(b.dmg * 0.5)), color: b.color, life: 0.55, crit: false, pierce: 0, knock: 0, scarica: b.scarica, figlia: 1 }); }
             this.events.push({ t: 'frattura', x: m.x, y: m.y, c: b.color });
           }
           // v2.18 — IMPRONTA ELEMENTALE (mago elementalista): ogni bolla che colpisce lascia a terra
@@ -3783,6 +3808,20 @@ class Room {
     for (const m of this.monsters) { if (m.bleedT > 0) { m.bleedT -= dt; m.bleedTick = (m.bleedTick || 0) + dt; if (m.bleedTick > 0.5) { m.bleedTick = 0; this.damageMonster(m, m.bleed * 2, m.x, m.y - 1, 0, this.players.get(m.bleedSrc)); } } }
   }
   _explode(b) { this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR }); this._explodeAt(b.x, b.y, b.boomR, b.boomDmg, this.players.get(b.owner)); }
+  // v2.19.11 — LO SCOPPIO DELLA PALLA DI FUOCO. Separato da `_explode` perche' ha il suo evento (il
+  // client ci disegna sopra una vampata arancione, non la deflagrazione grigia delle granate) e
+  // perche' porta l'effetto elementale del mago che l'ha lanciata, come faceva la vecchia versione.
+  _sfondaPalla(b) {
+    b.dead = true;
+    const src = this.players.get(b.owner), eff = src ? this._effettoElemento(src) : {};
+    let n = 0;
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      if (MU.dist(b.x, b.y, m.x, m.y) > b.boomR + m.radius) continue;
+      this.damageMonster(m, b.boomDmg, b.x, b.y, 140 * (src ? src.stats.knockMult : 1), src, eff); n++;
+    }
+    this.events.push({ t: 'palla', x: b.x, y: b.y, r: b.boomR, n, el: src ? this._elementoDi(src) : 'fuoco', who: b.owner });
+  }
   _explodeAt(x, y, r, dmg, src) { for (const m of this.monsters) if (!m.dead && MU.dist(x, y, m.x, m.y) <= r + m.radius) this.damageMonster(m, dmg, x, y, 120, src); }
   // v1.79 — IMPLOSIONE. Non e' un'esplosione al contrario per modo di dire: i nemici nel raggio vengono
   // TIRATI verso il punto d'impatto e restano fermi otto decimi di secondo. Serve a fare quello che al
@@ -3937,7 +3976,7 @@ class Room {
       if (m.type === 'darkmage' && m.alert) o.al = 1;
       mon.push(o);
     }
-    const bul = []; for (const b of this.bullets) { const o = { e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 }; if (b.bubble) o.bb = 1; if (b.arrow) { o.ar = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } bul.push(o); }
+    const bul = []; for (const b of this.bullets) { const o = { e: b.eid, x: Math.round(b.x), y: Math.round(b.y), h: b.hostile ? 1 : 0, c: b.color, r: b.r, g: b.grenade ? 1 : 0 }; if (b.palla) { o.pf = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } if (b.scarica) { o.sk = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } if (b.arrow) { o.ar = 1; o.a = Math.round(Math.atan2(b.vy, b.vx) * 100); } bul.push(o); }
     const orbs = []; for (const o of this.orbs) orbs.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), r: Math.round(o.r), k: o.turret ? 'turret' : (o.rift ? 'rift' : 'fire'), f: o.aim != null ? +o.aim.toFixed(2) : 0, tt: o.turret ? +Math.max(0, o.t).toFixed(1) : 0 });
     const met = []; for (const m of this.meteors) met.push({ x: Math.round(m.x), y: Math.round(m.y), r: m.r, p: +(1 - m.t / m.max).toFixed(2) });
     const zones = []; for (const z of this.zones) zones.push({ x: Math.round(z.x), y: Math.round(z.y), r: z.r, p: +(1 - z.t / z.max).toFixed(2), c: z.col });

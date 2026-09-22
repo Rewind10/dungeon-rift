@@ -188,7 +188,7 @@ forte.
 | Non comune | ⭕ Bolla Densa — +35% dimensione, +18% danno | ❄️ Tocco Gelido — rallenta del 50% per 1,5s |
 | Raro | ⛓️ Catena di Fulmini — rimbalza su 2 nemici al 25% | ↩️ Rimbalzo — +2 rimbalzi, senza perdere danno |
 | Epico | 💣 Colpi Esplosivi — ogni 4° colpo esplode al 35% in 90px | 🧠 Concentrazione — mezzo secondo fermo: +10% al colpo dopo |
-| Divino | 🔮 Frattura Arcana — la bolla che uccide si divide in due (50%) | ⏳ Campo di Lentezza — i nemici entro 200px vanno il 25% piu lenti |
+| Divino | 🔮 Frattura Arcana — la scarica che uccide si divide in due (50%) | ⏳ Campo di Lentezza — i nemici entro 200px vanno il 25% piu lenti |
 
 **🏹 Ladro / assassino** — colpire da dietro, far sanguinare, sparire
 
@@ -2438,8 +2438,11 @@ rimpiazzato, anche tornando indietro. I bonus vengono **ricalcolati da zero** a 
 
 **Le armi cambiano il modo di combattere, non solo i numeri.** Per il guerriero, piu' l'arma e' lunga piu'
 l'arco del fendente e' **stretto** (alabarda 152px/71°, spada 100px/109°): si sceglie fra tenere lontano e
-coprire i fianchi. Per il mago la **cadenza resta la stessa** su tutte le bacchette — quella la alza
-l'Intelligenza — e cambiano danno, velocita' e grandezza della bolla, cioe' quante ne vanno a segno.
+coprire i fianchi. Per il mago, **dalla v2.19.11**, le bacchette
+hanno due soli assi: **danno e cadenza**. La scarica e' identica per tutti i bastoni — stessa larghezza,
+stessa velocita', stessa gittata — quindi la scelta dentro il grado e' fra un colpo che pesa e tanti
+colpi che arrivano. (Prima cambiavano anche velocita' e grandezza della bolla: tolte per volonta' di
+Paolo, *«lascia solo danno e frequenza»*.)
 
 **SI VEDE COSA HAI ADDOSSO** *(rifatto in v1.88)*. Ogni oggetto porta una `tinta` e un rango, e il renderer
 li traduce in colori e forme:
@@ -2449,7 +2452,7 @@ li traduce in colori e forme:
 | **Armatura** | ridipinge i pezzi grossi: il **metallo** di elmo, piastra e spalline del guerriero, la **veste** del mago, **mantellina e cappuccio** del ladro |
 | **Scudo** | **arco piu' ampio e lastra piu' spessa** a ogni rango, un rivetto in piu', bordo del colore dell'oggetto. E' l'unico pezzo che cambia la sagoma vista dall'alto — e nel gioco e' quello che para davvero, quindi la forma dice quanto copre senza scrivere un numero. L'Aegis ha una **runa accesa** lungo il bordo |
 | **Arco** | quattro **lunghezze**, quattro legni; dal leggendario in su il dorso e' acceso del colore dell'arma |
-| **Bacchetta** | l'**orbe** cambia colore e grandezza |
+| **Bacchetta** | l'**orbe** cambia colore e grandezza (il *colpo*, dalla v2.19.11, e' invece sempre la stessa scarica: azzurra per il mago, viola per il warlock) |
 | **Rango divino** | un **alone che respira** del colore del pezzo. Uno solo anche con tre pezzi divini: tre aloni sovrapposti sarebbero una lampadina |
 
 Tecnicamente lo snapshot porta adesso **tutti e quattro** gli slot (prima solo arma e scudo), e la chiave
@@ -2470,7 +2473,7 @@ d'assalto e un hacker.
 | | Arma | Come colpisce | Danno/s | PV | Passo |
 |---|---|---|---:|---:|---:|
 | 🛡️ **Guerriero** | Spada | **semicerchio** davanti a se, 100px / 109° | 99 sul piu' vicino | 200 | 194 |
-| 🔮 **Mago** | Bolla di Energia | proiettile lento (430 px/s) e grosso | 96 | 100 | 200 |
+| 🔮 **Mago** | Scarica Arcana *(v2.19.11)* | saetta azzurra, 760 px/s | 96 | 100 | 200 |
 | 🏹 **Ladro** | Arco | freccia veloce (900 px/s), perfora 1 | 87 *(v1.83)* | 112 | 218 |
 
 > 🛡️ **Lo scudo para davanti** *(v1.83)*. Oltre allo sconto piatto, gli scudi del guerriero tagliano i

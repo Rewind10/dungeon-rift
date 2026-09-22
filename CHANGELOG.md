@@ -2,6 +2,84 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.19.11] — 2026-09-22 · "La scarica e la palla di fuoco"
+
+Quattro richieste di Paolo sul mago (e in parte sul warlock), fatte tutte in una versione sola.
+
+**1. Lo sparo non è più una bolla: è una scarica.** *«L'effetto dello sparo (la bolla) non mi piace per
+niente, sembra che spara bolle di sapone. Quello che vorrei è l'effetto, per il mago, di una scarica di
+energia (non elettrica) azzurra, e per il warlock viola. Magari un effetto tipo un lampo.»*
+
+Il proiettile arcano è una **saetta**: una spezzata che corre lungo la traiettoria, nucleo bianco,
+alone del colore della classe, due rametti corti che la fanno leggere come un lampo. Si rimescola dodici
+volte al secondo — vibra, non lampeggia — e la spezzata è **deterministica** (dipende dall'id del
+proiettile e dal tempo a scatti): tutti i giocatori vedono la stessa saetta.
+
+**Il colore è della CLASSE, non del bastone: azzurro il mago (#5aa8ff), viola il warlock (#c06bff).**
+Lo stesso scettro comprato dallo stesso arcanista spara azzurro in mano al mago e viola in mano al
+warlock — in cooperativa è l'unico modo di capire chi sta sparando.
+
+**2. Il suono è nuovo.** *«Cambia anche il suono che non mi piace per niente.»* Il vecchio era una
+sinusoide morbida che scendeva da 420 a 180 Hz con sotto un colpo di grancassa: suonava come una goccia,
+cioè come la bolla che disegnava. Il nuovo ha tre pezzi e **nessun sub**: lo *schiocco* (rumore a banda
+stretta spazzato da 5200 a 900 Hz in 70 ms — è l'aria che si apre), il *corpo* (due voci stonate di 5 Hz
+che scendono in fretta: ronzano senza suonare elettriche) e la *coda* (una risonanza corta che resta
+appesa). Il patto è lo stesso suono un'ottava sotto, con la dente di sega: si riconosce a orecchio chi
+dei due ha sparato.
+
+**3. Le bacchette hanno solo danno e frequenza.** *«Devi togliere dalle bacchette l'ampiezza della bolla
+(lo sparo) e lasciare solo danno e frequenza.»*
+
+Tutti e tredici i bastoni del mago hanno ora la **stessa scarica**: stessa larghezza (r 7), stessa
+velocità (760 px/s), stessa gittata (640), stessa perforazione (nessuna). Del bastone restano **due
+numeri soli**: quanto pesa il colpo e quanto spesso parte. Il bivio dentro il grado resta — pesante =
+colpo grosso e raro, leggera = tanti colpi leggeri, equilibrata in mezzo a 1,5 colpi/s — e il vincolo
+del 4% sul danno al secondo vale come per tutte le altre classi. Le schede del negozio non dicono più
+«Bolla r16 · 330 px/s · gittata 520», dicono «99 a colpo · 1 colpo/s · 99 danni/s».
+
+**4. La firma del mago è la Palla di Fuoco, e vola.** *«La scarica elementare non mi piace, ESIGO che
+l'abilità del mago sia una palla di fuoco con danno ad area. Deve essere una sfera di fuoco convincente,
+muoversi (tipo la bolla molto più veloce) e generare danno ad area.»*
+
+- **Scarica Elementale: tolta.** Non esiste più, né come firma né altrove.
+- **Palla di Fuoco: promossa al livello 1**, ed è diventata un **proiettile**. Prima era un colpo
+  istantaneo nel punto mirato: nessuno la vedeva partire, e in effetti non si disegnava affatto —
+  l'evento che il server mandava non lo raccoglieva nessuno nel client. Ora parte dalla mano, corre a
+  **900 px/s** (la scarica ne fa 760) e **scoppia dove arriva**: addosso al primo nemico che tocca, su
+  un muro, o a fine gittata (620). Il danno è **tutto nell'area** (raggio 150, 2,4× il colpo): la sfera
+  in sé non morde, altrimenti chi la prende in faccia pagherebbe due volte.
+- **La sfera si vede.** Tre strati che non hanno lo stesso centro — nucleo bianco-giallo spostato in
+  avanti, palla arancione attorno, alone rosso cupo che resta indietro e si allunga in scia — più un
+  bordo di sei punte che si rimescola quindici volte al secondo. È il trucco della fiamma di candela:
+  il caldo davanti, il fumo dietro. Lo scoppio è due anelli, una vampata larga quanto il raggio vero e
+  lo scossone.
+- **Al livello 13, al posto della Palla, c'è la COMBUSTIONE** (nuova): per dieci secondi ogni nemico
+  che uccidi **scoppia**, e lo scoppio può incendiare il vicino. La catena si ferma alla terza
+  generazione — senza quel freno un'ondata fitta si incendierebbe tutta in un fotogramma.
+
+**E il bancone dell'arcanista è libero.** *«Attenzione anche nel negozio di magia, hai piazzato un
+ostacolo proprio davanti al bancone del mago.»* Misurato: il cristallo grande sedeva a 50,6 — sulla riga
+della porta e a 2,8 tessere dal mercante — e insieme a candelabri e rastrelliere chiudeva la stanza:
+alla colonna x=51 restavano **0,75 tessere** libere e al banco ci si arrivava rasente al muro. Ora il
+cerchio è di quattro cristalli, due per parete, in mezzo non c'è niente, e la corsia è larga **1,8
+tessere** per tutto il tragitto.
+
+**La regola adesso è scritta e spacca da sola.** C'era già il controllo «niente davanti a una porta»
+(v2.19.2), ma guardava solo la fascia dell'uscio: dentro la stanza non controllava nessuno, ed è per
+questo che è successo di nuovo. Il nuovo controllo guarda il **tragitto**: dalla porta al mercante c'è
+una corsia larga 1,2 tessere e dev'essere vuota, in ogni bottega. Ha trovato **altri tre casi** che
+nessuno aveva segnalato: l'**incudine** in mezzo alla corsia del fabbro, due **casse** sulla riga del
+banco del Capitano, e il **fuoco** dell'oracolo fra l'uscio e l'oracolo stesso. Spostati tutti.
+
+**Test: 4513 passati, 0 falliti.** Il nuovo TEST 77 misura la scarica (colore di classe con lo stesso
+scettro in mano a mago e warlock), le bacchette appiattite e la palla di fuoco che parte, vola, scoppia
+ad area e non tocca chi è fuori dal raggio; il TEST 73 misura in più la corsia di ogni banco.
+
+**Resta aperto** (come prima, e per la stessa ragione): gli **elementi delle verghe** — fuoco, gelo,
+fulmine, veleno — non esistono ancora, quindi le abilità elementali si comportano tutte come fuoco.
+
+---
+
 ### [2.19.10] — 2026-09-21 · "Un nome da eroe"
 
 **Il nome proposto viene dalla classe.** *«Nomi casuali di eroi del fantasy, vincolati alla classe: che

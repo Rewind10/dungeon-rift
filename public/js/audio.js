@@ -36,10 +36,14 @@
       const SCU = { barbaro: 'melee', paladino: 'melee', maestro: 'melee', guerriero: 'melee',
                     assassino: 'agile', arciere: 'ranged', ladro: 'ranged', mago: 'magic', warlock: 'pact' };
       const sc = SCU[hero] || hero;
+      // v2.19.11 — LE DUE SCUOLE ARCANE HANNO UN SUONO LORO. Paolo: *«cambia anche il suono che non mi
+      // piace per niente»*. Il vecchio era una sinusoide morbida che scendeva da 420 a 180 con sotto un
+      // colpo di grancassa: suonava come una goccia — cioe' come la bolla che disegnava.
+      // Adesso e' una SCARICA, e si costruisce a parte (vedi `_scarica`): niente sub, niente tonfo.
+      if (sc === 'magic') return this._scarica(false);
+      if (sc === 'pact') return this._scarica(true);
       if (sc === 'melee') { f0 = 260; f1 = 70; type = 'triangle'; dur = 0.13; sub0 = 90; cHp = 700; cG = 0.40; }
       else if (sc === 'agile') { f0 = 620; f1 = 240; type = 'triangle'; dur = 0.06; sub0 = 90; cHp = 1900; cG = 0.30; bG = 0.16; }
-      else if (sc === 'magic') { f0 = 420; f1 = 180; type = 'sine'; dur = 0.16; sub0 = 110; cHp = 1800; cG = 0.16; bG = 0.26; }
-      else if (sc === 'pact') { f0 = 340; f1 = 140; type = 'sawtooth'; dur = 0.15; sub0 = 95; cHp = 1500; cG = 0.20; bG = 0.24; }
       else if (sc === 'ranged') { f0 = 900; f1 = 420; type = 'square'; dur = 0.05; sub0 = 80; cHp = 2400; cG = 0.26; bG = 0.12; }
       if (weapon === 'scatter' || weapon === 'scatter_evo') { f0 = 380; f1 = 90; dur = 0.14; sub0 = 180; cHp = 900; cG = 0.42; bG = 0.26; }
       else if (weapon === 'burst' || weapon === 'burst_evo') { f0 = 1050; f1 = 500; type = 'sawtooth'; dur = 0.05; sub0 = 90; cHp = 2200; cG = 0.20; bG = 0.16; }
@@ -47,6 +51,40 @@
       const len = Math.floor(this.ctx.sampleRate * 0.05); const b = this.ctx.createBuffer(1, len, this.ctx.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); const s = this.ctx.createBufferSource(); s.buffer = b; const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = cHp; const ng = this.ctx.createGain(); ng.gain.setValueAtTime(cG, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05); s.connect(hp); hp.connect(ng); ng.connect(this.sfxGain); s.start(t); s.stop(t + 0.06);
       const o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (weapon && weapon.indexOf('beam') === 0) o.frequency.linearRampToValueAtTime(f1, t + dur); else o.frequency.exponentialRampToValueAtTime(f1, t + dur); g.gain.setValueAtTime(bG, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur + 0.02);
       const sub = this.ctx.createOscillator(), sg = this.ctx.createGain(); sub.type = 'sine'; sub.frequency.setValueAtTime(sub0, t); sub.frequency.exponentialRampToValueAtTime(50, t + 0.08); sg.gain.setValueAtTime(0.18, t); sg.gain.exponentialRampToValueAtTime(0.001, t + 0.09); sub.connect(sg); sg.connect(this.sfxGain); sub.start(t); sub.stop(t + 0.1);
+    },
+    // v2.19.11 — IL SUONO DELLA SCARICA. Tre pezzi, e nessuno dei tre e' un tonfo:
+    //   1. lo SCHIOCCO — rumore bianco passato a banda stretta e spazzato dall'alto verso il basso
+    //      in 70 ms: e' l'aria che si apre. E' cio' che da' il "lampo", ed e' anche la ragione per
+    //      cui non serve nessun sub — la botta bassa faceva bolla, non scarica.
+    //   2. il CORPO — due onde leggermente stonate fra loro (5 Hz di battimento) che scendono in
+    //      fretta: il battimento le fa "ronzare" senza suonare elettriche.
+    //   3. la CODA — una risonanza corta che resta appesa, perche' una scarica si spegne, non finisce.
+    // Il patto (warlock) e' lo stesso suono un'ottava sotto, con la dente di sega al posto del
+    // triangolo e la banda piu' scura: si riconosce a orecchio chi dei due ha sparato.
+    _scarica(patto) {
+      if (!this.sfxOn) return; this.resume(); if (!this.ctx) return;
+      const t = this.ctx.currentTime, k = patto ? 0.62 : 1;
+      // 1 — lo schiocco
+      const len = Math.floor(this.ctx.sampleRate * 0.08), nb = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = nb.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+      const ns = this.ctx.createBufferSource(); ns.buffer = nb;
+      const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = patto ? 3.2 : 4.5;
+      bp.frequency.setValueAtTime(5200 * k, t); bp.frequency.exponentialRampToValueAtTime(900 * k, t + 0.07);
+      const ng = this.ctx.createGain(); ng.gain.setValueAtTime(patto ? 0.30 : 0.26, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      ns.connect(bp); bp.connect(ng); ng.connect(this.sfxGain); ng.connect(this.conv); ns.start(t); ns.stop(t + 0.09);
+      // 2 — il corpo, due voci stonate fra loro
+      for (const [det, g0] of [[0, 0.17], [5, 0.12]]) {
+        const o = this.ctx.createOscillator(), gg = this.ctx.createGain();
+        o.type = patto ? 'sawtooth' : 'triangle';
+        o.frequency.setValueAtTime(1150 * k + det, t); o.frequency.exponentialRampToValueAtTime(300 * k + det, t + 0.11);
+        gg.gain.setValueAtTime(g0, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        o.connect(gg); gg.connect(this.sfxGain); o.start(t); o.stop(t + 0.14);
+      }
+      // 3 — la coda che si spegne
+      const o2 = this.ctx.createOscillator(), g2 = this.ctx.createGain();
+      o2.type = 'sine'; o2.frequency.setValueAtTime(620 * k, t + 0.02); o2.frequency.exponentialRampToValueAtTime(410 * k, t + 0.22);
+      g2.gain.setValueAtTime(0.0001, t + 0.02); g2.gain.exponentialRampToValueAtTime(0.09, t + 0.05); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+      o2.connect(g2); g2.connect(this.sfxGain); g2.connect(this.conv); o2.start(t + 0.02); o2.stop(t + 0.26);
     },
     hitMonster() { this._blip(300, 0.05, 'square', 0.08, 180); },
     kill(boss) { if (boss) { this._blip(160, 0.5, 'sawtooth', 0.3, 40); this._noise(0.6, 0.35, 800); } else { this._blip(200, 0.14, 'square', 0.18, 80); this._noise(0.12, 0.15, 900); } },

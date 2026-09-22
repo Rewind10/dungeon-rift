@@ -3272,7 +3272,7 @@
         if (o.tt) { const a = Math.min(1, o.tt / 8); ctx.strokeStyle = 'rgba(159,224,255,' + (0.35 + 0.3 * a) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 15, -Math.PI / 2, -Math.PI / 2 + a * Math.PI * 2); ctx.stroke(); }
         ctx.restore(); return; }
       if (o.k === 'rift') { ctx.save(); ctx.translate(o.x, o.y); const rot = this.time * 3; for (let i = 0; i < 3; i++) { ctx.rotate(rot + i * 2.1); ctx.strokeStyle = 'rgba(0,240,200,' + (0.3 + 0.2 * Math.sin(this.time * 6)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, o.r * (0.5 + i * 0.22), 0.5, 5); ctx.stroke(); } ctx.fillStyle = 'rgba(0,240,200,0.10)'; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, 7); ctx.fill(); ctx.restore(); } },
-    _drawBullet(ctx, b) { b = Object.assign({}, b, { r: b.r * 1.35 }); if (b.bb) return this._drawBubble(ctx, b); if (b.ar) return this._drawArrow(ctx, b); if (b.g) { ctx.fillStyle = '#c7f06a'; ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, 7); ctx.fill(); ctx.strokeStyle = '#7a9a2b'; ctx.stroke(); return; }
+    _drawBullet(ctx, b) { b = Object.assign({}, b, { r: b.r * 1.35 }); if (b.pf) return this._drawPalla(ctx, b); if (b.sk) return this._drawScarica(ctx, b); if (b.ar) return this._drawArrow(ctx, b); if (b.g) { ctx.fillStyle = '#c7f06a'; ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, 7); ctx.fill(); ctx.strokeStyle = '#7a9a2b'; ctx.stroke(); return; }
       // v1.19 — proiettile luminoso: scia + alone saturo + nucleo bianco
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = b.c; ctx.globalAlpha = 0.55; ctx.lineWidth = b.r * 1.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (b.vx || 0) * 0.016, b.y - (b.vy || 0) * 0.016); ctx.stroke(); ctx.lineCap = 'butt';
@@ -3281,19 +3281,106 @@
       ctx.restore();
       if (b.h) { ctx.strokeStyle = '#ff3b5b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1.6, 0, 7); ctx.stroke(); } },
     _shadow(ctx, x, y, r) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y + r * 0.75, r * 0.9, r * 0.45, 0, 0, 7); ctx.fill(); },
-    // v1.66 — BOLLA D'ENERGIA del mago: sfera translucida con bordo netto e riflesso, non un pallino pieno.
-    // La membrana pulsa: e' quello che la distingue a colpo d'occhio dai proiettili dei nemici.
-    _drawBubble(ctx, b) {
-      const R = b.r * 1.25, pulse = 1 + Math.sin(this.time * 12 + b.e * 0.7) * 0.07;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const g = this._grad('bub|' + Math.round(R * 10), () => { const q = ctx.createRadialGradient(0, 0, R * 0.15, 0, 0, R * 1.5); q.addColorStop(0, 'rgba(255,255,255,.55)'); q.addColorStop(0.45, 'rgba(0,240,200,.35)'); q.addColorStop(1, 'rgba(0,240,200,0)'); return q; });
-      ctx.translate(b.x, b.y); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.5, 0, 7); ctx.fill();
+    // ============================================================================================
+    // v2.19.11 — LA SCARICA: un lampo di energia, non una bolla
+    // ============================================================================================
+    // Paolo: *«l'effetto dello sparo (la bolla) non mi piace per niente, sembra che spara bolle di
+    // sapone. Quello che vorrei e' una scarica di energia (non elettrica) azzurra per il mago e
+    // viola per il warlock. Magari un effetto tipo un lampo»*.
+    //
+    // Qui c'era una sfera translucida con tanto di riflesso in alto a sinistra — cioe' esattamente
+    // il disegno di una bolla di sapone. Adesso e' una SAETTA: una spezzata che corre lungo la
+    // traiettoria, con la testa incandescente davanti e la coda che si sfilaccia dietro.
+    //
+    // Non e' elettricita': non ci sono rami azzurri che schizzano a caso e non c'e' il bianco-blu del
+    // fulmine. E' energia che si scarica — il nucleo e' bianco, l'alone e' il colore della classe
+    // (azzurro il mago, viola il warlock, e il colore arriva dal server, vedi Room.effWeapon) e la
+    // spezzata si rimescola dodici volte al secondo, cosi' vibra invece di lampeggiare.
+    //
+    // La spezzata e' DETERMINISTICA: dipende dall'id del proiettile e dal tempo a scatti, non da
+    // Math.random(). Con il random ogni fotogramma la saetta sfarfallerebbe come una scintilla rotta,
+    // e per giunta ogni giocatore ne vedrebbe una diversa.
+    // ============================================================================================
+    // v2.19.11 — LA PALLA DI FUOCO: una sfera, non un pallino arancione
+    // ============================================================================================
+    // Paolo: *«deve essere una sfera di fuoco convincente, muoversi (tipo la bolla molto piu' veloce)
+    // e generare danno ad area»*. Prima non si disegnava affatto — l'abilita' faceva danno e basta, e
+    // l'evento che mandava non lo raccoglieva nessuno.
+    //
+    // Cosa la rende una sfera invece di un cerchio colorato: tre strati che non hanno lo stesso
+    // centro. Il nucleo bianco-giallo sta un po' AVANTI (verso la direzione di volo), la palla
+    // arancione gli sta attorno, e l'alone rosso cupo resta INDIETRO e si allunga in scia. E' lo
+    // stesso trucco della fiamma di una candela: il caldo davanti, il fumo dietro.
+    // Il bordo frastagliato vibra con lo stesso rumore deterministico della scarica — sei punte che
+    // si rimescolano quindici volte al secondo — cosi' la palla sembra BRUCIARE invece di scorrere.
+    _drawPalla(ctx, b) {
+      const a = b.a != null ? b.a / 100 : 0, R = b.r, seme = (b.e || 0) * 11 + Math.floor(this.time * 15) * 17;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(a);
+      ctx.globalCompositeOperation = 'lighter';
+      // la scia: tre sbuffi che si allungano all'indietro e si spengono
+      for (let i = 1; i <= 3; i++) {
+        const q = this._scNoise(seme + i * 2.7);
+        ctx.globalAlpha = 0.26 / i;
+        ctx.fillStyle = i < 3 ? '#ff7a2b' : '#8a1f08';
+        ctx.beginPath(); ctx.arc(-R * (0.75 * i), (q - 0.5) * R * 0.45, R * (1.05 - i * 0.2), 0, 7); ctx.fill();
+      }
+      // l'alone
+      ctx.globalAlpha = 1;
+      const g = this._grad('pf|' + Math.round(R * 10), () => {
+        const q = ctx.createRadialGradient(R * 0.18, 0, R * 0.12, 0, 0, R * 2.1);
+        q.addColorStop(0, 'rgba(255,255,235,.98)'); q.addColorStop(0.24, 'rgba(255,214,92,.92)');
+        q.addColorStop(0.5, 'rgba(255,122,43,.72)'); q.addColorStop(0.78, 'rgba(198,48,12,.30)');
+        q.addColorStop(1, 'rgba(120,20,0,0)'); return q;
+      });
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 2.1, 0, 7); ctx.fill();
+      // il bordo che brucia: sei punte che si rimescolano
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const ang = i / 6 * Math.PI * 2, rr = R * (0.92 + this._scNoise(seme + i * 4.1) * 0.45);
+        const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.fillStyle = 'rgba(255,150,50,.55)'; ctx.fill();
+      // il nucleo, spostato in avanti
+      ctx.fillStyle = '#fff6d8'; ctx.beginPath(); ctx.arc(R * 0.22, 0, R * 0.46, 0, 7); ctx.fill();
       ctx.restore();
-      ctx.save(); ctx.translate(b.x, b.y);
-      ctx.globalAlpha = 0.35; ctx.fillStyle = b.c || '#00f0c8'; ctx.beginPath(); ctx.arc(0, 0, R * pulse, 0, 7); ctx.fill();
-      ctx.globalAlpha = 0.95; ctx.strokeStyle = b.c || '#00f0c8'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(0, 0, R * pulse, 0, 7); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(-R * 0.32, -R * 0.34, R * 0.26, 0, 7); ctx.fill();
-      ctx.globalAlpha = 1; ctx.restore();
+    },
+    _scNoise(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); },
+    _drawScarica(ctx, b) {
+      const a = b.a != null ? b.a / 100 : 0, R = b.r, L = Math.max(20, R * 4.2);
+      const seme = (b.e || 0) * 7 + Math.floor(this.time * 12) * 31;
+      const N = 5, pts = [];
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;                                  // 0 = coda, 1 = testa
+        const off = (this._scNoise(seme + i * 3.3) - 0.5) * R * 1.9 * (1 - t) * (t > 0.05 ? 1 : 0.2);
+        pts.push([-L * (1 - t), off]);
+      }
+      pts[N][1] = 0;                                      // la testa sta sulla traiettoria, sempre
+      const traccia = () => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i <= N; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); };
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(a);
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      // l'alone: largo, tenue, del colore della classe
+      ctx.strokeStyle = b.c || '#5aa8ff'; ctx.globalAlpha = 0.30; ctx.lineWidth = R * 2.4; traccia();
+      // il corpo della scarica
+      ctx.globalAlpha = 0.85; ctx.lineWidth = R * 1.05; traccia();
+      // due rametti corti che partono dalla spezzata: e' cio' che la fa leggere come una saetta
+      for (let k = 0; k < 2; k++) {
+        const i = 2 + k, q = this._scNoise(seme + 40 + k * 5.7);
+        ctx.globalAlpha = 0.55; ctx.lineWidth = R * 0.42;
+        ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]);
+        ctx.lineTo(pts[i][0] + R * (0.5 + q), pts[i][1] + (q < 0.5 ? -1 : 1) * R * (1.0 + q * 1.2));
+        ctx.stroke();
+      }
+      // il nucleo bianco e la testa incandescente
+      ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = R * 0.42; traccia();
+      const g = this._grad('sk|' + Math.round(R * 10) + '|' + (b.c || ''), () => {
+        const q = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.2);
+        q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.35, this._rgba(b.c || '#5aa8ff', 0.55)); q.addColorStop(1, this._rgba(b.c || '#5aa8ff', 0)); return q;
+      });
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 2.2, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, R * 0.52, 0, 7); ctx.fill();
+      ctx.restore();
+      if (b.h) { ctx.strokeStyle = '#ff3b5b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.x, b.y, R + 1.6, 0, 7); ctx.stroke(); }
     },
     // v1.66 — FRECCIA del ladro: asta, punta e impennaggio orientati sulla traiettoria.
     _drawArrow(ctx, b) {

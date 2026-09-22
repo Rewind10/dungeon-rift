@@ -192,8 +192,10 @@
       apply: p => { p.boon.killNova += 2; } },
 
     // ---- MAGO: pochi colpi, ognuno deve fare rumore ------------------------------------------
-    { id: 'giant', name: 'Bolla Densa', icon: '⭕', rarity: 'uncommon', hero: 'mago', max: 1,
-      desc: 'Bolla molto piu grossa (+35%) e +18% danno',
+    // v2.19.11 — le carte del mago parlavano di BOLLE. Adesso il suo colpo e' una scarica: cambiano i
+    // nomi e le parole, non gli effetti — la carta fa esattamente quello che faceva prima.
+    { id: 'giant', name: 'Scarica Densa', icon: '⭕', rarity: 'uncommon', hero: 'mago', max: 1,
+      desc: 'Scarica molto piu grossa (+35%) e +18% danno',
       apply: p => { p.boon.bulletSize += 3; p.stats.dmgMult += 0.18; } },
     { id: 'freeze', name: 'Tocco Gelido', icon: '❄️', rarity: 'uncommon', hero: 'mago', max: 1,
       desc: 'I colpi rallentano i nemici del 50% per 1,5s',
@@ -202,7 +204,7 @@
       desc: 'Il colpo rimbalza su 2 nemici vicini, al 25% del danno',
       apply: p => { p.boon.chain += 2; } },
     { id: 'ricochet', name: 'Rimbalzo', icon: '↩️', rarity: 'rare', hero: 'mago', max: 1,
-      desc: 'Le bolle rimbalzano 2 volte in piu sui muri, senza perdere danno',
+      desc: 'Le scariche rimbalzano 2 volte in piu sui muri, senza perdere danno',
       apply: p => { p.boon.bounce += 2; } },
     { id: 'explode', name: 'Colpi Esplosivi', icon: '💣', rarity: 'epic', hero: 'mago', max: 1,
       desc: 'Ogni 4° colpo esplode: 35% del danno in un raggio di 90px',
@@ -215,7 +217,7 @@
     // v1.79.2 — al posto di Eco Arcana (il 40% dei colpi raddoppiato: danno gratis e senza condizioni).
     // Questa si autolimita: senza uccisioni non fa niente, e le figlie non si dividono a loro volta.
     { id: 'frattura', name: 'Frattura Arcana', icon: '🔮', rarity: 'divine', hero: 'mago', max: 1,
-      desc: 'La bolla che uccide si divide in due bolle minori (50% del danno)',
+      desc: 'La scarica che uccide si divide in due scariche minori (50% del danno)',
       apply: p => { p.boon.frattura = 1; } },
     // v1.79.2 — al posto di Implosione. Zero danno: controlla lo spazio, che e' quello che al mago manca.
     { id: 'lentezza', name: 'Campo di Lentezza', icon: '⏳', rarity: 'divine', hero: 'mago', max: 1,

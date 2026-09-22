@@ -1173,7 +1173,10 @@
       P('bancone', r.x0 + 2.2, cy, 1, { r: 1 });
       P('rastrelliera', r.x0 + 0.7, r.y0 + 1.4, 1, { r: 1 }); P('rastrelliera', r.x0 + 0.7, r.y1 - 1.4, 1, { r: 1 });
       P('rastrelliera', r.x0 + 5.5, r.y0 + 0.6, 1, { r: 0 }); P('rastrelliera', r.x1 - 2.5, r.y0 + 0.6, 1, { r: 0 });
-      P('incudine', r.x0 + 6.4, cy, 1.15);
+      // v2.19.11 — L'INCUDINE STAVA IN MEZZO ALLA CORSIA DEL BANCO, a quattro passi dal fabbro: chi
+      // entrava per comprare ci sbatteva contro. Adesso sta sul lato di settentrione, fra le due
+      // rastrelliere — il fuoco resta a mezzogiorno, il ferro a settentrione, e in mezzo si cammina.
+      P('incudine', r.x0 + 6.4, r.y0 + 1.5, 1.15);
       for (const [x, y, sc] of [[r.x1 - 1.4, r.y1 - 1.2, 1.5], [r.x1 - 2.8, r.y1 - 1.0, 1.35], [r.x1 - 1.8, r.y1 - 2.2, 1.2]]) P('lavapool', x, y, sc);
       P('brazier', r.x1 - 4.4, r.y1 - 1.2, 1);
       for (const [x, y] of [[r.x0 + 5.6, r.y1 - 1.1], [r.x0 + 6.6, r.y1 - 1.1]]) P('cratebox', x, y, 0.95);
@@ -1215,16 +1218,28 @@
       P('scaffale', r.x1 - 0.7, r.y0 + 0.9, 1, { r: 1, col: '#a98cff' });
       P('scaffale', r.x1 - 0.7, r.y1 - 0.9, 1, { r: 1, col: '#a98cff' });
       // v2.19.2 — I CRISTALLI STAVANO DAVANTI ALLA PORTA, e il piu' grosso proprio sulla soglia.
-      // Adesso sono un CERCHIO attorno al tappeto runico, in mezzo alla stanza: e' il posto che
-      // spiega cosa sono — un circolo d'incantesimo, non tre sassi sull'uscio — e l'ingresso e' libero.
+      // Adesso sono un CERCHIO attorno al tappeto runico: e' il posto che spiega cosa sono — un
+      // circolo d'incantesimo, non tre sassi sull'uscio — e l'ingresso e' libero.
+      //
+      // v2.19.11 — MA IL PIU' GROSSO STAVA IN MEZZO ALLA CORSIA. Paolo: *«nel negozio di magia hai
+      // piazzato un ostacolo proprio davanti al bancone del mago»*. Misurato: il cristallo grande
+      // sedeva a 50,6 — sulla riga della porta (y 34) e a 2,8 tessere dal mercante — e insieme ai
+      // candelabri e alle rastrelliere chiudeva la stanza: alla colonna x=51 restavano 0,75 tessere
+      // libere, e per arrivare al banco bisognava rasentare il muro di settentrione.
+      // Adesso il cerchio e' di QUATTRO cristalli, due per parete, e in mezzo non c'e' piu' niente:
+      // il tappeto runico sta sotto i piedi (si attraversa) e la corsia porta->banco e' sgombra.
+      // Tutto cio' che e' solido e' tirato verso le pareti (0,5 invece di 0,8), perche' la stanza e'
+      // alta cinque tessere e con due file di mobili a 0,8 in mezzo ne restava una scarsa.
+      // La regola adesso e' scritta e spacca da sola: vedi LA CORSIA DEL BANCO in fondo al file.
       P('tappeto', r.x0 + 4.4, cy, 1.35, { col: '#3a3368' });
-      P('crystal_cluster', r.x0 + 4.4, r.y0 + 0.8, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
-      P('crystal_cluster', r.x0 + 4.4, r.y1 - 0.8, 1.0, { col: '#a98cff', gr: 70, ga: 0.30 });
-      P('crystal_cluster', r.x0 + 6.6, cy, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
-      P('rastrelliera', r.x1 - 4.2, r.y0 + 0.7, 0.95, { r: 0 });   // i bastoni in piedi, come le armi dal fabbro
-      P('rastrelliera', r.x1 - 4.2, r.y1 - 0.7, 0.95, { r: 0 });
-      P('candelabra', r.x0 + 7.4, r.y0 + 0.8, 1.05); P('candelabra', r.x0 + 7.4, r.y1 - 0.8, 1.05);
-      P('cratebox', r.x1 - 5.6, r.y1 - 1.0, 0.9);
+      P('crystal_cluster', r.x0 + 3.2, r.y0 + 0.5, 1.0,  { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('crystal_cluster', r.x0 + 5.6, r.y0 + 0.5, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
+      P('crystal_cluster', r.x0 + 3.2, r.y1 - 0.5, 1.15, { col: '#c8b4ff', gr: 86, ga: 0.34 });
+      P('crystal_cluster', r.x0 + 5.6, r.y1 - 0.5, 1.0,  { col: '#a98cff', gr: 70, ga: 0.30 });
+      P('rastrelliera', r.x1 - 4.2, r.y0 + 0.45, 0.95, { r: 0 });   // i bastoni in piedi, come le armi dal fabbro
+      P('rastrelliera', r.x1 - 4.2, r.y1 - 0.45, 0.95, { r: 0 });
+      P('candelabra', r.x0 + 7.4, r.y0 + 0.5, 1.05); P('candelabra', r.x0 + 7.4, r.y1 - 0.5, 1.05);
+      P('cratebox', r.x0 + 2.0, r.y1 - 0.5, 0.9);
     }
 
     // ===================== L'ERBORISTERIA =====================
@@ -1252,7 +1267,8 @@
     {
       const r = R('antro'), cy = (r.y0 + r.y1) / 2;
       P('tappeto', r.x1 - 2.4, cy, 1.3, { col: '#2f5a52' });
-      P('focolare', r.x1 - 4.6, cy, 1.05);
+      // v2.19.11 — il fuoco stava in mezzo alla strada fra l'uscio e l'oracolo: spostato di lato.
+      P('focolare', r.x1 - 4.6, cy - 1.5, 1.05);
       P('candelabra', r.x1 - 0.9, r.y0 + 0.9, 1); P('candelabra', r.x1 - 0.9, r.y1 - 0.9, 1);
       P('scaffale', r.x0 + 0.8, cy - 1.6, 1, { r: 1, col: '#7fd6c0' });
       P('crystal_cluster', r.x0 + 1.4, r.y0 + 0.9, 0.9, { col: '#7fd6c0', gr: 58, ga: 0.26 });
@@ -1269,7 +1285,9 @@
       P('flag', r.x1 - 0.8, r.y0 + 1.6, 1.25, { col: '#ff9a8a' });
       P('flag', r.x1 - 0.8, r.y1 - 1.6, 1.25, { col: '#ff9a8a' });
       P('scaffale', r.x0 + 0.8, r.y0 + 1.4, 1, { r: 1 }); P('scaffale', r.x0 + 0.8, r.y1 - 1.4, 1, { r: 1 });
-      for (const [x, y] of [[r.x0 + 3.2, cy], [r.x0 + 4.2, cy]]) P('cratebox', x, y, 0.95);
+      // v2.19.11 — le due casse dell'usato stavano sulla riga del banco, in mezzo al passaggio:
+      // adesso sono accostate alla parete di settentrione, sotto lo scaffale.
+      for (const [x, y] of [[r.x0 + 3.2, r.y0 + 0.9], [r.x0 + 4.2, r.y0 + 0.9]]) P('cratebox', x, y, 0.95);
       P('barrel', r.x0 + 3.4, r.y1 - 1.2, 0.95);
     }
 
@@ -1405,6 +1423,46 @@
         }
       }
       if (guasti.length) throw new Error('mapgen: mobili davanti a una porta — ' + guasti.join(' · '));
+    }
+
+    // ============================================================================================
+    // v2.19.11 — LA CORSIA DEL BANCO: fra la porta e il mercante non ci sta niente
+    // ============================================================================================
+    // Paolo: *«nel negozio di magia hai piazzato un ostacolo proprio davanti al bancone del mago»*.
+    // La soglia era sgombra — il controllo qui sopra passava — ma tre passi piu' avanti, in mezzo
+    // alla strada che porta al banco, c'era un cristallo. La regola della soglia guarda solo la
+    // fascia dell'uscio: dentro la stanza nessuno controllava niente, e cosi' e' successo di nuovo.
+    //
+    // Questa guarda il TRAGITTO: dalla porta al mercante c'e' una corsia larga 1,2 tessere (0,6 per
+    // lato della riga del banco) e dev'essere vuota. Vale per ogni bottega dove c'e' qualcuno dietro
+    // un banco, e come quella della soglia SPACCA invece di correggere: il villaggio e' uguale a
+    // ogni partita, quindi o l'errore c'e' sempre o non c'e' mai.
+    // Il `bancone` non conta: e' il banco stesso, ed e' li' che ci si ferma.
+    {
+      const MEZZA_CORSIA = 0.6, guasti = [];
+      for (const s of VILLAGE.stalls) {
+        const r = VILLAGE.rooms.find(q => q.id === s.room); if (!r) continue;
+        const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+        for (const pr of props) {
+          const d = INGOMBRI[pr.type]; if (!d) continue;          // si attraversa: non ingombra
+          if (pr.type === 'bancone') continue;                    // il banco E' il banco
+          const x = pr.x / TILE - 0.5, y = pr.y / TILE - 0.5;
+          if (x < r.x0 - 1 || x > r.x1 + 1 || y < r.y0 - 1 || y > r.y1 + 1) continue;   // non e' di questa stanza
+          const sc = pr.s || 1;
+          let hw, hh;
+          if (d.c) { hw = hh = d.c * sc / TILE; }
+          else {
+            hw = d.r[0] * sc / TILE; hh = d.r[1] * sc / TILE;
+            if (GIRANO[pr.type] && (pr.r || 0) > 0.5) { const t = hw; hw = hh; hh = t; }
+          }
+          // di traverso: il mobile invade la corsia?  di lungo: sta fra la porta e il banco?
+          const invade = oriz ? Math.abs(y - s.y) < MEZZA_CORSIA + hh : Math.abs(x - s.x) < MEZZA_CORSIA + hw;
+          const a = oriz ? x : y, mezzo = oriz ? hw : hh, q0 = oriz ? px : py, q1 = oriz ? s.x : s.y;
+          const dentro = a + mezzo > Math.min(q0, q1) && a - mezzo < Math.max(q0, q1);
+          if (invade && dentro) guasti.push(r.id + ': ' + pr.type + ' a ' + x.toFixed(1) + ',' + y.toFixed(1));
+        }
+      }
+      if (guasti.length) throw new Error('mapgen: mobili sulla corsia del banco — ' + guasti.join(' · '));
     }
 
     const village = (() => {
