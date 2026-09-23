@@ -157,56 +157,35 @@ Cadono insieme agli scaglioni: **3 / 6 / 9 / 12 / 15**. Sei fasce, sei titoli pe
 | IV | 12-14 | Signore delle Lame | Magister | Spettro |
 | V | 15 | *(specializzazione)* | *(idem)* | *(idem)* |
 
-## 🎴 LE 32 ABILITA' PASSIVE *(ritarate in v1.79.2)*
+## 🎴 LE 84 ABILITA' PASSIVE *(rifatte da zero in v2.20.0)*
 
-Regola della taratura: **un'abilita', un effetto**. Prima quasi ognuna ne faceva due — "+15% critico *e*
-+0,5x danno critico" — cioe' erano due carte in una, ed e' per questo che il personaggio finiva troppo
-forte.
+Si scelgono ai livelli **3 · 5 · 9 · 11**, una per livello, e si sceglie fra **TRE** carte — non piu'
+quattro. Il mazzo neutro non esiste piu': **tutte e tre sono della tua classe**, e **nessuna carta e'
+condivisa con un'altra classe**. Dodici carte a testa, ottantaquattro in tutto.
 
-**Neutre — le vede chiunque**
+### Le tre vie
 
-| Scaglione | | |
-|---|---|---|
-| Non comune | 🎯 Occhio di Falco — +10% critico | 🏃 Passo Rapido — +10% velocita, -8% scatto |
-| Raro | ☠️ Tossina — veleno: 5% del danno del colpo al secondo, per 3s | 💠 Scudo Vitale — -5% danni subiti |
-| Epico | 🪓 Giustiziere — +5% critico e +30% danno critico | 🧱 Baluardo — -10% danni subiti |
-| Divino | ⏳ Ultima Occasione — due volte risorgi a meta vita | 🗡️ Colpo di Grazia — esecuzione sotto il 20% |
+Sono sempre le stesse tre, a ogni livello e per ogni classe — cosi' la griglia si impara una volta sola:
 
-**⚔️ Guerriero** — sta in mezzo alla mischia, la ricompensa e' la folla
+| | Cosa e' |
+|---|---|
+| ⚔️ **il colpo** | potenzia il modo in cui QUELLA classe fa male |
+| 🛡️ **la tenuta** | copre la sua debolezza, con lo strumento che le e' proprio (l'armatura per il paladino, la distanza per l'arciere, il rallentamento per il mago) |
+| 🎭 **il mestiere** | la cosa che solo quella classe fa — ed e' qui che le sette classi smettono di somigliarsi |
 
-| Scaglione | | |
-|---|---|---|
-| Non comune | 🗡 Arma Pesante — +8% danno | 🪓 Colpo Ampio — +5% per ogni nemico in piu nello stesso fendente (max +15%) |
-| Raro | 🛡 Presa Salda — +60% rinculo dei tuoi colpi, -6% ai danni subiti *(v1.93, al posto di Vampirismo)* | 💢 Rappresaglia — onda ampia quando incassi |
-| Epico | 🔥 Adrenalina Pura — +8% cadenza per uccisione, fino a +48% | 🧍 Colosso — +35% PV massimi, +8% velocita |
-| Divino | ☄️ Deflagrazione Cadaverica — i morti esplodono | 🌀 Onda di Ritorno — meta delle uccisioni emette una nova |
+### Le regole del mazzo
 
-**🔮 Mago** — pochi colpi, ognuno deve fare rumore
+- **Niente cure, di nessun tipo, e niente resurrezioni.** Restano ammessi gli scudi e gli assorbimenti,
+  che non curano e non riportano in vita (Scudo Arcano, Barriera di Mana). Lo verifica un test che
+  applica **tutte e 84** le carte a un personaggio ferito e guarda se i PV salgono.
+- **Tutte le magnitudini sono dimezzate** rispetto al mazzo vecchio. Dove l'effetto e' binario
+  («perfora un nemico in piu'») non c'e' niente da dimezzare; dove l'effetto E' la frequenza (Punto
+  Vitale, Scudo Arcano) e' l'intervallo a raddoppiare.
+- **Le sinergie sono sette, una per classe**, e ognuna chiede due carte di quella classe prese a
+  scaglioni diversi: un premio a chi ha seguito una linea invece di raccogliere a caso.
 
-| Scaglione | | |
-|---|---|---|
-| Non comune | ⭕ Bolla Densa — +35% dimensione, +18% danno | ❄️ Tocco Gelido — rallenta del 50% per 1,5s |
-| Raro | ⛓️ Catena di Fulmini — rimbalza su 2 nemici al 25% | ↩️ Rimbalzo — +2 rimbalzi, senza perdere danno |
-| Epico | 💣 Colpi Esplosivi — ogni 4° colpo esplode al 35% in 90px | 🧠 Concentrazione — mezzo secondo fermo: +10% al colpo dopo |
-| Divino | 🔮 Frattura Arcana — la scarica che uccide si divide in due (50%) | ⏳ Campo di Lentezza — i nemici entro 200px vanno il 25% piu lenti |
-
-**🏹 Ladro / assassino** — colpire da dietro, far sanguinare, sparire
-
-| Scaglione | | |
-|---|---|---|
-| Non comune | 🏹 Perforazione — +1 nemico perforato | 🔭 Tiro Lungo — +10% a piena gittata |
-| Raro | 🗡 Colpo alle Spalle — +20% su chi non ti sta guardando | 💃 Passo di Danza — +15% velocita per uccisione, fino a +30% |
-| Epico | 🩸 Lama Sporca — i critici aprono un emorragia (20% del colpo in 3s) | 🌫 Passo d'Ombra — dopo lo scatto, il primo colpo e critico |
-| Divino | 🎯 Punto Vitale — ogni 5° colpo e un critico garantito | 🌑 Uscita di Scena — sotto il 30% dei PV sparisci per 1,5s (ogni 20s) |
-
-**Le sinergie** restano sei, ognuna raggiungibile da **una sola classe** e a cavallo di **due scaglioni**:
-🌊 Onda d'Urto (Colpo Ampio + Rappresaglia) · 🛡 Muro d'Acciaio (Presa Salda + Adrenalina) · 🧊 Catena
-Gelida (Tocco Gelido + Catena) · 🧪 Deflagrazione Tossica (Tossina + Colpi Esplosivi) · 🩸 Frecce Sporche
-(Perforazione + Lama Sporca) · 🎯 Cacciatore di Teste (Colpo alle Spalle + Colpo di Grazia).
-
-**Ritirate**: 🪙 Avidita', 🍀 Fortuna Sfacciata, 🧲 Fame Vorace *(bonus XP, inutili col tetto)*, e in
-v1.79.2 🌵 Aura di Spine, ⛏️ Piede di Porco, 🔱 Sdoppiamento, 🎯 Mira Guidata, 😈 Furia Cieca, 🧿 Egida
-Ostinata, 🚩 Doppia Bolla, 🔊 Eco Arcana, 🌌 Implosione.
+La griglia completa, casella per casella, sta in **PIANO-CLASSI-SETTAGGI.md**: e' il registro delle
+decisioni di Paolo, e su quella griglia c'e' la sua firma.
 
 ## 🔒 I PRIGIONIERI *(v1.84)*
 

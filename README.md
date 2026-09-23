@@ -24,6 +24,19 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novità v2.20.0 (le passive rifatte)
+
+- **Ogni classe ha le sue dodici carte, e non le divide con nessuno.** Prima, ai livelli 3 e 5, barbaro,
+  paladino e maestro d'armi vedevano le stesse identiche carte.
+- **Si sceglie fra tre, non fra quattro**, e sono sempre le stesse tre vie: ⚔️ **il colpo**, 🛡️ **la
+  tenuta**, 🎭 **il mestiere**. Il mazzo neutro non esiste più.
+- **Nessuna carta cura e nessuna riporta in vita.** Gli scudi restano: non curano, assorbono.
+- **Tutti i valori sono dimezzati**, comprese le vecchie percentuali che stavano nascoste nel motore.
+- **Quaranta meccaniche nuove**: la parata, la schivata, il contrattacco, il Ritmo, il Faro, lo Scudo
+  Condiviso, il Giudizio, il Terremoto, Spacca in Due, il Mulinello, il Debito di Sangue e le altre.
+
+---
+
 ## 🆕 Novità v2.19.11 (la scarica e la palla di fuoco)
 
 - **Lo sparo del mago e del warlock non è più una bolla**: è una **scarica di energia** a forma di

@@ -132,19 +132,19 @@ function testBoons() {
   const room = new Room('boon'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame(); room.phase = C.PHASE_SHOP;
   // v1.79 — l'offerta arriva da uno SCAGLIONE: quattro abilita', due della classe e due neutre.
   p.scaglioniDovuti = ['uncommon'];
-  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'lo scaglione offre quattro abilita (' + (p.boonOffer || []).length + ')');
+  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 3, 'lo scaglione offre tre abilita (' + (p.boonOffer || []).length + ')');
   const pierceBefore = p.boon.pierce;
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pierceBefore + 1, 'Perforazione applicata col valore nuovo (+1)'); assert(p.boonsOwned.pierce === 1, 'conteggio aggiornato');
-  p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); assert(p.boon.chain === 2, 'Catena di Fulmini applicata (2 rimbalzi)');
+  p.boonOffer = ['arc_perfora']; room.pickBoon('b', 'arc_perfora'); assert(p.boon.pierce === pierceBefore + 1, 'Perforazione applicata col valore nuovo (+1)'); assert(p.boonsOwned.arc_perfora === 1, 'conteggio aggiornato');
+  p.boonOffer = ['mag_catena']; room.pickBoon('b', 'mag_catena'); assert(p.boon.chain === 2, 'Catena di Fulmini applicata (2 rimbalzi)');
   // spara e verifica che i proiettili portino i flag delle passive
   room.bullets.length = 0; p.fireCd = 0; room.firePlayerWeapon(p); const b = room.bullets.find(x => !x.hostile); assert(b && b.pierce >= 1 && b.chain === 2, 'i proiettili ereditano le passive');
   // v1.93 — qui si prendeva Vampirismo e si controllava che alzasse il lifesteal. Nessuna carta cura
   // piu': al suo posto c'e' Presa Salda, che sul rinculo e sulla resistenza non rimette un PV.
-  p.boonOffer = ['saldo']; const kn0 = p.stats.knockMult; room.pickBoon('b', 'saldo');
+  p.boonOffer = ['bar_spallata']; const kn0 = p.stats.knockMult; room.pickBoon('b', 'bar_spallata');
   assert(p.stats.knockMult > kn0, 'boon Presa Salda aumenta il rinculo');
   assert(p.stats.lifesteal === undefined, 'e il lifesteal non esiste proprio piu');
   // v1.79 — NIENTE IMPILAMENTO: ogni abilita' si prende una volta sola, e riproporla non fa niente.
-  p.boonOffer = ['pierce']; const pv = p.boon.pierce; room.pickBoon('b', 'pierce'); assert(p.boon.pierce === pv, 'la stessa abilita non si prende due volte');
+  p.boonOffer = ['arc_perfora']; const pv = p.boon.pierce; room.pickBoon('b', 'arc_perfora'); assert(p.boon.pierce === pv, 'la stessa abilita non si prende due volte');
   assert(Loot.BOONS.every(x => x.max === 1), 'e nessuna abilita e impilabile');
   ok('boon verificati');
 }
@@ -235,7 +235,7 @@ function testV16() {
   // v1.79.2 — Mira Guidata e' stata tolta (era troppo forte e non c'entrava col ladro). Al suo posto,
   // qui si verifica FRATTURA ARCANA: la bolla che uccide si spacca in due, e le figlie non si dividono.
   const rm = new Room('frat'); const pm = rm.addPlayer('m', { send() {} }, 'M', 'mago'); rm.startGame();
-  rm.phase = C.PHASE_SHOP; pm.boonOffer = ['frattura']; rm.pickBoon('m', 'frattura');
+  rm.phase = C.PHASE_SHOP; pm.boonOffer = ['mag_frattura']; rm.pickBoon('m', 'mag_frattura');
   assert(pm.boon.frattura === 1, 'Frattura Arcana applicata');
   rm.phase = C.PHASE_COMBAT; rm.monsters.length = 0; rm.bullets.length = 0;
   const vitt = rm.spawnMonster('skeleton', pm.x + 60, pm.y, { scaling: Waves.scaling(1, 1) }); vitt.hp = 1;
@@ -250,7 +250,7 @@ function testV16() {
   // raccolta e' spazzatura per costruzione, e allo scaglione divino varrebbe esattamente zero.
   for (const id of ['greed', 'lucky', 'gluttony']) assert(!Loot.BOON_BY_ID[id], 'il potere ' + id + ' e stato ritirato');
   // boon baluardo: riduce i danni
-  const p3 = room.addPlayer('d', { send() {} }, 'D', 'arciere'); p3.boonOffer = ['bulwark']; room.pickBoon('d', 'bulwark'); assert(p3.stats.dmgReduce > 0, 'boon Baluardo riduce i danni');
+  const p3 = room.addPlayer('d', { send() {} }, 'D', 'paladino'); p3.boonOffer = ['pal_baluardo']; room.pickBoon('d', 'pal_baluardo'); assert(p3.stats.dmgReduce > 0, 'boon Baluardo riduce i danni');
   p3.buffs = {}; p3.hp = 1000; p3.maxHp = 1000; const h0 = p3.hp; room.damagePlayer(p3, 100, p3.x + 10, p3.y, 0); const dealt = h0 - p3.hp; assert(dealt < 100, 'Baluardo attenua i danni subiti (' + dealt + ' < 100)');
   // snapshot espone i campi combo
   p.combo = 8; p.comboT = C.COMBO_TIME; const snap = room.snapshot(); const me = snap.players.find(x => x.i === 'b'); assert(me && me.cmb === 8 && me.cmx > 1, 'lo snapshot espone combo e moltiplicatore');
@@ -269,21 +269,20 @@ function testV17() {
   assert(p.hp > 1, 'ricompensa 40 cura il giocatore');
   // --- sinergie boon ---
   room.phase = C.PHASE_SHOP;
-  p.boonOffer = ['poison']; room.pickBoon('b', 'poison'); assert(!p.synActive.toxic_burst, 'un solo boon non attiva la sinergia');
-  room.events.length = 0; p.boonOffer = ['explode']; room.pickBoon('b', 'explode');
-  assert(p.synActive.toxic_burst === 1, 'poison + explode attiva Deflagrazione Tossica');
-  assert(p.boon.toxicBurst === 1, 'la sinergia imposta il flag toxicBurst');
-  assert(sent.some(m => m.ev && m.ev.t === 'synergy' && m.ev.id === 'toxic_burst'), 'la sinergia emette un evento al giocatore');
-  // frost_chain: chain + freeze
-  p.boonOffer = ['chain']; room.pickBoon('b', 'chain'); p.boonOffer = ['freeze']; room.pickBoon('b', 'freeze');
-  assert(p.synActive.frost_chain === 1 && p.boon.frostChain === 1, 'chain + freeze attiva Catena Gelida');
-  // v1.79.2 — la coppia del ladro adesso e' Perforazione + Lama Sporca (Mira Guidata e' stata tolta).
+  // v2.20.0 — LE SINERGIE SONO SETTE, UNA PER CLASSE, e ognuna chiede due carte di QUELLA classe prese
+  // a scaglioni diversi. Qui gioca un arciere, quindi la sua: Concentrazione (epica) + Tiro Lungo (non
+  // comune). Le vecchie coppie miste (Tossina + Colpi Esplosivi) non sono piu' raggiungibili da
+  // nessuno, perche' nessuna carta e' piu' di due classi.
+  p.boonOffer = ['arc_concentra']; room.pickBoon('b', 'arc_concentra'); assert(!p.synActive.syn_arciere, 'una carta sola non attiva la sinergia');
+  const cc0 = p.stats.critChance;
+  room.events.length = 0; p.boonOffer = ['arc_lungo']; room.pickBoon('b', 'arc_lungo');
+  assert(p.synActive.syn_arciere === 1, 'Concentrazione + Tiro Lungo attiva Mira');
+  assert(p.stats.critChance > cc0, 'e la sinergia si sente davvero (+5% critico)');
+  assert(sent.some(m => m.ev && m.ev.t === 'synergy' && m.ev.id === 'syn_arciere'), 'la sinergia emette un evento al giocatore');
   // Ogni abilita' presa e' sempre attiva: il tetto delle carte accese non esiste piu'.
-  p.boonOffer = ['pierce']; room.pickBoon('b', 'pierce');
-  p.boonOffer = ['lamasporca']; room.pickBoon('b', 'lamasporca'); const bl0 = p.boon.bleedCrit;
-  assert(!!p.cardOn.lamasporca, 'ogni abilita presa e sempre accesa');
-  assert(p.synActive.frecce_sporche === 1 && p.boon.bleedCrit > 0.10, 'Perforazione + Lama Sporca attiva Frecce Sporche (' + bl0 + ')');
-  const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'frecce_sporche'), 'la sinergia gia attiva non viene rilevata di nuovo');
+  p.boonOffer = ['arc_perfora']; room.pickBoon('b', 'arc_perfora');
+  assert(!!p.cardOn.arc_perfora, 'ogni abilita presa e sempre accesa');
+  const again = Loot.detectSynergies(p.boonsOwned, p.synActive); assert(!again.some(x => x.id === 'syn_arciere'), 'la sinergia gia attiva non viene rilevata di nuovo');
   // toxicBurst avvelena ad area
   const tp = room.addPlayer('d', { send() {} }, 'D', 'arciere'); tp.boon.toxicBurst = 1; tp.boon.poison = 1;
   const tm = room.spawnMonster('skeleton', tp.x + 20, tp.y, { scaling: Waves.scaling(2, 1) }); tm.poison = 0;
@@ -495,14 +494,14 @@ function testV110() {
   // --- si sceglie tra ESATTAMENTE 2 poteri ---
   const room = new Room('v110'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame(); room.phase = C.PHASE_SHOP;
   p.scaglioniDovuti = ['epic'];
-  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 4, 'si sceglie 1 di 4 (offerti: ' + (p.boonOffer || []).length + ')');
-  // --- catalogo ---
-  assert(Loot.BOONS.length === 38, 'il catalogo ha 38 carte (' + Loot.BOONS.length + ')');
-  for (const id of ['swift', 'juggernaut', 'executioner', 'ampio', 'spalle']) assert(Loot.BOON_BY_ID[id], 'abilita presente: ' + id);
-  // --- i boon applicano effetti ---
-  const d0 = p.stats.dmgMult; p.boonOffer = ['longshot']; room.pickBoon('b', 'longshot'); assert(p.boon.longshot > 0, 'Tiro Lungo applicato');
-  const hp0 = room.effMaxHp(p); p.boonOffer = ['juggernaut']; room.pickBoon('b', 'juggernaut'); assert(room.effMaxHp(p) > hp0, 'Colosso aumenta i PV massimi');
-  const cc0 = p.stats.critChance; p.boonOffer = ['executioner']; room.pickBoon('b', 'executioner'); assert(p.stats.critChance > cc0, 'Giustiziere aumenta la probabilita di critico');
+  room.offerBoon(p); assert(p.boonOffer && p.boonOffer.length === 3, 'si sceglie 1 di 3 (offerti: ' + (p.boonOffer || []).length + ')');
+  // --- catalogo (v2.20.0: ottantaquattro carte, dodici per classe) ---
+  assert(Loot.BOONS.length === 84, 'il catalogo ha 84 carte (' + Loot.BOONS.length + ')');
+  for (const id of ['arc_lungo', 'bar_colosso', 'ass_grazia', 'mag_frattura', 'war_debito']) assert(Loot.BOON_BY_ID[id], 'abilita presente: ' + id);
+  // --- i boon applicano effetti (l'arciere prende le SUE) ---
+  p.boonOffer = ['arc_lungo']; room.pickBoon('b', 'arc_lungo'); assert(p.boon.longshot > 0, 'Tiro Lungo applicato');
+  const cd0 = p.stats.cdrMult; p.boonOffer = ['arc_piede']; room.pickBoon('b', 'arc_piede'); assert(p.boon.dashCd > 0, 'Piede Leggero applicato');
+  const pf0 = p.boon.pierce; p.boonOffer = ['arc_perfora']; room.pickBoon('b', 'arc_perfora'); assert(p.boon.pierce > pf0, 'Perforazione applicata');
   // --- v1.67: l'emporio a livelli non esiste piu' (catalogo per classe in shared/gear.js) ---
   assert(!Loot.GEAR && !Loot.GEAR_BY_SLOT && !Loot.gearCost, 'l emporio generico a livelli e stato rimosso da loot.js');
   const sent = []; const cap = { send(x) { try { sent.push(JSON.parse(x)); } catch (_) {} } };
@@ -780,12 +779,13 @@ function testV151() {
   const Loot = require('../shared/loot.js');
   const dt = 1 / C.TICK_RATE;
   // --- 1) si sceglie 1 di 3 ---
-  assert(Loot.BOON_CHOICES === 4, 'la costante di offerta e 4 abilita');
-  // --- 2) dieci poteri nuovi, tutti applicabili ---
-  const NEW = ['longshot', 'killstep', 'retaliate', 'corpseblast', 'execute', 'defiance'];
+  assert(Loot.BOON_CHOICES === 3, 'la costante di offerta e 3 abilita');
+  // --- 2) i poteri storici sopravvissuti al rifacimento, tutti applicabili ---
+  // v2.20.0 — gli id sono cambiati: ogni carta appartiene a UNA classe e se lo porta nel nome.
+  const NEW = ['arc_lungo', 'mae_danza', 'bar_deflagrazione', 'ass_grazia', 'pal_ira'];
   assert(NEW.every(id => !!Loot.BOON_BY_ID[id]), 'i poteri storici rimasti sono nel catalogo');
-  assert(Loot.BOONS.length === 38, 'catalogo a 38 carte: ' + Loot.BOONS.length);
-  assert(NEW.every(id => { const b = Loot.BOON_BY_ID[id]; return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon; }), 'ogni nuovo potere ha icona, descrizione, max e apply');
+  assert(Loot.BOONS.length === 84, 'catalogo a 84 carte: ' + Loot.BOONS.length);
+  assert(Loot.BOONS.every(b => { return b.max >= 1 && typeof b.apply === 'function' && b.desc && b.icon && b.via && b.hero !== '*'; }), 'ogni carta ha icona, descrizione, via, classe e apply');
   assert(new Set(Loot.BOONS.map(b => b.id)).size === Loot.BOONS.length, 'nessun id di potere duplicato');
   // --- 3) il negozio XP e ora una scelta, non un rubinetto ---
   assert(Loot.STAT_MAX_LEVEL === 12, 'tetto di 12 livelli per statistica (v1.66)');
@@ -798,7 +798,7 @@ function testV151() {
   room.startGame();
   pl.scaglioniDovuti = ['rare'];
   room.offerBoon(pl);
-  assert(pl.boonOffer && pl.boonOffer.length === 4, 'lo scaglione offre 4 abilita, una sola selezionabile');
+  assert(pl.boonOffer && pl.boonOffer.length === 3, 'lo scaglione offre 3 abilita, una sola selezionabile');
   // tetto: comprando all infinito ci si ferma a 8
   room.phase = C.PHASE_SHOP; pl.points = 9999999;
   for (let i = 0; i < 25; i++) room.buyStat('b', 'st_for');
@@ -811,7 +811,7 @@ function testV151() {
   // COLPO DI GRAZIA: sotto soglia il nemico muore, ma il boss no
   pl.boon.execute = 1;
   const m1 = room.spawnMonster('skeleton', pl.x + 200, pl.y, { scaling: Waves.scaling(3, 1) });
-  m1.hp = Math.round(m1.maxHp * 0.11) + 1;
+  m1.hp = Math.round(m1.maxHp * 0.05) + 1;   // v2.20.0 — la soglia del Colpo di Grazia e' scesa al 10%
   room.damageMonster(m1, 1, pl.x, pl.y, 0, pl);
   assert(m1.dead, 'il Colpo di Grazia esegue il nemico sotto soglia');
   // ULTIMA OCCASIONE: consuma una carica invece di far cadere
@@ -826,9 +826,10 @@ function testV151() {
   assert(pl.hp < 500, 'il colpo successivo passa (egida in ricarica)');
   // nessun NaN con i nuovi poteri tutti attivi
   const room2 = new Room('v151b'); const p2 = room2.addPlayer('c', { send() { } }, 'C', 'arciere'); room2.startGame();
-  for (const id of NEW) { const b = Loot.BOON_BY_ID[id]; for (let k = 0; k < b.max; k++) { b.apply(p2); p2.boonsOwned[id] = (p2.boonsOwned[id] || 0) + 1; } }
+  // v2.20.0 — non piu' «i sei storici»: TUTTE le carte dell'arciere addosso insieme.
+  for (const b of Loot.boonsPerClasse('arciere')) { b.apply(p2); p2.boonsOwned[b.id] = 1; p2.cardOn[b.id] = 1; }
   for (let i = 0; i < C.TICK_RATE * 25; i++) { room2.setInput('c', bot(room2, p2)); room2.update(dt); if (hasNaN(room2)) break; }
-  assert(hasNaN(room2) === null, 'nessun NaN con tutti e 10 i nuovi poteri al massimo');
+  assert(hasNaN(room2) === null, 'nessun NaN con tutte le carte dell arciere addosso');
   ok('novita v1.51 verificate');
 }
 function testV150() {
@@ -2662,20 +2663,20 @@ function testV174() {
   assert(p.hp === 100, 'ma NON cura: altrimenti l Ostessa non servirebbe a niente');
   for (let i = 0; i < 5; i++) r.buyStat('a', 'st_cos');
   assert(p.hp === 100, 'nemmeno sei punti di fila curano di un solo PV');
-  prendi(r, p, 'juggernaut'); assert(p.hp === 100, 'e nemmeno Colosso');
-  prendi(r, p, 'overheal'); assert(p.hp === 100, 'e nemmeno Scudo Vitale');
+  prendi(r, p, 'bar_colosso'); assert(p.hp === 100, 'e nemmeno Colosso');
+  prendi(r, p, 'pal_baluardo'); assert(p.hp === 100, 'e nemmeno Scudo Vitale');
   assert(r.effMaxHp(p) > mx0 + 100, 'il massimo pero e cresciuto davvero');
 
   // --- 2) v1.79 — le abilita' non si spengono piu' (Cartomante chiusa): il tetto dei PV sale e basta.
   const r2 = new Room('v174b'); const q = r2.addPlayer('b', conn, 'B', 'paladino'); r2.startGame(); r2.phase = C.PHASE_SHOP;
   const mxPrima = r2.effMaxHp(q); q.hp = mxPrima;
-  prendi(r2, q, 'juggernaut');
+  prendi(r2, q, 'bar_colosso');
   assert(r2.effMaxHp(q) > mxPrima, 'Colosso alza il tetto dei PV');
   assert(q.hp === mxPrima, 'ma non cura: i PV correnti restano quelli');
-  r2.toggleCard('b', 'juggernaut');
-  assert(q.cardOn.juggernaut === 1 && r2.effMaxHp(q) > mxPrima, 'e non si puo spegnere');
+  r2.toggleCard('b', 'bar_colosso');
+  assert(q.cardOn.bar_colosso === 1 && r2.effMaxHp(q) > mxPrima, 'e non si puo spegnere');
   // ma il debito non restituisce piu' di quanto era stato tolto
-  q.hp = 40; r2.toggleCard('b', 'juggernaut'); r2.toggleCard('b', 'juggernaut');
+  q.hp = 40; r2.toggleCard('b', 'bar_colosso'); r2.toggleCard('b', 'bar_colosso');
   assert(q.hp === 40, 'se non c era nulla da tagliare non c e nulla da rendere');
 
   // --- 3) l'Ostessa ---
@@ -2717,7 +2718,7 @@ function testV174() {
 
   // --- 4) il riposo comprato cancella il debito, altrimenti sarebbe vita regalata ---
   const r4 = new Room('v174d'); const h = r4.addPlayer('d', conn, 'D', 'paladino'); r4.startGame(); r4.phase = C.PHASE_SHOP;
-  prendi(r4, h, 'juggernaut');
+  prendi(r4, h, 'bar_colosso');
   r4.enterMarket();
   h.hp = 100;                                    // si combatte e ci si fa male
   h.x = r4.innkeeper.x; h.y = r4.innkeeper.y; h.coins = 500;
@@ -2727,7 +2728,7 @@ function testV174() {
   const hpPagato = h.hp;
   // v2.6 — la Cartomante non c'e' piu' (e' diventata l’oracolo, che per ora non fa nulla), quindi
   // `r4.seer` e' null: la carta si riaccende da dove si e', e la regola che conta resta la stessa.
-  r4.toggleCard('d', 'juggernaut');
+  r4.toggleCard('d', 'bar_colosso');
   assert(h.hp === hpPagato, 'e riaccendere la carta non regala i PV gia comprati');
 
   // --- 5) cio' che arriva al client ---
@@ -2788,8 +2789,8 @@ function testV1741() {
   const r5 = new Room('v1741e'); const z = r5.addPlayer('e', conn, 'E', 'paladino'); r5.startGame(); r5.phase = C.PHASE_SHOP;
   z.hp = 100; z.points = 30; z.coins = 2000;
   r5.buyStat('e', 'st_cos'); assert(z.hp === 100, 'Costituzione: no');
-  z.boonOffer = ['juggernaut']; r5.pickBoon('e', 'juggernaut'); assert(z.hp === 100, 'carta Colosso: no');
-  z.boonOffer = ['overheal']; r5.pickBoon('e', 'overheal'); assert(z.hp === 100, 'carta Scudo Vitale: no');
+  z.boonOffer = ['bar_colosso']; r5.pickBoon('e', 'bar_colosso'); assert(z.hp === 100, 'carta Colosso: no');
+  z.boonOffer = ['pal_baluardo']; r5.pickBoon('e', 'pal_baluardo'); assert(z.hp === 100, 'carta Scudo Vitale: no');
   // mercante errante, offerta "+PV massimi"
   r5.phase = C.PHASE_COMBAT;
   r5.merchant = { x: z.x, y: z.y, wares: [{ id: 'w1', kind: 'maxhp', val: 30, cost: 10, name: 'Talismano' }] };
@@ -3340,7 +3341,7 @@ function testV178() {
   while (y.boonOffer && y.boonOffer.length && scelte < 12) {
     // v1.85 — una passiva mostra quattro carte, uno slot di abilita' ne mostra DUE
     const abil = !!Ab.BY_ID[y.boonOffer[0]];
-    assert(y.boonOffer.length === (abil ? 2 : 4), abil ? 'lo slot mostra le due abilita della classe' : 'ogni scaglione mostra quattro abilita');
+    assert(y.boonOffer.length === (abil ? 2 : 3), abil ? 'lo slot mostra le due abilita della classe' : 'ogni scaglione mostra tre abilita');
     r6.pickBoon('a', y.boonOffer[0]); scelte++;
   }
   assert(scelte === dovuti, 'il pannello si riapre finche gli scaglioni dovuti non sono finiti (' + scelte + '/' + dovuti + ')');
@@ -3436,34 +3437,50 @@ function testV179() {
   // dell'aggiunta delle sei carte nuove, quattro classi ne avevano UNA SOLA da qualche parte — questo
   // test lo avrebbe visto subito.
   //
-  // `b.hero` NON basta piu' a dire di chi e' una carta: la stessa carta appartiene a piu' classi (Arma
-  // Pesante e' del barbaro, del paladino e del maestro d'armi). La domanda giusta e' `Loot.carteDi`.
-  assert(Loot.BOONS.length === 38, 'trentotto carte in tutto (' + Loot.BOONS.length + ')');
+  // v2.20.0 — IL MAZZO E' RIFATTO: 84 carte, 12 per classe (tre vie per quattro scaglioni), nessuna
+  // condivisa e nessuna neutra. `b.hero` torna a bastare a dire di chi e' una carta, ed e' il punto:
+  // la tabella `CARTE_CLASSE` era una seconda verita' da tenere allineata a mano.
+  assert(Loot.BOONS.length === 84, 'ottantaquattro carte in tutto (' + Loot.BOONS.length + ')');
+  assert(Loot.BOONS.every(b => b.hero !== '*'), 'nessuna carta neutra: il mazzo comune non esiste piu');
   for (const h of Heroes.ORDER) {
     const sue = Loot.carteDi(h);
-    assert(sue.length === 8, h + ': otto carte proprie (' + sue.length + ')');
+    assert(sue.length === 12, h + ': dodici carte proprie (' + sue.length + ')');
     for (const t of ['uncommon', 'rare', 'epic', 'divine']) {
       const o = Loot.offerteScaglione(h, t, {});
-      assert(o.length === 4, h + '/' + t + ': quattro carte offerte (' + o.length + ')');
-      assert(o.filter(b => sue.indexOf(b.id) >= 0).length === 2, h + '/' + t + ': due sono della sua classe');
-      assert(o.filter(b => b.hero === '*').length === 2, h + '/' + t + ': e due sono neutre');
+      assert(o.length === 3, h + '/' + t + ': tre carte offerte (' + o.length + ')');
+      assert(o.every(b => b.hero === h), h + '/' + t + ': e sono tutte e tre sue');
       assert(o.every(b => b.rarity === t), h + '/' + t + ': e sono tutte di quello scaglione');
+      // LE TRE VIE, sempre nello stesso ordine: e' cio' che rende la griglia leggibile senza spiegarla
+      assert(o.map(b => b.via).join(',') === 'colpo,tenuta,mestiere', h + '/' + t + ': colpo, tenuta, mestiere in quest ordine (' + o.map(b => b.via).join(',') + ')');
     }
     // un mago non deve MAI poter vedere una carta del barbaro
     const cat = Loot.boonsPerClasse(h);
-    assert(cat.length === 16, h + ': il suo catalogo sono 16 carte (8 sue + 8 neutre)');
-    assert(cat.every(b => sue.indexOf(b.id) >= 0 || b.hero === '*'), h + ': e non ci sono carte di altre classi');
+    assert(cat.length === 12, h + ': il suo catalogo sono le sue 12 carte');
+    assert(cat.every(b => b.hero === h), h + ': e non ci sono carte di altre classi');
   }
   assert(Loot.BOONS.every(b => b.max === 1), 'nessuna abilita e impilabile');
-  assert(new Set(Loot.BOONS.map(b => b.id)).size === 38, 'nessun id duplicato');
-  for (const id of ['greed', 'lucky', 'gluttony']) assert(!Loot.BOON_BY_ID[id], 'ritirata: ' + id);
+  assert(new Set(Loot.BOONS.map(b => b.id)).size === 84, 'nessun id duplicato');
+  for (const id of ['greed', 'lucky', 'gluttony', 'giant']) assert(!Loot.BOON_BY_ID[id], 'ritirata: ' + id);
+  // v2.20.0 — NESSUNA CARTA CURA, E NESSUNA RIPORTA IN VITA. E' una richiesta esplicita di Paolo, e va
+  // controllata sul FATTO e non sulla parola: si applica ogni carta a un personaggio ferito e si guarda
+  // se i PV salgono o se una morte viene annullata. Con `defianceLeft` a zero non c'e' resurrezione.
+  {
+    const Heroes2 = require('../shared/heroes.js');
+    for (const b of Loot.BOONS) {
+      const rr = new Room('cura_' + b.id), pp = rr.addPlayer('a', conn(), 'A', b.hero); rr.startGame();
+      pp.hp = 10; const prima = pp.hp;
+      pp.boonsOwned[b.id] = 1; pp.cardOn[b.id] = 1; rr._recomputeBoons(pp);
+      assert(pp.hp <= prima, b.id + ': prenderla non cura (' + prima + ' -> ' + pp.hp + ')');
+      assert((pp.defianceLeft || 0) === 0, b.id + ': e non regala una resurrezione');
+    }
+  }
 
   // --- 2) LE SINERGIE restano raggiungibili, ognuna da UNA classe sola e in DUE scaglioni diversi ---
   for (const sy of Loot.SYNERGIES) {
     const ab = sy.need.map(id => Loot.BOON_BY_ID[id]);
     assert(ab.every(Boolean), 'la sinergia ' + sy.id + ' punta ad abilita che esistono');
-    const classi = new Set(ab.map(b => b.hero).filter(h => h !== '*'));   // le sinergie restano legate a un CORPO solo
-    assert(classi.size <= 1, 'la sinergia ' + sy.id + ' e raggiungibile da una classe sola (' + [...classi].join('+') + ')');
+    const classi = new Set(ab.map(b => b.hero));   // v2.20.0 — una sinergia per classe, e solo sua
+    assert(classi.size === 1, 'la sinergia ' + sy.id + ' e raggiungibile da una classe sola (' + [...classi].join('+') + ')');
     assert(new Set(ab.map(b => b.rarity)).size === ab.length, 'e sta a cavallo di scaglioni diversi (' + sy.id + ')');
   }
 
@@ -3487,7 +3504,7 @@ function testV179() {
   const prese = Object.keys(p.boonsOwned).map(id => Loot.BOON_BY_ID[id]);
   assert(new Set(prese.map(b => b.rarity)).size === 4, 'una passiva per scaglione, mai due dello stesso');
   assert(!!p.abil[0] && !!p.abil[1] && !p.abil[2], 'e i primi due slot sono pieni, il terzo e ancora vuoto');
-  assert(prese.every(b => Loot.carteDi('paladino').indexOf(b.id) >= 0 || b.hero === '*'), 'e mai una di un altra classe');
+  assert(prese.every(b => b.hero === 'paladino'), 'e mai una di un altra classe');
 
   // --- 4) IL TETTO: al 15 NON si sceglie piu' niente, e l esperienza smette di contare ---
   // v2.18 — QUESTO TEST AFFERMAVA IL BIVIO DELLE SPECIALIZZAZIONI, che non esiste piu'. Quattro dei sei
@@ -3552,12 +3569,12 @@ function testV179() {
   const r8 = new Room('v179g'); const m8 = r8.addPlayer('a', conn(), 'A', 'mago'); r8.startGame(); r8.phase = C.PHASE_SHOP;
   const prendi = (id) => { m8.boonOffer = [id]; r8.pickBoon('a', id); };
   // v1.79.2 — Scudo Vitale non alza piu' i PV ne' rigenera: da' resistenza, e basta.
-  const dr0 = m8.stats.dmgReduce; prendi('overheal');
+  const dr0 = m8.stats.dmgReduce; prendi('pal_baluardo');
   assert(Math.abs(m8.stats.dmgReduce - (dr0 + 0.05)) < 1e-9, 'Scudo Vitale da -5% ai danni subiti');
   assert(m8.stats.regen === undefined, 'e non rigenera piu un solo PV (dalla v1.93 il campo non esiste)');
-  prendi('chain'); assert(m8.boon.chain === 2, 'Catena di Fulmini: due rimbalzi');
-  prendi('concentra'); assert(m8.boon.concentra === 0.10, 'Concentrazione: +10% al colpo piazzato');
-  prendi('lentezza'); assert(m8.boon.lentezza === 200, 'Campo di Lentezza: raggio 200');
+  prendi('mag_catena'); assert(m8.boon.chain === 2, 'Catena di Fulmini: due rimbalzi');
+  prendi('arc_concentra'); assert(m8.boon.concentra === 0.10, 'Concentrazione: +10% al colpo piazzato');
+  prendi('arc_lentezza'); assert(m8.boon.lentezza === 200, 'Campo di Lentezza: raggio 200');
   // il campo rallenta davvero i nemici vicini, e non quelli lontani
   r8.phase = C.PHASE_COMBAT; r8.monsters.length = 0;
   // v1.80 — si misura LO STESSO nemico, dallo STESSO punto, col campo acceso e col campo spento. Prima
@@ -3576,8 +3593,8 @@ function testV179() {
   // le abilita' che alzano i PV in percentuale restano equilibrate fra classi: lo verifica Colosso,
   // che e' rimasto percentuale (il guerriero ha 200 PV, il mago 100).
   const rG = new Room('v179h'); const gg = rG.addPlayer('a', conn(), 'A', 'paladino'); rG.startGame(); rG.phase = C.PHASE_SHOP;
-  const gHp0 = rG.effMaxHp(gg); gg.boonOffer = ['juggernaut']; rG.pickBoon('a', 'juggernaut');
-  assert(Math.abs(rG.effMaxHp(gg) / gHp0 - 1.35) < 0.02, 'Colosso alza i PV in proporzione, non in cifra fissa');
+  const gHp0 = rG.effMaxHp(gg); gg.boonOffer = ['bar_colosso']; rG.pickBoon('a', 'bar_colosso');
+  assert(Math.abs(rG.effMaxHp(gg) / gHp0 - 1.17) < 0.02, 'Colosso alza i PV in proporzione, non in cifra fissa (v2.20.0: +17%)');
 
   ok('impianto v1.79 verificato');
 }
@@ -3644,14 +3661,14 @@ function testV1792() {
   const nuova = (eroe, id) => { const r = new Room('p' + id); const p = r.addPlayer('a', conn(), 'A', eroe); r.startGame(); r.phase = C.PHASE_SHOP; const dr0 = p.stats.dmgReduce || 0; p.boonOffer = [id]; r.pickBoon('a', id); return { r, p, dr0 }; };
 
   // --- le tarature semplici ---
-  { const { p } = nuova('arciere', 'crit'); assert(Math.abs(p.stats.critChance - (0.03 + 0.10)) < 1e-9, 'Occhio di Falco: +10% critico e basta'); }
-  { const { p } = nuova('arciere', 'executioner'); assert(Math.abs(p.stats.critChance - 0.08) < 1e-9 && Math.abs(p.stats.critMult - 2.30) < 1e-9, 'Giustiziere: +5% critico e +30% danno critico'); }
-  { const { p, dr0 } = nuova('arciere', 'bulwark'); assert(Math.abs((p.stats.dmgReduce - dr0) - 0.10) < 1e-9, 'Baluardo: -10%'); }
-  { const { p, dr0 } = nuova('arciere', 'overheal'); assert(Math.abs((p.stats.dmgReduce - dr0) - 0.05) < 1e-9 && p.stats.regen === undefined, 'Scudo Vitale: -5% e nessuna cura'); }
-  { const { p } = nuova('paladino', 'heavyarm'); assert(Math.abs(p.stats.dmgMult - 1.08) < 1e-9 && !p.perk.arcoPiu, 'Arma Pesante: +8% danno, niente altro'); }
+  // v2.20.0 — le tarature DIMEZZATE del mazzo nuovo, e ogni carta sulla classe che ce l'ha.
+  { const { p } = nuova('arciere', 'arc_lungo'); assert(p.boon.longshot === 1 && Math.abs(p.stats.critChance - 0.03) < 1e-9, 'Tiro Lungo: la gittata, non il critico'); }
+  { const { p } = nuova('arciere', 'arc_teste'); assert(Math.abs(p.boon.vsElite - 0.12) < 1e-9, 'Cacciatore di Teste: +12% su elite e boss'); }
+  { const { p, dr0 } = nuova('paladino', 'pal_baluardo'); assert(Math.abs((p.stats.dmgReduce - dr0) - 0.05) < 1e-9 && p.stats.regen === undefined, 'Baluardo: -5% e nessuna cura'); }
+  { const { p } = nuova('barbaro', 'bar_peso'); assert(Math.abs(p.boon.armaPesante - 0.05) < 1e-9 && !p.perk.arcoPiu, 'Peso del Colpo: +5% con l arma pesante, niente altro'); }
 
   // --- TOSSINA: una quota del colpo, non un numero fisso ---
-  { const { r, p } = nuova('mago', 'poison');
+  { const { r, p } = nuova('mago', 'ass_tossina');
     r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
     const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(3, 1) }); m.hp = m.maxHp = 5000;
     r.damageMonster(m, 200, p.x, p.y, 0, p, { poison: Math.round(200 * 0.05) });
@@ -3659,24 +3676,21 @@ function testV1792() {
     const hp0 = m.hp; for (let i = 0; i < C.TICK_RATE * 2; i++) r.update(1 / C.TICK_RATE);
     assert(m.hp < hp0, 'e fa danno nel tempo (' + (hp0 - m.hp) + ' in due secondi)'); }
 
-  // --- GUERRIERO: Colpo Ampio, piu' nemici piu' male, col tetto ---
-  { const { r, p } = nuova('paladino', 'ampio');
-    assert(p.boon.ampio === 0.05, 'Colpo Ampio applicato');
-    r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
-    const solo = r.spawnMonster('skeleton', p.x + 50, p.y, { scaling: Waves.scaling(2, 1) }); solo.hp = solo.maxHp = 9000;
-    p.aim = 0; p.fireCd = 0; solo.x = p.x + 50; solo.y = p.y;
-    let hp0 = solo.hp; r._meleeSwing(p, r.effWeapon(p), 100, false); const danno1 = hp0 - solo.hp;
-    // gli altri tre vanno messi PIU LONTANI, se no uno di loro diventa il bersaglio piu vicino e quello
-    // che misuriamo passa a prendere lo splash: misureremmo l ordine dei bersagli, non il bonus.
-    for (let i = 0; i < 3; i++) { const m = r.spawnMonster('skeleton', p.x + 72 + i * 6, p.y + 10 + i * 8, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000; }
-    // il primo fendente lo ha respinto: va rimesso davanti, se no il piu vicino diventa un altro
-    solo.x = p.x + 50; solo.y = p.y;
-    hp0 = solo.hp; r._meleeSwing(p, r.effWeapon(p), 100, false); const danno4 = hp0 - solo.hp;
-    assert(danno4 > danno1, 'colpendone quattro il fendente fa piu male che colpendone uno (' + danno1 + ' -> ' + danno4 + ')');
-    assert(danno4 <= Math.round(danno1 * 1.15) + 1, 'ma non oltre il +15% (' + danno4 + ')'); }
+  // --- BARBARO: il Peso del Colpo vale SOLO con l'arma pesante in mano ---
+  // v2.20.0 — ha preso il posto del Colpo Ampio, che era del guerriero generico e quindi di tre classi.
+  // La prova e' la stessa idea: la carta deve fare quello che c'e' scritto, e solo quando c'e' scritto.
+  { const Gear2 = require('../shared/gear.js');
+    const { r, p } = nuova('barbaro', 'bar_peso');
+    const pesante = Gear2.itemsOfRank('barbaro', 'weapon', 3).find(i => i.carattere === 'pesante');
+    const leggera = Gear2.itemsOfRank('barbaro', 'weapon', 3).find(i => i.carattere === 'leggera');
+    p.owned[leggera.id] = 1; p.gear.manoDx = leggera.id; p.gear.manoSx = null; r._recomputeGear(p); r._recomputeBoons(p);
+    const conLeggera = r.effDamage(p) / r.effWeapon(p).dmg;
+    p.owned[pesante.id] = 1; p.gear.manoDx = pesante.id; p.gear.manoSx = null; r._recomputeGear(p); r._recomputeBoons(p);
+    const conPesante = r.effDamage(p) / r.effWeapon(p).dmg;
+    assert(conPesante > conLeggera * 1.04, 'Peso del Colpo: con la pesante in mano il moltiplicatore sale (' + conLeggera.toFixed(3) + ' -> ' + conPesante.toFixed(3) + ')'); }
 
   // --- MAGO: Concentrazione si carica da fermo e si consuma ---
-  { const { r, p } = nuova('mago', 'concentra');
+  { const { r, p } = nuova('mago', 'arc_concentra');
     r.phase = C.PHASE_COMBAT; p.input.mx = 0; p.input.my = 0;
     for (let i = 0; i < C.TICK_RATE; i++) r.update(1 / C.TICK_RATE);
     assert(p.fermoT >= 0.5, 'stando fermo la concentrazione si carica (' + p.fermoT.toFixed(2) + 's)');
@@ -3691,30 +3705,31 @@ function testV1792() {
     assert(carico && scarico && carico.dmg > scarico.dmg, 'il colpo piazzato fa piu male del successivo (' + carico.dmg + ' > ' + scarico.dmg + ')'); }
 
   // --- LADRO: Colpo alle Spalle, Lama Sporca, Passo d Ombra, Punto Vitale, Uscita di Scena ---
-  { const { r, p } = nuova('arciere', 'spalle');
-    assert(p.perk.spalle === 0.20, 'Colpo alle Spalle: +20%');
+  { const { r, p } = nuova('arciere', 'ass_spalle');
+    assert(Math.abs(p.perk.spalle - 0.10) < 1e-9, 'Colpo alle Spalle: +10% (dimezzato nella v2.20.0)');
     r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
     const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000;
     m.facing = 0; let hp0 = m.hp; r.damageMonster(m, 100, m.x + 50, m.y, 0, p, {}); const davanti = hp0 - m.hp;
     hp0 = m.hp; r.damageMonster(m, 100, m.x - 50, m.y, 0, p, {}); const dietro = hp0 - m.hp;
     assert(dietro > davanti, 'da dietro fa piu male (' + dietro + ' contro ' + davanti + ')'); }
-  { const { r, p } = nuova('arciere', 'lamasporca');
+  { const { r, p } = nuova('arciere', 'mae_sporca');
     r.phase = C.PHASE_COMBAT; r.monsters.length = 0;
     const m = r.spawnMonster('skeleton', p.x + 60, p.y, { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 9000;
     r.damageMonster(m, 100, p.x, p.y, 0, p, { crit: false });
     assert(!m.bleedT, 'un colpo normale non fa sanguinare');
     r.damageMonster(m, 100, p.x, p.y, 0, p, { crit: true });
     assert(m.bleedT > 0 && m.bleed > 0, 'un critico apre l emorragia (' + m.bleed + '/mezzo secondo)'); }
-  { const { r, p } = nuova('arciere', 'ombra');
+  { const { r, p } = nuova('arciere', 'ass_ombra');
     r.phase = C.PHASE_COMBAT; p.cdDash = 0; r.useDash(p);
     assert(p.ombraT > 0, 'lo scatto apre la finestra del critico'); }
-  { const { r, p } = nuova('arciere', 'puntovitale');
-    assert(p.boon.critOgni === 5, 'Punto Vitale: un critico ogni cinque colpi');
+  { const { r, p } = nuova('arciere', 'arc_vitale');
+    assert(p.boon.critOgni === 10, 'Punto Vitale: un critico ogni dieci colpi (dimezzato nella v2.20.0)');
     r.phase = C.PHASE_COMBAT; r.bullets.length = 0;
     let critici = 0;
-    for (let k = 0; k < 10; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); const b = r.bullets.find(x => !x.hostile); if (b && b.crit) critici++; }
-    assert(critici >= 2, 'su dieci colpi almeno due sono critici garantiti (' + critici + ')'); }
-  { const { r, p } = nuova('arciere', 'scomparsa');
+    p.stats.critChance = 0;                      // si misurano i critici GARANTITI, non la fortuna
+    for (let k = 0; k < 20; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); const b = r.bullets.find(x => !x.hostile); if (b && b.crit) critici++; }
+    assert(critici === 2, 'su venti colpi sono due i critici garantiti (' + critici + ')'); }
+  { const { r, p } = nuova('arciere', 'ass_scena');
     r.phase = C.PHASE_COMBAT; p.hp = Math.round(r.effMaxHp(p) * 0.35); p.buffs = {};
     r.damagePlayer(p, Math.round(r.effMaxHp(p) * 0.10), p.x + 30, p.y, 0);
     assert(p.buffs.hidden > 0, 'sotto il 30% dei PV si sparisce dalla vista');
@@ -6692,6 +6707,279 @@ function testScarica() {
   ok('la scarica ha il colore della classe, le bacchette hanno solo danno e cadenza, la palla di fuoco vola e scoppia');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================================
+// v2.20.0 — LE PASSIVE NUOVE FANNO QUELLO CHE C'E' SCRITTO SULLA CARTA
+// ============================================================================================
+// Il mazzo e' stato rifatto da zero: 84 carte, e una quarantina non sono un moltiplicatore ma un
+// AGGANCIO nuovo dentro il motore — la parata, la schivata, il contrattacco, il danno dirottato fra
+// alleati, il giudizio a percentuale di PV, lo stordimento dello scatto, il debito del warlock.
+// Sono tutti sul percorso del DANNO, della MORTE e della DIFESA, cioe' le tre strade che attraversano
+// tutte e sette le classi: e' il cambiamento con il rischio di regressione piu' alto da quando le
+// classi sono diventate sette, e senza questo test sarebbero ottantaquattro righe di testo.
+// Qui si misura il FATTO, non il campo: si spara, si incassa, si uccide, e si guarda cosa cambia.
+function testPassive220() {
+  console.log('\n[TEST 78] v2.20.0 — le passive nuove: si misura cosa succede, non cosa c e scritto');
+  const conn = () => ({ send() {} });
+  // una stanza pulita con la carta addosso: niente ondata, niente mostri di passaggio
+  const con = (hero, ...ids) => {
+    const r = new Room('p220_' + hero + ids.join('_') + Math.random());
+    const p = r.addPlayer('a', conn(), 'A', hero); r.startGame();
+    r.phase = C.PHASE_COMBAT; r.monsters.length = 0; r.pending = 0; r.waveList = []; r.bullets.length = 0;
+    for (const id of ids) { p.boonsOwned[id] = 1; p.cardOn[id] = 1; }
+    r._recomputeBoons(p); p.hp = r.effMaxHp(p);
+    return { r, p };
+  };
+  const mob = (r, p, dx, dy) => { const m = r.spawnMonster('skeleton', p.x + dx, p.y + (dy || 0), { scaling: Waves.scaling(2, 1) }); m.hp = m.maxHp = 90000; return m; };
+
+  // --- 1) ZOCCOLO DURO: i colpi piccoli rimbalzano, i grossi no ---
+  { const { r, p } = con('barbaro', 'bar_zoccolo');
+    const max = r.effMaxHp(p);
+    // si confrontano le due QUOTE (quanto arriva su quanto e' partito), non i valori assoluti: il
+    // barbaro nasce con una riduzione sua dal profilo di classe, e un numero secco misurerebbe quella.
+    const inviato1 = Math.round(max * 0.05), inviato2 = Math.round(max * 0.40);
+    p.hp = max; r.damagePlayer(p, inviato1, p.x + 40, p.y, 0); const piccolo = (max - p.hp) / inviato1;
+    p.hp = max; p.buffs = {}; r.damagePlayer(p, inviato2, p.x + 40, p.y, 0); const grosso = (max - p.hp) / inviato2;
+    assert(piccolo < grosso * 0.85, 'Zoccolo Duro: del colpo piccolo ne arriva una quota minore (' + piccolo.toFixed(2) + ' contro ' + grosso.toFixed(2) + ')'); }
+
+  // --- 2) FEDE SALDA: vale solo nella meta' bassa della vita ---
+  { const { r, p } = con('paladino', 'pal_fede');
+    const max = r.effMaxHp(p);
+    p.hp = max; r.damagePlayer(p, 100, p.x + 40, p.y, 0); const sano = max - p.hp;
+    p.hp = Math.round(max * 0.3); p.buffs = {}; const h0 = p.hp; r.damagePlayer(p, 100, p.x + 40, p.y, 0); const ferito = h0 - p.hp;
+    assert(ferito < sano, 'Fede Salda: ferito incassa meno (' + ferito + ' < ' + sano + ')'); }
+
+  // --- 3) CUOIO E CICATRICI: piu' nemici attorno, meno danno ---
+  { const { r, p } = con('barbaro', 'bar_cicatrici');
+    p.hp = 9000; const h0 = p.hp; r.damagePlayer(p, 100, p.x + 300, p.y, 0); const solo = h0 - p.hp;
+    for (let i = 0; i < 4; i++) mob(r, p, 40 + i * 6, 10);
+    p.hp = 9000; p.buffs = {}; const h1 = p.hp; r.damagePlayer(p, 100, p.x + 300, p.y, 0); const folla = h1 - p.hp;
+    assert(folla < solo, 'Cuoio e Cicatrici: in mezzo alla folla si incassa meno (' + folla + ' < ' + solo + ')'); }
+
+  // --- 4) SCUDO CONDIVISO: il paladino incassa al posto del compagno ---
+  { const r = new Room('p220_cond'); const pal = r.addPlayer('a', conn(), 'A', 'paladino');
+    const amico = r.addPlayer('b', conn(), 'B', 'mago'); r.startGame(); r.phase = C.PHASE_COMBAT;
+    pal.boonsOwned.pal_condiviso = 1; pal.cardOn.pal_condiviso = 1; r._recomputeBoons(pal);
+    pal.x = amico.x; pal.y = amico.y; pal.hp = 500; amico.hp = 500; amico.buffs = {};
+    r.damagePlayer(amico, 100, amico.x + 40, amico.y, 0);
+    assert(pal.hp < 500, 'Scudo Condiviso: una quota la paga il paladino (' + (500 - pal.hp) + ')');
+    assert(amico.hp > 400, 'e il compagno ne prende di meno'); }
+
+  // --- 5) EGIDA: una volta per ondata, e il colpo che farebbe cadere non arriva ---
+  { const r = new Room('p220_egida'); const pal = r.addPlayer('a', conn(), 'A', 'paladino');
+    const amico = r.addPlayer('b', conn(), 'B', 'mago'); r.startGame(); r.phase = C.PHASE_COMBAT;
+    pal.boonsOwned.pal_egida = 1; pal.cardOn.pal_egida = 1; r._recomputeBoons(pal);
+    pal.x = amico.x; pal.y = amico.y; amico.hp = 12; amico.buffs = {};
+    r.damagePlayer(amico, 500, amico.x + 40, amico.y, 0);
+    assert(amico.hp === 12 && !amico.down, 'Egida: il colpo che lo avrebbe steso non arriva');
+    amico.buffs = {};
+    r.damagePlayer(amico, 500, amico.x + 40, amico.y, 0);
+    assert(amico.down || amico.hp < 12, 'e la seconda volta nella stessa ondata no'); }
+
+  // --- 6) LEGAME OSSEO: una quota la prende lo zombie ---
+  { const { r, p } = con('warlock', 'war_legame');
+    p.abil[0] = 'ab_zombie'; p.cdAb[0] = 0; r.useAbil(p, 1);
+    const z = [...r.players.values()].find(q => q.zombi);
+    assert(z, 'lo zombie e in campo');
+    const z0 = z.hp; p.hp = 500; p.buffs = {};
+    r.damagePlayer(p, 100, p.x + 40, p.y, 0);
+    assert(z.hp < z0, 'Legame Osseo: lo zombie ha pagato una quota (' + (z0 - z.hp) + ')');
+    assert(p.hp > 400, 'e il warlock ne ha presi di meno'); }
+
+  // --- 7) GIUDIZIO: il sesto colpo porta via una quota dei PV MASSIMI ---
+  { const { r, p } = con('paladino', 'pal_giudizio');
+    const m = mob(r, p, 60);
+    let visto = 0;
+    for (let k = 0; k < 6; k++) { const h0 = m.hp; r.damageMonster(m, 10, p.x, p.y, 0, p, {}); if (h0 - m.hp > 1000) visto++; }
+    assert(visto === 1, 'Giudizio: uno solo dei sei colpi porta via la quota (' + visto + ')'); }
+
+  // --- 8) AGGUATO ed ESECUZIONE: due condizioni opposte, stesso bersaglio ---
+  { const { r, p } = con('assassino', 'ass_agguato');
+    const m = mob(r, p, 60); let h0 = m.hp; r.damageMonster(m, 1000, p.x, p.y, 0, p, {}); const intero = h0 - m.hp;
+    h0 = m.hp; r.damageMonster(m, 1000, p.x, p.y, 0, p, {}); const toccato = h0 - m.hp;
+    assert(intero > toccato, 'Agguato: il primo colpo su chi e a vita piena pesa di piu (' + intero + ' > ' + toccato + ')'); }
+  { const { r, p } = con('assassino', 'ass_esecuzione');
+    const m = mob(r, p, 60); let h0 = m.hp; r.damageMonster(m, 1000, p.x, p.y, 0, p, {}); const pieno = h0 - m.hp;
+    m.hp = Math.round(m.maxHp * 0.2); h0 = m.hp; r.damageMonster(m, 1000, p.x, p.y, 0, p, {}); const morente = h0 - m.hp;
+    assert(morente > pieno, 'Esecuzione: su chi sta per cadere pesa di piu (' + morente + ' > ' + pieno + ')'); }
+
+  // --- 9) MANO FREDDA: il critico si avvicina a ogni colpo mancato e si azzera quando arriva ---
+  { const { r, p } = con('assassino', 'ass_fredda');
+    p.stats.critChance = 0; p.freddaAcc = 0;
+    for (let k = 0; k < 3; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); }
+    assert(p.freddaAcc > 0, 'Mano Fredda: i colpi non critici caricano il conto (' + p.freddaAcc.toFixed(3) + ')');
+    p.stats.critChance = 1; p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p);
+    assert(p.freddaAcc === 0, 'e il critico lo azzera'); }
+
+  // --- 10) RAFFICA: ogni ottavo colpo e' un ventaglio ---
+  { const { r, p } = con('arciere', 'arc_raffica');
+    let ventagli = 0;
+    for (let k = 0; k < 8; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); if (r.bullets.filter(b => !b.hostile).length >= 3) ventagli++; }
+    assert(ventagli === 1, 'Raffica: uno solo degli otto colpi e un ventaglio (' + ventagli + ')'); }
+
+  // --- 11) FRECCIA INCENDIARIA: la quarta lascia la fiamma dove arriva ---
+  { const { r, p } = con('arciere', 'arc_incendiaria');
+    const m = mob(r, p, 120); r.nebbie.length = 0;
+    for (let k = 0; k < 4; k++) { p.fireCd = 0; r.firePlayerWeapon(p); }
+    for (let i = 0; i < 60 && !r.nebbie.length; i++) r.updateBullets(1 / 60);
+    assert(r.nebbie.length > 0, 'Freccia Incendiaria: la fiamma resta a terra'); }
+
+  // --- 12) TERREMOTO: lo scatto stordisce chi si trova in mezzo ---
+  { const { r, p } = con('barbaro', 'bar_terremoto');
+    const m = mob(r, p, 10); m.stun = 0;
+    p.cdDash = 0; r.useDash(p);
+    for (let i = 0; i < 6; i++) r.update(1 / 60);
+    assert(m.stun > 0, 'Terremoto: il nemico attraversato resta intontito'); }
+
+  // --- 13) SPACCA IN DUE: il colpo che uccide prosegue su chi sta dietro ---
+  { const { r, p } = con('barbaro', 'bar_spacca');
+    p.aim = 0;
+    const primo = mob(r, p, 60); primo.hp = primo.maxHp = 10;
+    const dietro = mob(r, p, 120); const h0 = dietro.hp;
+    r.damageMonster(primo, 999, p.x, p.y, 0, p, {});
+    assert(primo.dead && dietro.hp < h0, 'Spacca in Due: chi sta dietro al morto incassa (' + (h0 - dietro.hp) + ')'); }
+
+  // --- 14) COLPO DOPPIO: il quarto fendente morde due volte ---
+  { const { r, p } = con('maestro', 'mae_doppio');
+    const m = mob(r, p, 40); p.aim = 0; m.x = p.x + 40; m.y = p.y;
+    const w = r.effWeapon(p); const danni = [];
+    for (let k = 0; k < 4; k++) { const h0 = m.hp; r._meleeSwing(p, w, 100, false); danni.push(h0 - m.hp); }
+    assert(danni[3] > danni[0], 'Colpo Doppio: il quarto fendente fa piu male (' + danni[3] + ' > ' + danni[0] + ')'); }
+
+  // --- 15) RITMO: i colpi a segno alzano la cadenza, il tempo la spegne ---
+  { const { r, p } = con('maestro', 'mae_ritmo');
+    const m = mob(r, p, 60); const t0 = r.effFireDelay(p);
+    for (let k = 0; k < 5; k++) r.damageMonster(m, 10, p.x, p.y, 0, p, {});
+    assert(p.ritmoStack === 5 && r.effFireDelay(p) < t0, 'Ritmo: cinque colpi a segno accorciano l attesa');
+    for (let i = 0; i < 180; i++) r.update(1 / 60);
+    assert(p.ritmoStack === 0, 'e due secondi senza colpire la azzerano'); }
+
+  // --- 16) DEBITO DI SANGUE: il conto si paga alla morte del maledetto ---
+  { const { r, p } = con('warlock', 'war_debito', 'war_marchio');
+    const vittima = mob(r, p, 60); const testimone = mob(r, p, 60, 60);
+    vittima.maled = 4; vittima.maledBy = p.id; vittima.maledMult = 1.12;
+    for (let k = 0; k < 6; k++) r.damageMonster(vittima, 500, p.x, p.y, 0, p, {});
+    assert(vittima.debito > 0, 'il conto si accumula sul maledetto (' + Math.round(vittima.debito) + ')');
+    const t0 = testimone.hp;
+    r.damageMonster(vittima, 99999, p.x, p.y, 0, p, {});
+    assert(vittima.dead && testimone.hp < t0, 'Debito di Sangue: alla sua morte scoppia (' + (t0 - testimone.hp) + ')'); }
+
+  // --- 17) MALEDIZIONE PERPETUA: non scade da sola ---
+  { const { r, p } = con('warlock', 'war_marchio', 'war_perpetua');
+    const m = mob(r, p, 60); p.aim = 0; m.x = p.x + 60; m.y = p.y;
+    for (let k = 0; k < 6; k++) { p.fireCd = 0; r.firePlayerWeapon(p); }
+    assert(m.maled > 100, 'Maledizione Perpetua: il segno non ha una scadenza vera (' + m.maled + ')'); }
+
+  // --- 18) ZOMBIE TENACE: piu' PV, ma a fine ondata si sgretola lo stesso ---
+  { const a = con('warlock'); const b = con('warlock', 'war_zombie');
+    for (const { r, p } of [a, b]) { p.abil[0] = 'ab_zombie'; p.cdAb[0] = 0; r.useAbil(p, 1); }
+    const z1 = [...a.r.players.values()].find(q => q.zombi), z2 = [...b.r.players.values()].find(q => q.zombi);
+    assert(z2.hp > z1.hp * 1.2, 'Zombie Tenace: regge di piu (' + z1.hp + ' -> ' + z2.hp + ')');
+    b.r._sgretolaZombie();
+    assert(![...b.r.players.values()].some(q => q.zombi), 'e a fine ondata si sgretola come sempre'); }
+
+  // --- 19) DOPPIA INCANTAZIONE: la prima Palla non manda in ricarica, la seconda si' ---
+  { const { r, p } = con('mago', 'mag_doppia');
+    p.abil[0] = 'ab_palla'; p.cdAb[0] = 0;
+    r.useAbil(p, 1); assert(p.cdAb[0] === 0, 'Doppia Incantazione: la prima carica e gratis');
+    r.useAbil(p, 1); assert(p.cdAb[0] > 0, 'e la seconda manda in ricarica'); }
+
+  // --- 20) ELEMENTALISTA PURO: la palla scoppia piu' larga ---
+  { const a = con('mago'); const b = con('mago', 'mag_puro');
+    for (const { r, p } of [a, b]) { p.abil[0] = 'ab_palla'; p.cdAb[0] = 0; p.aim = 0; r.useAbil(p, 1); }
+    const p1 = a.r.bullets.find(x => x.palla), p2 = b.r.bullets.find(x => x.palla);
+    assert(p2.boomR > p1.boomR, 'Elementalista Puro: il raggio cresce (' + p1.boomR + ' -> ' + p2.boomR + ')'); }
+
+  // --- 21) SILENZIOSO: i nemici lo notano da piu' vicino ---
+  { const { p } = con('assassino', 'ass_silenzioso');
+    assert(p.boon.silenzioso > 0, 'Silenzioso: il campo c e');
+    const AI = require('../shared/ai.js');
+    assert(typeof AI.update === 'function', 'e l IA lo legge da `p.boon.silenzioso` dentro perceive'); }
+
+  // --- 22) FARO: i nemici vicini prendono di mira il paladino ---
+  { const { r, p } = con('paladino', 'pal_faro');
+    const m = mob(r, p, 80);
+    for (let i = 0; i < 4; i++) r.update(1 / 60);
+    assert(m.taunt > 0 && m.tauntBy === p.id, 'Faro: il nemico vicino guarda lui'); }
+
+  // --- 23) VELENO CORROSIVO: il nemico avvelenato morde meno ---
+  { const { r, p } = con('assassino', 'ass_tossina', 'ass_corrosivo');
+    const m = mob(r, p, 60); const d0 = m.dmg;
+    r.damageMonster(m, 100, p.x, p.y, 0, p, { poison: 10 });
+    r.update(1 / 60);
+    assert(m.dmg < d0, 'Veleno Corrosivo: il morso del nemico cala (' + d0 + ' -> ' + m.dmg + ')'); }
+
+  // --- 24) MAESTRIA: la seconda arma rende quasi il doppio ---
+  { const Gear2 = require('../shared/gear.js');
+    const due = (extra) => {
+      const { r, p } = extra ? con('maestro', 'mae_maestria') : con('maestro');
+      const a1 = Gear2.itemsOfRank('maestro', 'weapon', 3).find(i => i.carattere === 'equilibrata');
+      const a2 = Gear2.itemsOfRank('maestro', 'weapon', 2).find(i => i.carattere === 'equilibrata');
+      p.owned[a1.id] = 1; p.owned[a2.id] = 1; p.gear.manoDx = a1.id; p.gear.manoSx = a2.id;
+      r._recomputeGear(p); r._recomputeBoons(p); return p._bonusSeconda;
+    };
+    const senza = due(false), con2 = due(true);
+    assert(con2 > senza * 1.5, 'Maestria: la quota della seconda mano quasi raddoppia (' + senza.toFixed(3) + ' -> ' + con2.toFixed(3) + ')'); }
+
+  // --- 25) TUTTE E DODICI ADDOSSO, PER TUTTE E SETTE LE CLASSI, IN PARTITA VERA ---
+  // E' il controllo di non-regressione di questa versione, e vale piu' delle ventiquattro prove qui
+  // sopra messe insieme: quelle misurano una carta alla volta in una stanza ferma, questa fa GIRARE il
+  // gioco con tutte le carte accese insieme — il contrattacco dentro la rappresaglia, il debito dentro
+  // la combustione, il mulinello dentro il fendente doppio. Se un aggancio nuovo tira un'eccezione o
+  // lascia un NaN in giro, e' qui che si vede, e si vede per tutte e sette le classi.
+  {
+    const dt2 = 1 / C.TICK_RATE;
+    for (const h of Heroes.ORDER) {
+      const r = new Room('p220_tutte_' + h);
+      const p = r.addPlayer('a', conn(), 'A', h); r.startGame();
+      for (const b of Loot.boonsPerClasse(h)) { p.boonsOwned[b.id] = 1; p.cardOn[b.id] = 1; }
+      r._recomputeBoons(p); p.hp = r.effMaxHp(p);
+      // e un'abilita' attiva in mano, perche' meta' delle carte nuove ci parlano insieme
+      p.abil[0] = (Ab.firma(h) || {}).id || null; p.cdAb[0] = 0;
+      let errore = null, incassati = 0, inflitti = 0;
+      try {
+        for (let i = 0; i < C.TICK_RATE * 20; i++) {
+          // NON si lascia fare al bot: il bot scappa, e un personaggio che scappa non prova NIENTE dei
+          // ganci nuovi — ne' il contrattacco, ne' la parata, ne' lo scudo condiviso. Qui il nemico glielo
+          // si mette addosso, e si spara: e' l'unico modo perche' le due direzioni del danno passino
+          // davvero di qui. (Verificato rompendo un gancio a mano: senza questo, il test non se ne accorge.)
+          if (i % 30 === 0 && r.monsters.filter(m => !m.dead).length < 6) {
+            const mm = r.spawnMonster('skeleton', p.x + MU.rand(-40, 40), p.y + MU.rand(-40, 40), { scaling: Waves.scaling(6, 1) });
+            if (mm) mm.awake = true;
+          }
+          // «incassato» = PV o scudi: il mago ha la Barriera di Mana e lo Scudo Arcano, e con quelli
+          // addosso i PV non calano mai — misurarli soli direbbe che il mago non ha mai preso un colpo.
+          const tot = q => q.hp + (q.manaShield || 0) + ((q.scudoAb && q.scudoAb.hp) || 0);
+          const hp0 = tot(p), vivi0 = r.monsters.filter(m => !m.dead).reduce((a2, m) => a2 + m.hp, 0);
+          // e ogni mezzo secondo un colpo IN FACCIA, dalla posizione di un nemico vicino: il mago
+          // ammazza tutto prima che lo tocchino, e senza questo le sue carte di tenuta non le prova
+          // nessuno. Il colpo arriva da dove arriverebbe davvero, se no la mischia non si riconosce.
+          if (i % 30 === 15) {
+            const vicino = r.monsters.find(m => !m.dead);
+            if (vicino) { p.buffs.iframe = 0; r.damagePlayer(p, 12, vicino.x, vicino.y, 0); }
+          }
+          const inp = bot(r, p); inp.shoot = true; inp.mx = 0; inp.my = 0;
+          if (i % 90 === 0) { p.cdAb[0] = 0; inp.ab = 1; }
+          if (i % 120 === 60) inp.dash = true;
+          r.setInput('a', inp);
+          r.update(dt2);
+          if (tot(p) < hp0) incassati++;
+          const vivi1 = r.monsters.filter(m => !m.dead).reduce((a2, m) => a2 + m.hp, 0);
+          if (vivi1 < vivi0) inflitti++;
+          if (p.down || p.dead) { p.down = false; p.dead = false; p.hp = r.effMaxHp(p); }
+          if (hasNaN(r)) break;
+        }
+      } catch (e) { errore = e; }
+      assert(incassati > 0 && inflitti > 0, h + ': il finto combattimento e' + ' davvero un combattimento (colpi presi ' + incassati + ', dati ' + inflitti + ')');
+      assert(!errore, h + ': venti secondi con tutte e dodici le carte addosso, senza eccezioni' + (errore ? ' (' + errore.message + ')' : ''));
+      assert(hasNaN(r) === null, h + ': e senza NaN in giro (' + hasNaN(r) + ')');
+      assert(r.effMaxHp(p) > 0 && r.effDamage(p) > 0, h + ': e il personaggio regge numeri sensati');
+    }
+  }
+
+  ok('le passive nuove fanno quello che c e scritto sulla carta');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

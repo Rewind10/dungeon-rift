@@ -669,7 +669,12 @@
           const el = document.createElement('div'); el.className = 'bc'; el.style.borderColor = r.color;
           // v2.16.4 — «TUA CLASSE» e non «DELLA TUA CLASSE»: sulla riga della carta la versione lunga
           // andava a capo, e una riga di due parole spezzata in due righe si legge peggio di una corta.
-          const chi = b.hero && b.hero !== '*' ? 'TUA CLASSE' : 'PER TUTTI';
+          // v2.20.0 — E ADESSO NON SI SCRIVE PIU' NEMMENO QUELLO. Le carte sono tutte e tre della tua
+          // classe (il mazzo neutro non esiste piu'), quindi «TUA CLASSE» comparirebbe tre volte su tre
+          // senza distinguere niente. Al suo posto c'e' la VIA, che e' l'unica cosa che le distingue:
+          // il colpo, la tenuta, il mestiere — sempre in quest'ordine, a ogni livello e per ogni classe.
+          const VIA = { colpo: '\u2694\ufe0f IL COLPO', tenuta: '\uD83D\uDEE1\ufe0f LA TENUTA', mestiere: '\uD83C\uDFAD IL MESTIERE' };
+          const chi = VIA[b.via] || (b.hero && b.hero !== '*' ? 'TUA CLASSE' : 'PER TUTTI');
           // v2.13.3 — LA CARTA E' UNA RIGA. Quello che c'era scritto in piccolo sotto — la rarita' e il
           // "per tutti / della tua classe" — e' finito nel TITOLO: la rarita' si vede gia' dal colore del
           // bordo, e la classe conta una volta su dieci. Cio' che resta a schermo e' cio' che serve per

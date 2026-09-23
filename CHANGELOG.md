@@ -2,6 +2,73 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.20.0] — 2026-09-23 · "Le passive rifatte"
+
+Il mazzo delle abilita' passive e' rifatto da zero. Paolo: *«Secondo me vanno ripensate: qualcuna puo'
+anche andare bene ma la maggior parte non e' indicata per la classe. Riduci da 4 a 3 opzioni per i 4
+step, ma che siano davvero indicate alle classi in gioco»* — e poi: *«togli qualsiasi abilita' che possa
+curare i personaggi, di qualsiasi tipo; dimezza gli effetti di bonus a danni, punti vita o altro; togli
+magie che portano in vita»*.
+
+**Da 38 carte a 84, e nessuna condivisa.** Il mazzo vecchio era quello dei tre eroi allargato a sette:
+ai livelli 3 e 5 barbaro, paladino e maestro d'armi vedevano le STESSE due carte, e mago e warlock pure;
+le classi si separavano solo dal 9 in su. Adesso ogni classe ha **dodici carte sue**, e se una carta va
+bene a tre classi vuol dire che non e' la carta di nessuna.
+
+**Tre opzioni invece di quattro, e sono le stesse tre vie a ogni livello:** ⚔️ **il colpo** (potenzia il
+modo in cui quella classe fa male), 🛡️ **la tenuta** (copre la sua debolezza con lo strumento che le e'
+proprio), 🎭 **il mestiere** (la cosa che solo quella classe fa). Il mazzo NEUTRO e' sciolto: le carte
+neutre che valevano la pena sono state date alla classe a cui appartengono davvero — il Colpo di Grazia
+all'assassino, il Campo di Lentezza all'arciere e al warlock, la Tossina all'assassino, il Baluardo al
+paladino — e le altre sono sparite. Sulla carta, al posto di «TUA CLASSE» (che adesso varrebbe per tutte
+e tre), c'e' scritta la via.
+
+**Niente cure e niente resurrezioni.** Ultima Occasione (risorgi a meta' vita) e' tolta; sono state
+tolte in fase di progetto anche le quattro carte che curavano. Restano ammessi gli scudi e gli
+assorbimenti, che non curano e non riportano in vita. Non e' una promessa: un test applica **tutte e 84
+le carte** a un personaggio ferito, una per una, e controlla che i PV non salgano e che non compaia
+nessuna carica di resurrezione.
+
+**Tutto dimezzato.** Non solo i numeri sulle carte: anche le magnitudini che stavano scritte a mano
+dentro il motore e che nessuna carta poteva toccare — la cadenza della Furia Crescente (+8% → +4% a
+uccisione), il passo del Passo di Danza, il Tributo di Sangue, la soglia del Colpo di Grazia (14% → 10%),
+il rimbalzo della Catena (25% → 12%), la Frattura (50% → 25%), il Tocco Gelido (50% → 25%) e il Campo di
+Lentezza (25% → 12%). Adesso quei valori li porta la CARTA: ritoccarli e' una riga in `loot.js`, non una
+caccia dentro `Room.js`.
+
+**Le carte nuove che non sono un moltiplicatore.** Una quarantina hanno richiesto un aggancio nuovo nel
+motore: la parata e la schivata (il colpo non arriva), il contrattacco (chi ti colpisce in mischia se lo
+ritrova addosso), il colpo doppio del maestro, il Ritmo (i colpi a segno di fila alzano la cadenza, un
+colpo a vuoto azzera), il Faro (i nemici vicini prendono di mira il paladino), lo Scudo Condiviso (una
+quota dei danni dei compagni la incassa lui davvero), il Giudizio (ogni sesto colpo porta via una quota
+dei PV massimi, molto meno sui boss), il Terremoto (lo scatto sbalza e stordisce), Spacca in Due (il
+colpo che uccide prosegue su chi sta dietro), il Mulinello, il Silenzioso (i nemici ti notano da piu'
+vicino — sta dentro `perceive`, perche' e' una proprieta' di chi viene guardato, non di chi guarda), il
+Veleno Corrosivo (il nemico avvelenato morde meno), il Legame Osseo e la Carne Debitrice del warlock, e
+il **Debito di Sangue**: ogni colpo su un maledetto va in conto, e il conto scoppia quando quello muore.
+
+**Due scelte fatte in corso d'opera, e vanno sapute.**
+1. **Non Cado e' stata sostituita da ZOCCOLO DURO** (i colpi che ti tolgono meno del 10% dei PV fanno il
+   25% in meno). Motivo: «resti a 1 PV invece di cadere» e' gia' **Ultimo Respiro**, l'abilita' attiva
+   del barbaro al livello 13. Due carte che fanno la stessa cosa non sono una scelta.
+2. **Le sinergie sono state ripuntate.** Le sei di prima chiedevano coppie miste (Tossina + Colpi
+   Esplosivi, Perforazione + Lama Sporca) che nel mazzo nuovo **nessuno puo' piu' mettere insieme**:
+   sarebbero rimaste scritte e morte. Adesso sono sette, una per classe, con effetti volutamente piccoli
+   — dopo il dimezzamento, una sinergia grossa rimetterebbe dalla finestra quello che e' uscito dalla
+   porta.
+
+**Test: 4746 passati, 0 falliti.** Il nuovo TEST 78 misura venticinque meccaniche una per una — e poi fa
+girare venti secondi di combattimento vero, **per tutte e sette le classi, con tutte e dodici le carte
+accese insieme**, controllando che nessun aggancio tiri un'eccezione o lasci un NaN. Quest'ultima parte
+e' stata verificata rompendo di proposito tre agganci: senza di essa non se ne accorgeva nessuno.
+
+**Resta segnalato** (e la scelta e' di Paolo): quattro carte, dopo il dimezzamento, stanno sotto la
+soglia in cui un giocatore SENTE la differenza — Presenza, Pelle di Patto, Faro e Doppia Guardia, tutte
+fra il 3 e il 4%. La strada indicata, se un giorno si volesse rimediare, e' **dare meno carte** (tre
+livelli invece di quattro), non rialzare i numeri.
+
+---
+
 ### [2.19.11] — 2026-09-22 · "La scarica e la palla di fuoco"
 
 Quattro richieste di Paolo sul mago (e in parte sul warlock), fatte tutte in una versione sola.

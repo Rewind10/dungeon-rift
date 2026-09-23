@@ -31,7 +31,11 @@
   function perceive(mon, ctx, senseR) {
     const p = ctx.nearest(mon); if (!p) return { p: null, d: Infinity, sees: false };
     const d = MU.dist(mon.x, mon.y, p.x, p.y);
-    const sees = d <= (senseR || 560) && ctx.losClear(mon.x, mon.y, p.x, p.y);
+    // v2.20.0 — SILENZIOSO (assassino): il raggio con cui ti notano si accorcia. Sta qui e non su
+    // `def.sightRange` perche' e' una proprieta' di CHI VIENE GUARDATO, non di chi guarda: due
+    // giocatori nella stessa stanza devono poter essere notati a distanze diverse.
+    const r = (senseR || 560) * (1 - ((p.boon && p.boon.silenzioso) || 0));
+    const sees = d <= r && ctx.losClear(mon.x, mon.y, p.x, p.y);
     if (sees) { mon.lkx = p.x; mon.lky = p.y; mon.seeT = mon.def.memory || 3.5; }
     return { p, d, sees };
   }

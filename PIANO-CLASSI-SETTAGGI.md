@@ -276,6 +276,150 @@ Il risultato, misurato, in multipli di un'arma a una mano dello stesso grado (**
 
 ---
 
+### ✅ REALIZZATO NELLA v2.20.0 — le abilità passive rifatte (23 settembre 2026)
+
+> *«Secondo me vanno ripensate: qualcuna può anche andare bene ma la maggior parte non è indicata per
+> la classe. Togli assolutamente l'abilità che aumenta la densità dello sparo del mago e warlock.
+> Riduci da 4 a 3 opzioni per i 4 step, ma che siano davvero indicate alle classi in gioco.»*
+> *«Togli qualsiasi abilità che possa curare i personaggi, di qualsiasi tipo. Dimezza gli effetti di
+> bonus a danni, punti vita o altro. Togli magie che portano in vita.»*
+
+**Stato: NEL GIOCO dalla v2.20.0.** Test: 4746 passati, 0 falliti. La griglia qui sotto è quella che
+gira davvero; due caselle sono cambiate in corso d'opera ed è scritto più sotto perché.
+
+#### Le regole della griglia
+
+1. **Tre opzioni, non quattro**, e **tutte e tre della classe**: il mazzo NEUTRO è sciolto. Le carte
+   neutre che valevano la pena (Ultima Occasione, Colpo di Grazia, Campo di Lentezza, Tossina,
+   Baluardo) sono state date alla classe a cui appartengono davvero; le altre sono sparite.
+2. **Le tre vie sono sempre le stesse**, a ogni livello e per ogni classe, così la griglia si impara
+   una volta sola: **⚔️ il colpo** (potenzia il modo in cui quella classe fa male) · **🛡️ la tenuta**
+   (copre la sua debolezza con lo strumento che le è proprio) · **🎭 il mestiere** (la cosa che solo
+   quella classe fa — ed è qui che le sette classi smettono di somigliarsi).
+3. **Nessuna carta è condivisa fra due classi.** Se una carta va bene a tre classi non è la carta di
+   nessuna. 84 caselle, nessuna ripetuta.
+4. **Niente cure, di nessun tipo**, e **niente resurrezioni** (Ultima Occasione è tolta). Restano
+   ammessi gli scudi e gli assorbimenti, che non curano e non riportano in vita: Scudo Arcano,
+   Barriera di Mana, Non Cado.
+5. **Tutte le magnitudini dimezzate** (danni, PV, percentuali, durate). Dove l'effetto è binario
+   («perfora un nemico in più», «lo scatto diventa un salto») non c'è niente da dimezzare; dove
+   l'effetto È la frequenza (Punto Vitale, Scudo Arcano) è l'intervallo a raddoppiare.
+6. **Scarica Densa è tolta** da mago e warlock, per richiesta esplicita.
+
+I livelli restano **3 · 5 · 9 · 11** (le attive restano a 1 · 7 · 13).
+
+#### La griglia approvata
+
+**🪓 BARBARO**
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Peso del Colpo** +5% danno con arma pesante | **Pellaccia** +12 PV, −5% dai nemici in mischia | **Sangue Caldo** sotto metà vita, +6% danno |
+| **5** | **Spallata** +30% rinculo; chi sbatte contro un muro prende un altro 8% del colpo | **Cuoio e Cicatrici** −3% per nemico entro 120px (max −12%) | **Carica Continua** ogni uccisione: −0,5s alla ricarica dello scatto |
+| **9** | **Furia Crescente** +4% cadenza per uccisione, fino a +24% | **Colosso** +17% PV massimi, +4% velocità | **Terremoto** lo scatto sbalza e stordisce 0,3s |
+| **11** | **Spacca in Due** il colpo che uccide prosegue sul nemico dietro, al 50% | **Zoccolo Duro** i colpi che ti tolgono meno del 10% dei PV fanno il 25% in meno | **Deflagrazione Cadaverica** i nemici uccisi esplodono, al 50% |
+
+**🛡️ PALADINO**
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Giuramento del Martello** +5% danno con lo scudo impugnato | **Scudo Alzato** −6% in più sui colpi frontali | **Presenza** gli alleati entro 200px −3% danni |
+| **5** | **Martello del Giusto** +8% contro élite e boss | **Ira Giusta** l'8% del danno subito torna al mittente | **Faro** i nemici vicini bersagliano te, e tu prendi −4% danni |
+| **9** | **Consacrazione** i nemici entro 200px prendono +5% danni | **Baluardo** −5% a tutti i danni subiti | **Scudo Condiviso** il 10% dei danni degli alleati vicini lo prendi tu |
+| **11** | **Giudizio** ogni 6° colpo toglie l'8% dei PV massimi (boss 3%) | **Fede Salda** sotto metà vita, −10% danni subiti | **Egida** una volta per ondata, 0,8s di invulnerabilità all'alleato che sta per cadere |
+
+**⚔️ MAESTRO D'ARMI**
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Colpo Doppio** ogni 4° fendente colpisce due volte, il secondo al 25% | **Parata Istintiva** il 5% dei colpi ricevuti è parato del tutto | **Passo di Danza** +8% velocità per uccisione, fino a +15% |
+| **5** | **Ritmo** +1,5% cadenza per colpo a segno di fila (max +12%) | **Doppia Guardia** con due armi, −4% danni subiti | **Risposta** dopo una parata, il colpo dopo fa +20% |
+| **9** | **Lama Sporca** i critici sanguinano: 10% del colpo in 3s | **Contrattacco** chi ti colpisce in mischia si becca il 20% del tuo colpo | **Catena di Colpi** tre nemici diversi di fila: +10% per 3s |
+| **11** | **Punto Vitale** ogni 10° colpo è critico garantito | **Maestria** la seconda arma rende il 67% della sua quota invece del 35% | **Mulinello** ogni 6 uccisioni, un giro di lama gratuito al 50% |
+
+**🗡️ ASSASSINO**
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Agguato** +8% sul primo colpo a un nemico a vita piena | **Schivata** il 5% dei colpi ti manca del tutto | **Silenzioso** i nemici ti notano da un ottavo più vicino |
+| **5** | **Colpo alle Spalle** +10% su chi non ti guarda | **Uscita Rapida** dopo un'uccisione, −20% ricarica dello scatto | **Tossina** i colpi avvelenano: 2,5% del danno al secondo per 3s |
+| **9** | **Esecuzione** +25% contro i nemici sotto il 35% dei PV | **Passo d'Ombra** dopo lo scatto, il primo colpo entro 0,8s è critico | **Veleno Corrosivo** il tuo veleno toglie anche l'8% del danno al nemico |
+| **11** | **Colpo di Grazia** i nemici sotto il 10% muoiono sul colpo (boss esclusi) | **Uscita di Scena** sotto il 30% PV sparisci per 0,8s | **Mano Fredda** +2,5% di probabilità critica per colpo non critico, si azzera al critico |
+
+**🏹 ARCIERE**
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Tiro Lungo** fino a +5% a piena gittata | **Piede Leggero** −12% ricarica dello scatto | **Perforazione** le frecce perforano un nemico in più |
+| **5** | **Vento in Poppa** frecce +12% veloci, +8% di gittata | **Radici** fermo un secondo, −8% danni subiti finché non ti muovi | **Freccia Incendiaria** ogni 4ª freccia lascia una fiamma per 1s |
+| **9** | **Concentrazione** fermo mezzo secondo, il colpo dopo fa +10% | **Guizzo** dopo lo scatto, altri 0,2s di invulnerabilità | **Cacciatore di Teste** +12% contro élite e boss |
+| **11** | **Punto Vitale** ogni 10° colpo è critico garantito | **Campo di Lentezza** i nemici entro 200px vanno il 12% più piano | **Raffica** ogni 8° colpo partono tre frecce, le laterali al 50% |
+
+**🔮 MAGO** *(niente Scarica Densa)*
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Studio** +5% danno delle scariche | **Tocco Gelido** i colpi rallentano del 25% per 1,5s | **Mana Sottile** −6% ricarica delle abilità |
+| **5** | **Catena di Fulmini** il colpo rimbalza su 2 nemici, al 12% | **Scudo Arcano** ogni 16 secondi assorbi un colpo per intero | **Rimbalzo** le scariche rimbalzano una volta in più sui muri |
+| **9** | **Colpi Esplosivi** ogni 4° colpo esplode: 18% in 90px | **Passo del Vuoto** lo scatto diventa un salto istantaneo | **Elementalista Puro** la Palla di Fuoco ha +12% di raggio |
+| **11** | **Frattura Arcana** la scarica che uccide si sdoppia, al 25% | **Barriera di Mana** sotto il 35% PV, scudo pari al 10% dei PV (una per ondata) | **Doppia Incantazione** la Palla di Fuoco ha una seconda carica |
+
+**⛓️ WARLOCK** *(niente Scarica Densa)*
+
+| | ⚔️ colpo | 🛡️ tenuta | 🎭 mestiere |
+|---|---|---|---|
+| **3** | **Patto di Sangue** +6% danno, −4% PV massimi | **Pelle di Patto** +12 PV e −3% danni subiti | **Sussurri** −6% ricarica delle abilità |
+| **5** | **Maledizione Diffusa** i colpi su un maledetto rimbalzano sul più vicino, al 12% | **Carne Debitrice** il 12% del danno che subisci lo prende anche il maledetto più vicino | **Tributo di Sangue** +3% danno per morto vicino, fino a +18% |
+| **9** | **Marchio del Patrono** ogni 6° colpo maledice: +12% danni subiti per 4s | **Zombie Tenace** il tuo zombie ha +25% PV (e si sgretola a fine ondata come sempre) | **Legame Osseo** l'8% dei danni che subisci li prende il tuo zombie |
+| **11** | **Maledizione Perpetua** la maledizione non scade finché il bersaglio è vivo | **Campo di Lentezza** i nemici entro 200px vanno il 12% più piano | **Debito di Sangue** il 12% del danno accumulato su un maledetto scoppia quando muore (tetto: un tuo colpo) |
+
+#### Decisioni prese lungo la strada, da non rifare
+
+- **Zombie Tenace dà solo i PV**: lo zombie **si sgretola a fine ondata** come deciso nella v2.19.7.
+  La versione che lo teneva in campo fra un'ondata e l'altra è stata scartata da Paolo.
+- **Niente due zombie insieme.** *«Sei sicuro di sapere gestire 2 zombie?»* — il motore reggerebbe
+  (il tetto degli evocati è 4 e l'IA va a tutti gli alleati, non al primo), ma il limite «una volta per
+  ondata» è un marchio, non un contatore, e andrebbe cambiato il meccanismo delle abilità; e il bug
+  dello «zombie impalato» veniva esattamente da lì. Scartata: al suo posto **Debito di Sangue**.
+- **Quattro carte, dopo il dimezzamento, quasi non si sentono**: Presenza (−3%), Pelle di Patto (−3%),
+  Faro (−4%), Doppia Guardia (−4%). Segnalato a Paolo. Se un giorno si volesse rimediare, la strada
+  indicata è **dare meno carte** (tre livelli invece di quattro), non rialzare i numeri.
+
+#### Cosa è cambiato mentre la si scriveva
+
+Due caselle sole, e per due ragioni diverse. Nessuna delle due è un ripensamento sul disegno: sono
+cose che si vedono solo quando si va a scrivere il codice, e vanno sapute perché la griglia qui sopra
+è il registro, non un ricordo.
+
+1. **Non Cado → ZOCCOLO DURO** (barbaro, livello 11, via della tenuta). «Resti a 1 PV invece di cadere»
+   è **esattamente** l'Ultimo Respiro, che il barbaro ha già come abilità ATTIVA al livello 13. Due
+   carte che fanno la stessa cosa non sono una scelta, sono una ripetizione. Al suo posto: i colpi che
+   ti tolgono meno del 10% dei PV massimi fanno il 25% in meno — la difesa di chi vive in mezzo alla
+   folla e incassa cento colpetti invece di tre colpi grossi.
+2. **Le sinergie sono state ripuntate, e sono diventate sette** (una per classe). Le sei di prima
+   chiedevano coppie MISTE — Tossina + Colpi Esplosivi, Perforazione + Lama Sporca — che funzionavano
+   solo perché nel mazzo vecchio quelle carte appartenevano a più classi. Nel mazzo nuovo nessuno può
+   più metterle insieme: sarebbero rimaste scritte nel codice e morte nel gioco. Adesso ognuna chiede
+   due carte della stessa classe prese a scaglioni diversi, e gli effetti sono volutamente piccoli.
+
+E una cosa che il dimezzamento ha toccato **oltre le carte**: le magnitudini che stavano scritte a mano
+dentro `Room.js` e che nessuna carta poteva raggiungere (la cadenza della Furia Crescente, il passo del
+Passo di Danza, il Tributo, la soglia del Colpo di Grazia, il rimbalzo della Catena, la Frattura, il
+Tocco Gelido, il Campo di Lentezza). Adesso quei valori li porta la carta: si ritoccano in `loot.js`.
+
+#### Cosa è costato
+
+Delle 84 caselle, **21 esistono già** in `shared/loot.js` (con numeri da dimezzare) e **63 sono
+nuove**. Di queste, una quarantina non sono un moltiplicatore ma un **aggancio nuovo** dentro
+`server/Room.js` — parata, schivata, contrattacco, colpo doppio, i contatori del ritmo, il taunt
+passivo, il danno dirottato fra alleati, il giudizio a percentuale di PV, la morte evitata, lo
+stordimento dello scatto, il debito del warlock. Toccano le vie del **danno, della morte e della
+difesa**, che sono quelle che attraversano tutte e sette le classi: è il cambiamento con il rischio di
+regressione più alto da quando le classi sono diventate sette, e va fatto in una versione sua, con la
+suite completa in fondo.
+
+---
+
 ### ✅ Decisioni della v2.19.11 — il mago (e in parte il warlock)
 
 > *«L'effetto dello sparo (la bolla) non mi piace per niente, sembra che spara bolle di sapone. Quello
