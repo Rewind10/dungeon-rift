@@ -8,7 +8,13 @@ function mkEl(id) {
   const el = { id, className: '', _html: '', textContent: '', style: { setProperty() {}, }, dataset: {}, children: [],
     classList: { _s: new Set(['hidden']), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, toggle(c, v) { v === undefined ? (this._s.has(c) ? this._s.delete(c) : this._s.add(c)) : (v ? this._s.add(c) : this._s.delete(c)); }, contains(c) { return this._s.has(c); } },
     appendChild(c) { this.children.push(c); }, removeChild(c) { this.children = this.children.filter(x => x !== c); },
-    querySelector() { return mkEl('q'); }, setAttribute() {}, get firstChild() { return this.children[0]; } };
+    // v2.20.1 — GLI ATTRIBUTI SI RICORDANO. `setAttribute` non faceva niente e `getAttribute` non
+    // esisteva affatto: dalla v2.19.9 `HUD._mettiArtwork` chiede `img.getAttribute('src')` per non
+    // riassegnare la stessa immagine a ogni ridisegno, e qui tirava «img.getAttribute is not a
+    // function». Il test del client si fermava li', e non se ne e' accorto nessuno per due versioni
+    // perche' veniva lanciato solo `simulate.js`. Adesso lo stub tiene una mappa, come il DOM vero.
+    _attr: {}, setAttribute(k, v) { this._attr[k] = String(v); }, getAttribute(k) { return k in this._attr ? this._attr[k] : null; },
+    querySelector() { return mkEl('q'); }, get firstChild() { return this.children[0]; } };
   // innerHTML fedele: assegnarlo azzera i figli, come nel DOM vero
   Object.defineProperty(el, 'innerHTML', { get() { return el._html; }, set(v) { el._html = v; el.children = []; } });
   return el;
@@ -38,11 +44,14 @@ ok(bar.innerHTML.includes('syn'), 'la sinergia e evidenziata');
 HUD.setActiveBoons([]);
 ok((bar.innerHTML.match(/cchip empty/g) || []).length === window.GAME.Constants.MAX_CARDS, 'senza carte le caselle restano, tutte vuote');
 
-// 2) v1.79 — il menu: quattro abilita' dello scaglione, statistiche con tetto, emporio assente
-const boons = L.offerteScaglione('ladro', 'rare', {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, desc: 'x', owned: 0, max: b.max }));
+// 2) v2.20.0 — il menu: TRE abilita' dello scaglione, statistiche con tetto, emporio assente.
+// v2.20.1 — e la classe e' 'arciere': 'ladro' non e' una classe dalla v2.18 (e' un CORPO), quindi
+// l'offerta tornava vuota e il pannello disegnava zero carte. Il test lo diceva da due versioni e
+// nessuno lo sentiva, perche' veniva lanciato solo `simulate.js`.
+const boons = L.offerteScaglione('arciere', 'rare', {}).map(b => ({ id: b.id, name: b.name, icon: b.icon, rarity: b.rarity, hero: b.hero, via: b.via, desc: 'x', owned: 0, max: b.max }));
 HUD.setBoons({ boons, picked: false, tier: 'rare', tierName: 'Raro', tierColor: '#3aa0ff', scaglione: 2, tot: 4, resta: 1, liv: 6 }, () => {});
 HUD.setStats({ xp: 500, level: 6, rankName: 'Predone', points: 5, wave: 6, stats: L.XP_STATS.map((s, i) => { const lvl = i === 0 ? L.STAT_MAX_LEVEL : 2; const maxed = lvl >= L.STAT_MAX_LEVEL; return { id: s.id, name: s.name, icon: s.icon, color: s.color, desc: s.desc, cost: maxed ? 0 : L.statCost(s.base, lvl), lvl, max: L.STAT_MAX_LEVEL, maxed }; }) }, () => {}, () => {});
-ok(document.getElementById('boonCards').children.length === 4, 'il menu disegna le quattro abilita dello scaglione');
+ok(document.getElementById('boonCards').children.length === 3, 'il menu disegna le tre abilita dello scaglione');
 ok(String(document.getElementById('boonSub').innerHTML).indexOf('Raro') > 0, 'e dice di quale scaglione si tratta');
 const cards = document.getElementById('upgradeCards').children;
 ok(cards.length === L.XP_STATS.length, 'una carta per statistica');
@@ -55,12 +64,12 @@ const gearPayload = (heroId, coins, indosso) => ({ coins, near: 1, slots: G.slot
   slot, name: G.SLOT_NAME[slot], icon: G.SLOT_ICON[slot],
   items: G.itemsFor(heroId, slot).map(it => ({ id: it.id, name: it.name, desc: it.desc, color: it.color, rank: it.rank, cost: it.cost, rarity: G.rarityOf(it), owned: (indosso || {})[slot] === it.id ? 1 : 0 })) })) });
 let comprato = null;
-HUD.showGear(gearPayload('guerriero', 300, G.startingGear('guerriero')), (id) => { comprato = id; });
+HUD.showGear(gearPayload('paladino', 300, G.startingGear('paladino')), (id) => { comprato = id; });   // v2.20.1 — 'guerriero' e' un corpo, non una classe
 const gw = document.getElementById('gearNpcCards');
-ok(gw.children.length === 3, 'il guerriero vede tre slot (arma, armatura, scudo)');
+ok(gw.children.length === G.slotsFor('paladino').length, 'il paladino vede i suoi slot (' + gw.children.length + ')');
 const righe = gw.children.map(b => b.children.filter(c => c.className === 'gslot-row')[0]).filter(Boolean);
-ok(righe.length === 3, 'ogni slot ha la sua riga di oggetti');
-ok(righe[0].children.length === 4, 'lo slot arma mostra le quattro armi del guerriero');   // v1.88
+ok(righe.length === gw.children.length, 'ogni slot ha la sua riga di oggetti');
+ok(righe[0].children.length === G.itemsFor('paladino', 'weapon').length, 'lo slot arma mostra tutte le armi che il paladino puo comprare (' + righe[0].children.length + ')');
 const carte = righe[0].children;
 ok(carte[0].className.includes('maxed') && carte[0].innerHTML.includes('IN USO'), 'l oggetto indosso e marcato IN USO');
 ok(carte[1].innerHTML.includes('Spadone') && carte[1].innerHTML.includes('230'), 'lo spadone mostra nome e prezzo');
@@ -566,16 +575,13 @@ ok(document.getElementById('gearNpcCards').children.length === 2, 'il mago vede 
                             ['>M<', 'musica'], ['Invio', 'chat'], ['>T<', 'prova']])
       ok(info.indexOf(k.replace(/[<>]/g, m => m === '>' ? '>' : '<')) > 0 || info.indexOf(k) > 0, 'nei comandi c e il tasto per ' + chi);
     ok(/accende e spegne la torcia/.test(info), 'e del tasto L si dice cosa fa');
-    // v2.8.2 — IL RICHIAMO ha preso il posto delle regole. "Come funziona una run" erano cinque punti
-    // fitti di numeri, letti prima ancora di aver premuto un tasto: chi arriva nuovo non vuole un
-    // manuale, vuole sapere se gli interessa. Adesso sotto il titolo ci sono tre frasi vaghe di
-    // proposito, e la colonna di destra tiene solo i COMANDI, che servono mentre si gioca.
-    const tit = men.slice(men.indexOf('<div id="titolone">'), men.indexOf('id="menuColonne"'));
-    ok(/class="occhiello"/.test(tit), 'sotto il titolo c e il richiamo');
+    // v2.8.2 — IL RICHIAMO aveva preso il posto delle regole («Come funziona una run»).
+    // v2.20.1 — il richiamo e' stato TOLTO (Paolo), e i controlli su di lui sono andati in
+    // `simulate.js` (TEST 79) e non qui. Il motivo e' spiacevole ma va scritto: questo file si ferma
+    // al primo errore e da due versioni non arrivava piu' in fondo, quindi un controllo messo qui non
+    // sarebbe stato eseguito da nessuno. Qui resta solo cio' che il test sa ancora verificare.
     ok(!/info-h">\u{1F3AF} Come funziona/u.test(men) && !/class="info-lista"/.test(men),
-      'e l elenco delle regole non c e piu nella colonna di destra');
-    ok(!/\b10\u00aa\b|\b20\u00aa\b/.test(tit), 'e il richiamo non fa numeri: e vago di proposito');
-    ok(/#titolone \.occhiello\{/.test(css), 'e ha il suo stile, con la larghezza bloccata');
+      'e l elenco delle regole non e tornato nella colonna di destra');
   }
 
   // v1.99 — il menu NON ha piu' l'illustrazione di sfondo: e' tornato il fondo scuro di sempre.

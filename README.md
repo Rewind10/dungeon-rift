@@ -24,6 +24,13 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novità v2.20.1 (il menu si accorcia)
+
+Via le tre frasi di richiamo sotto il titolo, titolo un filo più piccolo e metà dell'aria sopra: la
+schermata d'avvio ci sta in meno spazio e le due colonne salgono di novanta pixel.
+
+---
+
 ## 🆕 Novità v2.20.0 (le passive rifatte)
 
 - **Ogni classe ha le sue dodici carte, e non le divide con nessuno.** Prima, ai livelli 3 e 5, barbaro,

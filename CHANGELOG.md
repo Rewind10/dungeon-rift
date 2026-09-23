@@ -2,6 +2,37 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.20.1] — 2026-09-23 · "Il menu si accorcia"
+
+Tre ritocchi chiesti da Paolo sulla schermata d'avvio, e una cosa che e' saltata fuori facendoli.
+
+- **Via il richiamo sotto il titolo** — le tre frasi («Scendi. Venti volte, e ogni volta piu' a
+  fondo…»), che dalla v2.8.2 stavano fra il titolo e le due colonne. Con la scheda della classe
+  cresciuta nella v2.19.9 la schermata era diventata lunga, e quello era il pezzo che si poteva togliere
+  senza perdere niente di utile. Tolto anche il suo stile: un testo che sparisce e una regola CSS che
+  resta e' il modo in cui, fra sei mesi, qualcuno rimette il testo senza sapere che il CSS lo aspettava.
+- **Titolo un filo piu' piccolo**: da 38-72px a 34-64px, con la spaziatura fra le lettere scesa con lui
+  (era tarata sulla misura vecchia).
+- **Meta' dell'aria sopra il titolo**: il margine in cima al menu passa da `min(5vh,52px)` a
+  `min(2.5vh,26px)`. Misurato a 1500×900: il titolo comincia a 23px invece che a 45, e le due colonne
+  salgono da y=238 a y=148.
+
+**E una cosa da dire, perche' e' un mio errore.** Facendo questi tre ritocchi ho scoperto che
+**`test/client.js` era rotto da due versioni** e non se n'era accorto nessuno: si ferma al primo errore,
+e il primo errore era che dalla v2.19.9 `HUD._mettiArtwork` chiede `img.getAttribute('src')` mentre lo
+stub del DOM aveva solo `setAttribute` e non `getAttribute`. Subito dopo ne aveva un altro: parlava
+ancora di `'guerriero'` e `'ladro'`, che dalla v2.18 non sono classi ma CORPI. La causa e' semplice e
+sta in me: ho sempre lanciato `simulate.js` da solo, mai `npm test`, che li lancia tutti e due.
+
+Ho riparato lo stub (adesso tiene una mappa di attributi, come il DOM vero) e i due punti che parlavano
+delle classi vecchie, ma **il file non e' ancora sano**: piu' avanti ha altri controlli fermi al
+pannello del fabbro di due versioni fa. Nel frattempo i controlli su questi tre ritocchi li ho messi in
+`simulate.js` (TEST 79), che gira davvero — un test che non gira non e' un test.
+
+**Test: 4753 passati, 0 falliti** (`simulate.js`).
+
+---
+
 ### [2.20.0] — 2026-09-23 · "Le passive rifatte"
 
 Il mazzo delle abilita' passive e' rifatto da zero. Paolo: *«Secondo me vanno ripensate: qualcuna puo'

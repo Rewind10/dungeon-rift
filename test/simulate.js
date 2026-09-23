@@ -6980,6 +6980,37 @@ function testPassive220() {
   ok('le passive nuove fanno quello che c e scritto sulla carta');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+
+// ============================================================================================
+// v2.20.1 — IL MENU: niente richiamo, titolo piu' piccolo, meta' dell'aria sopra
+// ============================================================================================
+// Tre ritocchi chiesti da Paolo, e tre controlli che li tengono fermi. Stanno QUI e non in
+// `test/client.js`, che sarebbe il posto naturale: quel file si ferma al primo errore e da due
+// versioni non arrivava piu' in fondo (parlava ancora dei tre eroi di una volta), quindi un controllo
+// messo li' non lo avrebbe eseguito nessuno. Un test che non gira non e' un test.
+function testMenu2201() {
+  console.log('\n[TEST 79] v2.20.1 — il menu: via il richiamo, titolo piu piccolo, meta dell aria sopra');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+  const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+  // 1) il testo non c'e' piu' — ne' il paragrafo ne' una sua riga rimasta in giro
+  assert(!/class="occhiello"/.test(html), 'il richiamo sotto il titolo e stato tolto');
+  assert(!/Scendi\. Venti volte/.test(html), 'e non ne e rimasta nemmeno una riga');
+  // 2) e nemmeno il suo stile: un testo tolto con lo stile rimasto e' il modo in cui, fra sei mesi,
+  //    qualcuno rimette il testo senza accorgersi che il CSS lo aspettava ancora
+  assert(!/#titolone \.occhiello\{/.test(css), 'e nemmeno la regola di stile che lo vestiva');
+  // 3) i due numeri, letti come li legge il browser
+  const t = css.match(/#titolone h1\{font-size:clamp\(([\d.]+)px,([\d.]+)vw,([\d.]+)px\)/);
+  assert(t, 'il titolo ha ancora la sua misura elastica');
+  assert(+t[1] < 38 && +t[3] < 72, 'ed e piu piccolo di prima (' + t[1] + '-' + t[3] + 'px, era 38-72)');
+  const pad = css.match(/#menu\{justify-content:flex-start;padding:min\(([\d.]+)vh,([\d.]+)px\)/);
+  assert(pad, 'il menu ha ancora il suo margine in cima');
+  assert(Math.abs(+pad[1] - 2.5) < 0.01 && Math.abs(+pad[2] - 26) < 0.01,
+    'e l aria sopra il titolo e la meta di prima (' + pad[1] + 'vh/' + pad[2] + 'px, era 5vh/52px)');
+  ok('il menu e piu corto: niente richiamo, titolo piu piccolo, meta dell aria in cima');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
