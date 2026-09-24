@@ -5742,19 +5742,29 @@ function testStoria() {
   p.x = sh.x + 40; p.y = sh.y; r.update(1 / C.TICK_RATE);
   assert(r.storia && r.storia.scena === 'oracolo', 'avvicinandosi parte il discorso');
   assert(r.storia.n === Storia.oracolo.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
-  // il discorso nomina il boss e dice quante ondate: e' il suo mestiere
   const tutto = Storia.oracolo.righe.map(q => q.t).join(' ');
-  assert(tutto.indexOf('AZ') >= 0, 'e nomina il boss');
-  assert(/[Vv]enti/.test(tutto), 'e dice quante volte si scende');
-  // v2.8 — LA RIVELAZIONE. Non e' un dettaglio di colore: e' il motivo per cui la storia esiste, ed e'
-  // anche quello che spiega da dove arrivano i poteri di fine ondata. Se qualcuno riscrive il discorso
-  // e la perde per strada, il gioco torna a essere venti ondate senza perche'.
-  assert(/divinit|Dio/.test(tutto), 'e dice che dietro l avatar c e una divinita');
-  // v2.9 — la rivelazione non dice piu' la parola "schermo": dice che quel Dio sta guardando ADESSO, ed
-  // e' meglio cosi' (indicare lo schermo e' spiegare la battuta). Ma il PUNTO deve restare: se il
-  // discorso perde il "ti sta guardando" torna a essere una profezia qualunque.
-  assert(/guard/.test(tutto), 'e che quella divinita ti sta guardando in questo momento');
-  assert(/poteri/.test(tutto), 'e che e lei a donare i poteri: la rivelazione spiega una REGOLA');
+  // ==========================================================================================
+  // v2.20.2 — COSA DEVE RESTARE NEL DISCORSO, dopo la riscrittura di Paolo
+  // ==========================================================================================
+  // Le tre righe che c'erano qui chiedevano al discorso di NOMINARE il boss, di dire «venti» e di
+  // spiegare che i poteri sono doni di un Dio. Il discorso nuovo non fa piu' nessuna delle tre, e non
+  // per distrazione: non spiega piu' niente: chiede all'avatar se ha scelto lui, e lascia che sia il
+  // silenzio dell'avatar a dirlo. Quindi il test non chiede piu' quelle parole — chiede i due FATTI
+  // che, se sparissero, lascerebbero venti ondate senza perche'.
+  //
+  // 1. QUALCUNO GUARDA, ADESSO, e l'avatar e' il suo strumento.
+  assert(/osserv/.test(tutto), 'il discorso dice che qualcuno ci osserva');
+  assert(/adesso|in questo istante/.test(tutto), 'e che lo sta facendo ADESSO, non in una profezia');
+  assert(/strumento/.test(tutto), 'e che l avatar e il suo strumento');
+  // 2. IL CICLO: si muore, si ricomincia, e non sei il primo. E' quello che spiega la morte.
+  assert(/Non sei il primo/.test(tutto), 'e che non sei il primo a provarci');
+  assert(/gi\u00e0 successo|Molte volte|tornati all\u2019inizio/.test(tutto), 'e che tutto questo e gia successo');
+  // e il nome del boss e le venti discese non sono spariti dal gioco: si sono spostati dove servono
+  // davvero, cioe' nel riquadro della missione. Se un giorno sparissero anche da li', il giocatore non
+  // saprebbe piu' ne' dove sta andando ne' per quanto.
+  const miss = Storia.missioni.discesa;
+  assert(miss && miss.t.indexOf('AZ') >= 0, 'il boss lo nomina la missione');
+  assert(miss && /[Vv]enti/.test(miss.d), 'ed e la missione a dire quante volte si scende');
   // ed e' un DIALOGO: parlano in due, se no e' una conferenza
   const diTu = Storia.oracolo.righe.filter(q => q.chi === 'tu').length;
   assert(diTu >= 4, 'e l avatar risponde (' + diTu + ' battute sue): e un dialogo, non un monologo');
@@ -5891,7 +5901,7 @@ function testStoria() {
     assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
     for (const q of Storia[sc].righe) {
       assert(typeof q.t === 'string' && q.t.length > 0, 'ogni riga di ' + sc + ' ha un testo');
-      assert(['tu', 'oracolo', 'guardia', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
+      assert(['tu', 'oracolo', 'guardia', 'nota', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
     }
   }
   assert(Storia.prologo.righe.some(q => q.chi === ''), 'nel risveglio parla una voce senza volto');
@@ -5905,7 +5915,15 @@ function testStoria() {
   // continuerebbe a funzionare ma le tre rivelazioni arriverebbero tutte con lo stesso passo.
   const pause = Storia.oracolo.righe.filter(q => q.p).length;
   assert(pause >= 5, 'il discorso respira: ' + pause + ' righe aspettano prima di scriversi');
-  assert(!Storia.oracolo.righe.some(q => /^\(/.test(q.t)), 'e nessuna didascalia e stampata a schermo');
+  // v2.20.2 — LE DIDASCALIE ADESSO SI VEDONO, per scelta di Paolo: *«aggiungi anche le scritte tra
+  // parentesi, aiutano a dare profondita' al dialogo»*. Quindi il controllo si gira: una riga fra
+  // parentesi e' ammessa, ma DEVE essere marcata `chi: 'nota'` — se arriva come battuta di qualcuno, il
+  // client le mette il ritratto e il nome accanto, e una didascalia con la faccia dell'oracolo che dice
+  // «(L'Oracolo guarda verso lo schermo)» e' esattamente il pasticcio che questo test esiste per evitare.
+  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora'])
+    for (const q of Storia[sc].righe)
+      assert(!/^\(/.test(q.t) || q.chi === 'nota', sc + ': la riga fra parentesi e una didascalia, non una battuta (' + q.t + ')');
+  assert(Storia.oracolo.righe.some(q => q.chi === 'nota'), 'e il discorso dell oracolo ne ha almeno una');
   ok('la storia v2.9 verificata');
 }
 

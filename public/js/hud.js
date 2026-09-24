@@ -1462,8 +1462,9 @@
       g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); },
     ritratto(chi, eroeId) {
       const cv = $('dialFaccia'); if (!cv || !cv.getContext) return;
-      // la voce senza volto del risveglio non ha ritratto, e non e' una mancanza: e' la scena
-      if (!chi) { cv.classList.add('vuoto'); return; }
+      // la voce senza volto del risveglio non ha ritratto, e non e' una mancanza: e' la scena.
+      // v2.20.2 — e nemmeno la DIDASCALIA: quella non e' qualcuno che parla, e' la regia.
+      if (!chi || chi === 'nota') { cv.classList.add('vuoto'); return; }
       cv.classList.remove('vuoto');
       const g = cv.getContext('2d'), W = cv.width, H = cv.height;
       g.clearRect(0, 0, W, H);
@@ -1564,6 +1565,9 @@
     mostraDialogo(chi, testo, conSuggerimento, eroeId, nome, pausa) {
       const box = $('dial'); if (!box) return;
       $('dialChi').textContent = nome || '';
+      // v2.20.2 — la didascalia si veste da didascalia: corsivo, piu' piccola e piu' spenta. Il testo
+      // arriva comunque una lettera alla volta come tutto il resto — e' regia, non un cartello.
+      { const tx = $('dialTxt'); if (tx && tx.classList) tx.classList.toggle('nota', chi === 'nota'); }
       this.ritratto(chi, eroeId);
       const h = $('dialHint'); if (h) h.style.display = conSuggerimento === false ? 'none' : '';
       box.classList.remove('hidden');

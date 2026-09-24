@@ -24,6 +24,15 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novità v2.20.2 (il dialogo riscritto)
+
+Il risveglio, l'arrivo al villaggio e il discorso dell'oracolo sono riscritti: la rivelazione non si
+spiega più — l'oracolo chiede all'avatar se ha scelto lui di attraversare il portale, e aspetta — e
+compare il **ciclo** («Non sei il primo», «sono tornati all'inizio»). Le frasi fra parentesi ora si
+vedono come **fuori campo**: corsivo, senza ritratto, con una pausa vera prima di scriversi.
+
+---
+
 ## 🆕 Novità v2.20.1 (il menu si accorcia)
 
 Via le tre frasi di richiamo sotto il titolo, titolo un filo più piccolo e metà dell'aria sopra: la

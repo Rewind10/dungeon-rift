@@ -2,6 +2,41 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.20.2] — 2026-09-24 · "Il dialogo riscritto"
+
+**I dialoghi d'apertura sono di Paolo, parola per parola** — il risveglio nella stanza, l'arrivo al
+villaggio e il discorso dell'oracolo. Cosa e' cambiato, e perche' conta:
+
+- **La rivelazione non si spiega piu'.** Prima l'oracolo diceva «un Dio», «ti sta guardando», «ogni
+  potere che otterrai sara' perche' lui lo vorra'»: tre gradini e una regola servita al giocatore.
+  Adesso chiede all'avatar se ha scelto LUI di attraversare il portale — e aspetta. La risposta
+  («Io… non lo so. E' come se qualcuno mi guidasse») la dice l'avatar, non il vecchio.
+- **C'e' il ciclo, ed e' la cosa nuova.** *«Non sei il primo» · «Sono tornati all'inizio» · «Molte
+  volte»*. Spiega la morte senza nominarla: non hai finito, hai ricominciato. E l'ultima battuta e'
+  dell'avatar — *«Sempre che io mi ricordi di te»* — con l'oracolo che risponde *«Esatto»* e non lo
+  consola.
+- **Il boss e le venti discese non si nominano piu' nel discorso**: restano nel riquadro della
+  missione, che e' il posto dove il giocatore li legge quando gli servono.
+
+**Le frasi fra parentesi adesso si vedono.** Paolo: *«inserisci anche le frasi tra parentesi come fuori
+campo, danno profondita'»*. Erano commenti nel codice — `(l'oracolo lo osserva)`, `(sorride appena)` —
+e non le leggeva nessuno. Adesso sono righe con una voce loro (`chi: 'nota'`): **corsivo, piu' spente,
+senza ritratto e senza nome**, cosi' in mezzo secondo si capisce che non e' qualcuno che parla ma la
+regia. Sette in tutto nel discorso dell'oracolo, e ognuna porta anche la PAUSA: il «(Pausa.)» non e'
+solo una parola che dice di aspettare, e' un'attesa vera prima che la riga si scriva.
+
+**Il test si e' girato con loro.** Chiedeva al discorso di nominare il boss, di dire «venti» e di
+spiegare che i poteri sono doni: tre cose che il discorso nuovo non fa piu', e non per distrazione.
+Adesso chiede i due fatti che, se sparissero, lascerebbero venti ondate senza perche' — **qualcuno
+osserva adesso e tu sei il suo strumento**, e **non sei il primo, tutto questo e' gia' successo** — piu'
+il controllo che il boss e le venti discese siano rimasti nella missione. E una regola nuova: una riga
+fra parentesi **deve** essere marcata come fuori campo, se no il client le mette accanto la faccia
+dell'oracolo e si legge «(L'Oracolo guarda verso lo schermo)» detto dall'Oracolo in persona.
+
+**Test: 4853 passati, 0 falliti.**
+
+---
+
 ### [2.20.1] — 2026-09-23 · "Il menu si accorcia"
 
 Tre ritocchi chiesti da Paolo sulla schermata d'avvio, e una cosa che e' saltata fuori facendoli.

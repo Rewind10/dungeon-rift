@@ -959,6 +959,10 @@ h2.info-h:not(:first-child){margin-top:17px}
 #dial .d-txt{font-size:18.5px;line-height:1.46;color:#eef1f8;font-weight:500;min-height:54px}
 /* il cursore che lampeggia mentre la riga si scrive: dice "sta ancora parlando" senza una parola */
 #dial .d-txt .cur{opacity:.75;animation:curBlink .8s steps(1,end) infinite}
+/* v2.20.2 — LA DIDASCALIA (`chi: 'nota'`): le righe fra parentesi del copione, che adesso si vedono.
+   Corsivo, un filo piu' piccola e spenta del parlato, cosi' si capisce in mezzo secondo che non e'
+   qualcuno che parla ma la regia. Il riquadro del ritratto resta vuoto, come per la voce del risveglio. */
+#dial .d-txt.nota{font-style:italic;color:#96a2bb;font-size:16.5px;letter-spacing:.2px}
 @keyframes curBlink{50%{opacity:0}}
 #dial .d-hint{margin-top:10px;padding-top:9px;border-top:1px solid rgba(120,140,200,.14);
   text-align:right;font-size:11px;color:#6f7890;letter-spacing:.4px}

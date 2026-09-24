@@ -40,6 +40,12 @@
   const OR = (t, p) => ({ chi: 'oracolo', t, p: p ? 1 : 0 });
   const GU = (t, p) => ({ chi: 'guardia', t, p: p ? 1 : 0 });
   const VO = (t, p) => ({ chi: '', t, p: p ? 1 : 0 });
+  // v2.20.2 — LA DIDASCALIA. Paolo: *«aggiungi anche le scritte tra parentesi, aiutano a dare
+  // profondita' al dialogo»*. Fino a ieri erano commenti nel codice e non le leggeva nessuno; adesso
+  // sono righe a tutti gli effetti, con la loro voce: niente ritratto, niente nome, testo in corsivo e
+  // piu' spento (vedi `#dial .d-txt.nota` in style.css). Non sono un personaggio che parla: sono la
+  // regia, e devono vedersi come tali.
+  const DI = (t, p) => ({ chi: 'nota', t, p: p ? 1 : 0 });
 
   const S = {
     // il nome del boss dell'ondata 20 e quante volte si scende. La storia li pronuncia, quindi stanno
@@ -54,91 +60,111 @@
       righe: [
         TU('Cos’è quella luce?'),
         TU('No…'),
-        TU('C’è un portale. Nella mia stanza.'),
+        TU('C’è un portale.'),
+        TU('Nella mia stanza.'),
         VO('Non temere.'),
         TU('Chi sei?'),
         VO('Qualcuno che ti sta aspettando.'),
         TU('Dove?'),
         VO('Dall’altra parte.'),
         TU('E perché dovrei attraversarlo?'),
-        VO('Perché è già troppo tardi per tornare indietro.'),
+        VO('Perché il tuo cammino è già iniziato.'),
         TU('Non hai ancora risposto.'),
-        VO('Attraversa. Le risposte sono dall’altra parte.'),
+        VO('Attraversa.'),
+        VO('Le risposte sono dall’altra parte.'),
       ],
       // se uno gira per la stanza invece di entrare. Una volta sola: insistere la trasformerebbe in un
       // tutorial, e questa non e' una voce che spiega le cose.
-      sollecito: VO('Non è la finestra.'),
+      sollecito: VO('Non troverai le risposte qui.'),
     },
 
     // ===================== 2. L'ARRIVO AL VILLAGGIO =====================
     arrivo: {
       righe: [
         VO('Eccoti.'),
-        VO('Ora vieni da me.'),
-        VO('Cerca la casa con le ossa appese alla porta.'),
-        VO('È lì che scoprirai perché sei stato chiamato.'),
+        VO('L’Oracolo ti aspetta.'),
+        VO('Trova la sua casa.'),
+        VO('Lui saprà dirti perché sei stato chiamato.'),
       ],
     },
 
     // ===================== 3. L'ORACOLO =====================
-    // Il discorso vero, ed e' un DIALOGO: l'avatar non capisce, e il fatto che non capisca e' giusto —
-    // e' lui lo strumento, non l'informato. Le sue battute scandiscono, non spiegano.
+    // v2.20.2 — RISCRITTO DA PAOLO, parola per parola. Cosa e' cambiato rispetto alla versione
+    // precedente, perche' non lo si riscopra per caso fra sei mesi:
     //
-    // La rivelazione arriva in tre gradini e non in uno: «sei stato scelto» / «da un Dio» / «quel Dio ti
-    // sta guardando in questo momento». Ogni gradino ha la sua pausa, perche' e' il silenzio prima della
-    // frase a farla atterrare — non il punto esclamativo dopo.
+    //   · LA RIVELAZIONE NON SI SPIEGA PIU'. Prima l'oracolo diceva «un Dio», «ti sta guardando»,
+    //     «ogni potere che otterrai sara' perche' lui lo vorra'»: tre gradini e una regola spiegata.
+    //     Adesso non nomina nessun Dio. Chiede all'avatar se ha SCELTO lui di attraversare il portale,
+    //     e aspetta che sia l'avatar a non saper rispondere. La rivelazione la fa il giocatore da solo.
+    //   · C'E' IL CICLO. «Non sei il primo», «sono tornati all'inizio», «tutto questo e' gia' successo».
+    //     E' la cosa nuova del discorso, e spiega la morte: non sei finito, sei ricominciato.
+    //   · L'ULTIMA BATTUTA E' DELL'AVATAR. «Sempre che io mi ricordi di te» — «Esatto». Chi perde la
+    //     memoria fra un giro e l'altro e' lui, non tu, e l'oracolo glielo conferma senza consolarlo.
+    //   · NON SI NOMINANO PIU' il boss ne' le venti discese: quelli restano nel riquadro della missione
+    //     (`missioni.discesa`), che e' il posto dove servono davvero — li' si leggono quando servono,
+    //     qui sarebbero due numeri in mezzo a un dialogo che parla d'altro.
+    //
+    // Le righe fra parentesi sono FUORI CAMPO (`DI`): si vedono a schermo, in corsivo, piu' spente e
+    // senza ritratto — *«inserisci anche le frasi tra parentesi come fuori campo, danno profondita'»*.
+    // Portano anche la PAUSA (`p: 1`): prima di scriversi aspettano un attimo in silenzio, cosi' il
+    // «(Pausa.)» non e' solo una parola che dice di aspettare — e' un'attesa vera.
     oracolo: {
       righe: [
-        OR('Finalmente.'),
-        TU('Sei tu che mi hai trascinato qui?'),
-        OR('Io ho aperto il portale.'),
-        TU('Perché?'),
-        OR('Perché avevamo bisogno di te.'),
-        TU('Per cosa?'),
-        // (l'oracolo lo osserva per qualche istante)
-        OR('Sotto questo villaggio dorme qualcosa.', 1),
-        OR('Qualcosa che non avrebbe mai dovuto svegliarsi.'),
-        OR('Si chiama AZ’GAROTH.'),
-        OR('E si sta svegliando.'),
-        TU('E cosa c’entro io?'),
-        OR('Tutto.'),
-        TU('Non capisco.'),
-        OR('Nemmeno gli altri avrebbero capito.'),
-        OR('Ma tu sei diverso.'),
-        TU('Diverso come?'),
-        OR('Sei stato scelto.'),
-        TU('Da chi?'),
-        // (l'oracolo guarda verso di te — cioe' verso lo schermo)
-        OR('Da qualcuno che non vive in questo mondo.', 1),
-        OR('Un Dio.', 1),
-        TU('Un Dio?'),
-        OR('Sì.'),
-        OR('E ora viene la parte che sarà difficile da accettare.'),
-        TU('Cioè?'),
-        OR('Quel Dio ti sta guardando.'),
-        OR('E ti sta guidando.', 1),
-        TU('Come?'),
-        OR('Attraverso di te.'),
-        OR('Ogni passo che farai…'),
-        OR('ogni nemico che ucciderai…'),
-        OR('ogni potere che otterrai…'),
-        OR('sarà perché lui lo vorrà.'),
-        TU('Ma chi è?'),
-        // (sorride appena)
-        OR('Non lo hai ancora capito?', 1),
-        OR('È quello che tiene gli occhi su di te in questo momento.', 1),
+        OR('Siediti.'),
+        TU('Immagino che tu sappia perché sono qui.'),
+        OR('Non sei venuto qui per avere risposte.'),
+        OR('Sei venuto perché qualcuno ti ha condotto fino a qui.'),
+        OR('Dimmi una cosa…'),
+        OR('Quando hai attraversato il portale…'),
+        OR('hai scelto tu di farlo?'),
+        TU('…Certo.'),
+        OR('Ne sei sicuro?'),
         TU('…'),
-        OR('Non cercare di capire.'),
-        OR('Lascia che ti guidi.'),
-        OR('Avrai bisogno dei suoi poteri per arrivare in fondo.'),
-        TU('In fondo a cosa?'),
-        OR('Alla faglia.'),
-        OR('Attraversala.'),
-        OR('Supera ciò che ti aspetta dall’altra parte.'),
-        OR('E quando avrai attraversato tutte le venti fratture…'),
-        OR('troverai AZ’GAROTH.', 1),
-        TU('E poi?'),
-        OR('Poi scopriremo se il Dio ha scelto bene.'),
+        OR('E quando sei arrivato al villaggio?'),
+        OR('Hai scelto tu dove andare?'),
+        TU('Io… non lo so.'),
+        TU('È come se qualcuno mi guidasse.'),
+        OR('Lo so.'),
+        DI('(Pausa.)', 1),
+        TU('Qualcuno ci osserva?'),
+        OR('Sì.'),
+        TU('…Anche adesso?'),
+        OR('Sì.'),
+        OR('Ci sta osservando in questo istante.'),
+        DI('(Pausa.)', 1),
+        OR('Sei stato scelto.'),
+        OR('Sei il suo strumento.'),
+        TU('E cosa vuole che faccia?'),
+        OR('Sopravvivere.'),
+        DI('(Pausa.)', 1),
+        OR('Nelle profondità della terra dorme qualcosa…'),
+        OR('qualcosa che non avrebbe mai dovuto svegliarsi.'),
+        OR('Ora si sta risvegliando.'),
+        OR('Dovrai combatterlo.'),
+        OR('Altrimenti, per noi, sarà la fine.'),
+        TU('E se fallissi?'),
+        OR('Ci proverai ancora.'),
+        TU('Ancora?'),
+        DI('(L’Oracolo lo osserva in silenzio.)', 1),
+        OR('Non sei il primo.'),
+        TU('Quanti sono venuti prima di me?'),
+        OR('Abbastanza.'),
+        TU('E dove sono?'),
+        OR('Sono tornati all’inizio.'),
+        TU('Quindi tutto questo è già successo?'),
+        OR('Molte volte.'),
+        DI('(Pausa.)', 1),
+        TU('E nessuno è riuscito?'),
+        OR('Forse qualcuno sì.'),
+        TU('Allora perché sono qui?'),
+        OR('Perché qualcuno vuole vedere se questa volta sarà diverso.'),
+        DI('(L’Oracolo guarda verso lo schermo.)', 1),
+        OR('Vai.'),
+        TU('E se morirò?'),
+        OR('Ci rivedremo.'),
+        DI('(Pausa.)', 1),
+        TU('Sempre che io mi ricordi di te.'),
+        OR('Esatto.'),
       ],
     },
 
