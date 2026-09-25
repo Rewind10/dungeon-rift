@@ -2,6 +2,177 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.21.0] — 2026-09-25 · "Roba da rompere, e un posto dove ognuno è a casa sua"
+
+Paolo: *«vorrei aggiungere oggetti alle mappe della grotta ma non saprei cosa»*.
+
+**Prima di proporre, ho contato.** E la prima cosa da dire è che quello che avevo detto io, un'ora
+prima, era sbagliato: avevo scritto che la grotta aveva **11 oggetti**. Ne ha **37**. Il mio `grep`
+aveva pescato solo un pezzo dello `switch` del renderer, e metà della lista che avevo proposto a Paolo
+era roba già in gioco (l'obelisco è `obelisk`, le macerie sono `rubble`, la stalattite è `stalactite`).
+Corretto prima di scrivere una riga di codice: costruire su una misura sbagliata sarebbe costato molto
+più della figuraccia.
+
+Contando davvero sono usciti **tre fatti**, e sono quelli che hanno deciso la versione.
+
+#### 1. Il vero motivo per cui i cinque temi si somigliano
+
+Le scene tematiche sono **24** (cimitero, ossario, geode, santuario, officina…) e ogni tema ne pesca
+una quindicina. Ma **solo `fungaia` apparteneva a un tema solo** (la foresta). Tutte le altre erano
+condivise da due, tre o quattro temi. Detto altrimenti: **la lava non aveva una sola scena che
+parlasse di lava**, il ghiaccio nessuna di ghiaccio, l'arcano nessuna sua. Il colore della roccia della
+v2.20.3 aiutava, ma non poteva bastare: sotto, l'arredamento era lo stesso.
+
+**Adesso ogni tema ha due scene che sono solo sue**, e il test pretende che restino tali:
+
+| tema | scene esclusive | oggetti nuovi |
+|---|---|---|
+| Cripta Dimenticata | `sepolcreto`, `veglia` | loculo murato, urna cineraria, catafalco col sudario |
+| Caverne di Lava | `colata_lavica`, `fumarole` | colata rappresa con le crepe vive, sfiatatoio |
+| Rovine nella Foresta | `boschetto`, `radici` | tronco caduto muschioso, felce, radici che sfondano il pavimento |
+| Cripta di Ghiaccio | `assideramento`, `gelicidio` | sagoma congelata dentro il ghiaccio, colonna di ghiaccio |
+| Tempio Arcano | `rituale`, `studio` | cerchio rituale col pentacolo, leggio col libro aperto |
+
+Anche il **pulviscolo ambientale** (`propMix`, gli oggetti piccoli sparsi lungo le pareti) adesso
+cambia da tema a tema: felci nella foresta, colate sulla lava, ghiaccioli sul ghiaccio.
+
+Misurato su 220 mappe: ogni oggetto esclusivo compare **solo** nel suo tema, e i cinque temi escono
+tutti. Il test lo ricontrolla a ogni giro — se qualcuno un giorno aggiunge `colata` anche al ghiaccio
+per fare in fretta, si rompe lì.
+
+#### 2. Il bug della cassa invisibile
+
+`chest` veniva piazzato dalla scena `deposito` **dalla v1.24**. Nel renderer il caso `'chest'` non c'è
+mai stato: il prop cadeva in fondo allo `switch`, non trovava il suo ramo, e non disegnava niente.
+**Per decine di versioni il deposito ha avuto una cassa che nessuno vedeva**, senza un errore da
+nessuna parte.
+
+Disegnata (cassa di legno con le bande di ferro dorato e la serratura). Ma soprattutto: adesso c'è
+**il controllo che rende impossibile che ricapiti**. Legge dal sorgente quali tipi piazza `mapgen.js`
+e quali sa disegnare `renderer.js`, e pretende che i due insiemi tornino. È lo stesso mestiere del
+controllo del ponte client della v2.17.
+
+*(I cinque oggetti disegnati e mai usati — `pillar`, `statue`, `demon_statue`, `puddle`, `mimic` —
+restano spenti: Paolo li ha guardati e ha detto «non erano molto belli».)*
+
+#### 3. Gli oggetti non facevano niente
+
+Nessun oggetto della grotta era toccabile. `INGOMBRI` conteneva solo i mobili del villaggio più
+`crystal_cluster`: rocce, lapidi, bare, ossa, catene, ragnatele si attraversavano tutte. Erano carta
+da parati. Il villaggio "si legge" come un posto perché ci sbatti contro; la grotta era una stanza
+vuota decorata.
+
+Paolo ha scelto **B e C**, scartando A (gli oggetti che ingombrano): *«A bello ma "pericoloso"»* — e
+aveva ragione, un ingombro messo male chiude un corridoio e il campo di flusso ci finisce contro.
+Quindi **nessuno dei tre oggetti nuovi blocca il passaggio**. Fanno altro.
+
+---
+
+### 🏺 L'URNA — si rompe e lascia monete
+
+Tre-cinque per mappa, su **tutti** i temi (nella cripta qualcuna in più, perché ce la mettono anche le
+sue scene). Si rompe con un colpo qualunque e lascia **una mancia**, non un tesoro: `URNA_MONETE: 9`
+più 1,5 per ondata, cioè **meno di metà cassa**. È voluto — se l'urna pagasse come una cassa, aprire
+le casse smetterebbe di essere la ragione per attraversare il centro della mappa, che è tutto il
+motivo per cui le casse stanno lì (v1.63).
+
+### 🛢️ IL BARILE — esplode, e fa male anche a te
+
+Due-tre per mappa, lontani dalla partenza. Colpito, **deflagra**: raggio 112, danno 34 + 6 per ondata
+sui mostri, **metà sui giocatori che stanno dentro**.
+
+Che facesse male anche a noi non è una svista. Un barile che ferisce solo i nemici è una bomba
+gratis, e *quando* farlo scoppiare smetterebbe di essere una scelta. Metà danno è la taratura giusta:
+abbastanza per insegnare a starne lontani, non abbastanza per morire per distrazione.
+
+**Il disegno è parte della meccanica**: doghe scure, cerchi rossi, miccia accesa. Deve distinguersi a
+colpo d'occhio dal `barrel` normale del deposito, se no l'esplosione sarebbe una punizione arrivata
+dal nulla.
+
+**I barili si innescano fra loro.** Lo scoppio di uno rompe tutto ciò che sta nel suo raggio, barili
+compresi. La catena non può tornare indietro perché `rompiOggetto` segna `dead` **prima** di
+esplodere — una riga, ed è quella che tiene.
+
+**Chi può romperli**: i proiettili dei giocatori, i fendenti, e qualunque esplosione (granate, palla
+di fuoco). **I proiettili dei mostri no**, di proposito: un barile innescato da un colpo nemico
+sarebbe un danno arrivato da una catena che il giocatore non ha nessun modo di prevedere.
+
+### ⛓️ LA GRATA E LA LEVA — un ripostiglio chiuso, e la catena che lo apre
+
+Ogni mappa ha **un vano chiuso da una saracinesca**, e da qualche parte — fra 7 e 22 tessere di
+distanza, mai addosso — la **leva** che la apre. Dentro c'è una **cassa vera**, con tutto quello che
+comporta, mimic compreso: se dietro una porta chiusa ci fosse sempre e solo oro, aprirla smetterebbe
+di essere una scommessa dopo la prima volta.
+
+**La regola che rende la cosa sicura, ed è tutta la versione.** Il vano **non si ricava da spazio
+esistente: si scava nella roccia piena**. Così aprirlo o non aprirlo non può in nessun caso tagliare
+in due la mappa — che è il modo in cui una porta che si apre a gioco in corso rompe di solito il campo
+di flusso.
+
+Tutto il resto viene da sé, e questa è la parte bella: **il campo di flusso si ricostruisce da solo
+ogni 0,12 s dalla griglia**, e collisioni e linea di vista la rileggono a ogni chiamata. Cambiata la
+griglia, sono cambiate tutte e tre. Il codice che apre la grata è **una riga**.
+
+**Il primo tentativo era bucato, e il test l'ha preso.** Controllavo che fossero roccia le nove
+tessere del vano, ma non la **conchiglia** attorno: in **195 mappe su 300** il vano toccava di fianco
+un corridoio già esistente, il premio si raggiungeva senza mai tirare la leva, e la grata non chiudeva
+niente. Adesso si pretende piena anche la cornice 5×5. Misurato su 120 mappe: il premio è
+irraggiungibile a grata chiusa **sempre**, raggiungibile ad aperta **sempre**, e aprire non cambia lo
+stato di **nessuna** tessera fuori dal vano.
+
+**Il client non ricuoce niente.** Le tessere della grata vengono cotte come **pavimento** (stesso
+trucco delle lapidi del cimitero, `_leggero`), la saracinesca la disegna il render a ogni fotogramma:
+quando la leva la apre, basta smettere di disegnarla — sotto il pavimento c'è già. La leva cambia posa
+(braccio alzato/abbassato, pomo giallo/verde): è l'unico modo che ha il giocatore, tornando indietro,
+di sapere di averla già tirata.
+
+---
+
+### ⚠️ L'ERRORE CHE HO RIFATTO, ED È PROPRIO QUELLO CHE MI ERA STATO DETTO DI NON RIFARE
+
+Paolo, regola permanente: *«non ripetere errori di regressione: dopo una modifica va verificato anche
+ciò che NON è stato toccato»*. Nasceva da una riga infilata fra un `if` e il suo `else` che aveva
+cancellato il disegno di tutte le mappe dall'ondata 3 in poi (v1.97.1).
+
+**L'ho rifatto, nello stesso identico modo.** Il controllo sugli oggetti l'ho messo in mezzo al ramo
+`if (b.hostile) {…} else {…}` di `updateBullets`. L'`else` si è staccato dal suo `if`, e da quel
+momento **i proiettili OSTILI finivano nel ramo dei mostri**: nascendo addosso al mostro che li spara,
+si ammazzavano da soli al primo fotogramma. **Lo sputo dell'acido aveva smesso di uscire.**
+
+Nessun errore da nessuna parte. L'hanno preso i test (`0 bolle d'acido`). Il controllo adesso sta
+**dentro** l'`else`, con scritto sopra perché.
+
+E per non fidarmi del fatto che i test passino, **ho rotto di proposito tre cose** per vedere se se ne
+accorgono:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| tolto il disegno della cassa | ✅ 2 controlli rossi |
+| rimesso il controllo fuori dall'`else` | ✅ lo sputo dell'acido torna a 0 bolle |
+| tolto il controllo della conchiglia del vano | ✅ «79 mappe bucate» |
+
+---
+
+### 📐 Numeri e file toccati
+
+**Test: 4947 passati, 0 falliti.** (Erano 4879 in v2.20.3: +68 controlli nuovi, TEST 80.)
+
+| file | cosa |
+|---|---|
+| `public/js/renderer.js` | 16 disegni nuovi (13 scenici + barile, saracinesca, leva) + la cassa; grate/leve/rompibili disegnati a ogni fotogramma; `_leggero` include le tessere della grata |
+| `shared/mapgen.js` | 10 scene esclusive; `propMix` per tema; urne e barili escono dai `props` e diventano entità; lo scavo del vano con la conchiglia; la leva |
+| `server/Room.js` | `oggetti`/`grate`/`leve`; `colpisciOggetti`, `rompiOggetto`, `_scoppioBarile`, `updateLeve`; gli agganci in `updateBullets`, `_meleeSwing`, `_explodeAt`; `ogg` nello snapshot solo quando cambia |
+| `shared/constants.js` | `URNA_MONETE`, `URNA_XP`, `BARILE_RAGGIO`, `BARILE_DANNO`, `BARILE_QUOTA_GIOCATORE`, `GRATA_RAGGIO` |
+| `public/js/main.js` | gli eventi `urna`, `barile`, `grata`; `w.ogg`; lo stato delle grate aperte |
+| `test/simulate.js` | TEST 80; e i due controlli di raggiungibilità ora misurano **a grate aperte** |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 (identificatori di
+classe vecchi, v2.18) e non parte, quindi `npm test` resta rosso anche se `simulate.js` è verde. È un
+mio errore di allora, non l'ho ancora sistemato perché Paolo non me l'ha chiesto.
+
+
+---
+
 ### [2.20.3] — 2026-09-25 · "Ogni posto ha la sua pietra"
 
 Paolo, guardando le mappe: *«c'e' modo di variare in modo piu' significativo? anche solo colori delle

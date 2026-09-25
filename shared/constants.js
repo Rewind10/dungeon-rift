@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.20.3',
+    VERSION: '2.21.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -38,6 +38,13 @@
     // capita una ogni quattro-cinque ondate: abbastanza di rado da fartene dimenticare, che e' il punto.
     MIMIC_PROB: 0.06,
     CASSA_MONETE_PROB: 0.5, CASSA_MONETE: 22, CASSA_MONETE_ONDATA: 3,
+    // v2.21 — GLI OGGETTI CHE SI ROMPONO. L'urna e' una mancia, non un forziere: vale meno di mezza
+    // cassa, altrimenti aprire le casse smetterebbe di essere la ragione per attraversare il centro.
+    // Il barile fa male ai mostri e fa male anche a chi lo fa scoppiare: a meta' danno sui giocatori,
+    // che e' abbastanza per insegnare a starne lontani e non abbastanza per uccidere per distrazione.
+    URNA_MONETE: 9, URNA_MONETE_ONDATA: 1.5, URNA_XP: 8,
+    BARILE_RAGGIO: 112, BARILE_DANNO: 34, BARILE_DANNO_ONDATA: 6, BARILE_QUOTA_GIOCATORE: 0.5,
+    GRATA_RAGGIO: 34,
     PRIGIONE_PROB: 0.35,        // quante mappe hanno un recinto
     PRIGIONE_MONETE: 100,       // per testa
     PRIGIONE_MAX: 5,

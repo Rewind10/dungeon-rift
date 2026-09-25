@@ -167,6 +167,7 @@ function newBoon() {
 class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
+    this.oggetti = []; this.grate = []; this.leve = []; this.oggVer = 0; this.oggInviata = -1;   // v2.21 — rompibili, grate, leve
     this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = []; this.events = [];
     // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
     // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
@@ -210,6 +211,7 @@ class Room {
     // collisione torna a costare esattamente quanto prima: un solo confronto con null.
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
+    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
     this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = [];
     if (market) {
@@ -226,7 +228,7 @@ class Room {
       this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave, prologo: 1 });
       return;
     }
-    this.spawnCrates();
+    this.spawnCrates(); this.spawnOggetti();
     this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave });
     // v1.13 — UN SOLO mercante per round: il Nero SOSTITUISCE casualmente l'ufficiale (mai entrambi).
     if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
@@ -236,6 +238,78 @@ class Room {
   // v1.66 — le armi non si raccolgono piu' dalla mappa: saranno disponibili SOLO dal negozio, e l'acquisto
   // e' a sua volta sospeso finche' l'arsenale non viene ripensato attorno alle nuove scuole (melee/magic/
   // ranged). La funzione resta come stub perche' `weaponDrops` e il suo canale di rete restino validi.
+  // ===== v2.21 — GLI OGGETTI CHE FANNO QUALCOSA =====================================
+  // Urne, barili, grate e leve. Sono entita' del server e non decorazione, perche' devono poter
+  // sparire e cambiare stato: la decorazione viene cotta una volta sola nel fondo della mappa.
+  spawnOggetti() {
+    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1; this.oggVer++; this.oggInviata = -1;
+    for (const o of (this.map.rompibili || []))
+      this.oggetti.push({ eid: NEXT++, tipo: o.tipo, x: o.x, y: o.y, s: o.s || 1,
+        r: o.tipo === 'barile' ? 15 : 12, dead: false });
+    for (const gt of (this.map.grate || []))
+      this.grate.push({ id: gt.id, tiles: gt.tiles.slice(), x: gt.x, y: gt.y, premio: gt.premio, aperta: false });
+    for (const lv of (this.map.leve || []))
+      this.leve.push({ id: lv.id, gid: lv.gid, x: lv.x, y: lv.y, tirata: false });
+    // il premio dietro la grata e' una cassa vera, con tutto quello che comporta — mimic compreso.
+    // Se dietro una porta chiusa a chiave ci fosse sempre e solo oro, aprirla smetterebbe di essere
+    // una scommessa dopo la prima volta.
+    for (const gt of this.grate) if (gt.premio)
+      this.crates.push({ eid: NEXT++, x: gt.premio.x, y: gt.premio.y, r: 16,
+        mimic: Math.random() < (C.MIMIC_PROB == null ? 0.06 : C.MIMIC_PROB), opened: false });
+  }
+  // Un solo ingresso per tutto cio' che puo' rompere un oggetto: proiettili, fendenti, esplosioni.
+  // Averne uno solo e' quello che fa funzionare la catena dei barili senza scriverla due volte.
+  colpisciOggetti(x, y, r, src) {
+    if (!this.oggetti.length) return 0;
+    let n = 0;
+    for (const o of this.oggetti) { if (o.dead) continue;
+      if (MU.dist(x, y, o.x, o.y) > r + o.r) continue;
+      this.rompiOggetto(o, src); n++; }
+    return n;
+  }
+  rompiOggetto(o, src) {
+    if (o.dead) return; o.dead = true; this.oggVer++;      // PRIMA di tutto: e' cosi' che la catena
+    if (o.tipo === 'barile') {                             // dei barili non puo' tornare indietro
+      this.events.push({ t: 'barile', x: o.x, y: o.y, r: C.BARILE_RAGGIO });
+      this._scoppioBarile(o, src);
+      return;
+    }
+    const val = Math.round((C.URNA_MONETE + this.wave * C.URNA_MONETE_ONDATA) * MU.rand(0.75, 1.3));
+    for (const cp of Loot.coinsFor(val, C.COINS)) { const a = Math.random() * Math.PI * 2, rd = MU.rand(4, 18);
+      this.groundCoins.push({ eid: NEXT++, x: o.x + Math.cos(a) * rd, y: o.y + Math.sin(a) * rd, v: cp.v, cid: cp.id, t: 30 }); }
+    this.events.push({ t: 'urna', x: o.x, y: o.y, v: val });
+    this.xpCondivisa(C.URNA_XP, 'urna');
+  }
+  _scoppioBarile(o, src) {
+    const R = C.BARILE_RAGGIO, D = Math.round(C.BARILE_DANNO + this.wave * C.BARILE_DANNO_ONDATA);
+    for (const m of this.monsters) if (!m.dead && MU.dist(o.x, o.y, m.x, m.y) <= R + m.radius)
+      this.damageMonster(m, D, o.x, o.y, 150, src);
+    // e fa male anche a noi. E' la meta' del danno, ma e' danno vero: senza, il barile sarebbe una
+    // bomba gratis e la scelta di quando farlo scoppiare non varrebbe niente.
+    const Dp = Math.max(1, Math.round(D * (C.BARILE_QUOTA_GIOCATORE == null ? 0.5 : C.BARILE_QUOTA_GIOCATORE)));
+    for (const p of this.alivePlayers) { if (p.buffs.iframe || p.buffs.i_invuln) continue;
+      if (MU.dist(o.x, o.y, p.x, p.y) <= R + p.radius) this.damagePlayer(p, Dp, o.x, o.y, 1); }
+    this.colpisciOggetti(o.x, o.y, R, src);                // la catena
+  }
+  // La leva. Si tira camminandoci addosso, come si aprono le casse: il gioco non ha un tasto "usa"
+  // e non e' questo il momento di inventarne uno.
+  updateLeve() {
+    if (!this.leve.length) return;
+    for (const lv of this.leve) { if (lv.tirata) continue;
+      for (const p of this.raccoglitori) {
+        if (MU.dist(lv.x, lv.y, p.x, p.y) > p.radius + C.GRATA_RAGGIO) continue;
+        lv.tirata = true;
+        const gt = this.grate.find(q => q.id === lv.gid);
+        if (gt && !gt.aperta) {
+          gt.aperta = true;
+          // Qui non c'e' altro da fare che cambiare la griglia: il campo di flusso si ricostruisce
+          // da solo ogni 0,12 s, e collisioni e linea di vista la rileggono a ogni chiamata.
+          for (const t of gt.tiles) this.map.grid[t] = C.T_FLOOR;
+          this.flow = null;
+          this.events.push({ t: 'grata', id: gt.id, x: gt.x, y: gt.y, name2: p.name });
+        }
+        break; } }
+  }
   spawnWeapons() { /* disattivata in v1.66 */ }
 
   addPlayer(pid, conn, name, heroId) {
@@ -1480,6 +1554,14 @@ class Room {
       for (let i = 0; i < hit.length && i < cap; i++) this.damageMonster(hit[i].m, dd, p.x, p.y, 0, p, { nonConta: 1 });
       this.events.push({ t: 'doppio', x: p.x, y: p.y, a: p.aim, rad, half, who: p.id });
     }
+    // v2.21 — il fendente rompe anche urne e barili che cadono nell'arco. Senza questo il guerriero
+    // sarebbe l'unica classe che non puo' usare un barile, e la meta' del gioco corpo a corpo si
+    // troverebbe davanti a oggetti che per lei non esistono.
+    for (const o of this.oggetti) { if (o.dead) continue;
+      const dd = MU.dist(p.x, p.y, o.x, o.y); if (dd > rad + o.r) continue;
+      if (half < Math.PI) { const ao = Math.atan2(o.y - p.y, o.x - p.x);
+        const diff = Math.abs(((ao - p.aim + Math.PI) % (2 * Math.PI)) - Math.PI); if (diff > half) continue; }
+      this.rompiOggetto(o, p); }
     const colpiti = Math.min(hit.length, cap);
     if (p.perk.furia > 0) p.furiaBonus = Math.min(0.40, colpiti * p.perk.furia);   // matura per il PROSSIMO colpo
     this.events.push({ t: 'swing', x: p.x, y: p.y, a: p.aim, rad, half, crit, hits: colpiti, who: p.id, giro: giro ? 1 : 0 });
@@ -3571,7 +3653,7 @@ class Room {
     if (running) {
       // v2.19.7 — l'IA a OGNI alleato, non solo al primo: mercenario e zombie possono stare in campo insieme
       for (const mc of this.alleatiIA) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); }
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateLeve(); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -4100,7 +4182,21 @@ class Room {
       if (b.life <= 0 && b.palla) { this._sfondaPalla(b); continue; }
       if (b.life <= 0 && !b.grenade) b.dead = true; if (b.grenade && b.fuse <= 0) { this._explode(b); b.dead = true; continue; } if (b.dead) continue;
       if (b.hostile) { for (const p of this.alivePlayers) { if (p.buffs.iframe || p.buffs.i_invuln) continue; if (MU.circleHit(b.x, b.y, b.r, p.x, p.y, p.radius)) { this.damagePlayer(p, b.dmg, b.x, b.y, 1); if (b.curse) this.cursePlayer(p); b.dead = true; break; } } }
-      else { for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue;
+      else { // v2.21 — urne e barili fermano il colpo come lo fermerebbe un mostro. Solo i colpi dei
+        // giocatori: un barile fatto scoppiare da un proiettile nemico sarebbe un danno arrivato da
+        // una catena che il giocatore non ha nessun modo di prevedere.
+        // Questo blocco sta DENTRO l'else, non prima: la prima volta l'avevo messo in mezzo fra l'if e
+        // il suo else, e il ramo dei mostri e' finito buono anche per i proiettili ostili — che
+        // nascendo addosso a chi spara si ammazzavano da soli al primo fotogramma, e lo sputo
+        // dell'acido non usciva piu'. E' lo stesso errore della v1.97.1 sulla cottura delle mappe.
+        if (this.oggetti.length) {
+          for (const o of this.oggetti) { if (o.dead) continue;
+            if (!MU.circleHit(b.x, b.y, b.r, o.x, o.y, o.r)) continue;
+            this.rompiOggetto(o, this.players.get(b.owner));
+            if (!b.palla && !b.explosive && b.pierce <= 0) b.dead = true;
+            break; } }
+        if (b.dead) continue;
+        for (const m of this.monsters) { if (m.dead) continue; if (MU.circleHit(b.x, b.y, b.r, m.x, m.y, m.radius)) { if (b.hitSet && b.hitSet.has(m.eid)) continue;
           // v2.19.11 — la Palla di Fuoco non morde: scoppia. Tutto il suo danno e' nell'area, e chi
           // l'ha presa in faccia lo prende li' dentro come tutti gli altri.
           if (b.palla) { this._sfondaPalla(b); break; }
@@ -4152,7 +4248,7 @@ class Room {
     }
     this.events.push({ t: 'palla', x: b.x, y: b.y, r: b.boomR, n, el: src ? this._elementoDi(src) : 'fuoco', who: b.owner });
   }
-  _explodeAt(x, y, r, dmg, src) { for (const m of this.monsters) if (!m.dead && MU.dist(x, y, m.x, m.y) <= r + m.radius) this.damageMonster(m, dmg, x, y, 120, src); }
+  _explodeAt(x, y, r, dmg, src) { for (const m of this.monsters) if (!m.dead && MU.dist(x, y, m.x, m.y) <= r + m.radius) this.damageMonster(m, dmg, x, y, 120, src); this.colpisciOggetti(x, y, r, src); }
   // v1.79 — IMPLOSIONE. Non e' un'esplosione al contrario per modo di dire: i nemici nel raggio vengono
   // TIRATI verso il punto d'impatto e restano fermi otto decimi di secondo. Serve a fare quello che al
   // mago manca — radunare una folla sparsa in un punto solo — non a fare danno, che infatti e' il 60%.
@@ -4324,11 +4420,21 @@ class Room {
     const fg = ((this.phase === C.PHASE_CLEARED || this.phase === C.PHASE_MARKET || this.phase === C.PHASE_PROLOGO) && this.faglia) ? this.faglia : null;
     const tele = []; for (const w of this.ragnatele) tele.push({ x: Math.round(w.x), y: Math.round(w.y), r: w.r, p: +(w.t / w.max).toFixed(2), c: w.col });
     const crates = []; for (const c of this.crates) crates.push({ e: c.eid, x: Math.round(c.x), y: Math.round(c.y) });
+    // v2.21 — gli oggetti rompibili e le leve viaggiano nello snapshot come le casse: devono poter
+    // sparire e cambiare posa, e la mappa cotta non sa fare ne' l'una ne' l'altra cosa.
+    // Solo i rompibili viaggiano a ogni tick, perche' sono gli unici che cambiano di continuo.
+    // Grate e leve stanno nella MAPPA e il loro stato lo tiene il client, che lo aggiorna sull'evento
+    // `grata`: sono due oggetti per partita, mandarli sessanta volte al secondo sarebbe solo peso.
+    let ogg = null;
+    if (!slim || this.oggInviata !== this.oggVer) {
+      ogg = []; for (const o of this.oggetti) if (!o.dead) ogg.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), k: o.tipo === 'barile' ? 1 : 0, s: Math.round((o.s || 1) * 100) });
+      if (slim) this.oggInviata = this.oggVer;
+    }
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });
     const xp = []; for (const o of this.groundXp) xp.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y) });
     const coins = []; for (const o of this.groundCoins) coins.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), c: o.cid });
     const items = []; for (const it of this.items) items.push({ e: it.eid, x: Math.round(it.x), y: Math.round(it.y), id: it.id });
-    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, gmerchs: (this.gearMerchants || []).map(b => ({ x: Math.round(b.x), y: Math.round(b.y), k: b.cat })), pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0,
+    const s = { t: C.MSG.SNAPSHOT, tick: this.time, phase: this.phase, wave: this.wave, wt: +Math.max(0, this.phase === C.PHASE_CLEARED && this.waveDur != null ? this.waveDur : this.time - this.waveT0).toFixed(1), wp: this.parT || 0, ex: this.phase === C.PHASE_CLEARED ? Object.assign(this._contaUscita(), { t: Math.max(0, Math.ceil(this.exitT || 0)) }) : null, players, mon, bul, orbs, met, crates, ogg, wdrops, xp, coins, items, zones, muri, trap, nebb, tele, rec, chv, chIn, fg, merch: this.merchant ? { x: Math.round(this.merchant.x), y: Math.round(this.merchant.y) } : null, merchD: this.darkMerchant ? { x: Math.round(this.darkMerchant.x), y: Math.round(this.darkMerchant.y) } : null, gmerch: this.gearMerchant ? { x: Math.round(this.gearMerchant.x), y: Math.round(this.gearMerchant.y) } : null, gmerchs: (this.gearMerchants || []).map(b => ({ x: Math.round(b.x), y: Math.round(b.y), k: b.cat })), pend: this.pending, mcount: this.monsters.length, bt: this.bulletTime ? 1 : 0,
       // v2.7 — la storia viaggia nello snapshot, non solo negli eventi: due campi, e chi entra a meta'
       // di una scena la trova al punto giusto invece di non vederla affatto.
       st: this.storia ? { s: this.storia.scena, r: this.storia.riga } : null, ms: this.missione || null,

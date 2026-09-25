@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.19.10 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.21.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,28 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.21.0 (roba da rompere, e un posto dove ognuno è a casa sua)
+
+**Tre oggetti che fanno qualcosa.** L'**urna** si rompe con un colpo e lascia una mancia (meno di metà
+cassa: le casse restano il premio grosso). Il **barile** esplode — raggio 112, e fa male **anche a te**
+se ci stai dentro, a metà danno: per questo si riconosce a colpo d'occhio, doghe scure e miccia accesa.
+I barili si innescano fra loro. La **grata** chiude un ripostiglio con dentro una cassa vera (mimic
+compreso); la **leva** che la apre sta da qualche parte sulla mappa. Nessuno dei tre blocca il
+passaggio: il vano della grata è scavato nella roccia piena, quindi aprirlo non può tagliare in due la
+mappa.
+
+**E ogni tema ha finalmente due scene che sono solo sue.** Prima, delle 24 scene ce n'era **una** che
+appartenesse a un tema solo: la lava non aveva niente che parlasse di lava. Ora la cripta ha loculi
+murati, urne e catafalchi; la lava colate rapprese e sfiatatoi; la foresta tronchi caduti, felci e
+radici che sfondano il pavimento; il ghiaccio sagome congelate e colonne di ghiaccio; l'arcano cerchi
+rituali e leggii col libro aperto.
+
+**E una cassa che dalla v1.24 nessuno aveva mai visto**: `chest` veniva piazzata ma il renderer non
+sapeva disegnarla. Corretta, e adesso c'è il controllo che impedisce che ricapiti con qualunque altro
+oggetto.
+
+---
 
 ## 🆕 Novità v2.20.3 (ogni posto ha la sua pietra)
 

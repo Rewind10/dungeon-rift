@@ -309,6 +309,12 @@
       case 'zone_tell': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, ev.c || '#ff3b3b', 4, ev.r, 0.35); break;
       // v1.84 — i prigionieri: la chiave e chi la libera
       case 'crate_monete': A.crate && A.crate(); R.floater(ev.x, ev.y - 20, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', true); break;
+      // v2.21 — i tre oggetti che fanno qualcosa. L'urna e' una mancia: un tintinnio e i cocci.
+      // Il barile e' una deflagrazione vera, quindi prende in prestito la scossa e il fuoco delle
+      // granate — se avesse un effetto piu' timido si leggerebbe come meno pericoloso di quanto e'.
+      case 'urna': A.crate && A.crate(); R.burst(ev.x, ev.y, '#b6a37c', 14, 130, 0.45); R.ring(ev.x, ev.y, '#c9b68c', 4, 30, 0.3); R.floater(ev.x, ev.y - 18, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', false); break;
+      case 'barile': A.explosion && A.explosion(); R.ring(ev.x, ev.y, '#ff9a3b', 9, ev.r, 0.38); R.burst(ev.x, ev.y, '#ff7a2b', 26, 260, 0.55); R.burst(ev.x, ev.y, '#4a2c1e', 12, 180, 0.5); R.fire(ev.x, ev.y, 22, 110); R.addShake(8); break;
+      case 'grata': if (R.grateAperte) R.grateAperte.add(ev.id); A.ability && A.ability('rift'); R.ring(ev.x, ev.y, '#7de08a', 6, 70, 0.5); R.burst(ev.x, ev.y, '#8f98a6', 18, 170, 0.6); R.floater(ev.x, ev.y - 26, 'GRATA APERTA', '#7de08a', true); R.addShake(4); break;
       case 'chiave_elite': R.ring(ev.x, ev.y, '#ffd24a', 5, 60, 0.6); break;
       case 'chiave_cade': R.ring(ev.x, ev.y, '#ffd24a', 6, 54, 0.5); R.burst(ev.x, ev.y, '#ffe08a', 16, 150, 0.6); break;
       case 'chiave_presa': A.item && A.item(true); R.ring(ev.x, ev.y, '#ffd24a', 6, 46, 0.45); R.floater(ev.x, ev.y - 26, '\uD83D\uDD11 CHIAVE', '#ffd24a', true); break;
@@ -514,6 +520,7 @@
     const bm = {}; for (const b of prev.bul) bm[b.e] = b;
     w.bul = next.bul.map(nb => { const pb = bm[nb.e]; const o = Object.assign({}, nb); if (pb) { o.vx = (nb.x - pb.x) * C.SNAPSHOT_RATE; o.vy = (nb.y - pb.y) * C.SNAPSHOT_RATE; o.x = lerp(pb.x, nb.x, a); o.y = lerp(pb.y, nb.y, a); } return o; });
     w.orbs = next.orbs; w.met = next.met; w.crates = next.crates || []; w.wdrops = next.wdrops || [];
+    if (next.ogg) w.ogg = next.ogg; else if (!w.ogg) w.ogg = [];   // v2.21 — urne e barili ancora interi: la lista arriva solo quando cambia
     w.xp = next.xp || []; w.coins = next.coins || []; w.items = next.items || []; w.zones = next.zones || []; w.tele = next.tele || []; w.rec = next.rec || null; w.chv = next.chv || null; w.chIn = next.chIn || 0; w.fg = next.fg || null;
     // v2.17 — ED E' RICAPITATO, esattamente come dice l'avvertimento qui sotto. `muri`, `trap` e `nebb`
     // stanno nello snapshot dalla v1.85 e non erano MAI stati copiati qui: il server li mandava, il

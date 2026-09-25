@@ -5008,7 +5008,12 @@ function testV197() {
   for (const seed of [11, 222, 3333, 44444, 555555]) {
     const m = MG.generate(seed, 1, true);
     // connettivita': dallo spawn si deve raggiungere TUTTO il pavimento
-    const W = m.w, H = m.h, gri = m.grid;
+    // v2.21 — con le GRATE APERTE. Il ripostiglio della v2.21 e' nove tessere scavate nel pieno e
+    // chiuse da una grata: a grata chiusa sono irraggiungibili per costruzione, ed e' giusto cosi'.
+    // Cio' che questo controllo deve continuare a garantire e' che non esista pavimento ORFANO —
+    // cioe' che, tirata la leva, non resti niente di scollegato. Quindi si apre e si misura.
+    const W = m.w, H = m.h, gri = m.grid.slice();
+    for (const q of (m.grate || [])) for (const t of q.tiles) gri[t] = C.T_FLOOR;
     const sx = (m.spawn.x / m.tile) | 0, sy = (m.spawn.y / m.tile) | 0;
     assert(gri[sy * W + sx] !== C.T_WALL, 'seme ' + seed + ': si nasce su pavimento, non dentro una lapide');
     const vis = new Uint8Array(W * H); const st = [sy * W + sx]; vis[st[0]] = 1; let visti = 1;
@@ -5119,7 +5124,11 @@ function testV199() {
       }
       return { tot, best };
     };
+    // v2.21 — anche qui si misura a GRATE APERTE: il ripostiglio chiuso e' scollegato per costruzione
+    // (vedi il controllo della pianta del cimitero), e quello che conta e' che non resti niente di
+    // orfano una volta tirata la leva.
     const camm = new Uint8Array(W * H); for (let i = 0; i < gri.length; i++) camm[i] = passa(gri[i]) ? 1 : 0;
+    for (const q of (m.grate || [])) for (const t of q.tiles) camm[t] = 1;
     const a = grande(camm);
     assert(a.best === a.tot, 'seme ' + seed + ': tutta la conca e raggiungibile (' + a.best + '/' + a.tot + ')');
     const largo = new Uint8Array(W * H);
@@ -7057,6 +7066,234 @@ function testMenu2201() {
   ok('il menu e piu corto: niente richiamo, titolo piu piccolo, meta dell aria in cima');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.21 — OGGETTI CHE FANNO QUALCOSA, E OGGETTI CHE APPARTENGONO A UN TEMA SOLO
+// =================================================================================================
+function testV221() {
+  console.log('\n[TEST 80] v2.21 — urne, barili, grate e leve; e le scene esclusive per tema');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+
+  // --- 1) OGNI TIPO DI PROP CHE LA MAPPA PIAZZA DEVE AVERE IL SUO DISEGNO -------------------
+  // IL BUG CHE HA FATTO NASCERE QUESTO CONTROLLO. `chest` veniva piazzato dalla scena `deposito`
+  // dalla v1.24, ma nel renderer il caso 'chest' non c'era mai stato: il prop cadeva in fondo allo
+  // switch, non trovava il suo ramo e non disegnava niente. Per decine di versioni il deposito ha
+  // avuto una cassa invisibile, senza un errore da nessuna parte. Questo controllo legge dal sorgente
+  // che cosa piazza mapgen e che cosa sa disegnare il renderer, e pretende che i due insiemi tornino.
+  {
+    const srcG = fs.readFileSync(ROOT + 'shared/mapgen.js', 'utf8');
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    const piazzati = new Set(); let mm;
+    const reP = /\b(?:putC|putW|metti|P)\(\s*'([a-z_A-Z]+)'/g;
+    while ((mm = reP.exec(srcG))) piazzati.add(mm[1]);
+    const reB = /propMix:\s*\[([^\]]*)\]/g;
+    while ((mm = reB.exec(srcG))) for (const q of mm[1].match(/'([a-z_A-Z]+)'/g) || []) piazzati.add(q.slice(1, -1));
+    const disegnati = new Set();
+    for (const q of srcR.match(/case '([a-z_A-Z]+)':/g) || []) disegnati.add(q.slice(6, -2));
+    // questi il renderer li intercetta PRIMA dello switch, con un ramo tutto loro
+    for (const s of ['torch', 'camp', 'bonfire', 'stall', 'glowspot', 'urna', 'barile']) disegnati.add(s);
+    const muti = [...piazzati].filter(t => !disegnati.has(t));
+    assert(muti.length === 0, 'ogni prop piazzato dalla mappa ha il suo disegno nel renderer'
+      + (muti.length ? ' — MUTI: ' + muti.join(', ') : ''));
+    assert(/case 'chest':/.test(srcR), 'e in particolare la cassa del deposito, invisibile dalla v1.24, adesso si vede');
+  }
+
+  // --- 2) LE SCENE ESCLUSIVE SONO DAVVERO ESCLUSIVE -----------------------------------------
+  // Prima della v2.21 delle 24 scene ne esisteva UNA sola che appartenesse a un tema solo. Questo
+  // controllo serve a non tornarci: se qualcuno aggiunge `colata` anche al ghiaccio, qui si rompe.
+  {
+    const ESCL = { crypt: ['loculo', 'urna', 'catafalco'], lava: ['colata', 'sfiatatoio'],
+      forest: ['tronco', 'felce', 'radice'], ice: ['congelato', 'ghiacciolo'], arcane: ['cerchio', 'leggio'] };
+    const visti = {};                       // tipo -> insieme dei temi in cui e' comparso
+    const perTema = {};
+    for (let s = 1; s <= 220; s++) {
+      const m = MapGen.generate(s, 3 + (s % 12)); const t = m.theme.id;
+      perTema[t] = (perTema[t] || 0) + 1;
+      for (const p of m.props) { (visti[p.type] = visti[p.type] || new Set()).add(t); }
+    }
+    for (const tema of Object.keys(ESCL)) for (const tipo of ESCL[tema]) {
+      if (tipo === 'urna') continue;        // l'urna e' un rompibile: non passa dai props
+      const dove = visti[tipo];
+      assert(dove && dove.has(tema), tipo + ' compare nel tema ' + tema);
+      assert(dove && dove.size === 1, tipo + ' compare SOLO nel tema ' + tema + ' (visto in: ' + [...(dove || [])].join(',') + ')');
+    }
+    assert(Object.keys(perTema).length === 5, 'e le 220 mappe hanno comunque pescato tutti e cinque i temi');
+  }
+
+  // --- 3) IL RIPOSTIGLIO NON PUO' TAGLIARE LA MAPPA IN DUE ----------------------------------
+  // E' la proprieta' su cui regge tutta la grata. Il vano si SCAVA nella roccia piena e la sua
+  // conchiglia dev'essere piena a sua volta: cosi' aprirlo o non aprirlo non tocca niente di gia'
+  // esistente. Il primo tentativo controllava solo le nove tessere del vano e non la conchiglia: in
+  // 195 mappe su 300 il vano toccava di fianco un corridoio, il premio si prendeva senza leva e la
+  // grata non chiudeva niente.
+  {
+    const raggiunge = (m, aperta) => {
+      const W = m.w, H = m.h, g = m.grid.slice();
+      if (aperta) for (const q of m.grate) for (const t of q.tiles) g[t] = C.T_FLOOR;
+      const sx = (m.spawn.x / m.tile) | 0, sy = (m.spawn.y / m.tile) | 0;
+      const vis = new Uint8Array(W * H), st = [sy * W + sx]; vis[st[0]] = 1;
+      while (st.length) { const i = st.pop(), x = i % W, y = (i / W) | 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = ny * W + nx; if (vis[j] || g[j] === C.T_WALL) continue; vis[j] = 1; st.push(j); } }
+      return vis;
+    };
+    let senzaGrata = 0, chiusoRaggiungibile = 0, apertoIrraggiungibile = 0, oltreIlVano = 0, senzaLeva = 0;
+    for (let s = 1; s <= 120; s++) {
+      const m = MapGen.generate(s, 3 + (s % 12));
+      if (!m.grate.length) { senzaGrata++; continue; }
+      if (!m.leve.length) senzaLeva++;
+      const pr = m.grate[0].premio, px = (pr.x / m.tile) | 0, py = (pr.y / m.tile) | 0;
+      const vc = raggiunge(m, false), va = raggiunge(m, true);
+      if (vc[py * m.w + px]) chiusoRaggiungibile++;
+      if (!va[py * m.w + px]) apertoIrraggiungibile++;
+      let camb = 0; for (let i = 0; i < vc.length; i++) if (vc[i] !== va[i]) camb++;
+      if (camb > 10) oltreIlVano++;          // il vano e' 9 tessere piu' la porta
+    }
+    assert(senzaGrata === 0, 'ogni mappa ha il suo ripostiglio chiuso');
+    assert(senzaLeva === 0, 'e ogni ripostiglio ha la sua leva');
+    assert(chiusoRaggiungibile === 0, 'a grata chiusa il premio NON si raggiunge (' + chiusoRaggiungibile + ' mappe bucate)');
+    assert(apertoIrraggiungibile === 0, 'a grata aperta si raggiunge sempre (' + apertoIrraggiungibile + ' mappe murate)');
+    assert(oltreIlVano === 0, 'e aprirla non cambia NIENTE fuori dal vano (' + oltreIlVano + ' mappe stravolte)');
+  }
+
+  // --- 4) LA LEVA APRE DAVVERO, E IL MOSTRO CI PASSA ----------------------------------------
+  {
+    const r = new Room('v221a'); const p = r.addPlayer('a', { send() {} }, 'A', 'barbaro'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    assert(r.grate.length === 1 && r.leve.length === 1, 'la stanza ha caricato una grata e una leva');
+    const gt = r.grate[0], lv = r.leve[0];
+    assert(gt.tiles.every(t => r.map.grid[t] === C.T_WALL), 'a inizio partita la grata e muro');
+    assert(!r.isWallAt(gt.premio.x, gt.premio.y), 'ma dentro il vano c e pavimento gia scavato');
+    assert(r.crates.some(c => MU.dist(c.x, c.y, gt.premio.x, gt.premio.y) < 2), 'e dentro c e la cassa premio');
+    // il giocatore lontano non la tira
+    p.x = lv.x + 400; p.y = lv.y + 400; r.updateLeve();
+    assert(!lv.tirata && !gt.aperta, 'da lontano la leva non si tira da sola');
+    // ci cammina addosso
+    p.x = lv.x; p.y = lv.y; r.updateLeve();
+    assert(lv.tirata && gt.aperta, 'camminandoci addosso la leva si tira e la grata si apre');
+    assert(gt.tiles.every(t => r.map.grid[t] === C.T_FLOOR), 'e la griglia diventa pavimento');
+    assert(r.events.some(e => e.t === 'grata'), 'e parte l evento che lo dice al client');
+    // e adesso il campo di flusso ci passa: si ricostruisce dalla griglia, non da una copia sua
+    const PF2 = require('../shared/pathfinding.js');
+    const gx = (gt.premio.x / C.TILE) | 0, gy = (gt.premio.y / C.TILE) | 0;
+    const px2 = (p.x / C.TILE) | 0, py2 = (p.y / C.TILE) | 0;
+    const campo = PF2.build(r.map.grid, r.map.w, r.map.h, [{ gx, gy }]);
+    assert(campo[py2 * r.map.w + px2] >= 0,
+      'e il campo di flusso, ricostruito dalla griglia, adesso attraversa la porta');
+    // tirarla due volte non deve contare due volte
+    const quante = r.events.filter(e => e.t === 'grata').length;
+    r.updateLeve(); r.updateLeve();
+    assert(r.events.filter(e => e.t === 'grata').length === quante, 'e non si puo tirare due volte');
+  }
+
+  // --- 5) L'URNA SI ROMPE E LASCIA MONETE ---------------------------------------------------
+  {
+    const r = new Room('v221b'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const u = r.oggetti.find(o => o.tipo === 'urna');
+    assert(u, 'sulla mappa c e almeno un urna');
+    const monete0 = r.groundCoins.length;
+    r.rompiOggetto(u, p);
+    assert(u.dead, 'colpita, l urna si rompe');
+    assert(r.groundCoins.length > monete0, 'e lascia monete a terra (' + (r.groundCoins.length - monete0) + ')');
+    assert(r.events.some(e => e.t === 'urna'), 'e l evento arriva al client');
+    // rotta una volta, e' rotta: non si puo mungere
+    const dopo = r.groundCoins.length; r.rompiOggetto(u, p);
+    assert(r.groundCoins.length === dopo, 'e non si puo rompere due volte');
+    // e sparisce dallo snapshot
+    const snap = r.snapshot();
+    assert(!(snap.ogg || []).some(o => o.e === u.eid), 'e sparisce dallo snapshot');
+  }
+
+  // --- 6) IL BARILE FA MALE AI MOSTRI, AI GIOCATORI, E INNESCA GLI ALTRI BARILI --------------
+  {
+    const r = new Room('v221c'); const p = r.addPlayer('a', { send() {} }, 'A', 'barbaro'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    r.oggetti.length = 0;
+    const b1 = { eid: 90001, tipo: 'barile', x: 1000, y: 1000, s: 1, r: 15, dead: false };
+    const b2 = { eid: 90002, tipo: 'barile', x: 1000 + C.BARILE_RAGGIO - 20, y: 1000, s: 1, r: 15, dead: false };
+    const lontano = { eid: 90003, tipo: 'barile', x: 1000 + C.BARILE_RAGGIO * 4, y: 1000, s: 1, r: 15, dead: false };
+    r.oggetti.push(b1, b2, lontano);
+    const m = r.spawnMonster('skeleton', 1030, 1000, {}); const hp0 = m.hp;
+    const fuori = r.spawnMonster('skeleton', 1000 + C.BARILE_RAGGIO * 3, 1000, {}); const hpF = fuori.hp;
+    p.x = 1040; p.y = 1000; const pv0 = p.hp;
+    r.rompiOggetto(b1, p);
+    assert(b1.dead, 'il barile colpito scoppia');
+    assert(m.hp < hp0, 'e fa male al mostro dentro il raggio');
+    assert(fuori.hp === hpF, 'e non a quello fuori');
+    assert(p.hp < pv0, 'e fa male anche a chi lo ha fatto scoppiare, se ci sta dentro');
+    assert(pv0 - p.hp < hp0 - m.hp, 'ma meno che ai mostri: e un avvertimento, non una condanna');
+    assert(b2.dead, 'e innesca il barile vicino');
+    assert(!lontano.dead, 'e non quello lontano');
+    assert(r.events.filter(e => e.t === 'barile').length === 2, 'due barili, due esplosioni, e la catena si ferma li');
+  }
+
+  // --- 7) CHI PUO' ROMPERLI, E CHI NO -------------------------------------------------------
+  {
+    // il fendente prende quello davanti e non quello dietro le spalle
+    const r = new Room('v221d'); const p = r.addPlayer('a', { send() {} }, 'A', 'barbaro'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.oggetti.length = 0;
+    const w = r.effWeapon(p); p.aim = 0;
+    const davanti = { eid: 91001, tipo: 'urna', x: p.x + w.arcRadius * 0.6, y: p.y, s: 1, r: 12, dead: false };
+    const dietro = { eid: 91002, tipo: 'urna', x: p.x - w.arcRadius * 0.6, y: p.y, s: 1, r: 12, dead: false };
+    r.oggetti.push(davanti, dietro);
+    r._meleeSwing(p, w, 10, false);
+    assert(davanti.dead, 'il fendente rompe l urna che ha davanti');
+    assert(!dietro.dead, 'e non quella che ha dietro le spalle');
+
+    // il proiettile del giocatore rompe; quello del mostro no
+    const r2 = new Room('v221e'); const q = r2.addPlayer('b', { send() {} }, 'B', 'ranger'); r2.startGame();
+    r2.monsters.length = 0; r2.pending = 0; r2.waveList = []; r2.oggetti.length = 0; r2.bullets.length = 0;
+    // sul PAVIMENTO, non a coordinate a caso: dentro la roccia il proiettile muore sul muro prima di
+    // arrivare all urna, e il test misurerebbe tutt altro
+    const mio = { eid: 91003, tipo: 'urna', x: q.x, y: q.y, s: 1, r: 12, dead: false };
+    const suo = { eid: 91004, tipo: 'urna', x: q.x, y: q.y, s: 1, r: 12, dead: false };
+    r2.oggetti.push(mio, suo);
+    r2.bullets.push({ eid: 91005, hostile: false, owner: q.id, x: q.x, y: q.y, vx: 1, vy: 0, r: 6, dmg: 10, color: '#fff', life: 1, pierce: 0 });
+    r2.bullets.push({ eid: 91006, hostile: true, owner: 999, x: q.x, y: q.y, vx: 1, vy: 0, r: 6, dmg: 10, color: '#f00', life: 1, pierce: 0 });
+    r2.updateBullets(0.016);
+    assert(mio.dead, 'il colpo del giocatore rompe l urna');
+    assert(!suo.dead, 'quello del mostro no: un barile innescato da un nemico sarebbe un danno imprevedibile');
+    assert(r2.oggetti.filter(o => o.dead).length === 1, 'e ne rompe UNO solo: il colpo si ferma sul primo');
+
+    // E LA RIGA INFILATA FRA L'IF E IL SUO ELSE. Il controllo sugli oggetti era finito in mezzo al
+    // ramo `if (b.hostile) ... else ...` di updateBullets, e l'else si era staccato dal suo if: i
+    // proiettili OSTILI finivano nel ramo dei mostri e, nascendo addosso a chi li spara, si
+    // ammazzavano da soli al primo fotogramma. Lo sputo dell acido aveva smesso di uscire.
+    const r3 = new Room('v221f'); r3.addPlayer('c', { send() {} }, 'C', 'mago'); r3.startGame();
+    r3.monsters.length = 0; r3.pending = 0; r3.waveList = []; r3.bullets.length = 0;
+    // di nuovo: su PAVIMENTO. Lo spawn del giocatore e' l unico punto che sappiamo libero per certo —
+    // ma il giocatore va tolto di li', se no il proiettile ostile colpisce LUI (che e' giusto) e il
+    // test misurerebbe tutt altro. Senza questa riga falliva una volta su tre, a seconda del seme.
+    const g3 = r3.map.spawn;
+    for (const pl of r3.players.values()) { pl.x = g3.x + 4000; pl.y = g3.y + 4000; }
+    const mo = r3.spawnMonster('skeleton', g3.x, g3.y, {}); const vita = mo.hp;
+    r3.bullets.push({ eid: 91007, hostile: true, owner: mo.eid, x: g3.x, y: g3.y, vx: 1, vy: 0, r: 6, dmg: 25, color: '#0f0', life: 2, pierce: 0 });
+    r3.updateBullets(0.016);
+    assert(mo.hp === vita, 'un proiettile OSTILE non ferisce i mostri');
+    assert(r3.bullets.length === 1 && !r3.bullets[0].dead, 'e non muore addosso a chi lo ha sparato');
+  }
+
+  // --- 8) IL PONTE: cio che il server manda, il client lo guarda ----------------------------
+  {
+    const r = new Room('v221g'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    const pieno = r.snapshot();
+    assert(Array.isArray(pieno.ogg), 'lo snapshot pieno porta sempre la lista dei rompibili');
+    const a = r.snapshot(true), b = r.snapshot(true);
+    assert(Array.isArray(a.ogg), 'il primo snapshot magro la presenta');
+    assert(!b.ogg, 'nei successivi non si ripete finche non cambia');
+    const u = r.oggetti.find(o => !o.dead); if (u) r.rompiOggetto(u, null);
+    assert(Array.isArray(r.snapshot(true).ogg), 'ma appena uno si rompe la lista riparte');
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    assert(/w\.ogg\s*=/.test(srcM), 'e main.js la copia nel mondo interpolato');
+    assert(/case 'grata'/.test(srcM) && /grateAperte\.add/.test(srcM), 'e segna la grata aperta quando arriva l evento');
+    const srcR2 = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    assert(/this\.grateAperte = new Set\(\)/.test(srcR2), 'il renderer azzera le grate aperte a ogni mappa nuova');
+  }
+  ok('urne, barili, grate e leve fanno quello che devono, e ogni tema ha i suoi oggetti');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

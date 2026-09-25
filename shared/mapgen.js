@@ -34,11 +34,11 @@
   // Il VILLAGGIO non li ha, ed e' voluto: senza `chiaro`/`scuro` la cottura usa i valori di prima, e
   // il paese resta identico a com'era. Si cambia il sottosuolo, non casa della gente.
   const THEMES = [
-    { id: 'crypt', name: 'Cripta Dimenticata', floorA: '#12161f', floorB: '#151a26', wall: '#1b2036', wallTop: '#262d4a', hazard: '#ff5a1e', accent: '#8be9ff', chiaro: '#d8cfb4', scuro: '#0a0c10', blobMul: 1.0, hazMul: 1.0, propMix: ['bones', 'skull', 'coffin', 'tomb', 'corpse', 'chain', 'rock', 'rockSmall', 'web', 'skull', 'bones'], tint: 'rgba(40,60,45,.22)' },
-    { id: 'lava', name: 'Caverne di Lava', floorA: '#1c1413', floorB: '#241615', wall: '#2a1a16', wallTop: '#4a2a1e', hazard: '#ff7a1e', accent: '#ffb020', chiaro: '#e0a271', scuro: '#140805', blobMul: 0.85, hazMul: 1.9, propMix: ['rock', 'rockSmall', 'bones', 'skull', 'chain', 'corpse', 'crystal', 'rock', 'skull'], tint: 'rgba(90,40,20,.24)' },
-    { id: 'forest', name: 'Rovine nella Foresta', floorA: '#121a14', floorB: '#16221a', wall: '#1c2a1e', wallTop: '#2a3d2c', hazard: '#5adf5a', accent: '#8bff9a', chiaro: '#b9cfa0', scuro: '#08120a', blobMul: 1.15, hazMul: 1.1, propMix: ['rock', 'rockSmall', 'mushroom', 'bones', 'corpse', 'coffin', 'web', 'web', 'skull'], tint: 'rgba(30,70,40,.26)' },
-    { id: 'ice', name: 'Cripta di Ghiaccio', floorA: '#121a22', floorB: '#16222e', wall: '#1c2a3a', wallTop: '#2a3d52', hazard: '#7de0ff', accent: '#a8f0ff', chiaro: '#cfe9f5', scuro: '#06121c', blobMul: 1.05, hazMul: 0.9, propMix: ['rock', 'rockSmall', 'crystal', 'bones', 'skull', 'coffin', 'web', 'corpse'], tint: 'rgba(40,70,95,.22)' },
-    { id: 'arcane', name: 'Tempio Arcano', floorA: '#181322', floorB: '#1e1830', wall: '#2a1e3a', wallTop: '#3d2c52', hazard: '#c56bff', accent: '#d59bff', chiaro: '#d3bff0', scuro: '#0d0718', blobMul: 1.0, hazMul: 1.2, propMix: ['skull', 'bones', 'crystal', 'coffin', 'chain', 'corpse', 'web'], tint: 'rgba(70,40,95,.24)' },
+    { id: 'crypt', name: 'Cripta Dimenticata', floorA: '#12161f', floorB: '#151a26', wall: '#1b2036', wallTop: '#262d4a', hazard: '#ff5a1e', accent: '#8be9ff', chiaro: '#d8cfb4', scuro: '#0a0c10', blobMul: 1.0, hazMul: 1.0, propMix: ['bones', 'skull', 'coffin', 'tomb', 'corpse', 'chain', 'rock', 'rockSmall', 'web', 'skull', 'bones', 'urna', 'loculo'], tint: 'rgba(40,60,45,.22)' },
+    { id: 'lava', name: 'Caverne di Lava', floorA: '#1c1413', floorB: '#241615', wall: '#2a1a16', wallTop: '#4a2a1e', hazard: '#ff7a1e', accent: '#ffb020', chiaro: '#e0a271', scuro: '#140805', blobMul: 0.85, hazMul: 1.9, propMix: ['rock', 'rockSmall', 'bones', 'skull', 'chain', 'corpse', 'crystal', 'rock', 'skull', 'colata', 'colata', 'sfiatatoio'], tint: 'rgba(90,40,20,.24)' },
+    { id: 'forest', name: 'Rovine nella Foresta', floorA: '#121a14', floorB: '#16221a', wall: '#1c2a1e', wallTop: '#2a3d2c', hazard: '#5adf5a', accent: '#8bff9a', chiaro: '#b9cfa0', scuro: '#08120a', blobMul: 1.15, hazMul: 1.1, propMix: ['rock', 'rockSmall', 'mushroom', 'bones', 'corpse', 'coffin', 'web', 'web', 'skull', 'felce', 'felce', 'tronco'], tint: 'rgba(30,70,40,.26)' },
+    { id: 'ice', name: 'Cripta di Ghiaccio', floorA: '#121a22', floorB: '#16222e', wall: '#1c2a3a', wallTop: '#2a3d52', hazard: '#7de0ff', accent: '#a8f0ff', chiaro: '#cfe9f5', scuro: '#06121c', blobMul: 1.05, hazMul: 0.9, propMix: ['rock', 'rockSmall', 'crystal', 'bones', 'skull', 'coffin', 'web', 'corpse', 'ghiacciolo', 'ghiacciolo', 'congelato'], tint: 'rgba(40,70,95,.22)' },
+    { id: 'arcane', name: 'Tempio Arcano', floorA: '#181322', floorB: '#1e1830', wall: '#2a1e3a', wallTop: '#3d2c52', hazard: '#c56bff', accent: '#d59bff', chiaro: '#d3bff0', scuro: '#0d0718', blobMul: 1.0, hazMul: 1.2, propMix: ['skull', 'bones', 'crystal', 'coffin', 'chain', 'corpse', 'web', 'cerchio', 'leggio'], tint: 'rgba(70,40,95,.24)' },
   ];
   function stampBlob(g, cx, cy, rw, rh, v) { for (let y = cy - rh; y <= cy + rh; y++) for (let x = cx - rw; x <= cx + rw; x++) { if (x <= 1 || y <= 1 || x >= W - 2 || y >= H - 2) continue; g[idx(x, y)] = v; } }
   function areaFree(g, cx, cy, rw, rh, pad) { for (let y = cy - rh - pad; y <= cy + rh + pad; y++) for (let x = cx - rw - pad; x <= cx + rw + pad; x++) { if (x < 0 || y < 0 || x >= W || y >= H) return false; if (g[idx(x, y)] !== C.T_FLOOR) return false; } return true; }
@@ -705,7 +705,14 @@
 
     // ===== DECORAZIONI a CLUSTER coerenti, LIMITATE (max 3-4 per tipo; le TORCE fanno eccezione) =====
     const props = []; const pcnt = {}; const CAP = 4;
-    const putW = (type, wx, wy, s) => { if (type !== 'torch') { if ((pcnt[type] || 0) >= CAP) return false; pcnt[type] = (pcnt[type] || 0) + 1; } props.push({ type, x: wx, y: wy, s: s || MU.rand(0.9, 1.15), r: rng() }); return true; };
+    // v2.21 — URNE E BARILI NON SONO DECORAZIONE. Si rompono, quindi devono poter SPARIRE: se finissero
+    // fra i props verrebbero cotti una volta sola nel fondo della mappa e resterebbero disegnati anche
+    // dopo essere stati distrutti. Escono di qui e diventano entita' del server, come le casse.
+    const rompibili = [];
+    const ROMPIBILE = { urna: 1, barile: 1 };
+    const putW = (type, wx, wy, s) => { if (type !== 'torch') { if ((pcnt[type] || 0) >= CAP) return false; pcnt[type] = (pcnt[type] || 0) + 1; }
+      if (ROMPIBILE[type]) { rompibili.push({ tipo: type, x: wx, y: wy, s: s || MU.rand(0.9, 1.15) }); return true; }
+      props.push({ type, x: wx, y: wy, s: s || MU.rand(0.9, 1.15), r: rng() }); return true; };
     const putC = (type, c, dx, dy, s) => putW(type, wcx(c) + (dx || 0), wcy(c) + (dy || 0), s);
     // candidate: nicchie (nearWall) lontane dallo spawn, ben distanziate fra loro
     let cand = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 6 && nearWall(c));
@@ -739,14 +746,29 @@
       officina(c) { const n = 1 + rint(0, 1); for (let j = 0; j < n; j++) putC('grate', c, (j - (n - 1) / 2) * 40, MU.rand(-6, 6), MU.rand(1.0, 1.2)); if (rng() < 0.6) putC('rubble', c, MU.rand(-24, 24), 22, 1); },
       geode(c) { putC('giant_crystal', c, 0, 2, MU.rand(1.0, 1.25)); const n = 1 + rint(0, 1); for (let j = 0; j < n; j++) putC('crystal', c, (j ? 26 : -26), 12, MU.rand(0.9, 1.1)); },
       reliquiario(c) { putC('gem_statue', c, 0, 0, MU.rand(1.05, 1.25)); if (rng() < 0.6) putC('candelabra', c, -24, 8, 1); if (rng() < 0.6) putC('candelabra', c, 24, 8, 1); },
+      // v2.21 — LE SCENE ESCLUSIVE, due per tema. Fino alla v2.20.3 delle 24 scene ne esisteva UNA sola
+      // che appartenesse a un tema solo (la `fungaia` della foresta): tutte le altre erano condivise da
+      // due, tre o quattro temi. Per questo lava, ghiaccio e arcano non avevano niente che parlasse di
+      // loro, e il colore della roccia da solo non bastava a distinguerli. Queste dieci non vanno MAI
+      // aggiunte a piu' di un tema: e' tutto il loro scopo.
+      sepolcreto(c) { const n = 2 + rint(0, 1); for (let j = 0; j < n; j++) putC('loculo', c, (j - (n - 1) / 2) * 44, MU.rand(-6, 6), MU.rand(0.95, 1.15)); if (rng() < 0.7) putC('urna', c, MU.rand(-26, 26), 26, MU.rand(0.9, 1.1)); if (rng() < 0.5) putC('bones', c, MU.rand(-20, 20), -24, 1); },
+      veglia(c) { putC('catafalco', c, 0, 0, MU.rand(1.0, 1.15)); putC('candelabra', c, -30, 10, 1); if (rng() < 0.7) putC('candelabra', c, 30, 10, 1); if (rng() < 0.5) putC('urna', c, MU.rand(-16, 16), -26, 0.95); },
+      colata_lavica(c) { const n = 2 + rint(0, 1); for (let j = 0; j < n; j++) { const a = rng() * 6.28, dd = rng() * 34; putC('colata', c, Math.cos(a) * dd, Math.sin(a) * dd, MU.rand(0.95, 1.3)); } if (rng() < 0.7) putC('sfiatatoio', c, MU.rand(-26, 26), 24, 1); },
+      fumarole(c) { const n = 2 + rint(0, 1); for (let j = 0; j < n; j++) putC('sfiatatoio', c, (j - (n - 1) / 2) * 38, MU.rand(-8, 8), MU.rand(0.9, 1.2)); if (rng() < 0.6) putC('colata', c, MU.rand(-24, 24), 24, 1); },
+      boschetto(c) { putC('tronco', c, 0, 0, MU.rand(1.0, 1.2)); const n = 2 + rint(0, 1); for (let j = 0; j < n; j++) { const a = rng() * 6.28, dd = 24 + rng() * 20; putC('felce', c, Math.cos(a) * dd, Math.sin(a) * dd, MU.rand(0.9, 1.25)); } },
+      radici(c) { putC('radice', c, 0, 0, MU.rand(1.0, 1.2)); const n = 1 + rint(0, 1); for (let j = 0; j < n; j++) putC('felce', c, (j ? 28 : -28), MU.rand(-10, 16), MU.rand(0.9, 1.1)); if (rng() < 0.5) putC('rubble', c, MU.rand(-24, 24), 24, 0.95); },
+      assideramento(c) { putC('congelato', c, 0, 0, MU.rand(1.0, 1.2)); const n = 1 + rint(0, 1); for (let j = 0; j < n; j++) putC('ghiacciolo', c, (j ? 30 : -30), MU.rand(-8, 10), MU.rand(0.9, 1.15)); if (rng() < 0.5) putC('bones', c, MU.rand(-20, 20), 26, 1); },
+      gelicidio(c) { const n = 3 + rint(0, 1); for (let j = 0; j < n; j++) { const a = rng() * 6.28, dd = rng() * 38; putC('ghiacciolo', c, Math.cos(a) * dd, Math.sin(a) * dd, MU.rand(0.85, 1.25)); } },
+      rituale(c) { putC('cerchio', c, 0, 0, MU.rand(1.0, 1.25)); if (rng() < 0.6) putC('skull', c, MU.rand(-30, 30), 30, 1); if (rng() < 0.5) putC('candelabra', c, 34, -6, 1); },
+      studio(c) { putC('leggio', c, 0, 0, MU.rand(1.0, 1.15)); if (rng() < 0.7) putC('candelabra', c, -28, 6, 1); if (rng() < 0.5) putC('cerchio', c, MU.rand(-14, 14), 30, 0.8); },
     };
     // v1.23 — bag di feature per TEMA (coerenza) — poi mescolate e piazzate col cap 3-4 per tipo
     const themeFeats = {
-      crypt: ['cimitero', 'ossario', 'ragnatela', 'macerie', 'altare', 'gabbia', 'catacomba', 'rovine', 'patibolo', 'massacro', 'illuminata', 'discesa', 'cisterna', 'passaggio', 'reliquiario'],
-      lava: ['stalagmiti', 'cristalli', 'macerie', 'ossario', 'deposito', 'catacomba', 'grotta', 'rovine', 'santuario', 'massacro', 'officina', 'passaggio', 'geode', 'discesa'],
-      forest: ['fungaia', 'ragnatela', 'macerie', 'ossario', 'cimitero', 'catacomba', 'rovine', 'grotta', 'patibolo', 'illuminata', 'cisterna', 'passaggio', 'discesa'],
-      ice: ['stalagmiti', 'cristalli', 'macerie', 'ossario', 'gabbia', 'ragnatela', 'grotta', 'rovine', 'santuario', 'illuminata', 'geode', 'passaggio', 'cisterna', 'reliquiario'],
-      arcane: ['altare', 'cristalli', 'cimitero', 'ragnatela', 'deposito', 'catacomba', 'santuario', 'grotta', 'illuminata', 'massacro', 'geode', 'reliquiario', 'officina', 'discesa'],
+      crypt: ['sepolcreto', 'veglia', 'cimitero', 'ossario', 'ragnatela', 'macerie', 'altare', 'gabbia', 'catacomba', 'rovine', 'patibolo', 'massacro', 'illuminata', 'discesa', 'cisterna', 'passaggio', 'reliquiario'],
+      lava: ['colata_lavica', 'fumarole', 'stalagmiti', 'cristalli', 'macerie', 'ossario', 'deposito', 'catacomba', 'grotta', 'rovine', 'santuario', 'massacro', 'officina', 'passaggio', 'geode', 'discesa'],
+      forest: ['boschetto', 'radici', 'fungaia', 'ragnatela', 'macerie', 'ossario', 'cimitero', 'catacomba', 'rovine', 'grotta', 'patibolo', 'illuminata', 'cisterna', 'passaggio', 'discesa'],
+      ice: ['assideramento', 'gelicidio', 'stalagmiti', 'cristalli', 'macerie', 'ossario', 'gabbia', 'ragnatela', 'grotta', 'rovine', 'santuario', 'illuminata', 'geode', 'passaggio', 'cisterna', 'reliquiario'],
+      arcane: ['rituale', 'studio', 'altare', 'cristalli', 'cimitero', 'ragnatela', 'deposito', 'catacomba', 'santuario', 'grotta', 'illuminata', 'massacro', 'geode', 'reliquiario', 'officina', 'discesa'],
     };
     const order = (themeFeats[theme.id] || Object.keys(feats)).slice();
     for (let z = order.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = order[z]; order[z] = order[j]; order[j] = t; }
@@ -766,7 +788,9 @@
           if (put.length >= want) break;
           if (!used.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3)) continue;
           if (!put.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3)) continue;
-          props.push({ type: bag[(rng() * bag.length) | 0], x: wcx(c) + MU.rand(-10, 10), y: wcy(c) + MU.rand(-10, 10), s: MU.rand(0.62, 0.9), r: rng() });
+          { const tp = bag[(rng() * bag.length) | 0], px = wcx(c) + MU.rand(-10, 10), py = wcy(c) + MU.rand(-10, 10), ps = MU.rand(0.62, 0.9);
+            if (ROMPIBILE[tp]) rompibili.push({ tipo: tp, x: px, y: py, s: ps });
+            else props.push({ type: tp, x: px, y: py, s: ps, r: rng() }); }
           put.push(c);
         }
       }
@@ -869,7 +893,92 @@
       for (let i = 0; i < W * H; i++) if (dist[i] >= 0) out[i] = Math.max(0, 2 * M - M * dist[i]);
       return Array.from(out);
     })();
-    return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, muri: muriTipo ? Array.from(muriTipo) : null, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas };
+    // ===== v2.21 — IL RIPOSTIGLIO E LA LEVA ==========================================
+    // Un vano chiuso da una grata, e da qualche parte la catena che la apre.
+    // La regola che rende la cosa SICURA: il vano non si ricava da spazio esistente, si SCAVA nella
+    // roccia piena. Cosi' aprirlo o non aprirlo non puo' in nessun caso tagliare in due la mappa —
+    // che e' il modo in cui una porta a gioco in corso rompe di solito il campo di flusso. Tutto il
+    // resto viene da se': il campo di flusso si ricostruisce ogni 0,12 s dalla griglia, e collisioni
+    // e linea di vista leggono la griglia a ogni chiamata. Cambiata quella, sono cambiate tutte.
+    const grate = [], leve = [];
+    {
+      const pieno = (x, y) => x > 1 && y > 1 && x < W - 2 && y < H - 2 && grid[idx(x, y)] === C.T_WALL;
+      const DIR = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      let cand2 = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 6);
+      for (let z = cand2.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = cand2[z]; cand2[z] = cand2[j]; cand2[j] = t; }
+      let fatto = null;
+      for (const c of cand2) {
+        if (fatto) break;
+        for (let d = 0; d < 4 && !fatto; d++) {
+          const dx = DIR[d][0], dy = DIR[d][1];
+          const px = dx ? dy : 1, py = dx ? 1 : 0;              // versore perpendicolare alla direzione
+          const qx = dx ? 0 : 1, qy = dx ? 1 : 0;
+          const porta = { x: c.x + dx, y: c.y + dy };
+          if (!pieno(porta.x, porta.y)) continue;
+          // Il vano e' 3x3, ma NON basta che quelle nove tessere siano roccia: va chiesto che sia piena
+          // anche la CONCHIGLIA attorno (5 di profondita' per 5 di larghezza, porta esclusa). Il primo
+          // giro controllava solo le nove: in 195 mappe su 300 il vano toccava di fianco un corridoio
+          // gia' esistente, quindi il premio si raggiungeva senza mai tirare la leva — e la grata non
+          // chiudeva niente. Con la conchiglia il vano e' scavato nel pieno e l'unica via e' la porta.
+          let ok = true;
+          for (let p = 1; p <= 5 && ok; p++) for (let q = -2; q <= 2 && ok; q++) {
+            if (p === 1 && q === 0) continue;                       // la porta: e' roccia gia' verificata
+            const sx2 = c.x + dx * p + qx * q, sy2 = c.y + dy * p + qy * q;
+            if (!pieno(sx2, sy2)) ok = false;
+          }
+          if (!ok) continue;
+          const vano = [];
+          for (let p = 2; p <= 4; p++) for (let q = -1; q <= 1; q++)
+            vano.push({ x: c.x + dx * p + qx * q, y: c.y + dy * p + qy * q });
+          for (const v of vano) grid[idx(v.x, v.y)] = C.T_FLOOR;   // si scava
+          const centro = vano[4];
+          grate.push({ id: grate.length, tiles: [idx(porta.x, porta.y)],
+            x: porta.x * TILE + TILE / 2, y: porta.y * TILE + TILE / 2,
+            premio: { x: centro.x * TILE + TILE / 2, y: centro.y * TILE + TILE / 2 } });
+          fatto = { porta, c };
+        }
+      }
+      // la leva: sul pavimento vero, non troppo vicina alla grata (deve costare un giro) ne' troppo
+      // lontana (deve poterla trovare senza setacciare la mappa)
+      if (fatto) {
+        const gx = fatto.porta.x, gy = fatto.porta.y;
+        let best = null, bd = 1e9;
+        for (const c of cand2) {
+          const d2 = Math.hypot(c.x - gx, c.y - gy);
+          if (d2 < 7 || d2 > 22) continue;
+          const pun = Math.abs(d2 - 13);
+          if (pun < bd) { bd = pun; best = c; }
+        }
+        if (!best) best = cand2.find(c => Math.hypot(c.x - gx, c.y - gy) > 4) || null;
+        if (best) leve.push({ id: 0, gid: 0, x: wcx(best), y: wcy(best) });
+        else { for (const t of grate[0].tiles) grid[t] = C.T_FLOOR; grate.length = 0; }  // senza leva niente grata
+      }
+    }
+    // v2.21 — i BARILI: pochi, sparsi, lontani dalla partenza. Due o tre per mappa bastano: sono una
+    // scelta tattica, non un tappeto di mine.
+    {
+      let apc = free.filter(c => grid[c.i] === C.T_FLOOR && c.cd > 6);
+      for (let z = apc.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = apc[z]; apc[z] = apc[j]; apc[j] = t; }
+      const messi = [];
+      for (const c of apc) {
+        if (messi.length >= 2 + rint(0, 1)) break;
+        if (!messi.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 8)) continue;
+        rompibili.push({ tipo: 'barile', x: wcx(c) + MU.rand(-8, 8), y: wcy(c) + MU.rand(-8, 8), s: MU.rand(0.95, 1.1) });
+        messi.push(c);
+      }
+      // v2.21 — le URNE. Dal tema cripta ne arrivavano una e mezza per mappa, e solo li': su lava,
+      // ghiaccio, foresta e arcano il giocatore non avrebbe mai imparato che gli oggetti si rompono.
+      // Queste sono l'insegnamento, e stanno su tutte le mappe.
+      const urne = [];
+      for (const c of apc) {
+        if (urne.length >= 3 + rint(0, 2)) break;
+        if (!messi.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 3)) continue;
+        if (!urne.every(u => Math.hypot(u.x - c.x, u.y - c.y) > 6)) continue;
+        rompibili.push({ tipo: 'urna', x: wcx(c) + MU.rand(-9, 9), y: wcy(c) + MU.rand(-9, 9), s: MU.rand(0.9, 1.1) });
+        urne.push(c);
+      }
+    }
+    return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, muri: muriTipo ? Array.from(muriTipo) : null, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas, rompibili, grate, leve };
   }
 
   // ===================== v1.56 — MAPPA MERCATO: un VILLAGGIO, non una caverna =====================

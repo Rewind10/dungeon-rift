@@ -290,7 +290,12 @@
     // tasto L continua a spegnere e ad accendere, e continua a ricordarselo. Cambiare nome alla chiave e'
     // il modo pulito di dare un valore predefinito nuovo senza buttare via la memoria della scelta.
     resize() { this.dpr = Math.min(2, window.devicePixelRatio || 1); this.w = innerWidth; this.h = innerHeight; this.canvas.width = this.w * this.dpr; this.canvas.height = this.h * this.dpr; this.canvas.style.width = this.w + 'px'; this.canvas.style.height = this.h + 'px'; this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); if (!this.darkCv) { this.darkCv = document.createElement('canvas'); this.darkCtx = this.darkCv.getContext('2d'); } this.darkCv.width = Math.max(1, Math.round(this.w * this.darkScale)); this.darkCv.height = Math.max(1, Math.round(this.h * this.darkScale)); },
-    setMap(map) { this.map = map; this.theme = map.theme || {}; this._bake(); this._bakeMinimap(); },
+    setMap(map) { this.map = map; this.theme = map.theme || {};
+      // v2.21 — le grate aperte. Vive qui e non nello snapshot: sono uno o due oggetti per partita e
+      // cambiano una volta sola. Si azzera con la mappa, se no la grata della mappa precedente
+      // resterebbe aperta su quella nuova.
+      this.grateAperte = new Set();
+      this._bake(); this._bakeMinimap(); },
     // =====================================================================================
     // v1.76 — LA CAVERNA DIPINTA. Vale solo per le mappe di COMBATTIMENTO: il villaggio ha il suo
     // aspetto e resta com'e'.
@@ -317,7 +322,11 @@
       // cottura ci dipinge sopra la sua massa di pietra, il cimitero diventa una grotta con dei bozzi.
       // Qui valgono come suolo — la roccia non le tocca — e poi ci si dipinge sopra la lapide vera.
       const _mur = m.muri || null;
-      const _leggero = (x, y) => { if (!_mur) return false; const t = _mur[y * W + x]; return t === 1 || t === 4; };
+      // v2.21 — anche le tessere chiuse da una grata valgono come suolo: la saracinesca la disegna il
+      // render a ogni fotogramma, e il giorno che la leva la apre sotto ci deve essere gia' il
+      // pavimento cotto. Se le cuocessimo come roccia, aprire la grata scoprirebbe un buco nero.
+      const _gr = new Set(); for (const q of (m.grate || [])) for (const t of q.tiles) _gr.add(t);
+      const _leggero = (x, y) => { if (_gr.has(y * W + x)) return true; if (!_mur) return false; const t = _mur[y * W + x]; return t === 1 || t === 4; };
       const suolo = (x, y) => x >= 0 && y >= 0 && x < W && y < H && (m.grid[y * W + x] !== C.T_WALL || _leggero(x, y));
       const mix = (h1, h2, t) => { const a = this._hexToRgb(h1), b = this._hexToRgb(h2);
         return 'rgb(' + Math.round(a.r + (b.r - a.r) * t) + ',' + Math.round(a.g + (b.g - a.g) * t) + ',' + Math.round(a.b + (b.b - a.b) * t) + ')'; };
@@ -768,6 +777,7 @@
       for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { if (m.grid[y * m.w + x] !== C.T_EXIT) continue; const cx = x * T + T / 2, cy = y * T + T / 2; const gr = g.createRadialGradient(cx, cy, 3, cx, cy, T * .7); gr.addColorStop(0, th.accent || '#8be9ff'); gr.addColorStop(1, 'rgba(60,160,255,0)'); g.fillStyle = gr; g.fillRect(cx - T, cy - T, T * 2, T * 2); }
 
       this.runes = [];
+      if (!this.grateAperte) this.grateAperte = new Set();
       this.torches = []; this.campfires = []; this.glows = []; this.bigLight = null;
       for (const p of (m.props || [])) {
         if (p.type === 'stall') { this._bakeStall(g, p); continue; }     // v1.57 — banchetto del mercante
@@ -1429,6 +1439,256 @@
           // GEMMA luminosa
           g.save(); g.shadowColor = gem; g.shadowBlur = 12; const gg = g.createRadialGradient(0, -2, 0, 0, -2, 6); gg.addColorStop(0, '#ffffff'); gg.addColorStop(0.5, gem); gg.addColorStop(1, 'rgba(0,0,0,.3)'); g.fillStyle = gg; g.beginPath(); g.moveTo(0, -8); g.lineTo(5, -2); g.lineTo(0, 4); g.lineTo(-5, -2); g.closePath(); g.fill(); g.restore();
           g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1; g.stroke(); break; }
+        // ===== v2.21 — GLI OGGETTI CHE APPARTENGONO A UN TEMA SOLO ==========================
+        // Fino a qui le 24 scene della grotta erano quasi tutte condivise fra due o piu' temi: solo
+        // la `fungaia` era della sola foresta. Il risultato e' che lava, ghiaccio e arcano non avevano
+        // un oggetto che parlasse di loro, e cambiare il colore della roccia non bastava a farli
+        // sembrare posti diversi. Questi disegni servono a quello: due scene esclusive per tema.
+        case 'chest': { // v2.21 — LA CASSA. Esisteva da sempre nella scena `deposito` (putC('chest', ...))
+          // ma nel renderer non c'era il suo ramo: cadeva in fondo allo switch e non disegnava niente.
+          // Per tutto quel tempo il deposito ha avuto un oggetto invisibile.
+          g.rotate(rot < 0.5 ? 0 : Math.PI / 2);
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(2, 13, 17, 6, 0, 0, 7); g.fill();
+          const cg = g.createLinearGradient(0, -14, 0, 13); cg.addColorStop(0, '#7a5630'); cg.addColorStop(1, '#3f2c16');
+          g.fillStyle = cg; g.strokeStyle = '#1e1408'; g.lineWidth = 2; this._rr(g, -16, -13, 32, 26, 2); g.fill(); g.stroke();
+          g.fillStyle = '#8a6438'; this._rr(g, -16, -13, 32, 11, 2); g.fill(); g.stroke();   // il coperchio bombato
+          g.strokeStyle = '#c9a24a'; g.lineWidth = 2.4;                                       // le bande di ferro dorato
+          g.beginPath(); g.moveTo(-9, -13); g.lineTo(-9, 13); g.moveTo(9, -13); g.lineTo(9, 13); g.stroke();
+          g.fillStyle = '#c9a24a'; g.strokeStyle = '#6a4d14'; g.lineWidth = 1.2;
+          this._rr(g, -4, -5, 8, 9, 1.5); g.fill(); g.stroke();                               // la serratura
+          g.fillStyle = '#2a1e08'; g.beginPath(); g.arc(0, -1, 1.6, 0, 7); g.fill();
+          g.strokeStyle = 'rgba(255,225,160,.22)'; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(-15, -12); g.lineTo(15, -12); g.stroke(); break; }
+        // ---- CRIPTA -------------------------------------------------------------------------
+        case 'loculo': { // nicchia murata nella parete: la lastra sigillata con la targa
+          g.fillStyle = 'rgba(0,0,0,.40)'; this._rr(g, -20, -15, 42, 32, 2); g.fill();
+          g.fillStyle = '#2a2d36'; g.strokeStyle = '#141720'; g.lineWidth = 2; this._rr(g, -21, -16, 42, 32, 2); g.fill(); g.stroke();
+          const lg = g.createLinearGradient(-16, 0, 16, 0); lg.addColorStop(0, '#6e7484'); lg.addColorStop(.5, '#555b69'); lg.addColorStop(1, '#3c414d');
+          g.fillStyle = lg; g.strokeStyle = '#161922'; g.lineWidth = 2; this._rr(g, -17, -12, 34, 24, 1.5); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(20,23,32,.6)'; g.lineWidth = 1.4;                               // l'iscrizione consumata
+          for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-11, -5 + i * 5); g.lineTo(-11 + 8 + (i * 5) % 11, -5 + i * 5); g.stroke(); }
+          g.fillStyle = '#8f9099'; g.strokeStyle = '#161922'; g.lineWidth = 1.2;                // i quattro chiodi
+          for (const d of [[-14, -9], [14, -9], [-14, 9], [14, 9]]) { g.beginPath(); g.arc(d[0], d[1], 2, 0, 7); g.fill(); g.stroke(); }
+          g.fillStyle = 'rgba(30,60,40,.45)'; g.fillRect(-21, 10, 42, 6); break; }
+        case 'urna': { // urna cineraria sul suo piedistallo. E' anche l'oggetto rompibile (v2.21)
+          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(2, 14, 13, 5, 0, 0, 7); g.fill();
+          g.fillStyle = '#3e434f'; g.strokeStyle = '#181b24'; g.lineWidth = 2; this._rr(g, -11, 8, 22, 8, 1.5); g.fill(); g.stroke();
+          const ug = g.createLinearGradient(-9, 0, 9, 0); ug.addColorStop(0, '#8a7a5c'); ug.addColorStop(.45, '#b6a37c'); ug.addColorStop(1, '#6d6047');
+          g.fillStyle = ug; g.strokeStyle = '#2a2418'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(-6, 8); g.quadraticCurveTo(-12, -2, -8, -10); g.lineTo(8, -10);
+          g.quadraticCurveTo(12, -2, 6, 8); g.closePath(); g.fill(); g.stroke();
+          g.fillStyle = '#c9b68c'; g.strokeStyle = '#2a2418'; g.lineWidth = 1.8;
+          g.beginPath(); g.ellipse(0, -11, 10, 4, 0, 0, 7); g.fill(); g.stroke();               // il coperchio
+          g.fillStyle = '#8a7a5c'; g.beginPath(); g.arc(0, -13, 2.6, 0, 7); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(42,36,24,.55)'; g.lineWidth = 1.3;
+          g.beginPath(); g.moveTo(-9, -3); g.lineTo(9, -3); g.stroke(); break; }
+        case 'catafalco': { // il catafalco col sudario: un morto che nessuno ha mai seppellito
+          g.rotate(rot < 0.5 ? 0 : Math.PI / 2);
+          g.fillStyle = 'rgba(0,0,0,.38)'; this._rr(g, -22, -12, 48, 28, 3); g.fill();
+          g.fillStyle = '#4a4028'; g.strokeStyle = '#231c0e'; g.lineWidth = 2;                  // il cavalletto di legno
+          for (const dx of [-16, 14]) { this._rr(g, dx, -13, 6, 26, 1); g.fill(); g.stroke(); }
+          const pg = g.createLinearGradient(0, -14, 0, 14); pg.addColorStop(0, '#5d5238'); pg.addColorStop(1, '#382f1c');
+          g.fillStyle = pg; g.strokeStyle = '#231c0e'; g.lineWidth = 2; this._rr(g, -24, -9, 48, 18, 2); g.fill(); g.stroke();
+          const sg = g.createLinearGradient(0, -8, 0, 8); sg.addColorStop(0, '#cfc7b2'); sg.addColorStop(1, '#8e8877');
+          g.fillStyle = sg; g.strokeStyle = '#4a463c'; g.lineWidth = 1.6; g.lineJoin = 'round';  // il sudario
+          g.beginPath(); g.moveTo(-20, -6); g.quadraticCurveTo(-14, -10, -6, -7); g.quadraticCurveTo(4, -10, 12, -6);
+          g.quadraticCurveTo(20, -3, 20, 3); g.quadraticCurveTo(10, 8, -2, 6); g.quadraticCurveTo(-14, 8, -20, 4);
+          g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(74,70,60,.7)'; g.lineWidth = 1.2;                                // le pieghe
+          for (const dx of [-12, -3, 7]) { g.beginPath(); g.moveTo(dx, -6); g.lineTo(dx + 2, 5); g.stroke(); }
+          g.strokeStyle = '#6b5a3a'; g.lineWidth = 2;                                            // le corde che lo legano
+          g.beginPath(); g.moveTo(-10, -9); g.lineTo(-10, 9); g.moveTo(9, -9); g.lineTo(9, 9); g.stroke(); break; }
+        // ---- LAVA ---------------------------------------------------------------------------
+        case 'colata': { // colata rappresa: crosta nera con le crepe ancora vive sotto
+          g.rotate(rot);
+          const cr = g.createRadialGradient(0, 0, 2, 0, 0, 24); cr.addColorStop(0, '#ff8a2b'); cr.addColorStop(.35, '#7a2408'); cr.addColorStop(1, 'rgba(60,20,8,0)');
+          g.fillStyle = cr; g.beginPath(); g.ellipse(0, 0, 24, 15, 0, 0, 7); g.fill();
+          g.fillStyle = '#211613'; g.strokeStyle = '#0e0907'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath();                                                                        // la crosta, un lobo irregolare
+          const pt = [[-20, -3], [-13, -10], [-2, -12], [9, -9], [19, -2], [16, 7], [4, 12], [-8, 11], [-18, 5]];
+          pt.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = '#ff6a1e'; g.lineWidth = 2.2; g.lineCap = 'round';                     // le crepe che bruciano
+          g.beginPath(); g.moveTo(-15, 1); g.lineTo(-5, -3); g.lineTo(3, 2); g.lineTo(14, -1); g.stroke();
+          g.strokeStyle = '#ffc24a'; g.lineWidth = 1.1;
+          g.beginPath(); g.moveTo(-6, -6); g.lineTo(-2, -2); g.moveTo(6, 6); g.lineTo(10, 3); g.stroke();
+          g.fillStyle = '#ffd88a'; for (const d of [[-9, -2], [2, 0], [11, 1]]) { g.beginPath(); g.arc(d[0], d[1], 1.4, 0, 7); g.fill(); }
+          g.lineCap = 'butt'; break; }
+        case 'sfiatatoio': { // la fumarola: un buco che respira
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(0, 8, 18, 7, 0, 0, 7); g.fill();
+          g.fillStyle = '#332420'; g.strokeStyle = '#140c09'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath();                                                                        // il cono di scorie
+          for (let k = 0; k <= 13; k++) { const a = k / 13 * 6.283, rd = 17 * (.82 + ((k * 37) % 11) / 44);
+            const x = Math.cos(a) * rd, y = Math.sin(a) * rd * .68; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.closePath(); g.fill(); g.stroke();
+          g.fillStyle = '#4a342c'; g.beginPath(); g.ellipse(0, 0, 12, 8, 0, 0, 7); g.fill();
+          const bg2 = g.createRadialGradient(0, 0, 0, 0, 0, 9); bg2.addColorStop(0, '#ffd24a'); bg2.addColorStop(.45, '#ff5a1e'); bg2.addColorStop(1, '#2a1008');
+          g.fillStyle = bg2; g.beginPath(); g.ellipse(0, 0, 8, 5, 0, 0, 7); g.fill();            // la bocca incandescente
+          g.fillStyle = '#ffe9a8'; g.beginPath(); g.ellipse(-1, -1, 2.6, 1.6, 0, 0, 7); g.fill();
+          g.strokeStyle = 'rgba(255,120,40,.35)'; g.lineWidth = 1.4;
+          g.beginPath(); g.ellipse(0, 0, 11, 7, 0, 0, 7); g.stroke(); break; }
+        // ---- FORESTA ------------------------------------------------------------------------
+        case 'tronco': { // tronco caduto, coperto di muschio: e' lungo, e da' una direzione alla radura
+          g.rotate(rot);
+          g.fillStyle = 'rgba(0,0,0,.34)'; this._rr(g, -26, -7, 56, 20, 8); g.fill();
+          const tg = g.createLinearGradient(0, -11, 0, 11); tg.addColorStop(0, '#6a543a'); tg.addColorStop(.55, '#4a3a26'); tg.addColorStop(1, '#2c2114');
+          g.fillStyle = tg; g.strokeStyle = '#1a1209'; g.lineWidth = 2; this._rr(g, -28, -11, 56, 22, 10); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(26,18,9,.5)'; g.lineWidth = 1.2;                                 // le venature
+          for (const dy of [-5, 0, 5]) { g.beginPath(); g.moveTo(-24, dy); g.lineTo(22, dy + (dy ? 1 : 0)); g.stroke(); }
+          g.fillStyle = '#7d6a4a'; g.strokeStyle = '#1a1209'; g.lineWidth = 1.8;                 // il taglio in testa
+          g.beginPath(); g.ellipse(-28, 0, 4.5, 11, 0, 0, 7); g.fill(); g.stroke();
+          g.strokeStyle = '#5a4a32'; g.lineWidth = 1; for (const rr2 of [3, 6, 9]) { g.beginPath(); g.ellipse(-28, 0, rr2 * .42, rr2, 0, 0, 7); g.stroke(); }
+          g.fillStyle = 'rgba(96,148,70,.55)'; g.globalAlpha = .85;                               // il muschio sul dorso
+          for (const d of [[-14, -7, 9, 3.4], [2, -8, 11, 3], [17, -6, 7, 3]]) { g.beginPath(); g.ellipse(d[0], d[1], d[2], d[3], 0, 0, 7); g.fill(); }
+          g.globalAlpha = 1;
+          g.fillStyle = '#8fbf5a'; for (const d of [[-6, -9], [10, -9]]) { g.beginPath(); g.arc(d[0], d[1], 2.2, 0, 7); g.fill(); } break; }
+        case 'felce': { // felce: tre fronde dentellate. Bassa, non copre niente
+          g.rotate(rot);
+          g.fillStyle = 'rgba(0,0,0,.24)'; g.beginPath(); g.ellipse(0, 7, 13, 5, 0, 0, 7); g.fill();
+          const fr = (ang, L, col) => { g.save(); g.rotate(ang);
+            g.strokeStyle = col; g.lineWidth = 1.8; g.lineCap = 'round';
+            g.beginPath(); g.moveTo(0, 6); g.quadraticCurveTo(1, 6 - L * .6, 0, 6 - L); g.stroke();
+            g.lineWidth = 1.1;
+            for (let i = 1; i <= 6; i++) { const t = i / 7, yy = 6 - L * t, ww = 5.5 * (1 - t) + 1.5;
+              g.beginPath(); g.moveTo(0, yy); g.lineTo(-ww, yy - 2.2); g.moveTo(0, yy); g.lineTo(ww, yy - 2.2); g.stroke(); }
+            g.restore(); };
+          fr(-0.55, 15, '#2f5a28'); fr(0.55, 15, '#2f5a28'); fr(0, 18, '#3f7a34');
+          g.lineCap = 'butt'; break; }
+        case 'radice': { // radici che hanno sfondato il pavimento: il bosco si riprende la cripta
+          g.rotate(rot);
+          g.fillStyle = 'rgba(0,0,0,.30)'; g.beginPath(); g.ellipse(0, 2, 22, 14, 0, 0, 7); g.fill();
+          g.fillStyle = '#231a10'; g.beginPath(); g.ellipse(0, 0, 15, 9, 0, 0, 7); g.fill();      // il buco nel pavimento
+          const th2 = this.theme || {}; g.fillStyle = th2.wallTop || '#3a4260'; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1.4;
+          for (const d of [[-17, -6, 9, 6, -.3], [15, -8, 8, 5, .25], [-13, 9, 8, 5, .4], [16, 7, 7, 5, -.2]]) {
+            g.save(); g.translate(d[0], d[1]); g.rotate(d[4]); this._rr(g, -d[2] / 2, -d[3] / 2, d[2], d[3], 1.5); g.fill(); g.stroke(); g.restore(); }
+          g.strokeStyle = '#4a3a24'; g.lineCap = 'round'; g.lineJoin = 'round';                   // le radici
+          for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + .4;
+            g.lineWidth = 4.5 - i % 3; g.beginPath(); g.moveTo(0, 0);
+            g.quadraticCurveTo(Math.cos(a) * 11, Math.sin(a) * 8, Math.cos(a + .35) * 22, Math.sin(a + .35) * 15); g.stroke(); }
+          g.strokeStyle = '#6a5436'; g.lineWidth = 1.4;
+          for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + .9;
+            g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 14, Math.sin(a) * 10); g.stroke(); }
+          g.fillStyle = '#4a3a24'; g.beginPath(); g.arc(0, 0, 4, 0, 7); g.fill();
+          g.lineCap = 'butt'; break; }
+        // ---- GHIACCIO -----------------------------------------------------------------------
+        case 'congelato': { // una sagoma dentro il ghiaccio. Si vede che era qualcuno, non si vede chi
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(2, 18, 16, 6, 0, 0, 7); g.fill();
+          const ig = g.createLinearGradient(-12, -24, 12, 18); ig.addColorStop(0, 'rgba(190,232,248,.92)');
+          ig.addColorStop(.5, 'rgba(120,180,210,.82)'); ig.addColorStop(1, 'rgba(46,86,110,.90)');
+          g.fillStyle = ig; g.strokeStyle = '#16303e'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(-13, 18); g.lineTo(-10, -14); g.lineTo(-2, -25); g.lineTo(8, -20);
+          g.lineTo(13, 2); g.lineTo(10, 18); g.closePath(); g.fill(); g.stroke();
+          g.globalAlpha = .40; g.fillStyle = '#0d2530';                                            // la sagoma, sfocata dal ghiaccio
+          g.beginPath(); g.arc(-1, -12, 4.6, 0, 7); g.fill();
+          g.beginPath(); g.moveTo(-6, -7); g.lineTo(5, -7); g.lineTo(7, 9); g.lineTo(-7, 9); g.closePath(); g.fill();
+          g.beginPath(); g.moveTo(-6, -6); g.lineTo(-11, 3); g.lineTo(-8, 4); g.lineTo(-4, -4); g.closePath(); g.fill();
+          g.globalAlpha = 1;
+          g.strokeStyle = 'rgba(232,250,255,.55)'; g.lineWidth = 1.6;                               // i riflessi sul blocco
+          g.beginPath(); g.moveTo(-8, -12); g.lineTo(-5, 10); g.moveTo(6, -16); g.lineTo(9, 4); g.stroke();
+          g.strokeStyle = 'rgba(232,250,255,.85)'; g.lineWidth = 2.4;
+          g.beginPath(); g.moveTo(-10, -13); g.lineTo(-2, -24); g.lineTo(8, -19); g.stroke(); break; }
+        case 'ghiacciolo': { // colonna di ghiaccio dal pavimento al soffitto
+          const th3 = this.theme || {}; const acc = th3.accent || '#a8f0ff';
+          g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 12, 11, 5, 0, 0, 7); g.fill();
+          const kg = g.createLinearGradient(-7, -26, 7, 12); kg.addColorStop(0, 'rgba(226,248,255,.95)');
+          kg.addColorStop(.55, 'rgba(126,196,222,.85)'); kg.addColorStop(1, 'rgba(40,86,112,.9)');
+          g.fillStyle = kg; g.strokeStyle = '#173444'; g.lineWidth = 1.8; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(-8, 12); g.lineTo(-4, -10); g.lineTo(-1, -28); g.lineTo(3, -10); g.lineTo(8, 12); g.closePath(); g.fill(); g.stroke();
+          g.beginPath(); g.moveTo(6, 12); g.lineTo(9, -4); g.lineTo(12, -13); g.lineTo(13, 12); g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(240,253,255,.75)'; g.lineWidth = 1.4;
+          g.beginPath(); g.moveTo(-1, -27); g.lineTo(-4, 10); g.stroke();
+          g.strokeStyle = 'rgba(20,50,66,.55)'; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(-1, -26); g.lineTo(3, 10); g.stroke();
+          g.save(); g.globalAlpha = .28; g.fillStyle = acc; g.beginPath(); g.ellipse(0, -6, 9, 20, 0, 0, 7); g.fill(); g.restore(); break; }
+        // ---- ARCANO -------------------------------------------------------------------------
+        case 'cerchio': { // il cerchio rituale dipinto sul pavimento, con le candele consumate
+          const th4 = this.theme || {}; const arc = th4.accent || '#d59bff';
+          g.rotate(rot);
+          g.save(); g.globalAlpha = .22; const ag = g.createRadialGradient(0, 0, 4, 0, 0, 30);
+          ag.addColorStop(0, arc); ag.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = ag;
+          g.beginPath(); g.arc(0, 0, 30, 0, 7); g.fill(); g.restore();
+          g.strokeStyle = arc; g.globalAlpha = .55; g.lineWidth = 2;
+          g.beginPath(); g.arc(0, 0, 25, 0, 7); g.stroke();
+          g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, 20, 0, 7); g.stroke();
+          g.lineWidth = 1.6; g.beginPath();                                                        // il pentacolo
+          for (let k = 0; k <= 5; k++) { const a = -1.5708 + k * 2 * 6.283 / 5, x = Math.cos(a) * 20, y = Math.sin(a) * 20; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.closePath(); g.stroke();
+          g.lineWidth = 1; for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283;                   // le rune sul bordo
+            g.save(); g.translate(Math.cos(a) * 22.5, Math.sin(a) * 22.5); g.rotate(a + 1.5708);
+            g.beginPath(); g.moveTo(-1.6, -2.2); g.lineTo(1.6, -2.2); g.moveTo(0, -2.2); g.lineTo(0, 2.2); g.moveTo(-1.4, 2.2); g.lineTo(1.4, 2.2); g.stroke(); g.restore(); }
+          g.globalAlpha = 1;
+          for (const k of [0, 1, 2, 3]) { const a = -1.5708 + k * 1.5708;                           // quattro moccoli
+            const cx = Math.cos(a) * 25, cy = Math.sin(a) * 25;
+            g.fillStyle = '#e8dcc0'; g.strokeStyle = '#3a3428'; g.lineWidth = 1.2;
+            this._rr(g, cx - 2, cy - 5, 4, 8, 1); g.fill(); g.stroke();
+            g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(cx, cy - 6, 1.5, 0, 7); g.fill(); }
+          break; }
+        case 'leggio': { // leggio con il libro aperto: qualcuno stava leggendo quando e' successo
+          const th5 = this.theme || {}; const arc2 = th5.accent || '#d59bff';
+          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(2, 16, 14, 6, 0, 0, 7); g.fill();
+          g.fillStyle = '#3a2c1c'; g.strokeStyle = '#1c1409'; g.lineWidth = 2;
+          g.beginPath(); g.ellipse(0, 14, 11, 4.5, 0, 0, 7); g.fill(); g.stroke();                 // il piede
+          g.fillStyle = '#4a3a26'; this._rr(g, -3.5, -6, 7, 19, 1.5); g.fill(); g.stroke();        // l'asta
+          g.save(); g.rotate(-.06);
+          const bg3 = g.createLinearGradient(0, -14, 0, 2); bg3.addColorStop(0, '#6a5436'); bg3.addColorStop(1, '#3f3120');
+          g.fillStyle = bg3; g.strokeStyle = '#1c1409'; g.lineWidth = 2; this._rr(g, -17, -14, 34, 16, 2); g.fill(); g.stroke();
+          g.fillStyle = '#e4dcc4'; g.strokeStyle = '#8a8270'; g.lineWidth = 1.2;                    // le due pagine
+          g.beginPath(); g.moveTo(-15, -12); g.lineTo(-1, -13); g.lineTo(-1, -1); g.lineTo(-15, -2); g.closePath(); g.fill(); g.stroke();
+          g.beginPath(); g.moveTo(1, -13); g.lineTo(15, -12); g.lineTo(15, -2); g.lineTo(1, -1); g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(70,60,44,.6)'; g.lineWidth = .9;
+          for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(-13, -10 + i * 2.4); g.lineTo(-3, -10.4 + i * 2.4);
+            g.moveTo(3, -10.4 + i * 2.4); g.lineTo(13, -10 + i * 2.4); g.stroke(); }
+          g.strokeStyle = '#2c2418'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -13); g.lineTo(0, -1); g.stroke();
+          g.save(); const rg = g.createRadialGradient(0, -7, 1, 0, -7, 14);                          // la luce che sale dal testo
+          rg.addColorStop(0, arc2); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = .5;
+          g.fillStyle = rg; g.beginPath(); g.arc(0, -7, 14, 0, 7); g.fill(); g.restore();
+          g.restore(); break; }
+        // ---- v2.21 — I TRE OGGETTI CHE FANNO QUALCOSA --------------------------------------
+        case 'barile': { // BARILE ESPLOSIVO. Deve distinguersi a colpo d'occhio dal `barrel` normale,
+          // altrimenti il giocatore non puo' scegliere se colpirlo: doghe scure, cerchi rossi, la
+          // miccia accesa. Se si somigliassero, l'esplosione sarebbe una punizione arrivata dal nulla.
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(2, 12, 12, 5, 0, 0, 7); g.fill();
+          const bb = g.createLinearGradient(-9, 0, 9, 0); bb.addColorStop(0, '#2a1a14'); bb.addColorStop(.45, '#4a2c1e'); bb.addColorStop(1, '#22150f');
+          g.fillStyle = bb; g.strokeStyle = '#140b07'; g.lineWidth = 2; this._rr(g, -10, -12, 20, 24, 3); g.fill(); g.stroke();
+          g.strokeStyle = '#b8402a'; g.lineWidth = 2.6;                                             // i cerchi rossi
+          g.beginPath(); g.moveTo(-10, -5); g.lineTo(10, -5); g.moveTo(-10, 5); g.lineTo(10, 5); g.stroke();
+          g.strokeStyle = 'rgba(255,150,90,.30)'; g.lineWidth = 1;
+          g.beginPath(); g.moveTo(-9, -6); g.lineTo(9, -6); g.moveTo(-9, 4); g.lineTo(9, 4); g.stroke();
+          g.fillStyle = '#e8b13a'; g.strokeStyle = '#140b07'; g.lineWidth = 1.4;                    // il tappo
+          g.beginPath(); g.arc(0, -12, 4, 0, 7); g.fill(); g.stroke();
+          g.strokeStyle = '#7a6a4a'; g.lineWidth = 2; g.lineCap = 'round';                          // la miccia
+          g.beginPath(); g.moveTo(0, -13); g.quadraticCurveTo(5, -19, 9, -17); g.stroke();
+          g.fillStyle = '#ff9a3a'; g.beginPath(); g.arc(9.5, -17, 2, 0, 7); g.fill();
+          g.fillStyle = '#ffe08a'; g.beginPath(); g.arc(9.5, -17, 1, 0, 7); g.fill();
+          g.lineCap = 'butt'; break; }
+        case 'saracinesca': { // la grata che chiude il ripostiglio. Sotto e' pavimento gia' cotto:
+          // quando la leva la apre basta smettere di disegnarla — la mappa sotto c'e' gia'.
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(-24, -24, 48, 48);
+          g.strokeStyle = '#4a5260'; g.lineWidth = 5; g.lineCap = 'round';
+          for (let x = -17; x <= 17; x += 11.5) { g.beginPath(); g.moveTo(x, -22); g.lineTo(x, 22); g.stroke(); }
+          g.strokeStyle = '#2e343f'; g.lineWidth = 2.4;
+          for (let x = -17; x <= 17; x += 11.5) { g.beginPath(); g.moveTo(x - 1.2, -22); g.lineTo(x - 1.2, 22); g.stroke(); }
+          g.strokeStyle = '#5a6270'; g.lineWidth = 4;
+          for (const y of [-14, 0, 14]) { g.beginPath(); g.moveTo(-22, y); g.lineTo(22, y); g.stroke(); }
+          g.strokeStyle = '#6e7684'; g.lineWidth = 3; g.strokeRect(-23, -23, 46, 46);
+          g.fillStyle = '#8f98a6'; for (const d of [[-17, -14], [0, -14], [17, -14], [-17, 14], [0, 14], [17, 14]]) { g.beginPath(); g.arc(d[0], d[1], 2, 0, 7); g.fill(); }
+          g.lineCap = 'butt'; break; }
+        case 'leva': { // la catena da tirare. Il braccio cambia posa quando la grata e' aperta: e'
+          // l'unico modo che ha il giocatore, tornando indietro, di sapere di averla gia' tirata.
+          const giu = !!p.tirata;
+          g.fillStyle = 'rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(2, 15, 12, 5, 0, 0, 7); g.fill();
+          g.fillStyle = '#3a4048'; g.strokeStyle = '#161a20'; g.lineWidth = 2; this._rr(g, -10, 8, 20, 9, 2); g.fill(); g.stroke();
+          const mg = g.createLinearGradient(-7, 0, 7, 0); mg.addColorStop(0, '#565d68'); mg.addColorStop(.5, '#7a828e'); mg.addColorStop(1, '#3f4550');
+          g.fillStyle = mg; g.strokeStyle = '#161a20'; g.lineWidth = 2; this._rr(g, -7, -14, 14, 24, 2); g.fill(); g.stroke();
+          g.save(); g.translate(0, -12); g.rotate(giu ? 0.95 : -0.55);
+          g.strokeStyle = '#8a929e'; g.lineWidth = 4; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -16); g.stroke();
+          g.fillStyle = '#c9a24a'; g.strokeStyle = '#5a4514'; g.lineWidth = 1.4;
+          g.beginPath(); g.arc(0, -18, 3.6, 0, 7); g.fill(); g.stroke();
+          g.restore();
+          g.strokeStyle = '#6e7684'; g.lineWidth = 1.6;                                             // la catena che scende
+          for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(giu ? 11 + i * 1.2 : -11 - i * 1.2, -6 + i * 4.5, 2.2, 3.2, 0, 0, 7); g.stroke(); }
+          g.fillStyle = giu ? '#7de08a' : '#e0b23a'; g.beginPath(); g.arc(0, -2, 2.6, 0, 7); g.fill();
+          g.lineCap = 'butt'; break; }
       }
       g.restore();
     },
@@ -1559,6 +1819,13 @@
       for (const o of (world.coins || [])) this._drawCoin(ctx, o);
       for (const it of (world.items || [])) this._drawItem(ctx, it);
       for (const c of (world.crates || [])) this._drawCrate(ctx, c);
+      // v2.21 — grate ancora chiuse, oggetti rompibili, leve. Vengono dallo snapshot e non dalla mappa
+      // cotta: devono poter sparire (l'urna rotta, il barile scoppiato, la grata aperta) e cambiare
+      // posa (la leva tirata), e il fondo cotto una volta sola non sa fare ne' l'una ne' l'altra cosa.
+      { const mp = this.map || {};
+        for (const q of (mp.grate || [])) if (!this.grateAperte.has(q.id)) this._bakeProp(ctx, { type: 'saracinesca', x: q.x, y: q.y, s: 1, r: 0 });
+        for (const l of (mp.leve || [])) this._bakeProp(ctx, { type: 'leva', x: l.x, y: l.y, s: 1, r: 0, tirata: this.grateAperte.has(l.gid) }); }
+      for (const o of (world.ogg || [])) this._bakeProp(ctx, { type: o.k ? 'barile' : 'urna', x: o.x, y: o.y, s: (o.s || 100) / 100, r: 0 });
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
       // v2.19 — I MERCANTI LI DISEGNA QUESTA RIGA, TUTTI E SETTE. Prima il fabbro era saltato qui e
@@ -3133,7 +3400,7 @@
       // lista lunga qui sotto e' quella delle grotte, dove il velo e' il campo visivo e il ritaglio tiene
       // ogni bagliore dentro la visuale; li' non c'e' niente da tenere in riga.
       if (_lit) { for (const s of this._villSrc) light(s[0], s[1], s[2], s[3], s[4]); } else {
-      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.ogg || [])) if (o.k) light(o.x, o.y - 12, 34, '#ff8a3a', 0.34); for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();

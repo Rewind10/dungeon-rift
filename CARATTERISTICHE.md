@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.14.0`
+**Versione attuale:** `2.21.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -2211,6 +2211,64 @@ Tre nemici sono stati **ridisegnati** in stile dark-fantasy vettoriale, con nuov
 - **Morte**: ogni nemico **crolla e svanisce** (il negromante si **dissolve in volute viola**).
 
 Per ora sono coinvolti **solo questi 3** nemici.
+
+## 🏺 GLI OGGETTI CHE FANNO QUALCOSA *(novita v2.21)*
+
+Fino alla v2.20.3 **nessun oggetto della grotta era toccabile**: `INGOMBRI` conteneva solo i mobili del
+villaggio, e rocce, lapidi, bare, ossa e catene si attraversavano tutte. Erano carta da parati. Da qui
+in poi tre oggetti fanno qualcosa — e **nessuno dei tre blocca il passaggio**, scelta voluta: un
+ingombro messo male chiude un corridoio e il campo di flusso ci finisce contro.
+
+| oggetto | quanti | cosa fa |
+|---|---|---|
+| 🏺 **urna** | 3-5 per mappa, tutti i temi | si rompe con un colpo, lascia **9 monete + 1,5 per ondata** (meno di meta cassa: le casse restano il premio grosso) e 8 px |
+| 🛢️ **barile** | 2-3 per mappa, lontano dalla partenza | esplode: **raggio 112**, **34 + 6 per ondata** sui mostri, **meta sui giocatori** dentro il raggio. Innesca gli altri barili |
+| ⛓️ **grata + leva** | una coppia per mappa | la leva apre un ripostiglio con dentro una **cassa vera** (mimic compreso) |
+
+**Chi puo' romperli:** i proiettili dei giocatori, i fendenti, e qualunque esplosione (granate, palla di
+fuoco). **I proiettili dei mostri no**, di proposito: un barile innescato da un colpo nemico sarebbe un
+danno arrivato da una catena che il giocatore non ha nessun modo di prevedere.
+
+**Perche' il barile fa male anche a noi.** Un barile che ferisce solo i nemici e' una bomba gratis, e
+*quando* farlo scoppiare smetterebbe di essere una scelta. Meta' danno e' la taratura: abbastanza per
+insegnare a starne lontani, non abbastanza per morire per distrazione. Per lo stesso motivo il disegno
+e' parte della meccanica — doghe scure, cerchi rossi, miccia accesa — e non deve somigliare al `barrel`
+del deposito.
+
+**Il ripostiglio e' scavato nella roccia piena.** Non si ricava da spazio esistente: si scava, e si
+pretende piena anche la cornice 5x5 attorno. Cosi' aprirlo o non aprirlo **non puo' in nessun caso
+tagliare in due la mappa** — che e' il modo in cui una porta che si apre a gioco in corso rompe di
+solito il campo di flusso. Aperta la grata, non serve altro: il campo di flusso si ricostruisce da solo
+ogni 0,12 s dalla griglia, e collisioni e linea di vista la rileggono a ogni chiamata.
+
+## 🎭 DUE SCENE PER TEMA, E SOLO SUE *(novita v2.21)*
+
+Le scene tematiche sono 24, e ogni tema ne pesca una quindicina. Ma fino alla v2.20.3 **solo `fungaia`
+apparteneva a un tema solo** (la foresta): tutte le altre erano condivise da due, tre o quattro temi.
+La lava non aveva **una sola scena che parlasse di lava**, il ghiaccio nessuna di ghiaccio, l'arcano
+nessuna sua. E' questo, piu' del colore della roccia, il motivo per cui i cinque temi si somigliavano.
+
+| tema | scene esclusive | oggetti |
+|---|---|---|
+| Cripta Dimenticata | `sepolcreto`, `veglia` | loculo murato, urna cineraria, catafalco col sudario |
+| Caverne di Lava | `colata_lavica`, `fumarole` | colata rappresa con le crepe vive, sfiatatoio |
+| Rovine nella Foresta | `boschetto`, `radici` | tronco caduto muschioso, felce, radici che sfondano il pavimento |
+| Cripta di Ghiaccio | `assideramento`, `gelicidio` | sagoma congelata nel ghiaccio, colonna di ghiaccio |
+| Tempio Arcano | `rituale`, `studio` | cerchio rituale col pentacolo, leggio col libro aperto |
+
+Anche il pulviscolo ambientale (`propMix`) cambia da tema a tema. **Il test pretende che restino
+esclusive**: se un giorno qualcuno aggiunge `colata` anche al ghiaccio, si rompe li'.
+
+## 🕵️ LA CASSA INVISIBILE *(bug corretto in v2.21)*
+
+`chest` veniva piazzato dalla scena `deposito` **dalla v1.24**. Nel renderer il caso `'chest'` non c'e'
+mai stato: il prop cadeva in fondo allo `switch`, non trovava il suo ramo, e non disegnava niente. Per
+decine di versioni il deposito ha avuto **una cassa che nessuno vedeva**, senza un errore da nessuna
+parte.
+
+Ora e' disegnata, ma soprattutto c'e' **il controllo che rende impossibile che ricapiti**: legge dal
+sorgente quali tipi piazza `mapgen.js` e quali sa disegnare `renderer.js`, e pretende che i due insiemi
+tornino.
 
 ## 🗿 Terzo lotto di oggetti scenografici *(novita v1.25)*
 
