@@ -323,7 +323,11 @@
         return 'rgb(' + Math.round(a.r + (b.r - a.r) * t) + ',' + Math.round(a.g + (b.g - a.g) * t) + ',' + Math.round(a.b + (b.b - a.b) * t) + ')'; };
       // la palette esce dal TEMA, cosi' cripta, lava, ghiaccio, foresta e arcano restano diversi:
       // cambia il modo di disegnare, non l'identita' della mappa
-      const base = th.floorB || '#151a26', chiaro = '#c9d2dc', scuro = '#0a0e14';
+      // v2.20.3 — IL CHIARO E LO SCURO VENGONO DAL TEMA. Erano due costanti uguali per tutte e cinque
+      // le grotte, ed erano il motivo per cui si somigliavano: qualunque colore avesse il tema, la
+      // pietra finiva sempre impastata verso lo stesso grigio-azzurro. I valori di prima restano come
+      // ripiego — cosi' il villaggio, che non li porta, resta identico a com'era.
+      const base = th.floorB || '#151a26', chiaro = th.chiaro || '#c9d2dc', scuro = th.scuro || '#0a0e14';
       const PAV = [mix(base, chiaro, .34), mix(base, chiaro, .28), mix(base, chiaro, .40), mix(base, chiaro, .23), mix(base, chiaro, .45)];
       const ROC = [mix(th.wall || '#1b2036', chiaro, .18), mix(th.wall || '#1b2036', chiaro, .12), mix(th.wallTop || '#262d4a', chiaro, .16)];
       const ROC_T = mix(th.wallTop || '#262d4a', chiaro, .34), ROC_S = mix(th.wall || '#1b2036', scuro, .45);

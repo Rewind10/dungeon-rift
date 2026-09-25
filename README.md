@@ -24,6 +24,14 @@ Test: `npm test`
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
 
+## 🆕 Novità v2.20.3 (ogni posto ha la sua pietra)
+
+Le cinque grotte non si somigliano più: la roccia della cripta è calcare d'osso, quella della lava
+basalto caldo, la foresta pietra col lichene, il ghiaccio ghiaccio vero, l'arcano pietra lilla incisa.
+Il tema continua a sorteggiarsi a ogni mappa; il villaggio resta com'era.
+
+---
+
 ## 🆕 Novità v2.20.2 (il dialogo riscritto)
 
 Il risveglio, l'arrivo al villaggio e il discorso dell'oracolo sono riscritti: la rivelazione non si

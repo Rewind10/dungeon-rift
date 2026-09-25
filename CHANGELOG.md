@@ -2,6 +2,55 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.20.3] — 2026-09-25 · "Ogni posto ha la sua pietra"
+
+Paolo, guardando le mappe: *«c'e' modo di variare in modo piu' significativo? anche solo colori delle
+rocce diversi»*.
+
+**Aveva visto giusto, ma il motivo non era quello che sembrava.** I cinque colori c'erano gia', uno per
+tema. Il problema stava nella COTTURA: dentro `_bakeCaverna` il chiaro con cui si schiarisce la pietra e
+lo scuro con cui la si incide erano **due costanti uguali per tutte e cinque le grotte** — un
+grigio-azzurro e un nero-blu. Qualunque colore avesse il tema, la roccia veniva impastata sempre verso
+lo stesso grigio freddo: il colore c'era e se lo rimangiava il disegno. Ecco perche' cripta, ghiaccio e
+arcano, che pure hanno tre `wall` diversi, a schermo si somigliavano.
+
+**Adesso il chiaro e lo scuro li porta il TEMA**, e cambiano tutti e cinque:
+
+| | pietra | com'e' |
+|---|---|---|
+| Cripta Dimenticata | osso sporco `#d8cfb4` | calcare vecchio |
+| Caverne di Lava | cenere rossa `#e0a271` | basalto caldo |
+| Rovine nella Foresta | verde lichene `#b9cfa0` | pietra mangiata dal bosco |
+| Cripta di Ghiaccio | bianco-ciano `#cfe9f5` | ghiaccio vero |
+| Tempio Arcano | lilla pallido `#d3bff0` | pietra incisa |
+
+**Il tema continua a sorteggiarsi** come sempre — *«preferisco la casualita'»* — quindi non cambia
+niente su quale mappa esce quando: cambia solo come ogni mappa dipinge la sua pietra. E **il villaggio
+resta identico**: non porta `chiaro`/`scuro`, quindi la cottura usa i valori di prima. Si cambia il
+sottosuolo, non casa della gente.
+
+**Il test non guarda il disegno, guarda che le cinque pietre restino DIVERSE**: ogni tema deve avere i
+suoi due colori, nessun chiaro puo' essere uguale a un altro, e fra due qualunque devono esserci almeno
+40 punti di distanza sui canali RGB — sotto quella soglia, a schermo, non le distingue nessuno. E' la
+rete contro il giorno in cui qualcuno ricopia una riga per fare in fretta e si torna al punto di
+partenza senza che se ne accorga nessuno.
+
+**Scelte fatte prima di scrivere il codice, e le anteprime che le hanno decise.** Erano in ballo tre
+strade: (1) come adesso, (2) il tema su tutta la mappa, (3) il tema solo sulla roccia col pavimento
+neutro. La prima anteprima ha mostrato che la strada 2 tinge piu' il PAVIMENTO che la roccia — il
+pavimento si schiarisce con una presa fra il 23% e il 45%, la roccia solo fra il 12% e il 18% — e io
+avevo consigliato la 3. **Paolo ha scelto la 2**, perche' varia di piu': ed e' la 2 che e' nel gioco.
+
+**Scartata: la foresta.** Provata con due prototipi (pianta a radure e sentieri, chiome a strati,
+tronchi caduti, massi col muschio, felci, una pozza come ostacolo). Paolo: *«la differenza con la mappa
+della grotta e' molto marcata»* — e ha ragione, il gioco ha UN mondo solo, scavato nella stessa roccia
+dal villaggio in giu': un prato verde non e' una mappa diversa, e' un altro gioco incollato dentro.
+Resta scritto qui perche' l'idea non vada ritentata per distrazione.
+
+**Test: 4879 passati, 0 falliti.**
+
+---
+
 ### [2.20.2] — 2026-09-24 · "Il dialogo riscritto"
 
 **I dialoghi d'apertura sono di Paolo, parola per parola** — il risveglio nella stanza, l'arrivo al

@@ -1649,6 +1649,34 @@ function testV162() {
 
   // --- NOME DELLA ZONA: era scritto nei temi e non lo vedeva nessuno ---
   for (const th of MapGen.THEMES) assert(!!th.name && th.name.length > 3, 'il tema ' + th.id + ' ha un nome da mostrare ("' + th.name + '")');
+  // ==========================================================================================
+  // v2.20.3 — OGNI TEMA HA LA SUA PIETRA, e nessuna e uguale a un altra
+  // ==========================================================================================
+  // Fino alla 2.20.2 il chiaro e lo scuro con cui `_bakeCaverna` impasta la roccia erano due costanti
+  // scritte nel renderer, uguali per tutte e cinque le grotte: il colore del tema c'era e se lo
+  // rimangiava la cottura. Adesso li porta il tema. Questo test non guarda il disegno — guarda che i
+  // cinque abbiano DAVVERO cinque pietre diverse, perche' il giorno che qualcuno ricopia una riga per
+  // fare in fretta si torna esattamente al punto di partenza, e a occhio non se ne accorge nessuno.
+  {
+    const ESA = /^#[0-9a-f]{6}$/i;
+    const visti = {};
+    for (const th of MapGen.THEMES) {
+      assert(ESA.test(th.chiaro || ''), 'il tema ' + th.id + ' dice con che chiaro si schiarisce la sua pietra (' + th.chiaro + ')');
+      assert(ESA.test(th.scuro || ''), 'e con che scuro la si incide (' + th.scuro + ')');
+      assert(!visti[th.chiaro], 'e il chiaro del tema ' + th.id + ' non e lo stesso di ' + visti[th.chiaro]);
+      visti[th.chiaro] = th.id;
+    }
+    // e sono DISTANTI, non cinque sfumature dello stesso grigio: almeno 40 punti di distanza fra due
+    // qualunque, sui 255 di ogni canale. Sotto quella soglia, a schermo, non le distingue nessuno.
+    const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    for (let i = 0; i < MapGen.THEMES.length; i++) for (let j = i + 1; j < MapGen.THEMES.length; j++) {
+      const a2 = rgb(MapGen.THEMES[i].chiaro), b2 = rgb(MapGen.THEMES[j].chiaro);
+      const d = Math.abs(a2[0] - b2[0]) + Math.abs(a2[1] - b2[1]) + Math.abs(a2[2] - b2[2]);
+      assert(d >= 40, MapGen.THEMES[i].id + ' e ' + MapGen.THEMES[j].id + ' hanno pietre diverse a sufficienza (distanza ' + d + ')');
+    }
+    // il VILLAGGIO no: senza chiaro/scuro la cottura usa i valori di sempre, e il paese resta identico
+    assert(!MapGen.VILLAGE_THEME.chiaro && !MapGen.VILLAGE_THEME.scuro, 'il villaggio non prende la pietra colorata: resta com era');
+  }
   assert(!!MapGen.VILLAGE_THEME.name, 'anche il mercato ha un nome ("' + MapGen.VILLAGE_THEME.name + '")');
 
   // --- il pericolo del terreno FUNZIONA davvero in partita ---
