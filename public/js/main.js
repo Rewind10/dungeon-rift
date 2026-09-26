@@ -449,6 +449,8 @@
       // v2.24 — LE RISERVE. La pausa a meta ondata e la novita della versione, ma senza un avviso
       // sembra solo che l ondata sia finita male: il campo si svuota, non entra piu nessuno, e
       // poi all improvviso arrivano. Una riga lo dice, e riaccende l attenzione al momento giusto.
+      // v2.25 — il tempo obiettivo e scaduto: da qui in poi i mostri non vagano piu, ti cercano.
+      case 'braccata': A.wave(); HUD.killfeed('\u23F1 Tempo scaduto \u2014 <b>ti stanno cercando</b>'); break;
       case 'riserve': A.wave(); HUD.killfeed('\u26A0 Riserve in arrivo \u2014 altri ' + ev.n); break;
       case 'shop': HUD.killfeed('✨ Scegli un potere e spendi la XP'); break;
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;

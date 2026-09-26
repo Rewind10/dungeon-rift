@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.24.0',
+    VERSION: '2.25.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -145,6 +145,12 @@
     // Questi due numeri sono la manopola: alzare PAR_BASE regala tempo a tutte le ondate, alzare
     // PAR_PER_MOSTRO regala tempo soprattutto alle ondate affollate.
     PAR_BASE: 25, PAR_PER_MOSTRO: 3.2,
+    // v2.25 — LA BRACCATA. Scaduto il tempo obiettivo i mostri smettono di vagare e vengono a
+    // cercarti: nessuno resta piu' in attesa all'anello e chi non ti vede non gira a vuoto, ti
+    // raggiunge. Prima della scadenza non cambia niente — il comportamento e' quello di sempre.
+    // BRACCATA_VEL e' l'andatura della marcia: non e' una carica (chi ti vede resta piu' veloce),
+    // e' una convergenza. Metterla a 1 li fa arrivare tutti insieme, abbassarla li sparpaglia.
+    BRACCATA_VEL: 0.9,
     // il premio per chi ci sta dentro, in scala con l'ondata
     PAR_XP: 25, PAR_XP_ONDATA: 8, PAR_MONETE: 12, PAR_MONETE_ONDATA: 3,
     // v1.78 — QUANTO SI PUO' RESTARE nella mappa ripulita prima che l'uscita scatti da sola. Non e' una

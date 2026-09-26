@@ -503,7 +503,7 @@ class Room {
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
     // v2.24 — il primo carico e' quanto ci sta in campo; il resto sono RISERVE e aspettano.
-    this.riserveAperte = false; this.caricoFatto = false;
+    this.riserveAperte = false; this.caricoFatto = false; this._braccAnnuncio = false;
     // v2.8 — se uno esce dal villaggio SENZA parlare con l’oracolo, la missione in evidenza resterebbe
     // "trova l’oracolo" per venti ondate, mentre sta gia' scendendo. Chi salta ha saltato: la missione
     // diventa comunque la discesa, perche' e' quello che sta facendo.
@@ -687,6 +687,9 @@ class Room {
       // Passa da qui perche' TUTTE le IA chiedono il bersaglio a `ctx.nearest`: un solo punto, nessun ramo sparso.
       nearest(m) { if (m.taunt > 0 && m.tauntBy) { const t = self.players.get(m.tauntBy); if (t && !t.dead && !t.down) return t; } return self._nearestPlayer(m.x, m.y); },
       ANELLO: C.ANELLO_ATTESA,
+      // v2.25 — la braccata si calcola UNA volta per tick, qui, e non dentro l'IA di ogni mostro:
+      // e' la stessa risposta per tutti e sarebbe un confronto ripetuto quattordici volte al tick.
+      braccata: this.braccata(), braccataVel: C.BRACCATA_VEL || 0.9,
       flowStep(m) { if (!self.flow) return { x: 0, y: 0, d: -1 }; const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0; return PF.stepDir(self.flow, self.map.grid, self.map.w, self.map.h, gx, gy); },
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
       // v2.17 — per l'IA il muro di fuoco E' un muro: cosi' lo aggirano invece di suicidarcisi dentro,
@@ -747,6 +750,18 @@ class Room {
   }
   // quanti ne devono restare in campo perche' le riserve entrino: meta' del tetto (7 su 14).
   sogliaRiserve() { return Math.max(1, Math.round(this.tettoVivi() * (C.RISERVE_SOGLIA_Q || 0.5))); }
+  // v2.25 — LA BRACCATA. Paolo: *«quando il tempo per completare il livello scade i nemici devono
+  // venire a cercarti; prima della scadenza invece devono avere lo stesso comportamento che hanno
+  // adesso»*. E' la risposta alla domanda che il cronometro poneva senza rispondere: il tempo
+  // obiettivo era solo un bonus mancato, quindi il modo piu' sicuro di giocare era prendersela
+  // comoda e ripulire un angolo alla volta. Adesso scadere COSTA: non piu' monete, ma la mappa.
+  // Vale solo mentre si combatte: a mappa ripulita il cronometro e' fermo e non c'e' piu' niente
+  // da cercare.
+  braccata() {
+    if (this.phase !== C.PHASE_COMBAT && this.phase !== C.PHASE_BOSS) return false;
+    if (!this.parT) return false;
+    return (this.time - this.waveT0) > this.parT;
+  }
   // v2.24 — LE RISERVE ENTRANO IN BLOCCO, NON A GOCCIA. Prima ne rientrava uno ogni volta che ne
   // moriva uno: il campo restava pieno dal primo all'ultimo secondo. Adesso l'ondata mette giu' il
   // suo carico, poi TACE finche' non ne restano pochi, e allora entra il resto. La pausa in mezzo
@@ -3701,6 +3716,13 @@ class Room {
     // resta il ritmo di sempre (0,25-0,6s, e' la salita che da' il senso di ondata che monta), ma quando
     // e' gia' stata piena e si sono aperti dei buchi il rimpiazzo e' quasi immediato (0,10-0,22s).
     if (inCombat && this.monsters.length > (this._peakAlive || 0)) this._peakAlive = this.monsters.length;
+    // v2.25 — l'annuncio della braccata, una volta sola per ondata. Senza, il giocatore vede solo
+    // che all'improvviso arrivano tutti da tutte le parti e non capisce perche': il cronometro
+    // diventa rosso, ma nessuno guarda il cronometro mentre gli arrivano addosso.
+    if (inCombat && !this._braccAnnuncio && this.braccata()) {
+      this._braccAnnuncio = true;
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'braccata' } });
+    }
     if (inCombat && this.pending > 0 && this._puoSpawnare()) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     // v1.70 — il rifornimento della SOPRAVVIVENZA aveva un 14 scritto a mano che scavalcava il tetto:

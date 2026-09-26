@@ -842,9 +842,9 @@ function testV150() {
   assert(!at(1).includes('slime') && at(2).includes('slime'), 'Melma Corrosiva introdotta all ondata 2');
   assert(!at(2).includes('darkmage') && at(3).includes('darkmage'), 'Negromante introdotto all ondata 3');
   // v1.79.2 — tolto il Troll, gli archetipi dietro di lui si sono fatti avanti di un'ondata.
-  assert(!at(3).includes('spore_fungus') && at(4).includes('spore_fungus'), 'Fungo introdotto all ondata 4');
-  assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 5');
-  assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 7');
+  assert(!at(2).includes('spore_fungus') && at(3).includes('spore_fungus'), 'Fungo introdotto all ondata 3 (v2.25: era la 4)');
+  assert(!at(2).includes('bat_swarm') && at(3).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 3 (v2.25: era la 5)');
+  assert(!at(4).includes('wisp') && at(5).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 5 (v2.25: era la 7)');
   assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'Beholder introdotto all ondata 8 (v1.81: era la 9)');
   // v2.22 — i due nemici senza gambe. La Lama sta PRESTO di proposito: e' il primo nemico che
   // telegrafa il colpo, quindi deve arrivare quando c'e' ancora da imparare a schivare.
@@ -1302,8 +1302,8 @@ function testV158() {
 
   // ---------- la rampa resta monotona e ordinata ----------
   const at2 = w => Waves.poolForWave(w).map(x => x.id);
-  assert(!at2(3).includes('spore_fungus') && at2(4).includes('spore_fungus'), 'Fungo introdotto all ondata 4');
-  assert(!at2(5).includes('bone_roller') && at2(6).includes('bone_roller'), 'Sfera d\'Ossa introdotta all ondata 6');
+  assert(!at2(2).includes('spore_fungus') && at2(3).includes('spore_fungus'), 'Fungo introdotto all ondata 3 (v2.25: era la 4)');
+  assert(!at2(3).includes('bone_roller') && at2(4).includes('bone_roller'), 'Sfera d\'Ossa introdotta all ondata 4 (v2.25: era la 6)');
   let mono2 = true; for (let w = 1; w < 20; w++) { const a = at2(w), b = at2(w + 1); if (!a.every(id => b.includes(id))) mono2 = false; }
   assert(mono2, 'la rampa resta monotona con i nemici nuovi');
   // niente NaN con tutti i nuovi in campo
@@ -1748,8 +1748,8 @@ function testV161() {
   // Il Fuoco Fatuo sta dopo, perche' toglie una risposta che a quel punto il giocatore ha gia imparato:
   // mettersi al riparo. Arrivare prima sarebbe una regola tolta prima di averla insegnata.
   const at = w => Waves.poolForWave(w).map(x => x.id);
-  assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'il Nugolo entra dall ondata 5');
-  assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'il Fuoco Fatuo entra dall ondata 7');
+  assert(!at(2).includes('bat_swarm') && at(3).includes('bat_swarm'), 'il Nugolo entra dall ondata 3');
+  assert(!at(4).includes('wisp') && at(5).includes('wisp'), 'il Fuoco Fatuo entra dall ondata 5');
   assert(!at(1).includes('bat_swarm') && !at(1).includes('wisp'), 'nessuno dei due e piu nell ondata 1');
   const wBat = Waves.poolForWave(6).find(x => x.id === 'bat_swarm').weight;
   const wWisp = Waves.poolForWave(8).find(x => x.id === 'wisp').weight;
@@ -3830,8 +3830,8 @@ function testBeholder179() {
   assert(!at(9).includes('occhio_carne') && at(10).includes('occhio_carne'), 'quello di Carne alla 10');
   assert(!at(11).includes('occhio_spettro') && at(12).includes('occhio_spettro'), 'lo Spettrale alla 12');
   // i tre Ragni, intrecciati ai Beholder
-  assert(!at(7).includes('ragno') && at(8).includes('ragno'), 'la Vedova delle Volte entra alla 8');
-  assert(!at(9).includes('ragno_cripta') && at(10).includes('ragno_cripta'), 'il Ragno della Cripta alla 10');
+  assert(!at(6).includes('ragno') && at(7).includes('ragno'), 'la Vedova delle Volte entra alla 7 (v2.25: era la 8)');
+  assert(!at(8).includes('ragno_cripta') && at(9).includes('ragno_cripta'), 'il Ragno della Cripta alla 9 (v2.25: era la 10)');
   assert(!at(10).includes('ragno_veleno') && at(11).includes('ragno_veleno'), 'la Tessitrice Verde alla 11');
   const R1 = Mon.MONSTERS.ragno, R2 = Mon.MONSTERS.ragno_cripta, R3 = Mon.MONSTERS.ragno_veleno;
   assert(R1.ai === 'weaver' && R2.ai === 'weaver' && R3.ai === 'weaver', 'i tre Ragni hanno lo stesso comportamento');
@@ -7794,6 +7794,180 @@ function testV224() {
   ok('quattordici in campo, venti in tutto, e in mezzo si respira');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.25 — LA RAMPA ANTICIPATA E LA BRACCATA
+// =================================================================================================
+// Due richieste di Paolo nello stesso messaggio, e non c'entrano niente l'una con l'altra se non che
+// tutte e due nascono dalla v2.24:
+//   «alla terza ondata ci sono solo 3 tipologie, direi troppo poco: quelli piu' semplici falli
+//    entrare leggermente prima»
+//   «quando il tempo per completare il livello scade i nemici devono venire a cercarti; prima della
+//    scadenza invece devono avere lo stesso comportamento che hanno adesso»
+function testV225() {
+  console.log('\n[TEST 84] v2.25 — i semplici entrano prima, e allo scadere del tempo ti cercano');
+  const dt = 1 / C.TICK_RATE;
+  const at = (w) => Waves.poolForWave(w).map(x => x.id);
+
+  // --- 1) LA RAMPA SI E' FATTA AVANTI, MA NESSUNO E' STATO RITARDATO ------------------------
+  // E' la meta' che conta della richiesta: anticipare e' facile, il rischio e' spostare in avanti
+  // qualcos altro per far quadrare il conto. Qui c'e' scritta l'ondata di ingresso di TUTTI prima
+  // della v2.25: nessuno puo' entrare piu' tardi di cosi'.
+  const PRIMA = { skeleton: 1, lama: 2, slime: 2, darkmage: 3, spore_fungus: 4, bat_swarm: 5,
+                  bone_roller: 6, cubo: 6, wisp: 7, ragno: 8, occhio: 8, larva: 9,
+                  ragno_cripta: 10, occhio_carne: 10, ragno_veleno: 11, occhio_spettro: 12, padrone: 15 };
+  const entra = (id) => { for (let w = 1; w <= 20; w++) if (at(w).includes(id)) return w; return 99; };
+  for (const id in PRIMA) {
+    const ora = entra(id);
+    assert(ora <= PRIMA[id], id + ': entra alla ' + ora + ', non dopo la ' + PRIMA[id] + ' di prima');
+  }
+
+  // --- 2) E LA TERZA ONDATA NON E' PIU' TRE MUCCHI -----------------------------------------
+  // Il numero non e' magico: e' «abbastanza da non vedere tre volte la stessa cosa». Con venti posti
+  // (v2.24) quattro tipi sono quattro mucchi da cinque.
+  assert(at(3).length >= 6, 'alla terza ondata ci sono almeno 6 tipologie (' + at(3).length + ', erano 4)');
+  assert(at(4).length >= 7, 'alla quarta almeno 7 (' + at(4).length + ')');
+  assert(at(5).length >= 8, 'alla quinta almeno 8 (' + at(5).length + ')');
+  // e la prima resta pulita: una cosa sola da imparare
+  assert(at(1).length === 1, 'la prima ondata resta di un tipo solo: si impara a sparare e basta');
+
+  // --- 3) OGNI ONDATA DALLA 1 ALLA 12 PORTA ANCORA QUALCOSA DI NUOVO ------------------------
+  // E' la regola della v1.81, e anticipare e' il modo piu' facile di romperla: si tirano avanti
+  // quattro nemici e si aprono quattro buchi piu' in la'.
+  for (let w = 2; w <= 12; w++) {
+    if (Waves.isBossWave(w)) continue;
+    const nuovi = at(w).filter(x => !at(w - 1).includes(x));
+    assert(nuovi.length > 0, 'l ondata ' + w + ' porta qualcosa che alla ' + (w - 1) + ' non c era (' + nuovi.join(', ') + ')');
+  }
+
+  // --- 4) PRIMA DELLA SCADENZA NON CAMBIA NIENTE -------------------------------------------
+  // Paolo e' stato esplicito: *«prima della scadenza invece devono avere lo stesso comportamento che
+  // hanno adesso»*. Quindi servono due misure sulla stessa scena, non una.
+  //
+  // SI MISURA L'ANDATURA, NON LA DISTANZA. Il primo tentativo controllava che in quattordici secondi
+  // un mostro lontano non ti arrivasse addosso, ed era sbagliato: vagando puo' capitare davanti alla
+  // tua linea di vista, e da li' ti insegue — giustamente, perche' ti ha VISTO. Il test diventava
+  // rosso una volta su cinque per un comportamento corretto. Quello che distingue davvero i due
+  // regimi e' il passo: chi vaga va a 0,5-0,6 della sua velocita', chi ti braccca marcia a 0,9.
+  const lontano = (r, p) => {
+    // il punto piu' lontano, calpestabile e FUORI VISTA: e' la condizione in cui si vaga. Si cerca
+    // sulla griglia e non fra i punti di generazione, che su certe mappe sono zero.
+    const g = r.map.grid, W = r.map.w, H = r.map.h, T = C.TILE;
+    let best = null, bd = 0;
+    for (let gy = 1; gy < H - 1; gy++) for (let gx = 1; gx < W - 1; gx++) {
+      if (g[gy * W + gx] === C.T_WALL) continue;
+      const x = gx * T + T / 2, y = gy * T + T / 2, d = MU.dist(x, y, p.x, p.y);
+      if (d > bd && !r.isWallAt(x, y) && !r.losClear(x, y, p.x, p.y)) { bd = d; best = { x, y }; }
+    }
+    return best;
+  };
+  {
+    // ondata 5, non la partenza: `startGame()` senza argomenti apre il PROLOGO, dove non si combatte
+    // e quindi non si braccca nessuno — misurare li' vorrebbe dire misurare zero.
+    const r = new Room('v225a'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame(5);
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    p.x = r.map.spawn.x; p.y = r.map.spawn.y;
+    const sp = lontano(r, p);
+    assert(sp, 'sulla mappa c e un punto lontano e fuori vista da cui partire');
+    r.waveT0 = r.time; r.parT = 600;                       // tempo obiettivo lontanissimo
+    assert(!r.braccata(), 'col tempo ancora aperto la braccata e spenta');
+    const m = r.spawnMonster('skeleton', sp.x, sp.y, {}); m.awake = true;
+    // L'andatura si legge sulla velocita' CHIESTA dall'IA (m.mx/m.my), non sullo spostamento vero:
+    // un mostro che struscia contro una parete percorre meno strada di quanta ne voglia percorrere, e
+    // con lo spostamento il test misurava la forma della mappa invece del comportamento. Si prende il
+    // massimo su venti tick perche' chi vaga, nel tick in cui raggiunge il suo punto, sta fermo.
+    const passo = (tick) => { let mx = 0;
+      for (let i = 0; i < tick; i++) {
+        p.hp = 1e9; p.x = r.map.spawn.x; p.y = r.map.spawn.y;
+        r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+        r.update(dt); mx = Math.max(mx, Math.hypot(m.mx, m.my) / m.speed); }
+      return mx; };
+    const calma = passo(40);
+    assert(calma < 0.75, 'col tempo ancora aperto chi non ti vede vaga, non marcia (andatura ' + calma.toFixed(2) + ')');
+
+    // --- 5) SCADUTO IL TEMPO, TI VIENE A CERCARE -------------------------------------------
+    r.waveT0 = r.time - 9999;                              // il tempo obiettivo e' passato
+    assert(r.braccata(), 'scaduto il tempo obiettivo la braccata si accende');
+    const caccia = passo(20);
+    assert(caccia > 0.8, 'e da li in poi marcia (andatura ' + caccia.toFixed(2) + ', era ' + calma.toFixed(2) + ')');
+    const d2 = MU.dist(m.x, m.y, p.x, p.y);
+    let arrivato = false;
+    for (let i = 0; i < C.TICK_RATE * 60 && !arrivato; i++) {
+      p.hp = 1e9; p.x = r.map.spawn.x; p.y = r.map.spawn.y;
+      r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      r.update(dt);
+      if (MU.dist(m.x, m.y, p.x, p.y) < 120) arrivato = true;
+    }
+    assert(arrivato, 'e ti raggiunge da qualunque punto della mappa (partiva da ' + (d2 | 0) + ' px)');
+    assert(r._braccAnnuncio, 'e lo annuncia, una volta sola');
+  }
+
+  // --- 6) LA BRACCATA NON AGGIUNGE NEMICI, LI FA SOLO VENIRE -------------------------------
+  // E' la cosa che poteva andare storta: il tetto alla folla (v1.80) e il tetto ai vivi (v2.24) sono
+  // due cose diverse. La braccata spegne il PRIMO — nessuno resta piu' ad aspettare all anello — e
+  // non deve toccare il SECONDO, se no lo scadere del tempo raddoppierebbe l'ondata.
+  {
+    const r = new Room('v225b'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.wave = 8; r.nextWave();
+    r.monsters.length = 0;
+    r.pending = 40; r.waveList = Array.from({ length: 40 }, () => ({ type: 'skeleton' }));
+    r.riserveAperte = true; r.caricoFatto = true;
+    r.waveT0 = r.time; r.parT = 1;                         // braccata accesa dal primo tick
+    let picco = 0;
+    for (let i = 0; i < C.TICK_RATE * 30; i++) {
+      p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      r.update(dt);
+      picco = Math.max(picco, r.monsters.filter(x => !x.dead).length);
+    }
+    assert(r.braccata(), 'la braccata e accesa per tutta la prova');
+    assert(picco <= r.tettoVivi(), 'e il tetto ai vivi regge lo stesso (' + picco + ' su ' + r.tettoVivi() + ')');
+    // e COMBATTONO tutti. Questa e' la prova del cancello del tetto alla folla, e va misurata sugli
+    // attacchi, non sulle distanze: chi e' parcheggiato all anello durante la braccata ti ARRIVA
+    // ugualmente addosso (ci arriva da `wander`, dirottato), ma poi resta li' a girare senza mai
+    // menare. Contando solo chi e' vicino il sabotaggio passava liscio; contando chi ha davvero
+    // colpito, no.
+    const vivi = r.monsters.filter(x => !x.dead).length;
+    let attaccanti = 0;
+    { const chi = new Set();
+      for (let i = 0; i < C.TICK_RATE * 40; i++) {
+        p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+        r.events.length = 0; r.update(dt);
+        for (const e of r.events) if (e.t === 'melee' && e.e) chi.add(e.e);
+      }
+      attaccanti = chi.size; }
+    assert(attaccanti >= vivi - 1, 'e non ne resta nessuno a girare all anello: hanno attaccato in ' + attaccanti + ' su ' + vivi);
+  }
+
+  // --- 7) A MAPPA RIPULITA NON SI CERCA PIU' NESSUNO ---------------------------------------
+  // Il cronometro si ferma a ondata chiusa (v1.77) ma `time` no: senza questo controllo, chi ha
+  // chiuso l'ondata fuori tempo si sarebbe trovato i mostri della PROSSIMA gia' addosso al primo
+  // tick, prima ancora che il cronometro ripartisse.
+  {
+    const r = new Room('v225c'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.waveT0 = r.time - 9999; r.parT = 30;
+    assert(r.braccata(), 'in combattimento, fuori tempo, la braccata e accesa');
+    r.phase = C.PHASE_CLEARED;
+    assert(!r.braccata(), 'a mappa ripulita si spegne');
+    r.phase = C.PHASE_SHOP;
+    assert(!r.braccata(), 'e al negozio pure');
+  }
+
+  // --- 8) IL PONTE: IL DIROTTAMENTO E' IN UN PUNTO SOLO ------------------------------------
+  // Se un domani qualcuno scrive un'IA nuova che vaga per conto suo invece di passare da `wander`,
+  // quella si dimentichera' della braccata senza che nessun errore lo dica.
+  {
+    const fs = require('fs'), path = require('path');
+    const ROOT = path.join(__dirname, '..') + path.sep;
+    const srcA = fs.readFileSync(ROOT + 'shared/ai.js', 'utf8');
+    assert(/function wander\([^)]*\)\s*\{\s*(\/\/[^\n]*\n\s*)*if \(ctx\.braccata\)/.test(srcA),
+      'la braccata dirotta il vagabondaggio in cima a wander, cioe una volta per tutte le IA');
+    const gate = srcA.match(/if \(!?ctx\.braccata && mon\.impegnato === 0[^;]+;/);
+    assert(gate, 'e il tetto alla folla non parcheggia nessuno durante la braccata');
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    assert(srcM.indexOf("case 'braccata'") >= 0, 'e il client sa cosa farne: lo annuncia');
+  }
+  ok('i semplici entrano prima, e scaduto il tempo la mappa ti viene addosso');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -52,23 +52,32 @@
     if (w >= 2) add('lama', 14);          // galleggia, si carica mezzo secondo, scatta dritta
     if (w >= 2) add('slime', 16);         // blob acido, si divide alla morte
     if (w >= 3) add('darkmage', 12);      // caster / evocatore
-    if (w >= 4) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
-    if (w >= 5) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro
-    if (w >= 6) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
-    if (w >= 7) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta
+    // v2.25 — I SEMPLICI VENGONO AVANTI. Paolo: *«alla terza ondata ci sono solo 3 tipologie, direi
+    // troppo poco; magari quelli piu' semplici falli entrare leggermente prima»*. Aveva ragione, e il
+    // motivo e' la v2.24: finche' un'ondata ne portava quaranta, quattro tipi bastavano a riempirla di
+    // roba diversa. Con venti, quattro tipi sono quattro mucchi. Il tetto piu' basso non ha cambiato
+    // solo quanti nemici arrivano: ha cambiato quanti tipi SERVONO per non far sembrare l'ondata
+    // sempre uguale, e la rampa era ancora tarata sui numeri vecchi.
+    // Si fanno avanti i piu' semplici da leggere — uno sciame che ondeggia, una cosa immobile, una
+    // che carica dritto — non quelli che chiedono una risposta nuova. Nessuno viene RITARDATO: le
+    // ondate alte hanno esattamente il bestiario di prima.
+    if (w >= 3) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo   (era 4)
+    if (w >= 3) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro (era 5)
+    if (w >= 4) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato  (era 6)
+    if (w >= 5) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta  (era 7)
     // v2.22 — IL CUBO alla 6: arriva quando il giocatore ha gia' imparato a sparare a distanza e
     // a tenere la linea di tiro, perche' il suo mestiere e' togliergli proprio quella.
     if (w >= 6) add('cubo', 7);           // muro che si muove: ferma i proiettili, va aggirato
+    if (w >= 6) add('larva', 12);         // Larva Fetida — scoppia quando la uccidi            (era 9)
     // v1.81 — LA RAMPA ANTICIPATA. Prima il gioco smetteva di presentare cose all'ondata 7: dopo
     // arrivavano solo i tre Beholder (9, 12, 15) e le ondate 8, 10, 11, 13, 14 e dalla 16 in poi non
     // portavano NIENTE di nuovo. All'ondata 19 la composizione era identica a quella della 15. Adesso
     // ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era, e i Beholder si
     // fanno avanti: il Viola alla 8, quello di Carne alla 10, lo Spettrale alla 12 — cosi' il piu'
     // lavorato dei tre non compare a cinque ondate dalla fine.
-    if (w >= 8) add('ragno', 10);           // Vedova delle Volte — tesse tele che rallentano       (nuovo)
+    if (w >= 7) add('ragno', 10);           // Vedova delle Volte — tesse tele che rallentano       (era 8)
     if (w >= 8) add('occhio', 9);           // Occhio Viola — il primo dei tre, tetto di 8 vivi   (era 9)
-    if (w >= 9) add('larva', 12);           // Larva Fetida — scoppia quando la uccidi              (nuovo)
-    if (w >= 10) add('ragno_cripta', 8);    // Ragno della Cripta — la seconda tessitrice          (nuovo)
+    if (w >= 9) add('ragno_cripta', 8);     // Ragno della Cripta — la seconda tessitrice         (era 10)
     if (w >= 10) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino          (era 12)
     if (w >= 11) add('ragno_veleno', 6);    // Tessitrice Verde — la terza, tele piu' larghe       (nuovo)
     if (w >= 12) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo (era 15)

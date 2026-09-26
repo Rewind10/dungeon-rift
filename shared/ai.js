@@ -12,6 +12,14 @@
   // Sceglie un bersaglio casuale raggiungibile (niente muri, LOS libera) e ci cammina; ne prende uno nuovo
   // al raggiungimento, allo scadere del timer o se resta bloccato (rilevato dal poco spostamento reale).
   function wander(mon, ctx, sm = 0.55) {
+    // v2.25 — LA BRACCATA. Scaduto il tempo obiettivo non si vaga piu': chi non ti vede ti VIENE A
+    // CERCARE. Il dirottamento sta qui, in fondo a tutti i rami: `wander` e' l'unico posto dove
+    // finisce chi non ha un bersaglio in vista — ci arrivano `caccia`, l'attesa all'anello e ogni
+    // comportamento che chiama `caccia` quando ti perde. Una riga sola, e non c'e' un'IA che possa
+    // dimenticarsene. Il passo e' una marcia, non una carica: chi ti vede resta piu' veloce di chi
+    // ti sta soltanto raggiungendo, se no la differenza fra "mi ha visto" e "mi sta cercando"
+    // sparirebbe proprio nel momento in cui conta.
+    if (ctx.braccata) { seek(mon, ctx, ctx.braccataVel || 0.9); return; }
     // rilevamento "bloccato" tra un tick e l'altro (l'IA gira prima del movimento)
     if (mon._wpx != null) { const moved = MU.dist(mon.x, mon.y, mon._wpx, mon._wpy); mon._wstuck = (moved < 0.6 && (Math.abs(mon.mx) + Math.abs(mon.my) > 1)) ? (mon._wstuck || 0) + ctx.dt : 0; }
     mon._wpx = mon.x; mon._wpy = mon.y;
@@ -584,7 +592,11 @@
     // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
     // a meta' si vedrebbe.
     const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto' || mon.pf === 'carica' || mon.pf === 'sferza' || mon.pf === 'punta';
-    if (mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
+    // v2.25 — e durante la BRACCATA il tetto alla folla non parcheggia piu' nessuno: se restassero
+    // all'anello, «vengono a cercarti» varrebbe solo per i primi sei e gli altri continuerebbero a
+    // girare a vuoto. Il tetto ai VIVI in campo (v2.24) resta intatto: quello lo fa la coda, non
+    // questo, quindi la braccata non aggiunge un mostro che sia uno — li fa solo venire tutti.
+    if (!ctx.braccata && mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
     (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx);
   }
   return { update, behaviors, caccia, wander, attesa };

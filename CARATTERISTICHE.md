@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.24.0`
+**Versione attuale:** `2.25.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -295,7 +295,7 @@ di restare piantato li'.
 
 ---
 
-## 🪜 LA RAMPA DEGLI ARCHETIPI *(rifatta in v1.81)*
+## 🪜 LA RAMPA DEGLI ARCHETIPI *(v1.81, anticipata in v2.25)*
 
 Ogni ondata dalla 1 alla 12 mette in campo un archetipo che prima non c'era. Una volta entrato non esce
 piu' dal pool, e nessuna ondata resta senza novita':
@@ -303,21 +303,38 @@ piu' dal pool, e nessuna ondata resta senza novita':
 | Ondata | Entra | Cosa insegna |
 |---:|---|---|
 | 1 | Zombie Putrido | la mischia di base |
-| 2 | Melma Corrosiva | si divide: uccidere non basta |
-| 3 | Negromante | bersaglio prioritario, evoca |
-| 4 | Fungo Sporifero | nega il terreno: non stare fermo |
-| 5 | Nugolo di Pipistrelli | serpeggia: guida il tiro |
-| 6 | Sfera d'Ossa | carica dritta: togliti di lato |
-| 7 | Fuoco Fatuo | attraversa i muri: il riparo non basta |
-| **8** | **Vedova delle Volte** *(nuova)* + **Occhio Viola** *(era 9)* | **la tela ti toglie le gambe** · il raggio consuma vita |
-| **9** | **Larva Fetida** *(nuova)* | **non stare incollato a chi stai finendo** |
-| **10** | **Ragno della Cripta** *(nuovo)* + **Occhio di Carne** *(era 12)* | tele piu' larghe · lo stesso occhio, piu' duro |
-| **11** | **Tessitrice Verde** *(nuova)* | la tela piu' larga e piu' frequente |
-| **12** | **Occhio Spettrale** *(era 15)* | raggio lungo, e passa nella roccia |
+| 2 | Melma Corrosiva · Lama Errante | si divide: uccidere non basta · il colpo telegrafato |
+| **3** | Negromante · **Fungo Sporifero** *(era 4)* · **Nugolo di Pipistrelli** *(era 5)* | bersaglio prioritario · non stare fermo · serpeggia, guida il tiro |
+| **4** | **Sfera d'Ossa** *(era 6)* | carica dritta: togliti di lato |
+| **5** | **Fuoco Fatuo** *(era 7)* | attraversa i muri: il riparo non basta |
+| **6** | Cubo Gelatinoso · **Larva Fetida** *(era 9)* | ti toglie la linea di tiro · non stare incollato a chi stai finendo |
+| **7** | **Vedova delle Volte** *(era 8)* | la tela ti toglie le gambe |
+| 8 | Occhio Viola | il raggio consuma vita |
+| **9** | **Ragno della Cripta** *(era 10)* | tele piu' larghe |
+| 10 | Occhio di Carne | lo stesso occhio, piu' duro |
+| 11 | Tessitrice Verde | la tela piu' larga e piu' frequente |
+| 12 | Occhio Spettrale | raggio lungo, e passa nella roccia |
+| 15 | Il Padrone | comanda gli altri: l'ondata picchia piu' del solito |
 
-**Alla dodicesima il bestiario e' tutto in campo** — 14 archetipi. Prima della v1.81 la rampa si fermava
-alla settima: le ondate 8, 10, 11, 13, 14 e tutte dalla 16 alla 19 non portavano niente, e all'ondata 19 la
-composizione del pool era identica a quella della 15.
+**Perche' anticipare** *(v2.25)*. Paolo: *«alla terza ondata ci sono solo 3 tipologie, direi troppo
+poco»*. La rampa era tarata quando un'ondata ne portava quaranta: con quaranta nemici quattro tipi
+bastavano a riempire lo schermo di roba diversa, con **venti** (v2.24) sono quattro mucchi da cinque.
+Il tetto piu' basso ha cambiato quanti tipi SERVONO, non solo quanti nemici arrivano. Si sono fatti
+avanti i piu' semplici da leggere — uno sciame che ondeggia, una cosa immobile, una che carica dritto
+— e **nessuno e' stato ritardato**: le ondate alte hanno esattamente il bestiario di prima.
+
+| ondata | tipi prima della v2.25 | adesso |
+|---:|---:|---:|
+| 3 | 4 | **6** |
+| 4 | 5 | **7** |
+| 5 | 6 | **8** |
+| 6 | 8 | **10** |
+| 9 | 12 | **13** |
+| 15+ | 17 | 17 |
+
+**Alla dodicesima il bestiario e' quasi tutto in campo** — 16 archetipi su 17, manca solo il Padrone.
+Prima della v1.81 la rampa si fermava alla settima: le ondate 8, 10, 11, 13, 14 e tutte dalla 16 alla
+19 non portavano niente, e all'ondata 19 la composizione del pool era identica a quella della 15.
 
 ### 🕷️ I tre Ragni delle Volte
 Non inseguono: orbitano a media distanza e **tessono una ragnatela sul punto dove sei**. La tela non fa un
@@ -1645,6 +1662,38 @@ Cento regole del foglio di stile e quindici scritte disegnate sul canvas. Invari
   un premio.
 - I due numeri stanno in `constants.js` e sono la manopola: `PAR_BASE` regala tempo a tutte le ondate,
   `PAR_PER_MOSTRO` soprattutto a quelle affollate.
+
+### ⏱ LA BRACCATA — cosa succede quando il tempo scade *(novita v2.25)*
+Paolo: *«quando il tempo per completare il livello scade i nemici devono venire a cercarti; prima
+della scadenza invece devono avere lo stesso comportamento che hanno adesso»*.
+
+Fino alla v2.24 superare il tempo obiettivo costava **solo il bonus**. Il che vuol dire che il modo
+piu' sicuro di giocare era prendersela comoda: ripulire un angolo, rifiatare, ripulire il prossimo.
+Il cronometro premiava la fretta ma non puniva mai la calma, e una ricompensa senza rischio non e'
+una scelta, e' una mancia per chi gioca bene. Adesso scadere costa **la mappa**.
+
+| | finche' il tempo e' aperto | dopo la scadenza |
+|---|---|---|
+| chi non ti vede | **vaga** (0,5-0,6 della velocita') | **ti viene a cercare**, col campo di flusso, da qualunque punto |
+| chi e' di troppo | aspetta all'anello (tetto alla folla, v1.80) | **si fa sotto anche lui** |
+| quanti in campo | tetto ai vivi (14, o 16 in due — v2.24) | **lo stesso tetto**, invariato |
+
+Misurato con quattordici mostri e il giocatore fermo: dopo 30 s la distanza mediana passa da **826 px**
+(tempo aperto) a **50 px** (braccata), e attaccano **tutti e quattordici** invece della sola quota del
+tetto alla folla.
+
+**La braccata non aggiunge nemici**, li fa solo venire tutti: i due tetti sono cose diverse — quello
+alla folla decide quanti si fanno sotto, quello ai vivi quanti ce ne sono in campo. La braccata spegne
+il primo e non tocca il secondo.
+
+Il passo e' `BRACCATA_VEL` = **0,9**: una marcia, non una carica. Chi ti vede resta piu' veloce di chi
+ti sta soltanto raggiungendo, se no la differenza fra «mi ha visto» e «mi sta cercando» sparirebbe
+proprio nel momento in cui conta. A schermo: *«⏱ Tempo scaduto — ti stanno cercando»*, una volta sola
+per ondata. Si spegne a mappa ripulita e al negozio.
+
+*Dove sta scritto:* il dirottamento e' **una riga in cima a `wander`** in `shared/ai.js` — l'unico
+posto dove finisce chi non ha un bersaglio in vista, quindi vale per tutte le IA insieme e una IA
+nuova non puo' dimenticarsene.
 
 ## 👹 I NEMICI SI VEDONO ARRIVARE, NON COMPARIRE *(novita v1.76.1)*
 - **Il recupero anti-stallo** serve a non lasciare un'ondata aperta per sempre quando un mostro finisce

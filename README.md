@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.24.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.25.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,25 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.25.0 (i semplici entrano prima, e il tempo scaduto si paga)
+
+**La rampa si è fatta avanti.** Con venti nemici per ondata (v2.24), quattro tipologie alla terza
+ondata erano quattro mucchi da cinque. I più semplici da leggere entrano prima — Fungo e Pipistrelli
+alla **3**, Sfera d'Ossa alla **4**, Fuoco Fatuo alla **5**, Larva alla **6**, Vedova alla **7** — e
+**nessuno è stato ritardato**: le ondate alte hanno esattamente il bestiario di prima. La terza
+ondata passa da **4 a 6** tipologie, la sesta da 8 a 10.
+
+**⏱ LA BRACCATA.** Il tempo obiettivo dava un bonus a chi chiudeva in fretta e nient'altro: superarlo
+costava una mancia, quindi il modo più sicuro di giocare era prendersela comoda. Adesso **allo
+scadere i mostri smettono di vagare e vengono a cercarti**, da qualunque punto della mappa, e il
+tetto alla folla smette di tenerne qualcuno in disparte: non si fanno sotto più i primi sei, si fanno
+sotto tutti. Prima della scadenza **non cambia niente**.
+
+Non arriva un nemico in più — il tetto ai vivi in campo (14, o 16 in due) resta intatto: arrivano
+solo tutti insieme quelli che c'erano già.
+
+---
 
 ## 🆕 Novità v2.24.0 (l'azzardo sul ritmo delle ondate)
 

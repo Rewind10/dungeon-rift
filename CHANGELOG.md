@@ -2,6 +2,147 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.25.0] — 2026-09-26 · "I semplici entrano prima, e il tempo scaduto si paga"
+
+Due richieste di Paolo nello stesso messaggio. Non c'entrano niente l'una con l'altra, se non che
+tutte e due nascono dalla v2.24.
+
+---
+
+### 🎲 La terza ondata era diventata tre mucchi
+
+Paolo: *«anticipa l'entrata in gioco di alcuni nemici: alla terza ondata ci sono solo 3 tipologie,
+direi troppo poco. Magari quelli più semplici falli entrare leggermente prima»*.
+
+**Aveva ragione, e il motivo è la versione prima.** La rampa di introduzione era tarata quando
+un'ondata ne portava quaranta: con quaranta nemici, quattro tipi bastavano a riempire lo schermo di
+roba diversa. Con **venti** (v2.24), quattro tipi sono quattro mucchi da cinque. Il tetto più basso
+non ha cambiato solo *quanti* nemici arrivano: ha cambiato **quanti tipi servono** perché l'ondata
+non sembri sempre uguale. La rampa era rimasta indietro.
+
+Si sono fatti avanti i **più semplici da leggere** — uno sciame che ondeggia, una cosa immobile, una
+che carica dritto — non quelli che chiedono una risposta nuova al giocatore.
+
+| nemico | prima | adesso |
+|---|---|---|
+| 🍄 Fungo Sporifero | 4 | **3** |
+| 🦇 Nugolo di Pipistrelli | 5 | **3** |
+| 💀 Sfera d'Ossa | 6 | **4** |
+| 👻 Fuoco Fatuo | 7 | **5** |
+| 🪱 Larva Fetida | 9 | **6** |
+| 🕷️ Vedova delle Volte | 8 | **7** |
+| 🕸️ Ragno della Cripta | 10 | **9** |
+
+**Nessuno è stato ritardato.** È la metà che conta: anticipare è facile, il rischio è spostare in
+avanti qualcos'altro per far quadrare il conto. C'è un test che tiene scritta l'ondata di ingresso
+di tutti e diciassette i nemici prima della v2.25 e pretende che nessuno entri più tardi di allora.
+
+| ondata | tipi prima | tipi adesso |
+|---|---|---|
+| 3 | 4 | **6** |
+| 4 | 5 | **7** |
+| 5 | 6 | **8** |
+| 6 | 8 | **10** |
+| 9 | 12 | **13** |
+| 15+ | 17 | 17 |
+
+E ogni ondata dalla 1 alla 12 continua a portare **qualcosa che l'ondata prima non aveva** (regola
+della v1.81): anticipare quattro nemici è il modo più facile di aprire quattro buchi più in là, e c'è
+un test che li cerca uno per uno.
+
+---
+
+### ⏱️ LA BRACCATA — scaduto il tempo, la mappa ti viene addosso
+
+Paolo: *«quando il tempo per completare il livello scade (quello che ti dà diritto a dei bonus) i
+nemici devono venire a cercarti. Prima della scadenza invece devono avere lo stesso comportamento che
+hanno adesso»*.
+
+**È la risposta a una domanda che il cronometro poneva senza rispondere.** Il tempo obiettivo (v1.77)
+dava XP e monete a chi chiudeva in fretta, e basta: superarlo costava un bonus mancato e nient'altro.
+Il che vuol dire che il modo più sicuro di giocare era **prendersela comoda** — ripulire un angolo,
+rifiatare, ripulire il prossimo. Il cronometro premiava la fretta ma non puniva mai la calma, e una
+ricompensa senza rischio non è una scelta: è solo una mancia per chi gioca bene.
+
+Adesso scadere costa qualcosa che non sono monete: **la mappa**.
+
+- **finché il tempo è aperto**: nulla cambia. Chi non ti vede vaga, chi è di troppo aspetta
+  all'anello. È il comportamento di sempre, e c'è un test che lo misura apposta;
+- **allo scadere**: i mostri smettono di vagare e **vengono a cercarti**, dal punto della mappa in
+  cui si trovano, muri o non muri in mezzo — seguono il campo di flusso. E il **tetto alla folla**
+  (v1.80) smette di parcheggiare chi è di troppo: non si fanno sotto più i primi sei, si fanno sotto
+  **tutti**.
+
+Misurato, quattordici mostri con il giocatore fermo al centro:
+
+| | distanza mediana dopo 30 s | quanti attaccano |
+|---|---|---|
+| tempo aperto | **826 px** | la quota di sempre |
+| dopo la scadenza | **50 px** | **tutti e quattordici** |
+
+**Quello che la braccata NON fa: aggiungere nemici.** I due tetti sono cose diverse e vanno tenute
+separate — il tetto alla folla (v1.80) decide quanti si fanno sotto, il tetto ai vivi (v2.24) decide
+quanti ce ne sono in campo. La braccata spegne il primo e **non tocca il secondo**: allo scadere del
+tempo non arriva un mostro in più, arrivano solo tutti insieme quelli che c'erano già.
+
+**E lo dice.** *«⏱ Tempo scaduto — ti stanno cercando»*, una volta sola per ondata. Il cronometro
+diventava già rosso, ma nessuno guarda il cronometro mentre gli arrivano addosso: senza una riga, il
+giocatore vede solo che all'improvviso spuntano da tutte le parti e non capisce perché.
+
+**Una riga sola, in fondo a tutte le IA.** Il dirottamento sta dentro `wander`, che è l'unico posto
+dove finisce chi non ha un bersaglio in vista: ci arrivano `caccia`, l'attesa all'anello e ogni
+comportamento che chiama `caccia` quando ti perde. Scriverlo in ogni singola IA avrebbe voluto dire
+che la prossima IA se ne sarebbe dimenticata senza che nessun errore lo dicesse.
+
+Il passo della braccata è **0,9** della velocità (`BRACCATA_VEL`): una marcia, non una carica. Chi ti
+vede resta più veloce di chi ti sta soltanto raggiungendo — se no la differenza fra *«mi ha visto»* e
+*«mi sta cercando»* sparirebbe proprio nel momento in cui conta.
+
+---
+
+### 🧪 Numeri, e tre test che ho dovuto rifare
+
+**Test: 5140 passati, 0 falliti.** TEST 84 nuovo.
+
+Quattro sabotaggi deliberati:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| la braccata non dirotta più il vagabondaggio | ✅ 4 controlli rossi |
+| il tetto alla folla parcheggia anche durante la braccata | ✅ 2 controlli rossi |
+| la braccata accesa sempre (tempo obiettivo ignorato) | ✅ 5 controlli rossi, **quattro dei quali vecchi** — i test del vagabondaggio e del tetto alla folla si sono accorti da soli che il gioco non era più quello di prima |
+| il Nugolo torna alla quinta ondata | ✅ 4 controlli rossi |
+
+**Il mio test era sbagliato, e valeva la pena scoprirlo.** Per verificare che *prima* della scadenza
+non cambi niente avevo scritto: «un mostro lontano non ti arriva addosso in quattordici secondi».
+Rosso una volta su cinque — e **per un comportamento corretto**: un mostro che vaga può benissimo
+capitare davanti alla tua linea di vista, e da lì ti insegue, perché ti ha *visto*. Non era il gioco
+a sbagliare, era la domanda.
+
+Quello che distingue davvero i due regimi è **il passo**: chi vaga va a 0,5-0,6 della sua velocità,
+chi ti braccca marcia a 0,9. E si misura sulla velocità **chiesta dall'IA**, non sullo spostamento
+vero: un mostro che struscia contro una parete percorre meno strada di quanta ne voglia percorrere, e
+con lo spostamento il test misurava la forma della mappa invece del comportamento.
+
+Stessa storia, in piccolo, per il controllo del tetto alla folla: contavo quanti mostri fossero
+*vicini* al giocatore, e il sabotaggio passava liscio — perché chi è parcheggiato durante la braccata
+ti arriva addosso lo stesso (ci arriva da `wander`, dirottato), solo che poi resta lì senza mai
+menare. Contando **chi ha davvero colpito**, il sabotaggio si vede.
+
+| file | cosa |
+|---|---|
+| `shared/waves.js` | sette nemici anticipati, nessuno ritardato |
+| `shared/ai.js` | la braccata dentro `wander`; il tetto alla folla non parcheggia più durante la braccata |
+| `server/Room.js` | `braccata()`, il campo nel contesto dell'IA, l'annuncio una volta per ondata |
+| `shared/constants.js` | `BRACCATA_VEL`; versione |
+| `public/js/main.js` | l'avviso del tempo scaduto |
+| `test/simulate.js` | TEST 84; nove controlli di ingresso aggiornati alla rampa nuova |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.24.0] — 2026-09-26 · "L'azzardo: quattordici in campo, e in mezzo si respira"
 
 Paolo, dopo aver visto la tabella delle ondate: *«allora facciamo un azzardo: i nemici contemporanei
