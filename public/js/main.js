@@ -404,6 +404,15 @@
       case 'spore': if (ev.e != null) R.hitAttack(ev.e, 0.9); R.ring(ev.x, ev.y - 6, ev.c || '#a6ff3a', 4, 34, 0.45); R.burst(ev.x, ev.y - 8, ev.c || '#a6ff3a', 12, 120, 0.6); break;  // v1.58 — il fungo sbuffa
       case 'roll_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.62); R.ring(ev.x, ev.y, '#ff7a3b', 3, 26, 0.35); break;  // v1.58 — la sfera si carica
       case 'roll_go': A.kill && A.kill(false); R.burst(ev.x, ev.y, '#cfc7b0', 10, 150, 0.35); break;
+      // v2.22 — LA LAMA ERRANTE. La carica passa dal cronometro dei telegrafi (mAtk), lo stesso della
+      // Sfera d'Ossa: e' quello che il disegno legge per accendere il bagliore e gonfiare la runa.
+      case 'lama_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.5); R.ring(ev.x, ev.y, '#8be9ff', 3, 30, 0.3); break;
+      case 'lama_go': if (ev.e != null) { R._lamaSc = R._lamaSc || {}; R._lamaSc[ev.e] = R.time + 0.30; } R.burst(ev.x, ev.y, '#cfe6ff', 9, 170, 0.3); break;
+      case 'lama_muro': R.burst(ev.x, ev.y, '#dbe6f2', 6, 120, 0.25); break;
+      // v2.22 — IL CUBO. Il colpo che si spegne dentro, e la gelatina che si scioglie lasciando
+      // quello che aveva inghiottito.
+      case 'assorbito': R.burst(ev.x, ev.y, ev.c || '#ffd88a', 5, 70, 0.28); break;
+      case 'cubo_sciolto': A.crate && A.crate(); R.burst(ev.x, ev.y, '#9fd06a', 22, 200, 0.55); R.ring(ev.x, ev.y, '#b0d878', 5, 56, 0.4); R.floater(ev.x, ev.y - 22, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', true); break;
       case 'rift_edge': if (ev.who === Net.id) { HUD.modeBanner('\u26A0 LA FAGLIA TI STA CONSUMANDO', '#b25cff', 'Sei troppo vicino al bordo \u00b7 torna verso il centro'); R.addShake(4); R.ring(ev.x, ev.y, '#b25cff', 6, 70, 0.5); } break;  // v1.63
       case 'drain': if (ev.e != null) R.hitAttack(ev.e, 0.5); R.drain(ev.tx, ev.ty, ev.x, ev.y, ev.c || '#7dffea'); break;  // v1.61 — il fuoco fatuo succhia vita: scia di scintille dal giocatore verso il fatuo
       case 'roll_hit': R.addShake(4); R.burst(ev.x, ev.y, '#cfc7b0', 8, 130, 0.3); R.ring(ev.x, ev.y, '#8a8270', 4, 30, 0.25); break;  // rimbalzo sul muro

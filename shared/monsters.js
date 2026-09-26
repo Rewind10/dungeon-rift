@@ -47,6 +47,27 @@
     spore_fungus: { id: 'spore_fungus', name: 'Fungo Sporifero', tier: 1, hp: 110, speed: 0, radius: 20, dmg: 11, atkRange: 340, atkCd: 3.1, ai: 'sentry', atk: 'zone', xp: 12, weight: 0, color: '#2f3a24', color2: '#151c10', eye: '#c8ff6a', shape: 'fungus', front: true, fungus: true, immobile: true, sightRange: 340, spores: 2, zoneRadius: 62, zoneDelay: 1.05, zoneMult: 1.0, projColor: '#a6ff3a', eliteHp: 2.0 },
     // v1.58 — SFERA D'OSSA: niente gambe. Carica, poi rotola in linea retta rimbalzando sui muri.
     // Ti obbliga a schivare di lato, cosa che nessun altro nemico faceva.
+    // ===== v2.22 — DUE NEMICI SENZA GAMBE ==================================================
+    // Paolo: *«e difficile avere nemici che camminano perche' ci sono le animazioni di movimento»*.
+    // Vero, ed e' il motivo per cui nel roster funzionano meglio wisp, occhio, nugolo, melma e sfera
+    // d'ossa che non scheletro, zombi e troll. Questi due sono scelti apposta: nessuno dei due ha un
+    // passo da disegnare.
+    //
+    // A — LAMA ERRANTE (spada volante, di scuola D&D). Galleggia ruotando su se' stessa, si ferma,
+    // punta, SI CARICA per mezzo secondo — e quel mezzo secondo si vede — poi scatta in linea retta.
+    // L'animazione e' una rotazione piu' uno scatto: zero frame. E' il primo nemico del gioco che
+    // TELEGRAFA il colpo, e serve a quello: ai livelli bassi si impara solo a sparare, questa insegna
+    // a schivare, perche' la carica e' leggibile e lo scatto e' dritto (basta spostarsi di lato).
+    lama: { id: 'lama', name: 'Lama Errante', tier: 1, hp: 42, speed: 96, radius: 14, dmg: 11, atkRange: 34, atkCd: 0.7, ai: 'lama', atk: 'melee', xp: 7, weight: 14, color: '#9aa6b6', color2: '#3a424e', eye: '#8be9ff', shape: 'lama', lama: true, sightRange: 480, girCd: 1.0, puntaT: 0.35, caricaT: 0.5, scattoT: 0.30, scattoMul: 7.6, rinculo: 46, spin: 2.2, eliteHp: 1.4 },
+    // B — CUBO GELATINOSO (D&D, quello classico). Scivola lento e non insegue davvero: va dove c'e'
+    // spazio. FERMA I PROIETTILI — gli si conficcano dentro e si spengono — e dentro si vede la roba
+    // di chi ci e' finito prima, che cade a terra quando muore. L'animazione non esiste: e' un blocco
+    // che pulsa e si deforma quando cambia direzione.
+    // E' un MURO CHE SI MUOVE: ti taglia il corridoio e ti obbliga a cambiare posto. E' l'unica cosa
+    // del gioco che ti sposta senza minacciarti di morte — ed e' l'opzione degli oggetti che
+    // ingombrano (scartata nella v2.21 perche' pericolosa) ottenuta senza toccare la griglia: e' un
+    // mostro, quindi campo di flusso e collisioni non ne sanno niente.
+    cubo: { id: 'cubo', name: 'Cubo Gelatinoso', tier: 2, hp: 260, speed: 45, radius: 40, dmg: 16, atkRange: 46, atkCd: 0.9, ai: 'gelatina', atk: 'melee', xp: 24, weight: 7, color: '#5c8e42', color2: '#1e3e1c', eye: '#b0d878', shape: 'cubo', gelatina: true, assorbe: true, bottino: 1.6, aura: 0.9, sightRange: 520, memory: 5, maxAlive: 4, eliteHp: 1.6 },
     bone_roller: { id: 'bone_roller', name: 'Sfera d\'Ossa', tier: 2, hp: 120, speed: 96, radius: 19, dmg: 20, atkRange: 30, atkCd: 0.8, ai: 'roller', atk: 'melee', xp: 18, weight: 0, color: '#cfc7b0', color2: '#5d574a', eye: '#ff7a3b', shape: 'roller', front: true, roller: true, sightRange: 470, rollWind: 0.62, rollTime: 2.3, rollSpeed: 3.1, rollCd: 1.5, rollKnock: 3.2, eliteHp: 1.9 },
     // v1.58 — MELMA MINORE: nasce dalla divisione della Melma Corrosiva. Riusa lo stesso sprite a raggio
     // ridotto (come lo Zombie Minore col ghoul): zero asset nuovi. NON si divide a sua volta.

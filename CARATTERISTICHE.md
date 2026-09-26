@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.21.0`
+**Versione attuale:** `2.22.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -2211,6 +2211,55 @@ Tre nemici sono stati **ridisegnati** in stile dark-fantasy vettoriale, con nuov
 - **Morte**: ogni nemico **crolla e svanisce** (il negromante si **dissolve in volute viola**).
 
 Per ora sono coinvolti **solo questi 3** nemici.
+
+## 🗡️🟩 DUE NEMICI SENZA GAMBE *(novita v2.22)*
+
+**Il vincolo da cui nascono.** Le animazioni di camminata costano, e nel roster si vede: wisp, occhio,
+nugolo di pipistrelli, melma e sfera d'ossa reggono bene, mentre scheletro, zombi, negromante e troll
+sono la parte che costa. Da qui in poi i nemici nuovi **fluttuano, rotolano, colano, stanno fermi o
+strisciano** — non camminano.
+
+| | ondata | pv | cosa fa |
+|---|---|---|---|
+| 🗡️ **Lama Errante** *(spada volante, D&D)* | 2 | 42 | gira → punta → **carica mezzo secondo** → scatta dritta, e rimbalza sui muri |
+| 🟩 **Cubo Gelatinoso** *(D&D)* | 6 | 260 | scivola lento e **ferma i proiettili**, anche i perforanti |
+
+### La carica e' un contratto, non una decorazione
+
+Uno scatto veloce senza preavviso sarebbe un danno arrivato dal nulla. Con **mezzo secondo** di
+preavviso (bagliore, rinculo, runa che si gonfia) e una traiettoria **retta**, la risposta esiste
+sempre ed e' semplice: spostarsi di lato. E' il primo nemico del gioco che telegrafa il colpo, ed e'
+il motivo per cui entra alla **seconda** ondata: ai livelli bassi si impara solo a sparare, questa
+insegna a schivare, e deve arrivare quando c'e' ancora da imparare. **Durante la carica non fa
+male** — e c'e' un test che lo misura.
+
+### Il Cubo e' l'opzione A senza i suoi rischi
+
+Nella v2.21 l'opzione degli **oggetti che ingombrano** era stata scartata (*«A bello ma
+"pericoloso"»*): un ingombro messo male chiude un corridoio e il campo di flusso ci finisce contro.
+Il Cubo da' la stessa cosa — un muro che taglia il corridoio e toglie la linea di tiro — ma **e' un
+mostro**: la griglia non la tocca nessuno, collisioni e campo di flusso non ne sanno niente, e se
+davvero desse fastidio basta ucciderlo.
+
+Ferma **anche i perforanti**: e' questo che lo rende un muro invece di un mostro con tanti punti
+vita. Non assorbe i colpi dei mostri — un proiettile nemico che si spegne dentro non direbbe niente
+a chi gioca. Dentro si vede il bottino di chi ci e' finito prima, e morendo lo lascia cadere: se non
+lo lasciasse, quel disegno sarebbe una bugia.
+
+### Far leggere un cubo dall'alto
+
+Da sopra, un cubo e' un quadrato. Quattro cose, e la terza fa il lavoro: **due facce sfalsate** che
+ondeggiano in modo diverso fra loro; **il fianco vicino in un pezzo solo** (a segmenti si vedevano le
+cuciture e pareva una staccionata); **lo spigolo di fondo visto attraverso il vetro**, cioe' il bordo
+lontano della faccia a terra che si intravede dentro quella in alto; e **la parallasse** della roba
+dentro — chi sta in superficie piu' grande e nitido, chi e' affondato piu' piccolo e smorto.
+
+### Il bug che nessun test avrebbe preso
+
+Dentro il Cubo si vedeva **una spada sola**. Le posizioni degli otto oggetti venivano da
+`(sem * 97 + i * 37) % 1`: i moltiplicatori erano **interi**, e la parte frazionaria di un intero e'
+zero — quindi tutti e otto finivano nello stesso punto. Il codice funzionava: disegnava solo la cosa
+sbagliata. L'ha preso il **render di prova**, cioe' guardare il risultato.
 
 ## 🏺 GLI OGGETTI CHE FANNO QUALCOSA *(novita v2.21)*
 

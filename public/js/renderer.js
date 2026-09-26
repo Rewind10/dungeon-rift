@@ -2699,6 +2699,164 @@
     },
     // v1.58 — SFERA D'OSSA. La rotazione e ricavata dallo SPOSTAMENTO REALE (niente frame): rotola davvero,
     // e quando e ferma resta ferma. In carica si schiaccia e vibra.
+    // ===== v2.22 — LAMA ERRANTE ==============================================================
+    // Nessun frame: una rotazione e uno scatto. L'OMBRA STA STACCATA E PIU' IN BASSO — e' l'unica
+    // cosa che dice "questa cosa galleggia" invece di "questa cosa striscia". Il bagliore e il
+    // rinculo della carica arrivano dagli eventi `lama_wind`/`lama_go`, come per la Sfera d'Ossa.
+    _lamaF(ctx, m, rr, def, atk) {
+      const t = this.time, sc = rr / 14;                       // rr e' gia' scalato: si riporta a 1
+      const car = atk;                                        // il cronometro dei telegrafi: lo stesso della Sfera d'Ossa
+      const bob = Math.sin(t * 3.1 + (m.e || 0)) * 3 * sc;
+      ctx.save();
+      // l'ombra: staccata di 26, piu' piccola della lama, e NON segue il bob in pieno
+      ctx.save(); ctx.translate(0, 26 * sc + bob * 0.5);
+      ctx.fillStyle = 'rgba(0,0,0,.34)'; ctx.beginPath(); ctx.ellipse(0, 0, 15 * sc, 6 * sc, m.f, 0, 7); ctx.fill(); ctx.restore();
+      ctx.translate(0, bob); ctx.rotate(m.f); ctx.scale(sc, sc);
+      if (car > 0) {                                           // il mezzo secondo che si deve vedere
+        const q = ctx.createRadialGradient(0, 0, 2, 0, 0, 44 + car * 18);
+        q.addColorStop(0, 'rgba(180,220,255,' + (0.34 * car) + ')'); q.addColorStop(1, 'rgba(120,180,255,0)');
+        ctx.fillStyle = q; ctx.beginPath(); ctx.arc(0, 0, 44 + car * 18, 0, 7); ctx.fill();
+      }
+      const sctt = this._lamaSc && this._lamaSc[m.e] > t;      // sta scattando: il filo dietro (evento lama_go)
+      if (sctt) { ctx.strokeStyle = 'rgba(190,225,255,.35)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-52, 0); ctx.stroke(); ctx.lineCap = 'butt'; }
+      ctx.fillStyle = '#4a3a26'; ctx.strokeStyle = '#15100a'; ctx.lineWidth = 2; this._rr(ctx, -24, -3, 12, 6, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c9a24a'; ctx.strokeStyle = '#5a4514'; ctx.beginPath(); ctx.arc(-26, 0, 4.4, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#8f96a4'; ctx.strokeStyle = '#15181f'; ctx.lineWidth = 2; this._rr(ctx, -13, -11, 5, 22, 2); ctx.fill(); ctx.stroke();
+      const bg = ctx.createLinearGradient(0, -7, 0, 7);
+      bg.addColorStop(0, '#eaf1f8'); bg.addColorStop(.45, '#aab6c6'); bg.addColorStop(1, '#5e6878');
+      ctx.fillStyle = bg; ctx.strokeStyle = '#13161d'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(-8, -7); ctx.lineTo(26, -5); ctx.lineTo(38, 0); ctx.lineTo(26, 5); ctx.lineTo(-8, 7); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-6, -2.4); ctx.lineTo(28, -1.4); ctx.stroke();
+      ctx.strokeStyle = 'rgba(10,14,20,.45)'; ctx.beginPath(); ctx.moveTo(-6, 2.6); ctx.lineTo(27, 1.8); ctx.stroke();
+      // la runa sulla guardia: e' una spada STREGATA, non una spada caduta per terra
+      ctx.fillStyle = 'rgba(139,233,255,' + (.55 + Math.sin(t * 4) * .2 + car * .4) + ')';
+      ctx.beginPath(); ctx.arc(-10.5, 0, 2.2 + car * 1.4, 0, 7); ctx.fill();
+      if (m.fl) { ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath();
+        ctx.moveTo(-8, -7); ctx.lineTo(38, 0); ctx.lineTo(-8, 7); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    },
+    // ===== v2.22 — CUBO GELATINOSO ===========================================================
+    // Il problema era farlo leggere come un CUBO e non come un quadrato. Quattro cose, e la terza e'
+    // quella che fa il lavoro:
+    //  1. due facce sfalsate in verticale (a terra e in alto) che ondeggiano in modo DIVERSO fra loro
+    //     — se ondeggiassero uguali sembrerebbero due copie della stessa figura;
+    //  2. il fianco vicino in UN PEZZO SOLO: a segmenti si vedevano le cuciture e pareva una staccionata;
+    //  3. lo spigolo di fondo visto ATTRAVERSO il vetro — il bordo lontano della faccia a terra si
+    //     intravede dentro la faccia in alto, spostato in basso. E' il segnale che l'occhio usa per
+    //     capire che sta guardando dentro una scatola trasparente, e sono due righe;
+    //  4. la parallasse della roba dentro: chi sta in superficie e' disegnato piu' in alto e piu'
+    //     grande, chi e' affondato piu' piccolo e piu' smorto. Due monete alla stessa quota sono un
+    //     adesivo; due monete a quote diverse sono un volume.
+    _cuboF(ctx, m, rr, def, atk) {
+      const t = this.time, R = rr, ALT = rr * 0.36;
+      const mem = (this._cuboMem || (this._cuboMem = {}));
+      let me2 = mem[m.e]; if (!me2) me2 = mem[m.e] = { x: m.x, y: m.y, dx: 0, dy: 0, sq: 0 };
+      { const vx = m.x - me2.x, vy = m.y - me2.y, len = Math.hypot(vx, vy);
+        if (len > 0.05) { const nx = vx / len, ny = vy / len;
+          const cos = nx * me2.dx + ny * me2.dy;
+          if (me2.dx || me2.dy) { if (cos < 0.55) me2.sq = Math.min(1, me2.sq + (0.55 - cos)); }
+          me2.dx = nx; me2.dy = ny; }
+        me2.x = m.x; me2.y = m.y; me2.sq *= 0.90; }
+      const sq = me2.sq;
+      const pul = 1 + Math.sin(t * 1.8 + (m.e || 0)) * .035;
+      const sx = (1 + sq * .30) * pul, sy = (1 - sq * .22) * pul;
+      const yB = ALT * .5, yT = -ALT * .5;
+      const sem = ((m.e || 1) * 2654435761) % 1000 / 1000;
+      const sagoma = (rad, fase) => { const p = [];
+        for (let k = 0; k < 64; k++) { const a = k / 64 * 6.283, ca = Math.cos(a), sa = Math.sin(a);
+          const box = rad / Math.max(Math.abs(ca), Math.abs(sa));
+          let r2 = Math.min(box, rad * 1.31);
+          r2 *= 1 + Math.sin(a * 3 + t * 1.7 + fase) * .030 + Math.sin(a * 5 - t * 1.2 + fase) * .020;
+          p.push({ x: ca * r2, y: sa * r2 }); }
+        return p; };
+      const via = (p, dy) => { ctx.beginPath(); p.forEach((q, i) => i ? ctx.lineTo(q.x, q.y + dy) : ctx.moveTo(q.x, q.y + dy)); ctx.closePath(); };
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.40)'; ctx.beginPath(); ctx.ellipse(R * .08, yB + R * .78, R * .92, R * .26, 0, 0, 7); ctx.fill();
+      ctx.scale(sx, sy);
+      const base = sagoma(R * 0.94, 0.0), alto = sagoma(R, 1.6);
+      ctx.fillStyle = 'rgba(26,54,24,.60)'; via(base, yB); ctx.fill();
+      { const da = -5, a2 = 37;                       // il fianco vicino, una fascia sola
+        ctx.beginPath();
+        for (let k = da; k <= a2; k++) { const q = alto[(k + 64) % 64]; k === da ? ctx.moveTo(q.x, q.y + yT) : ctx.lineTo(q.x, q.y + yT); }
+        for (let k = a2; k >= da; k--) { const q = base[(k + 64) % 64]; ctx.lineTo(q.x, q.y + yB); }
+        ctx.closePath();
+        const fg = ctx.createLinearGradient(0, yT, 0, yB + R);
+        fg.addColorStop(0, 'rgba(96,152,68,.58)'); fg.addColorStop(.55, 'rgba(62,112,48,.60)'); fg.addColorStop(1, 'rgba(26,56,24,.66)');
+        ctx.fillStyle = fg; ctx.fill(); }
+      // la roba dentro, a quote diverse. Le posizioni vengono dall'eid: ogni cubo ha il suo bottino
+      ctx.save(); ctx.beginPath();
+      alto.forEach((q, i) => i ? ctx.lineTo(q.x, q.y + yT) : ctx.moveTo(q.x, q.y + yT)); ctx.closePath();
+      base.forEach((q, i) => i ? ctx.lineTo(q.x, q.y + yB) : ctx.moveTo(q.x, q.y + yB)); ctx.closePath(); ctx.clip();
+      const N = 8;
+      for (let i = 0; i < N; i++) {
+        const f = (sem * 97 + i * 0.3723) % 1, f2 = (sem * 53 + i * 0.7191) % 1, f3 = (sem * 29 + i * 0.1367) % 1;
+        const z = 0.08 + f3 * 0.84, dy = yB + (yT - yB) * z, s2 = (0.82 + z * 0.30) * (R / 40);
+        const ox = (f - .5) * R * 1.05, oy = (f2 - .5) * R * 0.78 + dy;
+        ctx.save(); ctx.translate(ox + Math.sin(t * .8 + f * 6) * 3.5, oy + Math.cos(t * .7 + f2 * 6) * 3.5);
+        ctx.scale(s2, s2); ctx.rotate(f * 6.28 + Math.sin(t * .5 + f) * .12);
+        ctx.globalAlpha = 0.58 + z * 0.40;
+        const k = i % 4;
+        if (k === 0) { ctx.fillStyle = '#e8b93a'; ctx.strokeStyle = '#7a5c12'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.ellipse(0, 0, 6, 5, 0, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#fff0b0'; ctx.beginPath(); ctx.arc(-1.6, -1.6, 1.8, 0, 7); ctx.fill(); }
+        else if (k === 1) { ctx.strokeStyle = '#cfc7b0'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 1); ctx.stroke(); ctx.lineCap = 'butt'; }
+        else if (k === 2) { ctx.fillStyle = '#d8d2c0'; ctx.strokeStyle = '#8f8874'; ctx.lineWidth = 1.3;
+          ctx.beginPath(); ctx.arc(0, -1, 7, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(-5, 4, 10, 4);
+          ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.arc(-2.6, -1, 2, 0, 7); ctx.arc(2.6, -1, 2, 0, 7); ctx.fill(); }
+        else { ctx.fillStyle = '#98a2b0'; ctx.strokeStyle = '#1b1f27'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(-14, -2.6); ctx.lineTo(12, -2); ctx.lineTo(18, 0); ctx.lineTo(12, 2); ctx.lineTo(-14, 2.6); ctx.closePath();
+          ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a4326'; ctx.fillRect(-19, -2, 6, 4); }
+        ctx.globalAlpha = 1; ctx.restore();
+      }
+      // I DARDI ANCORA CONFICCATI: il server dice quanti sono (m.ab), qui si disegnano. E' la
+      // meccanica messa in figura — senza, "ferma i proiettili" resterebbe una cosa da leggere
+      // nelle note invece che una cosa da vedere in partita.
+      const nd = Math.min(6, m.ab || 0);
+      for (let i = 0; i < nd; i++) {
+        const f = (sem * 131 + i * 0.5309) % 1, f2 = (sem * 17 + i * 0.8887) % 1;
+        const z = 0.55 + ((sem * 7 + i * 0.3061) % 1) * 0.40, dy = yB + (yT - yB) * z;
+        ctx.save(); ctx.translate((f - .5) * R * 1.3, (f2 - .5) * R * 0.9 + dy); ctx.rotate(f * 6.28);
+        const sd = R / 40;
+        ctx.scale(sd, sd);
+        ctx.globalAlpha = 1; ctx.strokeStyle = '#ffd88a'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(6, 0); ctx.stroke();
+        ctx.fillStyle = '#fff2c0'; ctx.beginPath(); ctx.arc(7, 0, 3.4, 0, 7); ctx.fill();
+        ctx.globalAlpha = .40; const q = ctx.createRadialGradient(7, 0, 1, 7, 0, 14);
+        q.addColorStop(0, '#ffe9a8'); q.addColorStop(1, 'rgba(255,200,80,0)');
+        ctx.fillStyle = q; ctx.beginPath(); ctx.arc(7, 0, 14, 0, 7); ctx.fill();
+        ctx.globalAlpha = 1; ctx.lineCap = 'butt'; ctx.restore();
+      }
+      ctx.restore();
+      // la faccia in alto: e' la piu' piena, perche' e' quella rivolta alla telecamera
+      const gg = ctx.createLinearGradient(-R, yT - R, R, yT + R);
+      gg.addColorStop(0, 'rgba(176,220,128,.30)'); gg.addColorStop(.5, 'rgba(104,160,72,.25)'); gg.addColorStop(1, 'rgba(58,106,48,.29)');
+      ctx.fillStyle = gg; via(alto, yT); ctx.fill();
+      ctx.save(); via(alto, yT); ctx.clip();
+      const cuore = ctx.createRadialGradient(-R * .2, yT - R * .2, R * .1, 0, yT, R * 1.15);
+      cuore.addColorStop(0, 'rgba(40,80,34,0)'); cuore.addColorStop(1, 'rgba(28,58,26,.34)');
+      ctx.fillStyle = cuore; ctx.fillRect(-R * 1.4, yT - R * 1.4, R * 2.8, R * 2.8);
+      ctx.strokeStyle = 'rgba(206,240,160,.26)'; ctx.lineWidth = 2;   // lo spigolo di fondo, nel vetro
+      ctx.beginPath();
+      for (let k = 36; k <= 60; k++) { const q = base[(k + 64) % 64]; k === 36 ? ctx.moveTo(q.x, q.y + yB) : ctx.lineTo(q.x, q.y + yB); }
+      ctx.stroke(); ctx.restore();
+      if (m.fl) { ctx.fillStyle = 'rgba(255,255,255,.28)'; via(alto, yT); ctx.fill(); }
+      ctx.strokeStyle = 'rgba(212,246,166,.62)'; ctx.lineWidth = 2.8; via(alto, yT); ctx.stroke();
+      ctx.strokeStyle = 'rgba(16,32,14,.45)'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (let k = -5; k <= 37; k++) { const q = base[(k + 64) % 64]; k === -5 ? ctx.moveTo(q.x, q.y + yB) : ctx.lineTo(q.x, q.y + yB); }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(214,246,170,.26)'; ctx.lineWidth = 2;   // i due spigoli vicini
+      for (const k of [8, 24]) { ctx.beginPath(); ctx.moveTo(base[k].x, base[k].y + yB); ctx.lineTo(alto[k].x, alto[k].y + yT); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(232,255,200,.26)';
+      ctx.beginPath(); ctx.ellipse(-R * .40, yT - R * .40, R * .30, R * .16, -.5, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.34)';
+      ctx.beginPath(); ctx.ellipse(-R * .46, yT - R * .46, R * .12, R * .065, -.5, 0, 7); ctx.fill();
+      ctx.restore();
+    },
     _rollerF(ctx, m, r, def, atk) {
       const t = this.time, eye = def.eye || '#ff7a3b';
       this._roll = this._roll || {}; this._rollP = this._rollP || {};
@@ -4338,6 +4496,8 @@
       if (def.topdown) { const pv = moveInfo(m.e); this._slimePuddle(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.46 — MELMA top-down (pozza fluo)
       else if (def.fungus) { this._fungusF(ctx, m, rr, def, atk); }   // v1.58 — immobile: nessuna camminata da animare
       else if (def.roller) { this._rollerF(ctx, m, rr, def, atk); }   // v1.58 — rotola: l'animazione e una rotazione
+      else if (def.lama) { this._lamaF(ctx, m, rr, def, atk); }       // v2.22 — galleggia e scatta: nessun passo
+      else if (def.gelatina) { this._cuboF(ctx, m, rr, def, atk); }   // v2.22 — un blocco che pulsa: nessun passo
       else if (def.bats) { this._batsF(ctx, m, rr, def, atk); }       // v1.61 — sciame: 11 sagome in orbita, nessuna camminata
       else if (def.wisp) { this._wispF(ctx, m, rr, def, atk); }       // v1.61 — fiamma sospesa: sinusoidi, nessun frame
       else if (def.larva) { const pv = moveInfo(m.e); this._larvaF(ctx, m, rr, def, atk, !!pv.on, pv.dir); }   // v1.81 — sacco gonfio dipinto a macchie

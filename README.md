@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.21.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.22.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,24 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.22.0 (due nemici senza gambe)
+
+**Regola di progetto**: le animazioni di camminata costano, quindi questi due non camminano.
+
+🗡️ La **Lama Errante** (ondata 2) galleggia ruotando, si ferma, **si carica per mezzo secondo** — e
+quel mezzo secondo si vede: bagliore e rinculo — poi scatta dritta e rimbalza sui muri. È il primo
+nemico del gioco che **telegrafa** il colpo, ed entra presto apposta: ai livelli bassi si impara solo
+a sparare, questa insegna a schivare. Durante la carica non fa male: è un avvertimento.
+
+🟩 Il **Cubo Gelatinoso** (ondata 6) scivola lento e **ferma i proiettili** — anche quelli
+perforanti, che gli si conficcano dentro e si spengono. È **un muro che si muove**: ti toglie la
+linea di tiro e ti obbliga a girarci intorno. Dentro si vede la roba di chi ci è finito prima, e
+morendo la lascia cadere (circa una cassa e mezza). È l'idea degli oggetti che ingombrano, scartata
+nella v2.21 perché pericolosa, ottenuta senza i suoi rischi: è un mostro, la griglia non la tocca
+nessuno.
+
+---
 
 ## 🆕 Novità v2.21.0 (roba da rompere, e un posto dove ognuno è a casa sua)
 

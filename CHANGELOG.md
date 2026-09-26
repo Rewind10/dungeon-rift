@@ -2,6 +2,154 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.22.0] — 2026-09-26 · "Due nemici senza gambe"
+
+Paolo, dopo aver bocciato la prima lista di nemici: *«non mi convincono. Dammi altre idee, prendi
+spunto da giochi o da D&D — ricorda che è difficile avere nemici che camminano perché ci sono le
+animazioni di movimento»*.
+
+**Il vincolo era giusto e la mia prima lista lo ignorava.** Cencio e Guardiano Cieco avevano tutti e
+due le gambe. E guardando il roster con quella lente si vede subito dove il gioco funziona già: wisp,
+occhio, nugolo di pipistrelli, melma e sfera d'ossa reggono, mentre scheletro, zombi, negromante e
+troll sono la parte che costa. Regola nuova, quindi: **niente gambe**. Cose che fluttuano, rotolano,
+colano, stanno ferme o strisciano.
+
+Di tre proposte Paolo ne ha approvate due, dopo un'anteprima animata fatta prima di scrivere una riga
+di codice di gioco.
+
+---
+
+### 🗡️ LAMA ERRANTE — *spada volante, di scuola D&D*
+
+Ondata 2, 42 pv, la più fragile del roster.
+
+Quattro fasi: **gira** (galleggia ruotando su sé stessa) → **punta** (si orienta) → **carica** (mezzo
+secondo di rinculo e bagliore) → **scatto** (dritta, veloce, e rimbalza sui muri come la Sfera
+d'Ossa). L'animazione è una rotazione più uno scatto: **zero frame**.
+
+**La carica non è decorazione, è il contratto con il giocatore.** Uno scatto veloce senza preavviso
+sarebbe un danno arrivato dal nulla; con mezzo secondo di preavviso e una traiettoria **retta**, la
+risposta esiste sempre ed è semplice — spostarsi di lato. È il primo nemico del gioco che telegrafa
+il colpo, ed è il motivo per cui entra alla **seconda ondata** e non alla decima: ai livelli bassi si
+impara solo a sparare, questa insegna a schivare, e deve arrivare quando c'è ancora da imparare.
+
+Il test misura proprio quello: durante la carica **i punti vita del giocatore non si muovono**, e
+l'evento del preavviso arriva prima di quello dello scatto.
+
+**L'ombra sta staccata e più in basso**, e non segue il bob in pieno. È l'unica cosa che dice
+"questa galleggia" invece di "questa striscia".
+
+---
+
+### 🟩 CUBO GELATINOSO — *D&D, quello classico*
+
+Ondata 6, 260 pv, raggio 40 (il più grosso non-boss del gioco), velocità 45.
+
+**Ferma i proiettili.** Gli si conficcano dentro e si spengono — **anche quelli perforanti**. È
+questo che lo rende un muro e non solo un mostro con tanti punti vita, ed è l'unica cosa che lo
+distingue: senza, sarebbe un bruto lento.
+
+**È un muro che si muove.** Ti taglia il corridoio, ti toglie la linea di tiro, ti obbliga a girarci
+intorno. È l'unica cosa del gioco che ti sposta senza minacciarti di morte — e soprattutto: **è
+l'opzione A della v2.21 ottenuta senza i suoi rischi**. Paolo l'aveva scartata (*«A bello ma
+"pericoloso"»*) perché un ingombro messo male chiude un corridoio e il campo di flusso ci finisce
+contro. Qui l'ingombro è un **mostro**: la griglia non la tocca nessuno, il campo di flusso e le
+collisioni non ne sanno niente, e se davvero si incastrasse basta ucciderlo.
+
+**Dentro si vede la roba di chi ci è finito prima** — monete, ossa, teschi, una spada — e morendo la
+lascia cadere. Paga circa una cassa e mezza. Se morendo non la lasciasse, quel disegno sarebbe una
+bugia; il test confronta dieci morti di Cubo contro dieci di Zombie Putrido e pretende più del
+doppio.
+
+**Non assorbe i colpi dei mostri**, solo quelli dei giocatori. Un proiettile nemico che si spegne
+dentro il Cubo non vuol dire niente per chi gioca.
+
+Entra alla 6 perché il suo mestiere è togliere la linea di tiro: ha senso quando il giocatore ha già
+imparato a tenerla.
+
+---
+
+### 🎨 Far leggere un cubo in una vista dall'alto
+
+Il problema vero non era l'IA, era il disegno: da sopra, un cubo è un quadrato. Quattro cose, e la
+terza è quella che fa il lavoro:
+
+1. **due facce sfalsate in verticale** (a terra e in alto) che ondeggiano in modo **diverso** fra
+   loro — se ondeggiassero uguali sembrerebbero due copie della stessa figura, non le due estremità
+   di una massa sola;
+2. **il fianco vicino in un pezzo solo**: al primo tentativo l'avevo disegnato a segmenti, si
+   vedevano le cuciture verticali e veniva fuori una staccionata. Ed era alto il doppio, quindi
+   sembrava un secchio visto di fronte invece di un cubo visto da sopra;
+3. **lo spigolo di fondo visto attraverso il vetro** — il bordo lontano della faccia a terra si
+   intravede *dentro* la faccia in alto, spostato in basso. È il segnale che l'occhio usa per capire
+   che sta guardando dentro una scatola trasparente, e sono due righe;
+4. **la parallasse della roba dentro**: chi sta in superficie è disegnato più in alto, più grande e
+   più nitido; chi è affondato più piccolo e più smorto, perché sopra ha della gelatina. Due monete
+   alla stessa quota sono un adesivo, due monete a quote diverse sono un volume.
+
+Lo schiacciamento quando cambia direzione lo calcola il **client** guardando il movimento, senza un
+evento dal server: è una cosa che si vede, e mandarla in rete sessanta volte al secondo sarebbe peso
+inutile.
+
+---
+
+### 🐞 IL BUG CHE NESSUN TEST AVREBBE PRESO
+
+Dentro il Cubo si vedeva **una spada sola**. Le posizioni degli otto oggetti venivano da
+`(sem * 97 + i * 37) % 1`: i moltiplicatori erano **interi**, e la parte frazionaria di un intero è
+zero — quindi `i` non cambiava niente e tutti e otto finivano esattamente nello stesso punto, uno
+sopra l'altro.
+
+Il codice funzionava. Non lanciava errori, non rallentava, disegnava solo la cosa sbagliata. **Nessun
+test unitario lo avrebbe mai visto**: l'ha preso il render di prova, cioè guardare il risultato.
+Stessa storia dei dardi conficcati, che erano quattro e se ne vedeva uno.
+
+Moltiplicatori non interi, e il problema sparisce.
+
+---
+
+### ⚠️ E una trappola evitata in tempo
+
+Il **tetto alla folla** (v1.80) manda ad aspettare all'anello chi è di troppo, ma esenta chi è in
+mezzo a un'azione già partita — `rolling`, `winding`, `lunge`. La carica e lo scatto della Lama non
+erano in quella lista: una Lama oltre il tetto sarebbe stata **parcheggiata a metà stoccata**, una
+spada ferma per aria. Aggiunte alla lista, e c'è un test che legge quella riga e pretende che ci
+siano.
+
+---
+
+### 📐 Numeri e file toccati
+
+**Test: 4986 passati, 0 falliti.** (Erano 4947 in v2.21: +39 controlli, TEST 81.)
+
+Tre sabotaggi deliberati per verificare che i controlli mordano:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| tolta la carica (la Lama scatta senza preavviso) | ✅ 3 controlli rossi |
+| il Cubo lascia passare i perforanti | ✅ 3 controlli rossi |
+| tolta la Lama dall'esenzione del tetto alla folla | ✅ 1 controllo rosso |
+
+| file | cosa |
+|---|---|
+| `shared/monsters.js` | le due definizioni (`lama`, `cubo`) |
+| `shared/ai.js` | i comportamenti `lama` (quattro fasi) e `gelatina`; carica e scatto aggiunti alle azioni esenti dal tetto alla folla |
+| `server/Room.js` | l'assorbimento dei proiettili (al posto della regola del perforante), il conto dei dardi con la sua dissolvenza, il bottino alla morte, `ab` nello snapshot |
+| `public/js/renderer.js` | `_lamaF` e `_cuboF` + il dispatch; lo schiacciamento calcolato dal client |
+| `public/js/main.js` | gli eventi `lama_wind`, `lama_go`, `lama_muro`, `assorbito`, `cubo_sciolto` |
+| `shared/waves.js` | Lama alla 2, Cubo alla 6 |
+| `test/simulate.js` | TEST 81; e il controllo della rampa ora verifica **la regola** (ogni ondata porta qualcosa di nuovo) invece del **numero** di archetipi, che era scritto a mano e saltava appena si aggiungeva un nemico |
+
+**Non fatto, per scelta di Paolo**: il **Verme delle Cave** (dodici segmenti sulla scia della testa)
+era la terza proposta ed era piaciuta come disegno, ma non è stata approvata per l'implementazione.
+L'anteprima resta.
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+
+---
+
 ### [2.21.0] — 2026-09-25 · "Roba da rompere, e un posto dove ognuno è a casa sua"
 
 Paolo: *«vorrei aggiungere oggetti alle mappe della grotta ma non saprei cosa»*.

@@ -1,0 +1,458 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<title>Tre nemici — anteprima</title>
+<style>
+  :root{--fondo:#0b0e14;--testo:#d8cfb4;--tenue:#8b8676;--linea:rgba(216,207,180,.18)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--testo);
+       font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:.3px}
+  .sotto{color:var(--tenue);margin:0 0 16px;font-size:13.5px;max-width:78ch}
+  .barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  button{background:#1a1f2b;color:var(--testo);border:1px solid var(--linea);
+         border-radius:7px;padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer}
+  button:hover{background:#232936}
+  button.on{background:#2e3a4e;border-color:rgba(216,207,180,.42)}
+  canvas{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--linea);background:#0a0c12}
+  .note{margin-top:14px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .n{border:1px solid var(--linea);border-radius:9px;padding:11px 13px;background:#10141d}
+  .n b{display:block;margin-bottom:3px;font-size:14.5px}
+  .n span{color:var(--tenue);font-size:13px}
+  .n em{color:#9fd8a0;font-style:normal}
+</style></head><body>
+
+<h1>Lama Errante · Cubo Gelatinoso · Verme delle Cave</h1>
+<p class="sotto">Solo disegno: niente di questo tocca il codice del gioco. Il cerchio azzurro è un
+giocatore alla scala vera (raggio 16 × 1,45). Guarda il <b>movimento</b>: è quello il punto — nessuna
+delle tre ha un passo da animare.</p>
+
+<div class="barra">
+  <button id="bPausa">⏸ Ferma</button>
+  <button id="bLento" class="on">Velocità normale</button>
+  <button id="bTraccia">Mostra la scia del verme</button>
+  <button id="bOssa">Mostra lo scheletro del disegno</button>
+</div>
+
+<canvas id="c" width="1340" height="470"></canvas>
+
+<div class="note">
+  <div class="n"><b>🗡️ Lama Errante</b><span>Gira su sé stessa, si ferma, <em>si carica</em> (bagliore +
+  rinculo), scatta dritta, riposa. L'animazione è una rotazione e uno scatto: nessun passo.</span></div>
+  <div class="n"><b>🟩 Cubo Gelatinoso</b><span>Scivola e si deforma quando cambia direzione. Dentro
+  galleggia la roba di chi ci è finito prima, e <em>i proiettili si conficcano</em> e si spengono.</span></div>
+  <div class="n"><b>🐛 Verme delle Cave</b><span>Dodici segmenti che ripercorrono la scia della testa.
+  Non esiste una posa: ogni anello sta <em>dove la testa stava un attimo fa</em>.</span></div>
+</div>
+
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d');
+const W = c.width, H = c.height, PAN = W / 3;
+
+/* ---- palette: quella della cripta, la stessa del gioco ---- */
+const TH = { floorB:'#151a26', wall:'#1b2036', wallTop:'#262d4a', accent:'#8be9ff',
+             chiaro:'#d8cfb4', scuro:'#0a0c10' };
+function hx(h){if(h[0]!=='#'){const n=h.match(/[\d.]+/g);return{r:+n[0],g:+n[1],b:+n[2]};}
+  h=h.replace('#','');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function mix(a,b,t){const x=hx(a),y=hx(b);return 'rgb('+Math.round(x.r+(y.r-x.r)*t)+','+Math.round(x.g+(y.g-x.g)*t)+','+Math.round(x.b+(y.b-x.b)*t)+')';}
+const INK = mix(TH.scuro, TH.wall, .18);
+const VIS = 1.45, RG = 16 * VIS;          // raggio del giocatore a schermo
+
+let _s = 0x1234567;
+const rnd = () => (_s = (_s*1664525+1013904223)>>>0)/4294967296;
+const rr = (a,b) => a + rnd()*(b-a);
+function rrect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+
+/* ---- il pavimento, cotto una volta sola ---- */
+const fondo = document.createElement('canvas'); fondo.width = W; fondo.height = H;
+(function(){
+  const p = fondo.getContext('2d');
+  const PAV=[mix(TH.floorB,TH.chiaro,.34),mix(TH.floorB,TH.chiaro,.28),mix(TH.floorB,TH.chiaro,.40),
+             mix(TH.floorB,TH.chiaro,.23),mix(TH.floorB,TH.chiaro,.45)];
+  p.fillStyle=PAV[0];p.fillRect(0,0,W,H);
+  for(let i=0;i<Math.round(W*H/1750);i++){const x=rr(0,W),y=rr(0,H),r=rr(34,150);
+    const gr=p.createRadialGradient(x,y,0,x,y,r);
+    gr.addColorStop(0,PAV[(rnd()*PAV.length)|0]);gr.addColorStop(1,'rgba(0,0,0,0)');
+    p.globalAlpha=rr(.05,.15);p.fillStyle=gr;p.beginPath();p.arc(x,y,r,0,7);p.fill();}
+  p.globalAlpha=1;
+})();
+
+/* ================= IL GIOCATORE, per la scala ================= */
+function giocatore(x,y,a){
+  g.save(); g.translate(x,y);
+  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(2,RG*.55,RG*.95,RG*.42,0,0,7); g.fill();
+  const gr=g.createRadialGradient(-RG*.3,-RG*.3,2,0,0,RG);
+  gr.addColorStop(0,'#bfe6ff'); gr.addColorStop(1,'#3d6f97');
+  g.fillStyle=gr; g.strokeStyle='#0d1a26'; g.lineWidth=2.4;
+  g.beginPath(); g.arc(0,0,RG,0,7); g.fill(); g.stroke();
+  g.rotate(a);
+  g.fillStyle='#e8f6ff'; g.beginPath(); g.moveTo(RG*.45,-RG*.34); g.lineTo(RG*1.05,0); g.lineTo(RG*.45,RG*.34); g.closePath(); g.fill();
+  g.restore();
+}
+
+/* ================= 1. LAMA ERRANTE ================= */
+const lama = { x:0, y:0, a:0, fase:'gira', t:0, vx:0, vy:0, rot:0, carica:0 };
+function aggiornaLama(dt, cx, cy, bx, by){
+  const L = lama; L.t += dt;
+  if (L.fase==='gira'){                       // galleggia e ruota su se stessa
+    L.rot += dt*2.2; L.x += L.vx*dt; L.y += L.vy*dt;
+    L.vx *= .94; L.vy *= .94;
+    if (L.t>1.0){ L.fase='punta'; L.t=0; }
+  } else if (L.fase==='punta'){               // si orienta verso il bersaglio
+    const d = Math.atan2(by-L.y, bx-L.x);
+    let df = ((d - L.rot + Math.PI)%(2*Math.PI)) - Math.PI;
+    L.rot += df * Math.min(1, dt*9);
+    if (L.t>0.35){ L.fase='carica'; L.t=0; }
+  } else if (L.fase==='carica'){              // IL MEZZO SECONDO CHE SI VEDE
+    L.carica = Math.min(1, L.t/0.5);
+    L.x -= Math.cos(L.rot)*dt*46; L.y -= Math.sin(L.rot)*dt*46;   // rincula
+    if (L.t>0.5){ L.fase='scatto'; L.t=0;
+      L.vx = Math.cos(L.rot)*760; L.vy = Math.sin(L.rot)*760; L.carica=0; }
+  } else if (L.fase==='scatto'){
+    L.x += L.vx*dt; L.y += L.vy*dt; L.vx*=.965; L.vy*=.965;
+    if (L.t>0.30){ L.fase='gira'; L.t=0; }
+  }
+  // resta nel suo riquadro
+  const m=64; if(L.x<cx-PAN/2+m){L.x=cx-PAN/2+m;L.vx=Math.abs(L.vx)*.4;}
+  if(L.x>cx+PAN/2-m){L.x=cx+PAN/2-m;L.vx=-Math.abs(L.vx)*.4;}
+  if(L.y<cy-150){L.y=cy-150;L.vy=Math.abs(L.vy)*.4;}
+  if(L.y>cy+150){L.y=cy+150;L.vy=-Math.abs(L.vy)*.4;}
+}
+function disegnaLama(T){
+  const L = lama;
+  const bob = Math.sin(T*3.1)*3;
+  // L'OMBRA STA PIU' IN BASSO E PIU' PICCOLA: e' quello che dice "questa cosa galleggia"
+  g.save(); g.translate(L.x, L.y+26+bob*.5);
+  g.fillStyle='rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(0,0,15,6,L.rot,0,7); g.fill(); g.restore();
+
+  g.save(); g.translate(L.x, L.y+bob); g.rotate(L.rot);
+  if (L.carica>0){                             // il bagliore della carica
+    const q=g.createRadialGradient(0,0,2,0,0,44+L.carica*16);
+    q.addColorStop(0,'rgba(180,220,255,'+(.30*L.carica)+')'); q.addColorStop(1,'rgba(120,180,255,0)');
+    g.fillStyle=q; g.beginPath(); g.arc(0,0,44+L.carica*16,0,7); g.fill();
+  }
+  // il filo che lascia dietro mentre scatta
+  if (L.fase==='scatto'){ g.strokeStyle='rgba(190,225,255,.35)'; g.lineWidth=7; g.lineCap='round';
+    g.beginPath(); g.moveTo(-14,0); g.lineTo(-52,0); g.stroke(); g.lineCap='butt'; }
+  // impugnatura, pomo, guardia
+  g.fillStyle='#4a3a26'; g.strokeStyle='#15100a'; g.lineWidth=2; rrect(-24,-3,12,6,2); g.fill(); g.stroke();
+  g.fillStyle='#c9a24a'; g.strokeStyle='#5a4514'; g.beginPath(); g.arc(-26,0,4.4,0,7); g.fill(); g.stroke();
+  g.fillStyle='#8f96a4'; g.strokeStyle='#15181f'; g.lineWidth=2; rrect(-13,-11,5,22,2); g.fill(); g.stroke();
+  // la lama
+  const bg=g.createLinearGradient(0,-7,0,7);
+  bg.addColorStop(0,'#eaf1f8'); bg.addColorStop(.45,'#aab6c6'); bg.addColorStop(1,'#5e6878');
+  g.fillStyle=bg; g.strokeStyle='#13161d'; g.lineWidth=2; g.lineJoin='round';
+  g.beginPath(); g.moveTo(-8,-7); g.lineTo(26,-5); g.lineTo(38,0); g.lineTo(26,5); g.lineTo(-8,7); g.closePath();
+  g.fill(); g.stroke();
+  g.strokeStyle='rgba(255,255,255,.65)'; g.lineWidth=1.4;
+  g.beginPath(); g.moveTo(-6,-2.4); g.lineTo(28,-1.4); g.stroke();
+  g.strokeStyle='rgba(10,14,20,.45)'; g.beginPath(); g.moveTo(-6,2.6); g.lineTo(27,1.8); g.stroke();
+  // la runa sulla guardia: e' una spada stregata, non una spada caduta
+  g.fillStyle='rgba(139,233,255,'+(.55+Math.sin(T*4)*.2)+')';
+  g.beginPath(); g.arc(-10.5,0,2.2,0,7); g.fill();
+  g.restore();
+}
+
+/* ================= 2. CUBO GELATINOSO ================= */
+const cubo = { x:0, y:0, vx:56, vy:0, sq:0, obl:[] };
+function initCubo(cx,cy){
+  cubo.x=cx-70; cubo.y=cy; cubo.vx=56; cubo.vy=0;
+  cubo.obl=[ {t:'moneta',x:-24,y:-20,r:.3,z:.85}, {t:'moneta',x:10,y:-32,r:1.1,z:.30},
+             {t:'moneta',x:-4,y:18,r:.6,z:.62}, {t:'moneta',x:26,y:-6,r:2.0,z:.12},
+             {t:'osso',x:24,y:6,r:-.5,z:.72}, {t:'teschio',x:-28,y:24,r:.2,z:.20},
+             {t:'spada',x:8,y:30,r:2.3,z:.48}, {t:'osso',x:-12,y:-6,r:1.7,z:.05},
+             {t:'osso',x:2,y:-14,r:.9,z:.92} ];
+  cubo.dardi=[{x:46,y:-14,a:.1,z:.88},{x:42,y:20,a:-.25,z:.66},{x:-42,y:-26,a:3.0,z:.78},{x:-36,y:16,a:2.7,z:.40}];
+}
+function aggiornaCubo(dt,cx,cy){
+  const K=cubo; K.x += K.vx*dt; K.y += K.vy*dt;
+  K.sq *= Math.pow(.02, dt);
+  if (K.x > cx+PAN/2-124){ K.vx=-Math.abs(K.vx); K.sq=1; }
+  if (K.x < cx-PAN/2+124){ K.vx= Math.abs(K.vx); K.sq=1; }
+}
+function disegnaCubo(T){
+  const K=cubo, R=62, ALT=22;          // ALT = quanto e' ALTO. E' tutta la prospettiva.
+  // Visto DALL ALTO si vede quasi tutta la faccia superiore e solo una FASCIA del fianco vicino.
+  // Al primo giro l avevo alta 34 con le pareti tutt intorno, e veniva fuori un secchio visto di
+  // fronte invece di un cubo visto da sopra.
+  const pul = 1 + Math.sin(T*1.8)*.035;
+  const sx = (1 + K.sq*.30) * pul, sy = (1 - K.sq*.22) * pul;
+  const yB =  ALT*0.5, yT = -ALT*0.5;  // faccia a terra e faccia in alto
+
+  // Il contorno non e' un rettangolo: e' un rettangolo che ONDEGGIA, e ondeggia in modo diverso
+  // in basso e in alto — se le due facce ondeggiassero uguali sembrerebbero due copie della
+  // stessa figura, non le due estremita' di una massa sola.
+  const sagoma = (rad, fase) => { const p=[];
+    for (let k=0;k<64;k++){ const a=k/64*6.283, ca=Math.cos(a), sa2=Math.sin(a);
+      const box = rad / Math.max(Math.abs(ca), Math.abs(sa2));       // la sagoma quadrata
+      let rr2 = Math.min(box, rad*1.31);                             // smussata verso il tondo
+      rr2 *= 1 + Math.sin(a*3 + T*1.7 + fase)*.030 + Math.sin(a*5 - T*1.2 + fase)*.020;
+      p.push({x:ca*rr2, y:sa2*rr2}); }
+    return p; };
+  const via = (p, dy) => { g.beginPath();
+    p.forEach((q,i)=> i?g.lineTo(q.x,q.y+dy):g.moveTo(q.x,q.y+dy)); g.closePath(); };
+
+  g.save(); g.translate(K.x, K.y);
+  g.fillStyle='rgba(0,0,0,.40)'; g.beginPath(); g.ellipse(5,yB+R*.78,R*.92,R*.26,0,0,7); g.fill();
+  g.scale(sx,sy);
+
+  const base = sagoma(R*0.94, 0.0);      // sotto un filo piu' stretta: la massa si appoggia
+  const alto = sagoma(R, 1.6);
+
+  // --- 1. LA FACCIA A TERRA, la piu' scura: e' quella che sta nell'ombra di se stessa
+  g.fillStyle='rgba(26,54,24,.60)'; via(base, yB); g.fill();
+
+  // --- 2. IL FIANCO VICINO, in un pezzo solo. Per segmenti separati si vedevano le cuciture
+  //        verticali e sembrava una staccionata: e' UNA fascia, con una sfumatura sola.
+  {
+    const da = -5, a2 = 37;                       // solo la meta' rivolta verso di noi
+    g.beginPath();
+    for (let k=da;k<=a2;k++){ const q=alto[(k+64)%64]; k===da?g.moveTo(q.x,q.y+yT):g.lineTo(q.x,q.y+yT); }
+    for (let k=a2;k>=da;k--){ const q=base[(k+64)%64]; g.lineTo(q.x,q.y+yB); }
+    g.closePath();
+    const fg=g.createLinearGradient(0,yT,0,yB+R);
+    fg.addColorStop(0,'rgba(96,152,68,.58)'); fg.addColorStop(.55,'rgba(62,112,48,.60)');
+    fg.addColorStop(1,'rgba(26,56,24,.66)');
+    g.fillStyle=fg; g.fill();
+  }
+
+  // --- 3. DENTRO: la roba galleggia a QUOTE DIVERSE, e quella piu' in alto e' disegnata piu'
+  //        in alto e piu' grande. E' la parallasse: due monete alla stessa quota sarebbero un
+  //        adesivo, due monete a quote diverse sono un volume.
+  g.save(); via(alto, yT); g.clip(); via(base, yB); g.clip();
+  g.restore();
+  g.save();
+  g.beginPath();                                          // il ritaglio e' l unione delle due facce
+  alto.forEach((q,i)=> i?g.lineTo(q.x,q.y+yT):g.moveTo(q.x,q.y+yT));
+  g.closePath();
+  base.forEach((q,i)=> i?g.lineTo(q.x,q.y+yB):g.moveTo(q.x,q.y+yB));
+  g.closePath(); g.clip();
+  for (const o of K.obl){
+    const z = o.z == null ? .5 : o.z;                     // 0 = sul fondo, 1 = a pelo della cima
+    const dy = yB + (yT - yB) * z;
+    const sc = 0.82 + z*0.30;
+    const ox=o.x+Math.sin(T*.8+o.r*3)*3.5, oy=o.y*0.72+Math.cos(T*.7+o.r*2)*3.5 + dy;
+    g.save(); g.translate(ox,oy); g.scale(sc,sc); g.rotate(o.r+Math.sin(T*.5+o.r)*.12);
+    g.globalAlpha = 0.42 + z*0.50;                        // il fondo si vede meno: c e' massa sopra
+    if(o.t==='moneta'){ g.fillStyle='#e8b93a'; g.strokeStyle='#7a5c12'; g.lineWidth=1.4;
+      g.beginPath(); g.ellipse(0,0,6,5,0,0,7); g.fill(); g.stroke();
+      g.fillStyle='#fff0b0'; g.beginPath(); g.arc(-1.6,-1.6,1.8,0,7); g.fill(); }
+    if(o.t==='osso'){ g.strokeStyle='#cfc7b0'; g.lineWidth=3.4; g.lineCap='round';
+      g.beginPath(); g.moveTo(-8,0); g.lineTo(8,1); g.stroke();
+      g.lineWidth=5.6; g.beginPath(); g.moveTo(-8.6,0); g.lineTo(-8,0); g.moveTo(8,1); g.lineTo(8.6,1); g.stroke();
+      g.lineCap='butt'; }
+    if(o.t==='teschio'){ g.fillStyle='#d8d2c0'; g.strokeStyle='#8f8874'; g.lineWidth=1.3;
+      g.beginPath(); g.arc(0,-1,7,0,7); g.fill(); g.stroke(); g.fillRect(-5,4,10,4);
+      g.fillStyle='#1a1a22'; g.beginPath(); g.arc(-2.6,-1,2,0,7); g.arc(2.6,-1,2,0,7); g.fill(); }
+    if(o.t==='spada'){ g.fillStyle='#98a2b0'; g.strokeStyle='#1b1f27'; g.lineWidth=1.4;
+      g.beginPath(); g.moveTo(-14,-2.6); g.lineTo(12,-2); g.lineTo(18,0); g.lineTo(12,2); g.lineTo(-14,2.6); g.closePath();
+      g.fill(); g.stroke(); g.fillStyle='#5a4326'; g.fillRect(-19,-2,6,4); }
+    g.globalAlpha=1; g.restore();
+  }
+  // i proiettili conficcati: stanno vicino alla superficie, quindi alti e ben visibili
+  for (const d of K.dardi){
+    const z = d.z == null ? .8 : d.z, dy = yB + (yT - yB) * z;
+    g.save(); g.translate(d.x, d.y*0.72 + dy); g.rotate(d.a);
+    g.globalAlpha=.9; g.strokeStyle='#ffd88a'; g.lineWidth=3; g.lineCap='round';
+    g.beginPath(); g.moveTo(-9,0); g.lineTo(5,0); g.stroke();
+    g.fillStyle='#fff2c0'; g.beginPath(); g.arc(6,0,3,0,7); g.fill();
+    g.globalAlpha=.32; const q=g.createRadialGradient(6,0,1,6,0,13);
+    q.addColorStop(0,'#ffe9a8'); q.addColorStop(1,'rgba(255,200,80,0)');
+    g.fillStyle=q; g.beginPath(); g.arc(6,0,13,0,7); g.fill();
+    g.globalAlpha=1; g.lineCap='butt'; g.restore();
+  }
+  g.restore();
+
+  // --- 4. LA FACCIA IN ALTO, la piu' chiara, e il suo contorno netto. E' l unico bordo marcato:
+  //        se marcassimo anche quello di sotto sembrerebbero due figure sovrapposte.
+  const gg=g.createLinearGradient(-R,yT-R,R,yT+R);
+  gg.addColorStop(0,'rgba(176,220,128,.46)'); gg.addColorStop(.5,'rgba(104,160,72,.40)');
+  gg.addColorStop(1,'rgba(58,106,48,.44)');
+  g.fillStyle=gg; via(alto, yT); g.fill();
+  // il cuore piu' torbido: al centro si guarda attraverso PIU' gelatina che ai bordi. E' questo,
+  // piu' di qualunque spigolo, a dire che l oggetto e' pieno e non una lastra dipinta.
+  g.save(); via(alto, yT); g.clip();
+  const cuore=g.createRadialGradient(-R*.2,yT-R*.2,R*.1,0,yT,R*1.15);
+  cuore.addColorStop(0,'rgba(40,80,34,0)'); cuore.addColorStop(1,'rgba(28,58,26,.42)');
+  g.fillStyle=cuore; g.fillRect(-R*1.4,yT-R*1.4,R*2.8,R*2.8);
+  // LO SPIGOLO DI FONDO VISTO ATTRAVERSO IL VETRO: il bordo lontano della faccia a terra si
+  // vede DENTRO la faccia in alto, spostato in basso. E' il segnale che l occhio usa per capire
+  // che sta guardando dentro una scatola trasparente, ed e' due righe.
+  g.strokeStyle='rgba(206,240,160,.26)'; g.lineWidth=2;
+  g.beginPath();
+  for (let k=36;k<=60;k++){ const q=base[(k+64)%64]; k===36?g.moveTo(q.x,q.y+yB):g.lineTo(q.x,q.y+yB); }
+  g.stroke();
+  g.restore();
+  g.strokeStyle='rgba(212,246,166,.62)'; g.lineWidth=2.8; via(alto, yT); g.stroke();
+  // il contorno di sotto resta tenue: marcarlo come quello di sopra darebbe due figure sovrapposte
+  g.strokeStyle='rgba(16,32,14,.45)'; g.lineWidth=1.6;
+  g.beginPath();
+  for (let k=-5;k<=37;k++){ const q=base[(k+64)%64]; k===-5?g.moveTo(q.x,q.y+yB):g.lineTo(q.x,q.y+yB); }
+  g.stroke();
+
+  // --- 5. I DUE SPIGOLI VICINI. Bastano quelli: gli altri due stanno dietro la faccia in alto
+  g.strokeStyle='rgba(214,246,170,.26)'; g.lineWidth=2;
+  for (const k of [8, 24]) { g.beginPath();
+    g.moveTo(base[k].x, base[k].y+yB); g.lineTo(alto[k].x, alto[k].y+yT); g.stroke(); }
+
+  // --- 6. la goccia di luce sulla faccia in alto
+  g.fillStyle='rgba(232,255,200,.26)';
+  g.beginPath(); g.ellipse(-R*.40, yT-R*.40, R*.30, R*.16, -.5, 0, 7); g.fill();
+  g.fillStyle='rgba(255,255,255,.34)';
+  g.beginPath(); g.ellipse(-R*.46, yT-R*.46, R*.12, R*.065, -.5, 0, 7); g.fill();
+  g.restore();
+}
+
+/* ================= 3. VERME DELLE CAVE ================= */
+const verme = { scia:[], t:0, x:0, y:0, a:0 };
+const SEG = 12, PASSO = 6, GRANA = 2.6;   // un punto ogni 2,6 px: indipendente dal fotogramma
+function initVerme(cx,cy){
+  verme.x=cx; verme.y=cy; verme.a=0; verme.scia=[];
+  for(let i=0;i<SEG*PASSO+6;i++) verme.scia.push({x:cx-i*GRANA,y:cy});
+}
+function aggiornaVerme(dt,cx,cy){
+  const V=verme; V.t+=dt;
+  // vaga: un seno lento piu' una spinta verso il centro del suo riquadro
+  const verso = Math.atan2(cy-V.y, cx-V.x);
+  let df = ((verso - V.a + Math.PI)%(2*Math.PI)) - Math.PI;
+  const lontano = Math.min(1, Math.hypot(cx-V.x, cy-V.y)/150);
+  V.a += Math.sin(V.t*1.25)*dt*2.3 + df*dt*1.5*lontano;
+  const vel = 132;
+  V.x += Math.cos(V.a)*vel*dt; V.y += Math.sin(V.a)*vel*dt;
+  // un punto nuovo solo quando si e' percorsa la grana: cosi' gli anelli restano equidistanti
+  // qualunque sia il passo del fotogramma (e qualunque sia il rallentatore)
+  let guardia = 0;
+  while (Math.hypot(V.x - V.scia[0].x, V.y - V.scia[0].y) >= GRANA && guardia++ < 40) {
+    const d = Math.hypot(V.x - V.scia[0].x, V.y - V.scia[0].y), k = GRANA / d;
+    V.scia.unshift({ x: V.scia[0].x + (V.x - V.scia[0].x) * k, y: V.scia[0].y + (V.y - V.scia[0].y) * k });
+  }
+  if (V.scia.length > SEG*PASSO+6) V.scia.length = SEG*PASSO+6;
+}
+function disegnaVerme(T, traccia){
+  const V=verme;
+  if (traccia){                                  // la scia, per far vedere COME funziona
+    g.strokeStyle='rgba(139,233,255,.30)'; g.lineWidth=2; g.setLineDash([5,6]);
+    g.beginPath(); V.scia.forEach((p,i)=> i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y)); g.stroke(); g.setLineDash([]);
+  }
+  // ombra di tutto il corpo
+  for(let i=SEG;i>=1;i--){ const p=V.scia[Math.min(V.scia.length-1,i*PASSO)];
+    const r=(21 - i*0.95); g.fillStyle='rgba(0,0,0,.26)';
+    g.beginPath(); g.ellipse(p.x+3,p.y+7,r*1.0,r*.5,0,0,7); g.fill(); }
+  // i segmenti, dalla coda alla testa
+  for(let i=SEG;i>=1;i--){
+    const p = V.scia[Math.min(V.scia.length-1, i*PASSO)];
+    const q = V.scia[Math.min(V.scia.length-1, i*PASSO+PASSO)];
+    const ang = Math.atan2(p.y-q.y, p.x-q.x);
+    const r = 21 - i*0.95;
+    g.save(); g.translate(p.x,p.y); g.rotate(ang);
+    const sg=g.createLinearGradient(0,-r,0,r);
+    sg.addColorStop(0,'#8a6a46'); sg.addColorStop(.42,'#5c4128'); sg.addColorStop(1,'#2e2013');
+    g.fillStyle=sg; g.strokeStyle='#150e07'; g.lineWidth=2.2; g.lineJoin='round';
+    g.beginPath(); g.ellipse(0,0,r*1.02,r,0,0,7); g.fill(); g.stroke();
+    // la placca chitinosa sopra: e' quella che fa leggere gli anelli
+    g.fillStyle='rgba(196,160,110,.55)';
+    g.beginPath(); g.ellipse(-r*.15,-r*.30, r*.62, r*.30, 0, 0, 7); g.fill();
+    g.strokeStyle='rgba(21,14,7,.55)'; g.lineWidth=1.6;
+    g.beginPath(); g.moveTo(-r*.85,-r*.55); g.lineTo(-r*.85,r*.55); g.stroke();
+    // le setole laterali: due trattini per anello, ed e' tutta l'animazione che serve
+    g.strokeStyle='#241809'; g.lineWidth=2.6; g.lineCap='round';
+    const sw = Math.sin(T*9 - i*0.7)*2.6;
+    g.beginPath(); g.moveTo(-r*.2,-r*.85); g.lineTo(-r*.5,-r*1.5+sw);
+    g.moveTo(-r*.2, r*.85); g.lineTo(-r*.5, r*1.5-sw); g.stroke(); g.lineCap='butt';
+    g.restore();
+  }
+  // LA TESTA
+  const h=({x:V.x,y:V.y}), h2=V.scia[Math.min(V.scia.length-1,PASSO)];
+  const ha=Math.atan2(h.y-h2.y, h.x-h2.x);
+  g.save(); g.translate(h.x,h.y); g.rotate(ha);
+  g.fillStyle='rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(3,8,26,13,0,0,7); g.fill();
+  const hg=g.createLinearGradient(0,-23,0,23);
+  hg.addColorStop(0,'#9b7a52'); hg.addColorStop(.42,'#6b4c2d'); hg.addColorStop(1,'#33230f');
+  g.fillStyle=hg; g.strokeStyle='#150e07'; g.lineWidth=2.6; g.lineJoin='round';
+  g.beginPath(); g.moveTo(-18,-20); g.lineTo(12,-17); g.lineTo(24,-7); g.lineTo(24,7);
+  g.lineTo(12,17); g.lineTo(-18,20); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle='rgba(206,172,120,.5)';
+  g.beginPath(); g.ellipse(-2,-7,15,6,0,0,7); g.fill();
+  // le mandibole, che si aprono e chiudono: l'unica parte animata di tutto il verme
+  const ap = 4 + Math.sin(T*5.5)*3.4;
+  g.strokeStyle='#e0d4b4'; g.fillStyle='#d6c7a2'; g.lineWidth=2.4; g.lineJoin='round';
+  for (const s of [-1,1]){
+    g.save(); g.scale(1,s);
+    g.beginPath(); g.moveTo(22,-3-ap); g.quadraticCurveTo(38,-6-ap, 42,-1-ap*.4);
+    g.quadraticCurveTo(36,-1-ap, 22,2-ap); g.closePath(); g.fill(); g.stroke();
+    g.restore();
+  }
+  // gli occhi: quattro, piccoli, rossi. Bastano a dire da che parte guarda
+  g.fillStyle='#ff5a3b';
+  for (const d of [[9,-10],[14,-5],[9,10],[14,5]]){ g.beginPath(); g.arc(d[0],d[1],2.3,0,7); g.fill(); }
+  g.fillStyle='rgba(255,190,150,.9)';
+  for (const d of [[8.4,-10.6],[13.4,-5.6]]){ g.beginPath(); g.arc(d[0],d[1],.9,0,7); g.fill(); }
+  g.restore();
+}
+
+/* ================= SCENA ================= */
+let pausa=false, lento=false, traccia=false, ossa=false, T=0, last=0, avviato=false;
+function etichetta(t,x,y,sz,col){ g.save(); g.font='600 '+(sz||15)+'px system-ui,sans-serif'; g.textAlign='center';
+  g.fillStyle='rgba(0,0,0,.75)'; g.fillText(t,x+1,y+1); g.fillStyle=col||'#d8cfb4'; g.fillText(t,x,y); g.restore(); }
+
+function avvia(){
+  lama.x = PAN*0.5; lama.y = H/2;
+  initCubo(PAN*1.5, H/2);
+  initVerme(PAN*2.5, H/2);
+  avviato = true;
+}
+
+function telaio(ms){
+  if(!avviato) avvia();
+  const ora = ms/1000; let dt = last ? Math.min(.05, ora-last) : 0; last = ora;
+  if (pausa) dt = 0;
+  if (lento) dt *= 0.35;
+  T += dt;
+
+  g.drawImage(fondo,0,0);
+
+  const gx = [PAN*0.5, PAN*1.5, PAN*2.5];
+  const gy = H/2 + 118;
+  // il giocatore, in ogni riquadro, alla scala vera
+  for (let i=0;i<3;i++) giocatore(gx[i]-98, gy, -0.5);
+
+  aggiornaLama(dt, PAN*0.5, H/2, gx[0]-98, gy);
+  aggiornaCubo(dt, PAN*1.5, H/2);
+  aggiornaVerme(dt, PAN*2.5, H/2);
+
+  disegnaVerme(T, traccia);       // il verme per primo: e' il piu' grande
+  disegnaCubo(T);
+  disegnaLama(T);
+
+  if (ossa){                      // lo "scheletro": da cosa e' fatto il movimento
+    g.strokeStyle='rgba(139,233,255,.55)'; g.lineWidth=1.4; g.setLineDash([4,4]);
+    g.beginPath(); g.arc(lama.x, lama.y, 44, 0, 7); g.stroke();
+    g.beginPath(); g.moveTo(lama.x,lama.y); g.lineTo(lama.x+Math.cos(lama.rot)*70, lama.y+Math.sin(lama.rot)*70); g.stroke();
+    g.strokeRect(cubo.x-62, cubo.y-62+17, 124, 124); g.strokeRect(cubo.x-58, cubo.y-58-17, 116, 116);
+    for(let i=1;i<=SEG;i++){ const p=verme.scia[Math.min(verme.scia.length-1,i*PASSO)];
+      g.beginPath(); g.arc(p.x,p.y,21-i*.95,0,7); g.stroke(); }
+    g.setLineDash([]);
+  }
+
+  // i divisori e i nomi
+  g.strokeStyle='rgba(216,207,180,.22)'; g.lineWidth=1.5;
+  for(let i=1;i<3;i++){ g.beginPath(); g.moveTo(PAN*i,0); g.lineTo(PAN*i,H); g.stroke(); }
+  etichetta('LAMA ERRANTE', PAN*0.5, 30, 16);
+  etichetta('CUBO GELATINOSO', PAN*1.5, 30, 16);
+  etichetta('VERME DELLE CAVE', PAN*2.5, 30, 16);
+  const f = {gira:'galleggia e ruota', punta:'punta', carica:'SI CARICA', scatto:'scatta'}[lama.fase];
+  etichetta(f, PAN*0.5, 52, 13, lama.fase==='carica' ? '#8be9ff' : '#8b8676');
+  etichetta('ferma i proiettili · dentro c\'e\' chi l\'ha incontrato prima', PAN*1.5, 52, 13, '#8b8676');
+  etichetta('12 anelli sulla scia della testa', PAN*2.5, 52, 13, '#8b8676');
+  etichetta('← giocatore, scala vera', gx[0]-98, gy+48, 12.5, '#8b8676');
+
+  requestAnimationFrame(telaio);
+}
+requestAnimationFrame(telaio);
+
+const bP=document.getElementById('bPausa'), bL=document.getElementById('bLento'),
+      bT=document.getElementById('bTraccia'), bO=document.getElementById('bOssa');
+bL.classList.add('on'); lento=true; bL.textContent='Al rallentatore';
+bP.onclick=()=>{pausa=!pausa; bP.textContent=pausa?'▶ Riprendi':'⏸ Ferma'; bP.classList.toggle('on',pausa);};
+bL.onclick=()=>{lento=!lento; bL.textContent=lento?'Al rallentatore':'Velocità normale'; bL.classList.toggle('on',lento);};
+bT.onclick=()=>{traccia=!traccia; bT.classList.toggle('on',traccia);};
+bO.onclick=()=>{ossa=!ossa; bO.classList.toggle('on',ossa);};
+</script></body></html>

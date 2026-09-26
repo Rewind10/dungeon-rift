@@ -2808,6 +2808,15 @@ class Room {
     // v1.69 — il tetto va contato SUI VIVI e va rispettato anche dalla scissione. Prima bastava che ci
     // fosse un posto libero perche' la Melma ne generasse due: con 29 in campo si finiva a 31, e "mai piu'
     // di 30" tornava a essere un auspicio. La melma che muore libera il proprio posto, quindi non conta.
+    // v2.22 — IL CUBO RESTITUISCE. Dentro si vedeva la roba di chi ci era finito prima: se morendo
+    // non la lasciasse, quel disegno sarebbe una bugia. Paga come una cassa e mezza — e' il premio
+    // per aver speso su di lui i colpi che non attraversano.
+    if (m.def.bottino && !m.minion) {
+      const val = Math.round((C.CASSA_MONETE + this.wave * C.CASSA_MONETE_ONDATA) * m.def.bottino * MU.rand(0.85, 1.15));
+      for (const cp of Loot.coinsFor(val, C.COINS)) { const a = Math.random() * Math.PI * 2, rd = MU.rand(8, 34);
+        this.groundCoins.push({ eid: NEXT++, x: m.x + Math.cos(a) * rd, y: m.y + Math.sin(a) * rd, v: cp.v, cid: cp.id, t: 30 }); }
+      this.events.push({ t: 'cubo_sciolto', x: m.x, y: m.y, v: val });
+    }
     if (m.def.splitInto && !m.minion) {
       let vivi = 0; for (const x of this.monsters) if (!x.dead) vivi++;
       const spazio = this.tettoVivi() - vivi;
@@ -4131,6 +4140,8 @@ class Room {
   updateMonsters(dt) {
     const ctx = this.makeCtx(); const tf = this.bulletTime ? this.bulletTime.factor : 1;
     for (const m of this.monsters) { if (m.dead) continue; if (m.hitFlash) m.hitFlash = Math.max(0, m.hitFlash - dt);
+      // v2.22 — i dardi conficcati nella gelatina si dissolvono col tempo, non restano per sempre
+      if (m.assorbT > 0) { m.assorbT -= dt; if (m.assorbT <= 0) { m.assorbiti = Math.max(0, (m.assorbiti || 0) - 1); if (m.assorbiti > 0) m.assorbT = 0.8; } }
       if (m.taunt > 0) m.taunt -= dt;                 // v1.85 — Grido di Guerra
       if (m.marchio > 0) m.marchio -= dt;             // v1.85 — Marchio
       if (m.maled > 0) m.maled -= dt;                 // v2.18 — maledizione del warlock
@@ -4228,7 +4239,14 @@ class Room {
               dps: Math.max(1, Math.round(b.dmg * 0.5)), tick: 0.25, acc: 0, lento: 0, col: '#ff8a3b' });
           }
           if (b.implode) { this._implodeAt(b.x, b.y, 150, Math.round(b.dmg * 0.6), src); b.dead = true; break; }
-          if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || (src && src.boon.explodeQuota) || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
+          if (b.explosive) { this._explodeAt(b.x, b.y, b.boomR || 90, Math.round(b.dmg * (b.boomQ || (src && src.boon.explodeQuota) || 1.2)), src); if (src && src.boon.toxicBurst) this._toxicBurst(b.x, b.y, 90, src); this.events.push({ t: 'explosion', x: b.x, y: b.y, r: b.boomR || 90, toxic: (src && src.boon.toxicBurst) ? 1 : 0 }); b.dead = true; break; } if (m.def.assorbe) {
+            // v2.22 — DENTRO LA GELATINA IL COLPO SI SPEGNE. Vale anche per i perforanti: e' questo
+            // che lo rende un muro e non solo un mostro con tanti punti vita. Il contatore serve al
+            // client, che disegna i dardi ancora conficcati finche' non si dissolvono.
+            m.assorbiti = Math.min(6, (m.assorbiti || 0) + 1); m.assorbT = 2.4;
+            this.events.push({ t: 'assorbito', x: b.x, y: b.y, c: b.color, e: m.eid });
+            b.dead = true; break; }
+          if (b.pierce > 0) { b.pierce--; if (!b.hitSet) b.hitSet = new Set(); b.hitSet.add(m.eid); } else { b.dead = true; break; } } } }
     }
     if (this.bullets.some(b => b.dead)) this.bullets = this.bullets.filter(b => !b.dead);
     for (const m of this.monsters) { if (m.bleedT > 0) { m.bleedT -= dt; m.bleedTick = (m.bleedTick || 0) + dt; if (m.bleedTick > 0.5) { m.bleedTick = 0; this.damageMonster(m, m.bleed * 2, m.x, m.y - 1, 0, this.players.get(m.bleedSrc)); } } }
@@ -4390,6 +4408,7 @@ class Room {
         if (m.elite) o.el = 1; if (m.boss) o.b = 1; if (m.mega) o.mg = 1;
       }
       if (m.hitFlash > 0) o.fl = 1;
+      if (m.assorbiti > 0) o.ab = m.assorbiti;          // v2.22 — quanti colpi ha ancora dentro il cubo
       if (m.shielded > 0) o.sh = 1;
       if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
       if (m.marchio > 0) o.mk = 1;                       // v1.85 — Marchio del ladro

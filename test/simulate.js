@@ -846,13 +846,18 @@ function testV150() {
   assert(!at(4).includes('bat_swarm') && at(5).includes('bat_swarm'), 'Nugolo di Pipistrelli introdotto all ondata 5');
   assert(!at(6).includes('wisp') && at(7).includes('wisp'), 'Fuoco Fatuo introdotto all ondata 7');
   assert(!at(7).includes('occhio') && at(8).includes('occhio'), 'Beholder introdotto all ondata 8 (v1.81: era la 9)');
+  // v2.22 — i due nemici senza gambe. La Lama sta PRESTO di proposito: e' il primo nemico che
+  // telegrafa il colpo, quindi deve arrivare quando c'e' ancora da imparare a schivare.
+  assert(!at(1).includes('lama') && at(2).includes('lama'), 'Lama Errante introdotta all ondata 2');
+  assert(!at(5).includes('cubo') && at(6).includes('cubo'), 'Cubo Gelatinoso introdotto all ondata 6');
   // v1.81 — LA RAMPA NON HA BUCHI e non arriva tardi: ogni ondata dalla 1 alla 12 aggiunge almeno un
   // archetipo che prima non c'era, e alla 12 il bestiario e' tutto in campo. Dalla 8 in poi qualche
   // ondata ne aggiunge due (i tre Ragni si intrecciano ai tre Beholder), quindi non si conta piu' "un
   // tipo per ondata": si conta che il pool CRESCA sempre, e che si chiuda entro la dodicesima.
-  for (let w = 1; w <= 7; w++) assert(at(w).length === w, 'ondata ' + w + ': ' + w + ' archetipi nel pool');
-  for (let w = 8; w <= 12; w++) assert(at(w).length > at(w - 1).length, 'ondata ' + w + ': porta qualcosa che prima non c era');
-  assert(at(12).length === 14 && at(13).length === 14, 'alla dodicesima il bestiario e tutto in campo (14 archetipi) e li resta');
+  for (let w = 2; w <= 12; w++) assert(at(w).length > at(w - 1).length,
+    'ondata ' + w + ': porta almeno un archetipo che prima non c era (' + at(w - 1).length + ' -> ' + at(w).length + ')');
+  assert(at(12).length === at(13).length && at(13).length === at(19).length,
+    'alla dodicesima il bestiario e tutto in campo (' + at(12).length + ' archetipi) e li resta');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -7294,6 +7299,159 @@ function testV221() {
   ok('urne, barili, grate e leve fanno quello che devono, e ogni tema ha i suoi oggetti');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.22 — LAMA ERRANTE E CUBO GELATINOSO: due nemici senza gambe
+// =================================================================================================
+function testV222() {
+  console.log('\n[TEST 81] v2.22 — la Lama telegrafa il colpo, il Cubo ferma i proiettili');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const Mon = require('../shared/monsters.js');
+
+  // --- 1) NESSUNO DEI DUE HA UN PASSO DA DISEGNARE ------------------------------------------
+  // E' il vincolo da cui nascono tutti e due (Paolo: «e difficile avere nemici che camminano
+  // perche' ci sono le animazioni di movimento»). Se un domani qualcuno li marca `front` o `sheet`
+  // finiscono nel ramo del billboard o dello sprite animato, e il vincolo salta senza un errore.
+  for (const id of ['lama', 'cubo']) {
+    const d = Mon.MONSTERS[id];
+    assert(d, id + ' esiste nel roster');
+    assert(!d.front && !d.sheet && !d.puppet, id + ' non passa da billboard, sprite-sheet o puppet: niente camminata');
+  }
+  {
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    assert(/_lamaF\(ctx, m, rr, def, atk\)/.test(srcR) || /_lamaF\s*\(/.test(srcR), 'la Lama ha il suo disegno');
+    assert(/_cuboF\s*\(/.test(srcR), 'il Cubo ha il suo disegno');
+    assert(/def\.lama\s*\)\s*\{\s*this\._lamaF/.test(srcR), 'e il disegno della Lama e raggiunto dal dispatch');
+    assert(/def\.gelatina\s*\)\s*\{\s*this\._cuboF/.test(srcR), 'e quello del Cubo pure');
+  }
+
+  // --- 2) LA LAMA FA TUTTO IL GIRO: gira → punta → carica → scatto --------------------------
+  {
+    const r = new Room('v222a'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.bullets.length = 0;
+    const sp = r.map.spawn;
+    p.x = sp.x; p.y = sp.y;
+    const m = r.spawnMonster('lama', sp.x + 150, sp.y, {}); m.awake = true; m.impegnato = 1;
+    const viste = new Set(); let eventi = [];
+    let maxPasso = 0, prima = { x: m.x, y: m.y };
+    for (let i = 0; i < 300 && !m.dead; i++) {
+      r.events.length = 0;
+      r.update(1 / 60);
+      for (const e of r.events) if (/^lama_/.test(e.t)) eventi.push(e.t);
+      if (m.fase) viste.add(m.fase);
+      const passo = MU.dist(prima.x, prima.y, m.x, m.y); if (passo > maxPasso) maxPasso = passo;
+      prima = { x: m.x, y: m.y };
+    }
+    for (const f of ['gira', 'punta', 'carica', 'scatto'])
+      assert(viste.has(f), 'la Lama passa per la fase ' + f);
+    assert(eventi.includes('lama_wind'), 'e annuncia la carica al client (lama_wind)');
+    assert(eventi.includes('lama_go'), 'e lo scatto (lama_go)');
+    assert(eventi.indexOf('lama_wind') < eventi.indexOf('lama_go'), 'e la carica arriva PRIMA dello scatto');
+    assert(maxPasso > 8, 'lo scatto e uno scatto vero (' + maxPasso.toFixed(1) + ' px in un fotogramma)');
+  }
+
+  // --- 3) E LA CARICA E' UN AVVERTIMENTO, NON UN COLPO --------------------------------------
+  // E' tutto il senso della creatura: mezzo secondo in cui si vede cosa sta per succedere e non
+  // succede ancora niente. Se facesse male gia' in carica, il preavviso non servirebbe a nulla.
+  {
+    const r = new Room('v222b'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const sp = r.map.spawn; p.x = sp.x; p.y = sp.y;
+    const m = r.spawnMonster('lama', sp.x + 30, sp.y, {}); m.awake = true; m.impegnato = 1;
+    m.fase = 'carica'; m.faseT = 0; m.facing = Math.PI;      // gia' addosso, gia' puntata
+    const pv0 = p.hp; let dur = 0;
+    for (let i = 0; i < 40 && m.fase === 'carica'; i++) { r.update(1 / 60); dur += 1 / 60; }
+    assert(p.hp === pv0, 'durante la carica la Lama NON fa male: e un avvertimento');
+    assert(dur > 0.35 && dur < 0.75, 'e la carica dura circa mezzo secondo (' + dur.toFixed(2) + 's)');
+  }
+
+  // --- 4) UNA LAMA A META' SCATTO NON VIENE PARCHEGGIATA ------------------------------------
+  // Il tetto alla folla (v1.80) ferma chi e' di troppo e lo manda ad aspettare all anello. Ma chi e'
+  // in mezzo a un'azione gia' partita e' esentato — rolling, slam, balzo. La carica e lo scatto
+  // della Lama vanno nella stessa lista: senza, una spada resterebbe ferma per aria a meta stoccata.
+  {
+    const srcA = fs.readFileSync(ROOT + 'shared/ai.js', 'utf8');
+    const riga = srcA.match(/const azione = [^;]+;/);
+    assert(riga, 'la lista delle azioni gia partite esiste ancora');
+    assert(/carica/.test(riga[0]) && /scatto/.test(riga[0]),
+      'e comprende la carica e lo scatto della Lama');
+  }
+
+  // --- 5) IL CUBO FERMA I PROIETTILI, ANCHE QUELLI PERFORANTI -------------------------------
+  {
+    const r = new Room('v222c'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.bullets.length = 0; r.oggetti.length = 0;
+    const sp = r.map.spawn;
+    const c = r.spawnMonster('cubo', sp.x, sp.y, {}); c.awake = true;
+    const hp0 = c.hp;
+    // un colpo PERFORANTE: e' il caso che conta. Se lo attraversasse, il Cubo sarebbe solo un
+    // mostro grosso e perderebbe l unica cosa che lo distingue.
+    r.bullets.push({ eid: 95001, hostile: false, owner: p.id, x: sp.x, y: sp.y, vx: 1, vy: 0,
+      r: 6, dmg: 10, color: '#fff', life: 1, pierce: 3 });
+    r.updateBullets(1 / 60);
+    assert(c.hp < hp0, 'il colpo ferisce il Cubo');
+    assert(r.bullets.length === 0, 'e si spegne dentro, anche se era perforante');
+    assert(c.assorbiti === 1, 'e il Cubo si tiene il conto dei colpi che ha dentro');
+    assert(r.events.some(e => e.t === 'assorbito'), 'e lo dice al client');
+    // il conto arriva nello snapshot, ed e' quello che il disegno usa per i dardi conficcati
+    const snap = r.snapshot();
+    const so = snap.mon.find(x => x.e === c.eid);
+    assert(so && so.ab === 1, 'e viaggia nello snapshot (ab)');
+    // e si dissolve: i dardi non restano piantati per sempre
+    for (let i = 0; i < 400; i++) r.update(1 / 60);
+    assert(!c.assorbiti, 'e col tempo i dardi si dissolvono');
+  }
+
+  // --- 6) MA UN COLPO NEMICO GLI PASSA ATTRAVERSO -------------------------------------------
+  {
+    const r = new Room('v222d'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.bullets.length = 0;
+    const sp = r.map.spawn;
+    for (const pl of r.players.values()) { pl.x = sp.x + 4000; pl.y = sp.y + 4000; }
+    const c = r.spawnMonster('cubo', sp.x, sp.y, {}); c.awake = true; const hp0 = c.hp;
+    r.bullets.push({ eid: 95002, hostile: true, owner: 777, x: sp.x, y: sp.y, vx: 1, vy: 0,
+      r: 6, dmg: 20, color: '#f00', life: 2, pierce: 0 });
+    r.updateBullets(1 / 60);
+    assert(c.hp === hp0, 'il Cubo non assorbe i colpi dei mostri: quelli non sono roba sua');
+    assert(r.bullets.length === 1, 'e il colpo nemico prosegue');
+  }
+
+  // --- 7) E QUANDO SI SCIOGLIE RESTITUISCE QUELLO CHE AVEVA INGHIOTTITO ----------------------
+  // Dentro il Cubo si vede il bottino di chi ci e' finito prima. Se morendo non lo lasciasse,
+  // quel disegno sarebbe una bugia.
+  {
+    const r = new Room('v222e'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.groundCoins.length = 0;
+    r.wave = 5;
+    const sp = r.map.spawn;
+    const c = r.spawnMonster('cubo', sp.x, sp.y, {}); c.awake = true;
+    r.killMonster(c, p);
+    assert(r.groundCoins.length > 0, 'sciogliendosi lascia monete a terra (' + r.groundCoins.length + ')');
+    assert(r.events.some(e => e.t === 'cubo_sciolto'), 'e l evento arriva al client');
+    // e deve pagare MOLTO piu' di un mostro qualunque: ogni mostro lascia gia' le sue monete morendo,
+    // quindi "lascia monete" da solo non direbbe niente. Dieci morti per parte, perche' il singolo
+    // drop ha la sua forbice casuale.
+    const somma = (id) => { let tot = 0;
+      for (let i = 0; i < 10; i++) {
+        const rx = new Room('v222f' + i); const qx = rx.addPlayer('b', { send() {} }, 'B', 'ranger'); rx.startGame();
+        rx.monsters.length = 0; rx.pending = 0; rx.waveList = []; rx.groundCoins.length = 0; rx.wave = 5;
+        const mm = rx.spawnMonster(id, rx.map.spawn.x, rx.map.spawn.y, {});
+        rx.killMonster(mm, qx);
+        for (const c2 of rx.groundCoins) tot += c2.v;
+      } return tot; };
+    const oroCubo = somma('cubo'), oroZombi = somma('skeleton');
+    assert(oroCubo > oroZombi * 2, 'e paga molto piu di uno Zombie Putrido (' + oroCubo + ' contro ' + oroZombi + ')');
+  }
+
+  // --- 8) IL PONTE COL CLIENT ---------------------------------------------------------------
+  {
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    for (const ev of ['lama_wind', 'lama_go', 'lama_muro', 'assorbito', 'cubo_sciolto'])
+      assert(srcM.indexOf("case '" + ev + "'") >= 0, 'il client sa cosa fare con l evento ' + ev);
+  }
+  ok('la Lama telegrafa e scatta, il Cubo ferma i colpi e restituisce il bottino');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

@@ -44,12 +44,18 @@
     // ciascuno, cosi' la rampa non lascia un buco dove c'era lui e ogni ondata continua a portare
     // qualcosa di nuovo. La definizione resta in monsters.js ma non e' piu' raggiungibile da qui.
     add('skeleton', 40);                  // sciame mischia — sempre presente
+    // v2.22 — LA LAMA ENTRA PRESTO, ed e' voluto: e' il primo nemico che TELEGRAFA il colpo, quindi
+    // deve arrivare quando c'e' ancora da imparare a schivare. Alla seconda ondata, non alla decima.
+    if (w >= 2) add('lama', 14);          // galleggia, si carica mezzo secondo, scatta dritta
     if (w >= 2) add('slime', 16);         // blob acido, si divide alla morte
     if (w >= 3) add('darkmage', 12);      // caster / evocatore
     if (w >= 4) add('spore_fungus', 10);  // immobile: nega il terreno, punisce chi sta fermo
     if (w >= 5) add('bat_swarm', 10);     // sciame volante: ondeggia — insegna a guidare il tiro
     if (w >= 6) add('bone_roller', 9);    // carica in linea retta: obbliga a schivare di lato
     if (w >= 7) add('wisp', 8);           // attraversa i muri: toglie il riparo come risposta
+    // v2.22 — IL CUBO alla 6: arriva quando il giocatore ha gia' imparato a sparare a distanza e
+    // a tenere la linea di tiro, perche' il suo mestiere e' togliergli proprio quella.
+    if (w >= 6) add('cubo', 7);           // muro che si muove: ferma i proiettili, va aggirato
     // v1.81 — LA RAMPA ANTICIPATA. Prima il gioco smetteva di presentare cose all'ondata 7: dopo
     // arrivavano solo i tre Beholder (9, 12, 15) e le ondate 8, 10, 11, 13, 14 e dalla 16 in poi non
     // portavano NIENTE di nuovo. All'ondata 19 la composizione era identica a quella della 15. Adesso

@@ -312,6 +312,64 @@
     // v1.61 — NUGOLO (Nugolo di Pipistrelli): insegue ONDEGGIANDO. Al vettore di inseguimento somma una
     // componente PERPENDICOLARE sinusoidale, poi rinormalizza: la velocita' resta quella, ma la traiettoria
     // e' una serpentina — difficile da colpire in linea retta senza guidare il tiro.
+    // ===== v2.22 — LAMA ERRANTE ==========================================================
+    // Quattro fasi, e la terza e' tutta la creatura: GIRA (galleggia e ruota su se stessa) → PUNTA
+    // (si orienta) → CARICA (mezzo secondo di rinculo e bagliore, e si VEDE) → SCATTO (dritta, veloce).
+    // La carica non e' decorazione: e' il contratto con il giocatore. Uno scatto veloce senza preavviso
+    // sarebbe un danno arrivato dal nulla; con mezzo secondo di preavviso e una traiettoria RETTA, la
+    // risposta c'e' sempre ed e' semplice — spostarsi di lato. E' il primo nemico che insegna a schivare.
+    lama(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+      const D = m.def;
+      m.fase = m.fase || 'gira'; m.faseT = (m.faseT || 0) + ctx.dt;
+      if (m.fase === 'gira') {
+        // galleggia e deriva pigra: se non ti vede continua a girare per la mappa invece di piantarsi
+        m.facing = (m.facing || 0) + ctx.dt * (D.spin || 2.2);
+        caccia(m, ctx, 0.34);
+        if (d > (D.sightRange || 480) || !ctx.losClear(m.x, m.y, p.x, p.y)) { m.faseT = 0; return; }
+        if (m.faseT >= (D.girCd || 1.0)) { m.fase = 'punta'; m.faseT = 0; }
+        return;
+      }
+      if (m.fase === 'punta') {
+        m.mx = m.my = 0;
+        const des = Math.atan2(p.y - m.y, p.x - m.x);
+        m.facing = MU.turnToward(m.facing || 0, des, Math.min(1, ctx.dt * 9));
+        if (m.faseT >= (D.puntaT || 0.35)) { m.fase = 'carica'; m.faseT = 0;
+          ctx.emit({ t: 'lama_wind', e: m.eid, x: m.x, y: m.y, dur: D.caricaT || 0.5 }); }
+        return;
+      }
+      if (m.fase === 'carica') {
+        // rincula: e' il secondo segnale, e si legge anche quando il bagliore finisce sotto a un altro
+        const rin = D.rinculo || 46;
+        m.mx = -Math.cos(m.facing) * rin; m.my = -Math.sin(m.facing) * rin;
+        if (m.faseT >= (D.caricaT || 0.5)) { m.fase = 'scatto'; m.faseT = 0;
+          m.lvx = Math.cos(m.facing); m.lvy = Math.sin(m.facing);
+          ctx.emit({ t: 'lama_go', e: m.eid, x: m.x, y: m.y }); }
+        return;
+      }
+      // SCATTO. Rimbalza sui muri come la Sfera d'Ossa: una lama che si pianta nella roccia e resta
+      // li' mezzo secondo sarebbe solo un modo goffo di morire.
+      const sp = m.speed * (D.scattoMul || 7.6);
+      const passo = sp * ctx.dt + m.radius * 0.9;
+      if (ctx.isWallAt(m.x + m.lvx * passo, m.y)) { m.lvx = -m.lvx; ctx.emit({ t: 'lama_muro', x: m.x, y: m.y }); }
+      if (ctx.isWallAt(m.x, m.y + m.lvy * passo)) { m.lvy = -m.lvy; ctx.emit({ t: 'lama_muro', x: m.x, y: m.y }); }
+      m.mx = m.lvx * sp; m.my = m.lvy * sp; m.facing = Math.atan2(m.lvy, m.lvx);
+      if (d <= D.atkRange + p.radius && m.atkT <= 0) { ctx.melee(m, p, m.dmg, 1.6); m.atkT = D.atkCd; }
+      if (m.faseT >= (D.scattoT || 0.30)) { m.fase = 'gira'; m.faseT = 0; }
+    },
+    // ===== v2.22 — CUBO GELATINOSO =======================================================
+    // Non insegue: scivola. Lento, testardo, e non cambia idea. Tutta la sua pericolosita' non sta
+    // nell'IA — sta nel fatto che FERMA I PROIETTILI (Room) e che e' grosso: quello che fa qui e'
+    // solo arrivarti addosso abbastanza piano da darti il tempo di decidere se aggirarlo o sparargli.
+    // Non ha memoria corta e non si distrae: se avesse gli scatti di un inseguitore normale
+    // smetterebbe di leggersi come una massa e tornerebbe a essere un nemico qualunque, piu' grosso.
+    gelatina(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      caccia(m, ctx, 1);
+      const d = MU.dist(m.x, m.y, p.x, p.y);
+      if (d <= m.def.atkRange + p.radius && m.atkT <= 0) { ctx.melee(m, p, m.dmg, 0.6); m.atkT = m.def.atkCd; }
+    },
     flock(m, ctx) {
       const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 620);
       if (!sees) { if (!investigate(m, ctx)) caccia(m, ctx, 0.9); return; }
@@ -467,7 +525,7 @@
     // altri aspettano il turno all'anello. Non si applica a chi e' immobile per mestiere, ai boss, a
     // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
     // a meta' si vedrebbe.
-    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0;
+    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto';
     if (mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
     (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx);
   }
