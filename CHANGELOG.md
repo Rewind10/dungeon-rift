@@ -2,6 +2,154 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.23.0] — 2026-09-26 · "Il Padrone"
+
+Paolo, dopo aver bocciato il mio demone disegnato in codice: *«insomma il padrone così così, ti
+allego un'immagine fatta da me, riesci a usarla come modello? Puoi creare una marionetta come zombie
+e mago, togli le ali e aggiungile fatte da te. Aggiungi parti in movimento per renderlo credibile.
+Come zombie e mago resta sempre frontale, non può girarsi»*.
+
+**Una scoperta che ha deciso tutto: il formato combaciava già.** Le marionette del gioco lavorano su
+una tela larga 1024 con `originX: 512` e i piedi verso `y≈1410`. Il disegno di Paolo è **1024×1536
+con i piedi a y≈1519**. Non serviva adattare niente: entrava nella pipeline esistente così com'era.
+
+---
+
+### 🔪 Tagliare un disegno piatto in otto pezzi
+
+Il ritaglio dal fondo è passato per **tre tentativi**, e i primi due vanno raccontati perché dicono
+qual è il problema vero.
+
+**Soglia sulla luminosità** — fallita. Il fondo è una sfumatura rosso cupo, ma il personaggio ha le
+sue ombre e il contorno a inchiostro nello stesso identico intervallo di luminosità. La soglia si è
+mangiata metà dell'armatura.
+
+**Bacchetta magica contigua** — peggio. Entrando in un pixel solo se somiglia al precedente, la
+visita scivola lungo la sfumatura… e poi passa *attraverso* la linea di contorno scura, perché anche
+quella somiglia al fondo. Ha divorato le membrane delle ali e le zone in ombra.
+
+**Un modello di matting** (`rembg`, isnet-general-use) — questo funziona, ma con una fregatura: con
+l'alpha matting acceso tutto il personaggio diventava un fantasma semitrasparente. Serve la maschera
+**netta**, ripulita a mano dopo.
+
+**E anche così si era mangiato la coscia destra.** Misurato: nell'originale a `y=1000` c'è carne da
+`x=588` a `x=706`; nel ritaglio, niente. La correzione non è un ritocco a mano ma una regola —
+l'alpha finale è **la maschera del modello OPPURE la carne**, dove la carne è rossa satura e chiara
+(`r>100 && r>g*1.8 && r>b*1.5`) e il fondo è rosso cupo e spento. Due condizioni bastano a
+distinguerli.
+
+Recuperando la carne però sono tornate anche **le membrane delle ali**, che sono rosse come il corpo:
+il torso si stringe su `x 258-766` e le taglia via. Tanto le ali vanno rifatte comunque.
+
+**Gli otto pezzi**: `testa` (con le corna), `torso` (con gli spallacci), `braccioSx`, `braccioDx`,
+`cintura` (il teschio e il gonnellino), `gambaSx`, `gambaDx`, `coda`.
+
+**I confini delle braccia sono diagonali, non rettangoli.** Il braccio scende in fuori e la coscia
+sale in dentro: un rettangolo o taglia il bicipite o si porta via mezza gamba. E il gonnellino è
+misurato sul disegno (`x 432-586`), non messo a occhio — la prima volta l'avevo largo `386-614` e si
+prendeva la coscia destra per intero.
+
+**Il formato del rig, per chi lo ritocca domani**: `w,h` sono i pixel del PNG, `ox,oy` il perno
+*dentro* il PNG, `ax,ay` dove quel perno va sulla tela. E i PNG stanno a **metà risoluzione**: il
+renderer li ridisegna a `si = 2s` perché `SC = 0.5`.
+
+---
+
+### 🦇 Le ali sono in codice, e non è una scorciatoia
+
+Nel disegno c'erano, ma **ferme**. Un'ala ferma è un mantello. Tolte dal ritaglio e rifatte in
+vettoriale dietro alla marionetta: battono da sole, **si spalancano sulla carica** e **si chiudono di
+scatto nell'affondo**.
+
+Il battito è una rotazione più una compressione orizzontale — da sopra non si vede lo spessore, quindi
+l'unica cosa che racconta il colpo d'ala è **di quanto l'ala si accorcia**.
+
+Anche qui due giri: al primo erano lunghe un terzo del corpo (avevo scritto `L` in pixel invece che in
+unità della tela) e avevano artigli grossi come la testa; ed erano tutte a spigoli, che le faceva
+sembrare aquiloni di carta piegata. Adesso sono curve, con le nervature appena accennate — marcate, la
+membrana sembra un ombrello — e il bordo esterno più scuro a darle spessore.
+
+**La coda** è un pezzo raster, ma ondeggia di suo con una fase più lenta e sfasata dal passo: a tempo
+col passo si leggerebbe come un bastone attaccato al bacino.
+
+**E il respiro c'è sempre**, fermo o in marcia. Senza, da fermo sembra in pausa.
+
+**Va lento**: cadenza del passo `0.52` contro `1.05` dello zombi, busto che dondola la metà. Chi comanda
+non corre.
+
+---
+
+### 👑 Cosa fa
+
+**Comanda.** I mostri dentro 250 unità vanno **1,28× più veloci** e picchiano **1,22× più forte**.
+Si vede: bordo acceso addosso a loro, e sotto di lui l'anello tratteggiato che gira — l'unico modo che
+ha il giocatore di sapere dove finisce il potenziamento, e quindi dove conviene tirare i mostri.
+
+Il comando **non vale fra Padroni**: due che si potenziassero a vicenda sarebbero una moltiplicazione.
+
+*Nota tecnica che conterà:* il comando **non tocca `m.speed` né `m.dmg`**. Il Veleno Corrosivo della
+v2.20 già salva e ripristina `m.dmg`, e due meccaniche che si passano lo stesso numero prima o poi si
+pestano i piedi. Due moltiplicatori a parte (`cmdV`, `cmdD`), letti nei tre imbuti da cui passa tutto
+ciò che un mostro tira addosso a un giocatore: `melee`, `shoot`, `spread`.
+
+**Non è solo un'aura — Paolo: *«deve attaccare anche lui»*.** Due attacchi, scelti per distanza:
+
+- **da vicino, LA FRUSTA**: 0,85 s di carica che si vede (ali aperte, braccio indietro, occhi accesi),
+  poi un arco largo davanti a sé. L'area si paga con un cerchio spostato in avanti — il settore vero
+  costerebbe un'altra macchina e a quelle distanze la differenza non si gioca; il disegno resta un arco.
+- **da lontano, LA CONDANNA**: punta il bersaglio e gli apre **sotto i piedi** una zona che si chiude.
+  Il cerchio che si stringe è il cronometro, e si legge senza numeri.
+
+I due si alternano da soli perché dipendono dalla distanza: se stai addosso ti frusta, se scappi ti
+condanna. **Non c'è un posto comodo**, ed è quello che deve insegnare.
+
+---
+
+### 📅 Ondata 15, e il buco che riempie
+
+Le ondate **dalla 13 alla 19 non portavano più niente di nuovo**: sette di fila con solo numeri più
+grandi. Il Padrone arriva in mezzo a quel vuoto, alla **15**, con peso 5 e tetto di **2 vivi**.
+
+Ed è giusto che arrivi tardi: a quel punto il giocatore conosce tutto il bestiario, quindi
+**accorgersi che l'ondata picchia più del solito vuol dire qualcosa**. Prima della dodicesima sarebbe
+solo un altro nemico nuovo fra i tanti.
+
+Il controllo della rampa è stato aggiornato: il bestiario adesso **chiude alla 15**, non alla 12. Il
+numero cambia, la regola no.
+
+---
+
+### 📐 Numeri, e i sabotaggi
+
+**Test: 5055 passati, 0 falliti.** (Erano 4986 in v2.22: +69 controlli, TEST 82.)
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| tolto il PNG di un pezzo della marionetta | ✅ «il pezzo testa ha il suo PNG» |
+| il comando potenzia anche gli altri Padroni | ✅ 2 controlli rossi |
+| il comando non arriva al danno | ✅ «14 contro 14» |
+
+Il primo è il più importante: un pezzo dichiarato nel rig ma senza PNG **non dà nessun errore** — il
+renderer fa `if (!p || !img) continue` e quel pezzo semplicemente non si vede. È lo stesso silenzio
+della cassa invisibile della v2.21.
+
+| file | cosa |
+|---|---|
+| `public/assets/enemies/padrone/` | **nuova**: 8 PNG dei pezzi + `padrone.json` (il rig) |
+| `public/js/renderer.js` | `PUPPETS.padrone`, `PROF.padrone` (andatura, pose, morte), `_aliPadrone`, il raggio del comando, il bordo su chi è comandato, e il ramo `shape === 'padrone'` nel dispatch frontale |
+| `shared/monsters.js` | la definizione, coi numeri di comando, frusta e condanna |
+| `shared/ai.js` | il comportamento `padrone` (avanza → carica → sferza / punta → condanna); carica, sferzata e mira aggiunte alle azioni esenti dal tetto alla folla |
+| `server/Room.js` | `applicaComando()`, i moltiplicatori nei tre imbuti del danno, `cm` nello snapshot |
+| `public/js/main.js` | i quattro eventi `padrone_*` |
+| `shared/waves.js` | ondata 15 |
+| `test/simulate.js` | TEST 82; e la chiusura del bestiario spostata da 12 a 15 |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+
+---
+
 ### [2.22.0] — 2026-09-26 · "Due nemici senza gambe"
 
 Paolo, dopo aver bocciato la prima lista di nemici: *«non mi convincono. Dammi altre idee, prendi

@@ -1,0 +1,409 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<title>Il Padrone — anteprima</title>
+<style>
+  :root{--fondo:#0b0e14;--testo:#d8cfb4;--tenue:#8b8676;--linea:rgba(216,207,180,.18)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--testo);
+       font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:.3px}
+  .sotto{color:var(--tenue);margin:0 0 16px;font-size:13.5px;max-width:84ch}
+  .barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  button{background:#1a1f2b;color:var(--testo);border:1px solid var(--linea);
+         border-radius:7px;padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer}
+  button:hover{background:#232936}
+  button.on{background:#2e3a4e;border-color:rgba(216,207,180,.42)}
+  canvas{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--linea);background:#0a0c12}
+  .note{margin-top:14px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+  .n{border:1px solid var(--linea);border-radius:9px;padding:11px 13px;background:#10141d}
+  .n b{display:block;margin-bottom:3px;font-size:14.5px}
+  .n span{color:var(--tenue);font-size:13px}
+  .n em{color:#ffb14a;font-style:normal}
+</style></head><body>
+
+<h1>Il Padrone</h1>
+<p class="sotto">Solo disegno: niente tocca il codice del gioco. Sta sospeso, quindi non ha un passo da
+animare — le ali sono due rotazioni. Guarda il ciclo: <b>comanda</b>, poi <b>frusta</b> chi gli sta
+vicino, poi <b>condanna</b> chi sta lontano. Non è solo un'aura: fa male anche lui.</p>
+
+<div class="barra">
+  <button id="bPausa">⏸ Ferma</button>
+  <button id="bLento" class="on">Al rallentatore</button>
+  <button id="bAura">Mostra il raggio del comando</button>
+  <button id="bSalta">→ Passa alla fase dopo</button>
+</div>
+
+<canvas id="c" width="1340" height="580"></canvas>
+
+<div class="note">
+  <div class="n"><b>👑 Il comando</b><span>I mostri dentro il suo raggio sono <em>più veloci e
+  picchiano più forte</em>: si vede, hanno il bordo acceso e la scia. Quello fuori dal raggio è
+  normale. Finché il Padrone è vivo, l'ondata ti viene addosso più cattiva di quanto dovrebbe.</span></div>
+  <div class="n"><b>🔥 La frusta</b><span>Da vicino. <em>Si carica</em> — la frusta si arrotola e si
+  accende — poi sferza un arco largo. Colpisce anche i suoi: è così che li spinge avanti.</span></div>
+  <div class="n"><b>☄️ La condanna</b><span>Da lontano. Ti punta, e <em>sotto ai tuoi piedi</em> si
+  apre un cerchio che cresce. Quando si chiude, brucia. Ti obbliga a muoverti mentre i suoi mostri,
+  accelerati da lui, ti arrivano addosso.</span></div>
+</div>
+
+<script>
+const c=document.getElementById('c'), g=c.getContext('2d');
+const W=c.width, H=c.height;
+const TH={ floorB:'#151a26', chiaro:'#d8cfb4', scuro:'#0a0c10', wall:'#1b2036' };
+function hx(h){if(h[0]!=='#'){const n=h.match(/[\d.]+/g);return{r:+n[0],g:+n[1],b:+n[2]};}
+  h=h.replace('#','');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function mix(a,b,t){const x=hx(a),y=hx(b);return 'rgb('+Math.round(x.r+(y.r-x.r)*t)+','+Math.round(x.g+(y.g-x.g)*t)+','+Math.round(x.b+(y.b-x.b)*t)+')';}
+const INK=mix(TH.scuro,TH.wall,.18);
+const VIS=1.45, RG=16*VIS;
+let _s=0x51a3c7; const rnd=()=>(_s=(_s*1664525+1013904223)>>>0)/4294967296;
+const rr=(a,b)=>a+rnd()*(b-a);
+function rrect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+
+/* pavimento */
+const fondo=document.createElement('canvas'); fondo.width=W; fondo.height=H;
+(function(){const p=fondo.getContext('2d');
+  const PAV=[mix(TH.floorB,TH.chiaro,.34),mix(TH.floorB,TH.chiaro,.28),mix(TH.floorB,TH.chiaro,.40),
+             mix(TH.floorB,TH.chiaro,.23),mix(TH.floorB,TH.chiaro,.45)];
+  p.fillStyle=PAV[0];p.fillRect(0,0,W,H);
+  for(let i=0;i<Math.round(W*H/1750);i++){const x=rr(0,W),y=rr(0,H),r=rr(34,150);
+    const q=p.createRadialGradient(x,y,0,x,y,r);
+    q.addColorStop(0,PAV[(rnd()*PAV.length)|0]);q.addColorStop(1,'rgba(0,0,0,0)');
+    p.globalAlpha=rr(.05,.15);p.fillStyle=q;p.beginPath();p.arc(x,y,r,0,7);p.fill();}
+  p.globalAlpha=1;})();
+
+function etichetta(t,x,y,sz,col){g.save();g.font='600 '+(sz||15)+'px system-ui,sans-serif';g.textAlign='center';
+  g.fillStyle='rgba(0,0,0,.78)';g.fillText(t,x+1,y+1);g.fillStyle=col||'#d8cfb4';g.fillText(t,x,y);g.restore();}
+
+/* ---------------- giocatore ---------------- */
+const pg={x:0,y:0,a:0};
+function giocatore(x,y,a){
+  g.save(); g.translate(x,y);
+  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(2,RG*.55,RG*.95,RG*.42,0,0,7); g.fill();
+  const q=g.createRadialGradient(-RG*.3,-RG*.3,2,0,0,RG);
+  q.addColorStop(0,'#bfe6ff'); q.addColorStop(1,'#3d6f97');
+  g.fillStyle=q; g.strokeStyle='#0d1a26'; g.lineWidth=2.4;
+  g.beginPath(); g.arc(0,0,RG,0,7); g.fill(); g.stroke();
+  g.rotate(a);
+  g.fillStyle='#e8f6ff'; g.beginPath(); g.moveTo(RG*.45,-RG*.34); g.lineTo(RG*1.05,0); g.lineTo(RG*.45,RG*.34); g.closePath(); g.fill();
+  g.restore();
+}
+
+/* ---------------- i suoi mostri ---------------- */
+const RAGGIO = 250;                       // il raggio del comando
+const mostri = [];
+function initMostri(px,py){
+  mostri.length=0;
+  const pos=[[-120,-40],[-70,80],[90,60],[150,-70],[330,110]];   // l'ultimo sta FUORI dal raggio
+  for(const p of pos) mostri.push({ x:pad.x+p[0], y:pad.y+p[1], f:0, t:rr(0,6.28) });
+}
+function aggiornaMostri(dt){
+  for(const m of mostri){
+    const acc = Math.hypot(m.x-pad.x, m.y-pad.y) <= RAGGIO;
+    m.acc = acc;
+    const v = acc ? 62 : 30;
+    const dx=pg.x-m.x, dy=pg.y-m.y, d=Math.hypot(dx,dy)||1;
+    const dal = Math.hypot(m.x-pad.x, m.y-pad.y);
+    if (dal < RAGGIO*0.78 && d > 70){ m.x += dx/d*v*dt; m.y += dy/d*v*dt; }
+    else { // al guinzaglio: tornano dal padrone. Sono i suoi, non vanno a morire da soli
+      const bx=pad.x-m.x, by=pad.y-m.y, b=Math.hypot(bx,by)||1;
+      m.x += bx/b*v*0.8*dt; m.y += by/b*v*0.8*dt; }
+    m.f = Math.atan2(dy,dx); m.t += dt*(acc?7:3.4);
+    if (m.scia === undefined) m.scia=[];
+    if (acc){ m.scia.unshift({x:m.x,y:m.y}); if(m.scia.length>8) m.scia.length=8; }
+    else m.scia.length=0;
+  }
+}
+function disegnaMostro(m,T){
+  const r=17;
+  // la scia: si vede che va piu' forte
+  for(let i=m.scia.length-1;i>=0;i--){const p=m.scia[i],k=1-i/m.scia.length;
+    g.globalAlpha=k*0.16; g.fillStyle='#ff7a2b';
+    g.beginPath(); g.ellipse(p.x,p.y+6,r*0.9*k,r*0.5*k,0,0,7); g.fill(); }
+  g.globalAlpha=1;
+  g.save(); g.translate(m.x,m.y);
+  g.fillStyle='rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(2,r*.72,r*.9,r*.38,0,0,7); g.fill();
+  if (m.acc){                                  // il bordo acceso: e' il marchio del comando
+    const q=g.createRadialGradient(0,-2,r*.4,0,-2,r*1.9);
+    q.addColorStop(0,'rgba(255,120,40,.34)'); q.addColorStop(1,'rgba(255,90,20,0)');
+    g.fillStyle=q; g.beginPath(); g.arc(0,-2,r*1.9,0,7); g.fill();
+  }
+  // zombi visto di fronte, come il roster: testa, torso, due braccia. Non e' lui il protagonista.
+  const flip = Math.cos(m.f)<0?-1:1; g.scale(flip,1);
+  const dond = Math.sin(m.t)*3;
+  g.fillStyle=m.acc?'#4a4438':'#3a3d3a'; g.strokeStyle='#141614'; g.lineWidth=2; g.lineJoin='round';
+  g.beginPath(); g.moveTo(-r*.5,r*.7); g.lineTo(-r*.46,-r*.3+dond*.2); g.lineTo(0,-r*.55+dond*.2);
+  g.lineTo(r*.46,-r*.3+dond*.2); g.lineTo(r*.5,r*.7); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle=m.acc?'#5d5344':'#3a3d3a'; g.lineWidth=5; g.lineCap='round';
+  g.beginPath(); g.moveTo(-r*.44,-r*.1); g.lineTo(-r*.74,r*.3+dond*.5);
+  g.moveTo(r*.44,-r*.1); g.lineTo(r*.74,r*.3-dond*.5); g.stroke(); g.lineCap='butt';
+  g.fillStyle=m.acc?'#5d5344':'#464a45'; g.strokeStyle='#141614'; g.lineWidth=2;
+  g.beginPath(); g.arc(0,-r*.72+dond*.2,r*.36,0,7); g.fill(); g.stroke();
+  g.fillStyle=m.acc?'#ff8a3a':'#8bff86';
+  g.beginPath(); g.arc(-r*.14,-r*.74+dond*.2,2.2,0,7); g.arc(r*.14,-r*.74+dond*.2,2.2,0,7); g.fill();
+  g.restore();
+}
+
+/* ============================================================================
+   IL PADRONE
+   ============================================================================ */
+const pad = { x:0, y:0, fase:'comanda', t:0, fr:0, zx:0, zy:0, zt:0, ali:0 };
+const FASI = { comanda:3.0, carica:0.85, frusta:0.42, punta:0.5, condanna:1.25, scoppio:0.4 };
+function aggiornaPad(dt){
+  const P=pad; P.t+=dt; P.ali+=dt;
+  // sta sospeso e ondeggia piano attorno al suo posto
+  if (P.fase==='comanda'){
+    P.x += Math.cos(P.ali*0.5)*10*dt; P.y += Math.sin(P.ali*0.7)*8*dt;
+    if (P.t>FASI.comanda){ P.fase = P.alterna ? 'punta' : 'carica'; P.alterna = !P.alterna; P.t=0; }
+  }
+  else if (P.fase==='carica'){ if(P.t>FASI.carica){P.fase='frusta';P.t=0;} }
+  else if (P.fase==='frusta'){ if(P.t>FASI.frusta){P.fase='comanda';P.t=0;} }
+  else if (P.fase==='punta'){ if(P.t>FASI.punta){P.fase='condanna';P.t=0;P.zx=pg.x;P.zy=pg.y;} }
+  else if (P.fase==='condanna'){ if(P.t>FASI.condanna){P.fase='scoppio';P.t=0;} }
+  else if (P.fase==='scoppio'){ if(P.t>FASI.scoppio){P.fase='comanda';P.t=0;} }
+}
+function ala(T, lato, apertura){
+  // L'ALA: tre dita di membrana. L'animazione e' UNA rotazione piu' una compressione orizzontale —
+  // non c'e' nessun frame da disegnare, e da qui viene tutto il "vola" della creatura.
+  const bat = Math.sin(T*3.4)*0.34 + apertura*0.5;
+  g.save(); g.scale(lato,1); g.rotate(-0.22 + bat*0.30); g.scale((0.70+Math.abs(Math.cos(bat))*0.34)*0.92, 1.06);
+  const wg=g.createLinearGradient(10,-40,86,30);
+  wg.addColorStop(0,'#5a2036'); wg.addColorStop(.5,'#3a1424'); wg.addColorStop(1,'#1e0c14');
+  g.fillStyle=wg; g.strokeStyle='#150810'; g.lineWidth=2.6; g.lineJoin='round';
+  g.beginPath();
+  g.moveTo(8,-16);
+  g.lineTo(44,-52); g.lineTo(92,-46);       // primo dito, spigoloso
+  g.quadraticCurveTo(70,-24, 86,-10);       // membrana strappata
+  g.quadraticCurveTo(66,-4, 76,16);
+  g.quadraticCurveTo(52,8, 48,30);
+  g.quadraticCurveTo(28,12, 8,16);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle='rgba(10,5,8,.55)';           // gli strappi nella membrana
+  g.beginPath(); g.moveTo(56,-18); g.lineTo(70,-14); g.lineTo(58,-6); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(40,6); g.lineTo(52,12); g.lineTo(42,18); g.closePath(); g.fill();
+  g.fillStyle=wg;
+  g.strokeStyle='rgba(180,90,110,.35)'; g.lineWidth=2;   // le nervature
+  g.beginPath(); g.moveTo(10,-10); g.lineTo(92,-42); g.moveTo(10,-6); g.lineTo(84,-8);
+  g.moveTo(10,0); g.lineTo(74,16); g.moveTo(10,6); g.lineTo(50,28); g.stroke();
+  g.fillStyle='#2a1018';                                  // gli artigli in punta
+  for(const d of [[92,-46],[86,-10],[76,16],[48,30]]){
+    g.beginPath(); g.arc(d[0],d[1],3.4,0,7); g.fill(); }
+  g.restore();
+}
+function disegnaPad(T){
+  const P=pad;
+  const sosp = Math.sin(T*1.5)*7;                  // il galleggio
+  const car = P.fase==='carica' ? P.t/FASI.carica : 0;
+  const fru = P.fase==='frusta' ? P.t/FASI.frusta : -1;
+  const pun = P.fase==='punta' ? P.t/FASI.punta : 0;
+
+  // --- il raggio del comando, sempre visibile ma discreto
+  const pulse = 0.5+0.5*Math.sin(T*1.6);
+  g.save();
+  const ag=g.createRadialGradient(P.x,P.y,RAGGIO*0.35,P.x,P.y,RAGGIO);
+  ag.addColorStop(0,'rgba(255,90,30,0)'); ag.addColorStop(.72,'rgba(255,90,30,0)'); ag.addColorStop(1,'rgba(255,90,30,'+(0.05+pulse*0.035)+')');
+  g.fillStyle=ag; g.beginPath(); g.arc(P.x,P.y,RAGGIO,0,7); g.fill();
+  g.strokeStyle='rgba(255,130,60,'+(0.38+pulse*0.22)+')'; g.lineWidth=2.6; g.setLineDash([14,11]);
+  g.lineDashOffset = -T*26;
+  g.beginPath(); g.arc(P.x,P.y,RAGGIO,0,7); g.stroke(); g.setLineDash([]);
+  g.restore();
+  // i fili che lo legano ai suoi: si vede CHI sta comandando
+  for(const m of mostri){ if(!m.acc) continue;
+    g.strokeStyle='rgba(255,120,50,'+(0.10+pulse*0.10)+')'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(P.x,P.y+sosp); g.lineTo(m.x,m.y-6); g.stroke(); }
+
+  // --- l'ombra: STACCATA e piu' piccola. E' l'unica cosa che dice "questo sta per aria"
+  g.fillStyle='rgba(0,0,0,.34)';
+  g.beginPath(); g.ellipse(P.x+7, P.y+76, 40, 15, 0, 0, 7); g.fill();
+
+  g.save(); g.translate(P.x, P.y+sosp); g.scale(1.22,1.22);
+  const vs = Math.cos(Math.atan2(pg.y-P.y, pg.x-P.x))<0 ? -1 : 1;
+
+  // --- LE ALI, dietro al corpo
+  ala(T, -1, car); ala(T, 1, car);
+
+  // --- il corpo. Visto di fronte come tutto il roster umanoide; sotto la cintola non c'e' niente
+  //     da animare: brandelli e fumo, che e' il modo piu' vecchio del mondo per non disegnare un passo.
+  g.save(); g.scale(vs,1);
+  // brandelli / fumo
+  g.fillStyle='rgba(20,10,16,.85)'; g.strokeStyle='#150810'; g.lineWidth=2;
+  g.beginPath(); g.moveTo(-20,10);
+  g.quadraticCurveTo(-26,36,-14,52+Math.sin(T*2.1)*4);
+  g.quadraticCurveTo(-4,38,2,54+Math.sin(T*2.6+1)*4);
+  g.quadraticCurveTo(10,36,20,50+Math.sin(T*2.3+2)*4);
+  g.quadraticCurveTo(26,30,20,10);
+  g.closePath(); g.fill(); g.stroke();
+  // torso
+  const bg=g.createLinearGradient(0,-40,0,18);
+  bg.addColorStop(0,'#8a2f2a'); bg.addColorStop(.5,'#5e1d1f'); bg.addColorStop(1,'#2e0f12');
+  g.fillStyle=bg; g.strokeStyle='#150810'; g.lineWidth=2.8; g.lineJoin='round';
+  g.beginPath(); g.moveTo(-21,14); g.lineTo(-24,-20); g.lineTo(-13,-36); g.lineTo(13,-36);
+  g.lineTo(24,-20); g.lineTo(21,14); g.closePath(); g.fill(); g.stroke();
+  // spalliere a punta
+  g.fillStyle='#3a1218';
+  for(const s of [-1,1]){ g.save(); g.scale(s,1);
+    g.beginPath(); g.moveTo(12,-34); g.lineTo(34,-30); g.lineTo(30,-12); g.lineTo(18,-18); g.closePath();
+    g.fill(); g.stroke();
+    g.fillStyle='#6a2028'; g.beginPath(); g.moveTo(24,-31); g.lineTo(33,-29); g.lineTo(30,-20); g.closePath(); g.fill();
+    g.fillStyle='#3a1218'; g.restore(); }
+  // il marchio sul petto, pulsa col comando
+  const mg=g.createRadialGradient(0,-12,1,0,-12,13+pulse*4);
+  mg.addColorStop(0,'#ffe0a0'); mg.addColorStop(.45,'#ff7a2b'); mg.addColorStop(1,'rgba(255,60,20,0)');
+  g.fillStyle=mg; g.beginPath(); g.arc(0,-12,13+pulse*4,0,7); g.fill();
+  g.strokeStyle='rgba(255,180,90,.9)'; g.lineWidth=2.2; g.lineCap='round';
+  g.beginPath(); g.moveTo(-6,-20); g.lineTo(0,-12); g.lineTo(-5,-4); g.moveTo(0,-12); g.lineTo(7,-18);
+  g.moveTo(0,-12); g.lineTo(6,-5); g.stroke(); g.lineCap='butt';
+  // braccio sinistro (quello che indica, nella fase punta)
+  g.strokeStyle='#5e1d1f'; g.lineWidth=9; g.lineCap='round';
+  const bx = pun>0 ? -34-pun*10 : -26, by = pun>0 ? -26-pun*6 : -6;
+  g.beginPath(); g.moveTo(-19,-24); g.lineTo(bx,by); g.stroke();
+  g.fillStyle='#6a2028'; g.beginPath(); g.arc(bx,by,6,0,7); g.fill();
+  // testa: corna e occhi accesi
+  g.fillStyle='#6a2028'; g.strokeStyle='#150810'; g.lineWidth=2.4;
+  g.beginPath(); g.moveTo(-11,-38); g.lineTo(-9,-52); g.lineTo(9,-52); g.lineTo(11,-38); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle='#3a1218';
+  for(const s of [-1,1]){ g.save(); g.scale(s,1);
+    g.beginPath(); g.moveTo(6,-50); g.quadraticCurveTo(20,-60,26,-76);
+    g.quadraticCurveTo(14,-64,9,-46); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+  const oc = 0.6+0.4*Math.sin(T*5)+car*0.6;
+  g.fillStyle='rgba(255,170,60,'+Math.min(1,oc)+')';
+  g.beginPath(); g.arc(-5,-45,3.2,0,7); g.arc(5,-45,3.2,0,7); g.fill();
+  g.fillStyle='#fff0c0'; g.beginPath(); g.arc(-5,-45,1.3,0,7); g.arc(5,-45,1.3,0,7); g.fill();
+  g.restore();  // fine scale(vs)
+
+  // --- LA FRUSTA. Braccio destro: si arrotola in carica, si stende nella sferzata.
+  {
+    const ang = Math.atan2(pg.y-P.y, pg.x-P.x);
+    g.save(); g.rotate(ang);
+    g.strokeStyle='#5e1d1f'; g.lineWidth=9; g.lineCap='round';
+    g.beginPath(); g.moveTo(14,-22); g.lineTo(30,-10); g.stroke();
+    const N=16, L = fru>=0 ? 150 : (26 + car*10);
+    const apri = fru>=0 ? ease(Math.min(1,fru*1.4)) : 0;
+    g.lineCap='round'; g.lineJoin='round';
+    for(let i=N;i>=1;i--){
+      const u=i/N;
+      // in carica si avvolge su se stessa, nella sferzata si apre in un arco largo
+      const a2 = fru>=0 ? (-1.15 + apri*2.3)*u : (car*7.5)*u;
+      const rad = L*u;
+      const x=Math.cos(a2)*rad+30, y=Math.sin(a2)*rad-10;
+      const w = 7*(1-u*0.72);
+      g.strokeStyle = fru>=0
+        ? 'rgba('+Math.round(255)+','+Math.round(150+100*(1-u))+',60,'+(0.95-u*0.25)+')'
+        : 'rgba(120,40,40,'+(0.85+car*0.15)+')';
+      if (i===N) { g.beginPath(); g.moveTo(30,-10); }
+      g.lineWidth=w;
+      g.beginPath();
+      const u0=(i-1)/N, a0 = fru>=0 ? (-1.15 + apri*2.3)*u0 : (car*7.5)*u0, r0=L*u0;
+      g.moveTo(Math.cos(a0)*r0+30, Math.sin(a0)*r0-10); g.lineTo(x,y); g.stroke();
+      if (fru>=0 && i%3===0){ g.fillStyle='rgba(255,200,110,'+(0.5*(1-fru))+')';
+        g.beginPath(); g.arc(x,y,w*0.7,0,7); g.fill(); }
+    }
+    // il bagliore che monta durante la carica
+    if (car>0){ const q=g.createRadialGradient(30,-10,2,30,-10,40+car*24);
+      q.addColorStop(0,'rgba(255,150,60,'+(0.30*car)+')'); q.addColorStop(1,'rgba(255,90,20,0)');
+      g.fillStyle=q; g.beginPath(); g.arc(30,-10,40+car*24,0,7); g.fill(); }
+    g.lineCap='butt'; g.restore();
+  }
+  g.restore();
+
+  // --- L'ARCO DELLA SFERZATA, disegnato dove fa male davvero
+  if (fru>=0){
+    const ang=Math.atan2(pg.y-P.y,pg.x-P.x), k=fru;
+    g.save(); g.translate(P.x,P.y+sosp); g.rotate(ang);
+    const a1 = -1.15 + ease(Math.min(1,k*1.4))*2.3;
+    g.lineCap='round';
+    for (let q2=0; q2<5; q2++){                  // cinque strisce sempre piu' magre e piu' chiare
+      const u=q2/4;
+      g.globalAlpha=(0.62-u*0.34)*(1-k);
+      g.strokeStyle = ['#ff6a1e','#ff8a2b','#ffb14a','#ffd88a','#fff2c8'][q2];
+      g.lineWidth=(17-q2*3)*(1-k)+2.5;
+      g.beginPath(); g.arc(0,0,168,a1-0.62+u*0.14, a1+0.36-u*0.22); g.stroke(); }
+    g.lineCap='butt';
+    g.globalAlpha=1; g.restore();
+  }
+}
+
+/* --- la condanna: il cerchio che cresce sotto i piedi, poi brucia --- */
+function disegnaCondanna(T){
+  const P=pad;
+  if (P.fase==='punta'){
+    const k=P.t/FASI.punta;
+    g.save(); g.strokeStyle='rgba(255,150,60,'+(0.3+k*0.4)+')'; g.lineWidth=2; g.setLineDash([6,8]);
+    g.beginPath(); g.moveTo(P.x,P.y); g.lineTo(pg.x,pg.y); g.stroke(); g.setLineDash([]); g.restore();
+    return;
+  }
+  if (P.fase==='condanna'){
+    const k=P.t/FASI.condanna;
+    g.save(); g.translate(P.zx,P.zy);
+    g.strokeStyle='rgba(255,90,30,.75)'; g.lineWidth=3;
+    g.beginPath(); g.ellipse(0,0,84,42,0,0,7); g.stroke();
+    g.fillStyle='rgba(255,80,20,.13)'; g.beginPath(); g.ellipse(0,0,84,42,0,0,7); g.fill();
+    // il cerchio che si chiude: e' il cronometro, e si legge senza leggere niente
+    g.strokeStyle='#ffd24a'; g.lineWidth=5;
+    g.beginPath(); g.ellipse(0,0,84*(1-k)+6,42*(1-k)+3,0,0,7); g.stroke();
+    for(let i=0;i<8;i++){const a=i/8*6.283+T*0.6;
+      g.fillStyle='rgba(255,170,70,.7)';
+      g.beginPath(); g.arc(Math.cos(a)*84,Math.sin(a)*42,3.2,0,7); g.fill();}
+    g.restore();
+    return;
+  }
+  if (P.fase==='scoppio'){
+    const k=P.t/FASI.scoppio;
+    g.save(); g.translate(P.zx,P.zy); g.globalAlpha=1-k;
+    const q=g.createRadialGradient(0,0,4,0,0,100);
+    q.addColorStop(0,'#fff0c0'); q.addColorStop(.35,'#ff8a2b'); q.addColorStop(1,'rgba(255,60,20,0)');
+    g.fillStyle=q; g.beginPath(); g.ellipse(0,0,100,52,0,0,7); g.fill();
+    g.strokeStyle='rgba(255,220,150,'+(0.8*(1-k))+')'; g.lineWidth=7*(1-k)+2;
+    g.beginPath(); g.ellipse(0,0,84+k*46,42+k*24,0,0,7); g.stroke();
+    g.globalAlpha=1; g.restore();
+  }
+}
+
+/* ================================ SCENA ================================ */
+let pausa=false, lento=true, aura=true, T=0, last=0, avviato=false;
+function avvia(){
+  pad.x=W*0.42; pad.y=H*0.44; pad.fase='comanda'; pad.t=0;
+  pg.x=W*0.80; pg.y=H*0.66;
+  initMostri();
+  avviato=true;
+}
+function telaio(ms){
+  if(!avviato) avvia();
+  const ora=ms/1000; let dt=last?Math.min(.05,ora-last):0; last=ora;
+  if(pausa) dt=0; if(lento) dt*=0.45; T+=dt;
+
+  // il giocatore si sposta un po', cosi' la condanna non cade sempre nello stesso punto
+  pg.x = W*0.68 + Math.cos(T*0.5)*70; pg.y = H*0.58 + Math.sin(T*0.62)*70; pg.a = Math.atan2(pad.y-pg.y, pad.x-pg.x);
+
+  aggiornaPad(dt); aggiornaMostri(dt);
+
+  g.drawImage(fondo,0,0);
+  if(!aura){ /* il raggio lo disegna disegnaPad: qui si spegne solo l'anello */ }
+  disegnaCondanna(T);
+  disegnaPad(T);
+  for(const m of mostri) disegnaMostro(m,T);
+  giocatore(pg.x,pg.y,pg.a);
+
+  const nome={comanda:'COMANDA — i suoi vanno piu\' forte',carica:'CARICA LA FRUSTA',
+              frusta:'SFERZA',punta:'TI PUNTA',condanna:'CONDANNA — il cerchio si chiude',
+              scoppio:'BRUCIA'}[pad.fase];
+  const col={comanda:'#8b8676',carica:'#ffb14a',frusta:'#ff7a2b',punta:'#ffb14a',
+             condanna:'#ff7a2b',scoppio:'#ffd24a'}[pad.fase];
+  etichetta('IL PADRONE', W/2, 32, 17);
+  etichetta(nome, W/2, 56, 14, col);
+  const dentro = mostri.filter(m=>m.acc).length;
+  etichetta(dentro+' mostri dentro il comando · 1 fuori', W/2, H-22, 13, '#8b8676');
+  etichetta('raggio del comando', pad.x, pad.y-RAGGIO-10, 12.5, 'rgba(255,150,80,.75)');
+
+  requestAnimationFrame(telaio);
+}
+requestAnimationFrame(telaio);
+
+const bP=document.getElementById('bPausa'),bL=document.getElementById('bLento'),
+      bA=document.getElementById('bAura'),bS=document.getElementById('bSalta');
+bA.classList.add('on');
+bP.onclick=()=>{pausa=!pausa;bP.textContent=pausa?'▶ Riprendi':'⏸ Ferma';bP.classList.toggle('on',pausa);};
+bL.onclick=()=>{lento=!lento;bL.textContent=lento?'Al rallentatore':'Velocità normale';bL.classList.toggle('on',lento);};
+bA.onclick=()=>{aura=!aura;bA.classList.toggle('on',aura);};
+bS.onclick=()=>{ pad.t = 99; };
+window.pad=pad;
+</script></body></html>

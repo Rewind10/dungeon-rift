@@ -238,6 +238,28 @@ class Room {
   // v1.66 — le armi non si raccolgono piu' dalla mappa: saranno disponibili SOLO dal negozio, e l'acquisto
   // e' a sua volta sospeso finche' l'arsenale non viene ripensato attorno alle nuove scuole (melee/magic/
   // ranged). La funzione resta come stub perche' `weaponDrops` e il suo canale di rete restino validi.
+  // ===== v2.23 — IL COMANDO DEL PADRONE ============================================
+  // I mostri dentro il raggio di un Padrone vivo vanno piu' forte e picchiano di piu'. Vale su
+  // TUTTI tranne i Padroni stessi: due che si potenziassero a vicenda sarebbero una
+  // moltiplicazione, non un comando.
+  // NON si toccano `m.speed` e `m.dmg`: il Veleno Corrosivo (v2.20) gia' salva e ripristina
+  // `m.dmg`, e due meccaniche che si passano lo stesso numero prima o poi si pestano i piedi.
+  // Due moltiplicatori a parte, letti dove il numero viene usato davvero.
+  applicaComando() {
+    let padroni = null;
+    for (const m of this.monsters) { if (!m.dead && m.def.comandoR) (padroni || (padroni = [])).push(m); }
+    for (const m of this.monsters) { m.cmdV = 1; m.cmdD = 1; }
+    if (!padroni) return;
+    for (const c of padroni) {
+      const R = c.def.comandoR;
+      for (const m of this.monsters) {
+        if (m.dead || m === c || m.def.comandoR) continue;
+        if (MU.dist(c.x, c.y, m.x, m.y) > R + m.radius) continue;
+        m.cmdV = Math.max(m.cmdV, c.def.comandoVel || 1.28);
+        m.cmdD = Math.max(m.cmdD, c.def.comandoDmg || 1.22);
+      }
+    }
+  }
   // ===== v2.21 — GLI OGGETTI CHE FANNO QUALCOSA =====================================
   // Urne, barili, grate e leve. Sono entita' del server e non decorazione, perche' devono poter
   // sparire e cambiare stato: la decorazione viene cotta una volta sola nel fondo della mappa.
@@ -668,12 +690,14 @@ class Room {
       // v2.17 — per l'IA il muro di fuoco E' un muro: cosi' lo aggirano invece di suicidarcisi dentro,
       // il negromante non ci si teletrasporta e la Sfera d'Ossa ci rimbalza contro (rimbalza gia' sui muri).
       isWallAt: (x, y) => self.isWallAt(x, y) || self.muroFuoco(x, y, 10),
-      shoot(m, dx, dy, spd, dmg, color) { self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: dx * spd, vy: dy * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); },
+      shoot(m, dx, dy, spd, dmg, color) { if (m.cmdD > 1) dmg = Math.max(1, Math.round(dmg * m.cmdD));
+        self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: dx * spd, vy: dy * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); },
       summon(id, x, y) { if (self._postiLiberi() <= 0) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); self.spawnMonster(id, x, y, { scaling: s }); },
       // v1.39 — evocazione OWNED (con proprietario) per il tetto di minion del Negromante
       summonMinion(id, x, y, owner) { if (self._postiLiberi() <= 0) return; const s = self.waveScaling || Waves.scaling(self.wave, self.alivePlayers.length || 1); const mm = self.spawnMonster(id, x, y, { scaling: s }); if (mm) { mm.owner = owner; mm.minion = true; } return mm; },
       countMinions(owner) { let c = 0; for (const mm of self.monsters) { if (!mm.dead && mm.owner === owner) c++; } return c; },
-      melee(m, p, dmg, kn) { self.damagePlayer(p, dmg, m.x, m.y, kn || 1);
+      melee(m, p, dmg, kn) { if (m.cmdD > 1) dmg = Math.max(1, Math.round(dmg * m.cmdD));
+        self.damagePlayer(p, dmg, m.x, m.y, kn || 1);
         // v1.79 — le spine rimandano un forfait PIU' una quota del colpo incassato: cosi' restano utili
         // anche all'ondata 18, quando i nemici picchiano forte e 25 danni fissi non si notano piu'.
         // v2.20.0 — IRA GIUSTA (paladino) porta SOLO la quota, non il forfait: la condizione guardava
@@ -682,7 +706,8 @@ class Room {
       areaDamage(x, y, r, dmg, color, kn) { self.events.push({ t: 'area', x, y, r, c: color }); for (const p of self.alivePlayers) if (MU.dist(x, y, p.x, p.y) <= r + p.radius) self.damagePlayer(p, dmg, x, y, kn || 1); },
       meteor(x, y, r, dmg) { self.meteors.push({ eid: NEXT++, x, y, r, dmg, t: 1.1, max: 1.1 }); self.events.push({ t: 'meteor_tell', x, y, r }); },
       zone(x, y, r, delay, dmg, color) { self.zones.push({ eid: NEXT++, x, y, r, dmg, t: delay || 0.9, max: delay || 0.9, col: color || '#ff3b3b', done: false }); self.events.push({ t: 'zone_tell', x, y, r, delay: delay || 0.9, c: color || '#ff3b3b' }); },
-      spread(m, cx, cy, n, arc, spd, dmg, color) { const base = Math.atan2(cy, cx); for (let i = 0; i < n; i++) { const a = base + (i - (n - 1) / 2) * arc; self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); } },
+      spread(m, cx, cy, n, arc, spd, dmg, color) { if (m.cmdD > 1) dmg = Math.max(1, Math.round(dmg * m.cmdD));
+        const base = Math.atan2(cy, cx); for (let i = 0; i < n; i++) { const a = base + (i - (n - 1) / 2) * arc; self.bullets.push({ eid: NEXT++, hostile: true, x: m.x, y: m.y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: C.BULLET_RADIUS + 1, dmg, color: color || '#ff5252', life: 3.2, pierce: 0, owner: m.eid, curse: m.def.curse ? 1 : 0 }); } },
       emit(ev) { self.events.push(ev); },
       GAZE_TICK: C.GAZE_TICK,
       gaze(m, p, kind) { self.gazePlayer(p, kind); },
@@ -3662,7 +3687,7 @@ class Room {
     if (running) {
       // v2.19.7 — l'IA a OGNI alleato, non solo al primo: mercenario e zombie possono stare in campo insieme
       for (const mc of this.alleatiIA) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); }
-      this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateLeve(); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.applicaComando(); this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateLeve(); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -4150,6 +4175,7 @@ class Room {
       // fisso: cosi' non diventa irrilevante all'ondata 15 ne' sproporzionato alla prima.
       if (m.poison > 0 && m.poisonT > 0) { m.poisonT -= dt; m.poisonTick = (m.poisonTick || 0) + dt; if (m.poisonTick > 0.5) { m.poisonTick = 0; this.damageMonster(m, Math.max(1, Math.round(m.poison * 0.5)), m.x, m.y - 1, 0, this.players.get(m.poisonSrc)); if (m.dead) continue; } }
       let slow = 1; if (m.slowT > 0) { m.slowT -= dt; slow = 1 - (m.slowQ || 0.25); }
+      if (m.cmdV > 1) slow *= m.cmdV;        // v2.23 — il comando del Padrone
       // v2.20.0 — VELENO CORROSIVO (assassino): finche' dura, il nemico morde meno. Si tocca `m.dmg`
       // (e si tiene da parte il valore vero) perche' e' l'unico numero che TUTTI i suoi attacchi
       // leggono — mischia, tiro e aree: correggerne uno solo avrebbe corretto un terzo della carta.
@@ -4409,6 +4435,7 @@ class Room {
       }
       if (m.hitFlash > 0) o.fl = 1;
       if (m.assorbiti > 0) o.ab = m.assorbiti;          // v2.22 — quanti colpi ha ancora dentro il cubo
+      if (m.cmdV > 1) o.cm = 1;                         // v2.23 — sotto il comando del Padrone
       if (m.shielded > 0) o.sh = 1;
       if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
       if (m.marchio > 0) o.mk = 1;                       // v1.85 — Marchio del ladro

@@ -850,14 +850,17 @@ function testV150() {
   // telegrafa il colpo, quindi deve arrivare quando c'e' ancora da imparare a schivare.
   assert(!at(1).includes('lama') && at(2).includes('lama'), 'Lama Errante introdotta all ondata 2');
   assert(!at(5).includes('cubo') && at(6).includes('cubo'), 'Cubo Gelatinoso introdotto all ondata 6');
+  assert(!at(14).includes('padrone') && at(15).includes('padrone'), 'Il Padrone introdotto all ondata 15');
   // v1.81 — LA RAMPA NON HA BUCHI e non arriva tardi: ogni ondata dalla 1 alla 12 aggiunge almeno un
   // archetipo che prima non c'era, e alla 12 il bestiario e' tutto in campo. Dalla 8 in poi qualche
   // ondata ne aggiunge due (i tre Ragni si intrecciano ai tre Beholder), quindi non si conta piu' "un
   // tipo per ondata": si conta che il pool CRESCA sempre, e che si chiuda entro la dodicesima.
   for (let w = 2; w <= 12; w++) assert(at(w).length > at(w - 1).length,
     'ondata ' + w + ': porta almeno un archetipo che prima non c era (' + at(w - 1).length + ' -> ' + at(w).length + ')');
-  assert(at(12).length === at(13).length && at(13).length === at(19).length,
-    'alla dodicesima il bestiario e tutto in campo (' + at(12).length + ' archetipi) e li resta');
+  assert(at(15).length === at(16).length && at(16).length === at(19).length,
+    'alla quindicesima il bestiario e tutto in campo (' + at(15).length + ' archetipi) e li resta');
+  assert(at(15).length > at(12).length,
+    'e fra la dodicesima e la quindicesima arriva ancora qualcosa: era il buco della v2.22');
   let mono = true; for (let w = 1; w < 20; w++) { const a = at(w), b = at(w + 1); if (!a.every(id => b.includes(id))) mono = false; }
   assert(mono, 'rampa monotona: nessun archetipo sparisce al crescere delle ondate');
   // 2) ELITE: i nemici gia robusti non devono esplodere di PV
@@ -7452,6 +7455,151 @@ function testV222() {
   ok('la Lama telegrafa e scatta, il Cubo ferma i colpi e restituisce il bottino');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.23 — IL PADRONE: marionetta dal disegno di Paolo, comando ai vicini, frusta e condanna
+// =================================================================================================
+function testV223() {
+  console.log('\n[TEST 82] v2.23 — Il Padrone: comanda, frusta da presso, condanna da lontano');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const Mon = require('../shared/monsters.js');
+
+  // --- 1) LA MARIONETTA E' COMPLETA E COERENTE ----------------------------------------------
+  // Un pezzo dichiarato nel rig ma senza il suo PNG non da' nessun errore: il renderer fa
+  // `if (!p || !img) continue` e quel pezzo semplicemente non si vede. E' lo stesso silenzio
+  // della cassa invisibile della v2.21, e questo controllo serve a non ripeterlo.
+  {
+    const dir = ROOT + path.join('public', 'assets', 'enemies', 'padrone') + path.sep;
+    assert(fs.existsSync(dir + 'padrone.json'), 'il rig del Padrone c e');
+    const rig = JSON.parse(fs.readFileSync(dir + 'padrone.json', 'utf8'));
+    assert(rig.parts.length === 8, 'ha i suoi otto pezzi (' + rig.parts.length + ')');
+    for (const p of rig.parts) {
+      assert(fs.existsSync(dir + p.name + '.png'), 'il pezzo ' + p.name + ' ha il suo PNG');
+      assert(p.w > 0 && p.h > 0, p.name + ' ha misure valide');
+      assert(p.ox >= 0 && p.ox <= p.w && p.oy >= 0 && p.oy <= p.h,
+        'il perno di ' + p.name + ' cade dentro il pezzo (' + p.ox + ',' + p.oy + ' su ' + p.w + 'x' + p.h + ')');
+    }
+    assert(rig.charH > 0 && rig.feetY > rig.charH, 'altezza e riga dei piedi sono coerenti');
+    // e il renderer deve conoscerli tutti: un pezzo fuori dall ordine di disegno non viene mai messo giu'
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    const mo = srcR.match(/padrone: \{[\s\S]*?order: \[([^\]]*)\]/);
+    assert(mo, 'il profilo di animazione del Padrone esiste');
+    const ordine = mo[1].split(',').map(s => s.trim().replace(/'/g, ''));
+    for (const p of rig.parts)
+      assert(ordine.includes(p.name), 'il pezzo ' + p.name + ' compare nell ordine di disegno');
+    assert(ordine.length === rig.parts.length, 'e l ordine non nomina pezzi che non esistono');
+    assert(/padrone: makePuppet\(/.test(srcR), 'la marionetta e registrata fra i puppet');
+    assert(/shape === 'padrone'\) this\._puppet\('padrone'/.test(srcR),
+      'e il dispatch frontale la raggiunge: senza questa riga il disegno non parte e basta');
+    assert(/ali: true/.test(srcR), 'e dichiara le ali disegnate in codice');
+  }
+
+  // --- 2) IL COMANDO: chi e dentro va piu forte, chi e fuori no ------------------------------
+  {
+    const r = new Room('v223a'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const sp = r.map.spawn;
+    const pad = r.spawnMonster('padrone', sp.x, sp.y, {}); pad.awake = true;
+    const R = Mon.MONSTERS.padrone.comandoR;
+    const dentro = r.spawnMonster('skeleton', sp.x + R * 0.5, sp.y, {});
+    const fuori  = r.spawnMonster('skeleton', sp.x + R * 2.5, sp.y, {});
+    const altro  = r.spawnMonster('padrone', sp.x + R * 0.4, sp.y, {});
+    r.applicaComando();
+    assert(dentro.cmdV > 1 && dentro.cmdD > 1, 'il mostro dentro il raggio e comandato');
+    assert(fuori.cmdV === 1 && fuori.cmdD === 1, 'quello fuori no');
+    assert(altro.cmdV === 1, 'e un Padrone non comanda un altro Padrone: sarebbe una moltiplicazione');
+    assert(pad.cmdV === 1, 'ne se stesso');
+    // e il potenziamento arriva davvero al danno, non e solo un numero appoggiato sul mostro
+    const ctx = r.makeCtx();
+    p.hp = p.maxHp; const pv0 = p.hp;
+    ctx.melee(fuori, p, 20, 0); const normale = pv0 - p.hp;
+    p.hp = p.maxHp; const pv1 = p.hp;
+    ctx.melee(dentro, p, 20, 0); const comandato = pv1 - p.hp;
+    assert(comandato > normale, 'e chi e comandato picchia piu forte (' + comandato + ' contro ' + normale + ')');
+    // morto il Padrone, il comando si spegne
+    r.killMonster(pad, p); r.killMonster(altro, p); r.applicaComando();
+    assert(dentro.cmdV === 1 && dentro.cmdD === 1, 'e appena il Padrone cade il comando finisce');
+  }
+
+  // --- 3) NON E SOLO UN AURA: DA VICINO FRUSTA ----------------------------------------------
+  {
+    const r = new Room('v223b'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const sp = r.map.spawn; p.x = sp.x + 80; p.y = sp.y;
+    const m = r.spawnMonster('padrone', sp.x, sp.y, {}); m.awake = true; m.impegnato = 1; m.atkT = 0;
+    const viste = new Set(); const ev = [];
+    const pv0 = p.hp;
+    for (let i = 0; i < 260 && !m.dead; i++) {
+      r.events.length = 0; p.x = sp.x + 80; p.y = sp.y;      // resta addosso: deve scegliere la frusta
+      r.update(1 / 60);
+      for (const e of r.events) if (/^padrone_/.test(e.t)) ev.push(e.t);
+      if (m.pf) viste.add(m.pf);
+      if (ev.includes('padrone_frusta')) break;
+    }
+    assert(viste.has('carica'), 'da vicino il Padrone carica la frusta');
+    assert(ev.includes('padrone_wind'), 'e annuncia la carica al client');
+    assert(ev.includes('padrone_frusta'), 'e poi sferza');
+    assert(ev.indexOf('padrone_wind') < ev.indexOf('padrone_frusta'), 'la carica arriva PRIMA della sferzata');
+    assert(p.hp < pv0, 'e la sferzata fa male davvero (' + (pv0 - p.hp) + ' danni)');
+  }
+
+  // --- 4) E DA LONTANO CONDANNA -------------------------------------------------------------
+  {
+    const r = new Room('v223c'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = []; r.zones.length = 0;
+    const sp = r.map.spawn;
+    const m = r.spawnMonster('padrone', sp.x, sp.y, {}); m.awake = true; m.impegnato = 1; m.atkT = 0;
+    m.speed = 0;                                             // fermo: qui si misura la scelta, non la corsa
+    const D = Mon.MONSTERS.padrone;
+    const ev = [];
+    for (let i = 0; i < 400 && !m.dead; i++) {
+      // il giocatore resta OLTRE la distanza della condanna
+      p.x = sp.x + D.condannaMin + 60; p.y = sp.y;
+      r.events.length = 0; r.update(1 / 60);
+      for (const e of r.events) if (/^padrone_/.test(e.t)) ev.push(e.t);
+      if (ev.includes('padrone_condanna')) break;
+    }
+    assert(ev.includes('padrone_punta'), 'da lontano il Padrone punta il bersaglio');
+    assert(ev.includes('padrone_condanna'), 'e apre la condanna');
+    assert(!ev.includes('padrone_frusta'), 'e da lontano NON frusta: i due attacchi si scelgono per distanza');
+    assert(r.zones.length > 0, 'e la zona a terra esiste davvero');
+    const z = r.zones[r.zones.length - 1];
+    assert(MU.dist(z.x, z.y, p.x, p.y) < 90, 'e si apre SOTTO il bersaglio, non addosso al Padrone');
+    assert(z.t > 0.5, 'e ha il suo ritardo: e un avvertimento, non un colpo istantaneo');
+  }
+
+  // --- 5) UN PADRONE A META COLPO NON VIENE PARCHEGGIATO -------------------------------------
+  {
+    const srcA = fs.readFileSync(ROOT + 'shared/ai.js', 'utf8');
+    const riga = srcA.match(/const azione = [^;]+;/);
+    assert(riga && /pf === 'carica'/.test(riga[0]) && /pf === 'sferza'/.test(riga[0]),
+      'carica e sferzata stanno fra le azioni esenti dal tetto alla folla');
+  }
+
+  // --- 6) L ONDATA E IL PONTE COL CLIENT ----------------------------------------------------
+  {
+    const at = (w) => Waves.poolForWave(w).map(x => x.id);
+    assert(!at(14).includes('padrone') && at(15).includes('padrone'), 'entra alla quindicesima');
+    const d = Mon.MONSTERS.padrone;
+    assert(d.maxAlive && d.maxAlive <= 2, 'e non se ne vedono piu di due per volta');
+    const r = new Room('v223d'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const sp = r.map.spawn;
+    const pad = r.spawnMonster('padrone', sp.x, sp.y, {});
+    const sk = r.spawnMonster('skeleton', sp.x + 40, sp.y, {});
+    r.applicaComando();
+    const so = r.snapshot().mon.find(x => x.e === sk.eid);
+    assert(so && so.cm === 1, 'e chi e comandato lo dice allo snapshot (cm)');
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    for (const e of ['padrone_wind', 'padrone_frusta', 'padrone_punta', 'padrone_condanna'])
+      assert(srcM.indexOf("case '" + e + "'") >= 0, 'il client sa cosa fare con l evento ' + e);
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    assert(/def\.comandoR\)/.test(srcR), 'e il renderer disegna il raggio del comando');
+    assert(/if \(m\.cm\)/.test(srcR), 'e il bordo acceso su chi e comandato');
+  }
+  ok('il Padrone comanda i suoi, frusta da presso e condanna da lontano');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

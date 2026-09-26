@@ -409,6 +409,13 @@
       case 'lama_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.5); R.ring(ev.x, ev.y, '#8be9ff', 3, 30, 0.3); break;
       case 'lama_go': if (ev.e != null) { R._lamaSc = R._lamaSc || {}; R._lamaSc[ev.e] = R.time + 0.30; } R.burst(ev.x, ev.y, '#cfe6ff', 9, 170, 0.3); break;
       case 'lama_muro': R.burst(ev.x, ev.y, '#dbe6f2', 6, 120, 0.25); break;
+      // v2.23 — IL PADRONE. La carica passa dal cronometro dei telegrafi (mAtk), come la Sfera
+      // d'Ossa e la Lama: e' quello che il profilo della marionetta legge per aprire le ali,
+      // tirare indietro il braccio e accendere gli occhi.
+      case 'padrone_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.85); R.ring(ev.x, ev.y, '#ff7a2b', 4, 40, 0.4); break;
+      case 'padrone_frusta': A.explosion && A.explosion(); R.swing(ev.x, ev.y, ev.a, ev.r, ev.arco || 1.15, false); R.burst(ev.x, ev.y, '#ff8a2b', 18, 210, 0.45); R.addShake(5); break;
+      case 'padrone_punta': R.ring(ev.tx, ev.ty, '#ffb14a', 3, 46, 0.45); break;
+      case 'padrone_condanna': A.ability && A.ability('rift'); R.ring(ev.tx, ev.ty, '#ff5a1e', 5, ev.r || 84, 0.5); break;
       // v2.22 — IL CUBO. Il colpo che si spegne dentro, e la gelatina che si scioglie lasciando
       // quello che aveva inghiottito.
       case 'assorbito': R.burst(ev.x, ev.y, ev.c || '#ffd88a', 5, 70, 0.28); break;

@@ -312,6 +312,60 @@
     // v1.61 — NUGOLO (Nugolo di Pipistrelli): insegue ONDEGGIANDO. Al vettore di inseguimento somma una
     // componente PERPENDICOLARE sinusoidale, poi rinormalizza: la velocita' resta quella, ma la traiettoria
     // e' una serpentina — difficile da colpire in linea retta senza guidare il tiro.
+    // ===== v2.23 — IL PADRONE =============================================================
+    // Avanza piano e non e' lui a fare il grosso del danno: lo fanno i suoi, che dentro al suo
+    // raggio vanno piu' forte e picchiano di piu' (il comando lo applica Room, non l'IA).
+    // Ma non e' un totem: ha due attacchi, scelti per DISTANZA.
+    //   da vicino → FRUSTA: si carica (e si vede), poi sferza un arco largo davanti a se'.
+    //   da lontano → CONDANNA: punta il bersaglio e gli apre sotto i piedi una zona che si chiude.
+    // I due si alternano da soli perche' dipendono dalla distanza: se stai addosso ti frusta, se
+    // scappi ti condanna. Non c'e' un posto comodo, ed e' quello che deve insegnare.
+    padrone(m, ctx) {
+      const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
+      const D = m.def, d = MU.dist(m.x, m.y, p.x, p.y);
+      m.pf = m.pf || 'avanza'; m.pfT = (m.pfT || 0) + ctx.dt;
+      if (m.pf === 'avanza') {
+        caccia(m, ctx, 1);
+        if (m.atkT > 0) return;
+        if (d > (D.sightRange || 620) || !ctx.losClear(m.x, m.y, p.x, p.y)) return;
+        if (d <= (D.frustaRaggio || 178) + p.radius) {
+          m.pf = 'carica'; m.pfT = 0;
+          ctx.emit({ t: 'padrone_wind', e: m.eid, x: m.x, y: m.y, dur: D.frustaWind || 0.85 });
+        } else if (d >= (D.condannaMin || 240)) {
+          m.pf = 'punta'; m.pfT = 0;
+          ctx.emit({ t: 'padrone_punta', e: m.eid, x: m.x, y: m.y, tx: p.x, ty: p.y });
+        }
+        return;
+      }
+      if (m.pf === 'carica') {
+        stop(m, p);
+        if (m.pfT >= (D.frustaWind || 0.85)) {
+          m.pf = 'sferza'; m.pfT = 0;
+          const R = D.frustaRaggio || 178, a = m.facing;
+          // L'arco si paga con un cerchio spostato in avanti: il settore vero costerebbe un'altra
+          // macchina, e a queste distanze la differenza non si gioca. Il disegno resta un arco.
+          ctx.areaDamage(m.x + Math.cos(a) * R * 0.55, m.y + Math.sin(a) * R * 0.55,
+            R * 0.62, Math.round(m.dmg * (D.frustaDmg || 1)), '#ff7a2b', 2.4);
+          ctx.emit({ t: 'padrone_frusta', e: m.eid, x: m.x, y: m.y, a, r: R, arco: D.frustaArco || 1.15 });
+          m.atkT = D.atkCd;
+        }
+        return;
+      }
+      if (m.pf === 'sferza') { stop(m, p); if (m.pfT >= 0.42) { m.pf = 'avanza'; m.pfT = 0; } return; }
+      if (m.pf === 'punta') {
+        stop(m, p);
+        if (m.pfT >= 0.55) {
+          m.pf = 'avanza'; m.pfT = 0; m.atkT = D.atkCd;
+          // la zona si apre SOTTO IL BERSAGLIO e si chiude dopo il ritardo: il cerchio che si
+          // stringe e' il cronometro, e si legge senza numeri.
+          ctx.zone(p.x, p.y, D.condannaR || 84, D.condannaRitardo || 1.25,
+            Math.round(m.dmg * (D.condannaDmg || 1.35)), '#ff5a1e');
+          ctx.emit({ t: 'padrone_condanna', e: m.eid, x: m.x, y: m.y, tx: p.x, ty: p.y, r: D.condannaR || 84 });
+        }
+        return;
+      }
+      m.pf = 'avanza'; m.pfT = 0;
+    },
     // ===== v2.22 — LAMA ERRANTE ==========================================================
     // Quattro fasi, e la terza e' tutta la creatura: GIRA (galleggia e ruota su se stessa) → PUNTA
     // (si orienta) → CARICA (mezzo secondo di rinculo e bagliore, e si VEDE) → SCATTO (dritta, veloce).
@@ -525,7 +579,7 @@
     // altri aspettano il turno all'anello. Non si applica a chi e' immobile per mestiere, ai boss, a
     // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
     // a meta' si vedrebbe.
-    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto';
+    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto' || mon.pf === 'carica' || mon.pf === 'sferza' || mon.pf === 'punta';
     if (mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
     (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx);
   }

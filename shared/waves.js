@@ -69,6 +69,13 @@
     if (w >= 10) add('occhio_carne', 7);    // Occhio di Carne — piu' duro e piu' vicino          (era 12)
     if (w >= 11) add('ragno_veleno', 6);    // Tessitrice Verde — la terza, tele piu' larghe       (nuovo)
     if (w >= 12) add('occhio_spettro', 5);  // Occhio Spettrale — attraversa i muri, raggio lungo (era 15)
+    // v2.23 — IL PADRONE alla 15. Le ondate dalla 13 alla 19 non portavano piu' niente di nuovo:
+    // sette ondate di seguito con solo numeri piu' grandi. Lui arriva in mezzo a quel vuoto, ed e'
+    // il primo nemico che rende piu' forti gli ALTRI — a quel punto il giocatore conosce tutto il
+    // bestiario, quindi accorgersi che l'ondata picchia piu' del solito vuol dire qualcosa.
+    // Peso basso e tetto di 2 vivi: due Padroni in campo sono gia' un'ondata diversa, tre sarebbero
+    // una moltiplicazione.
+    if (w >= 15) add('padrone', 5);         // comanda i vicini, frusta da presso, condanna da lontano
     return p;
   }
 

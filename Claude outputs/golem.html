@@ -1,0 +1,439 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8">
+<title>Due golem — anteprima</title>
+<style>
+  :root{--fondo:#0b0e14;--testo:#d8cfb4;--tenue:#8b8676;--linea:rgba(216,207,180,.18)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--testo);
+       font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:.3px}
+  .sotto{color:var(--tenue);margin:0 0 16px;font-size:13.5px;max-width:82ch}
+  .barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  button{background:#1a1f2b;color:var(--testo);border:1px solid var(--linea);
+         border-radius:7px;padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer}
+  button:hover{background:#232936}
+  button.on{background:#2e3a4e;border-color:rgba(216,207,180,.42)}
+  canvas{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--linea);background:#0a0c12}
+  .note{margin-top:14px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .n{border:1px solid var(--linea);border-radius:9px;padding:11px 13px;background:#10141d}
+  .n b{display:block;margin-bottom:3px;font-size:14.5px}
+  .n span{color:var(--tenue);font-size:13px}
+  .n em{color:#9fd8a0;font-style:normal}
+</style></head><body>
+
+<h1>Il Rimesso Insieme · Il Sommerso</h1>
+<p class="sotto">Solo disegno: niente di questo tocca il codice del gioco. Il cerchio azzurro è un
+giocatore alla scala vera. Guarda i <b>cicli</b>: nessuno dei due ha un passo da animare — uno è un
+nugolo che orbita, l'altro sta sottoterra e riemerge.</p>
+
+<div class="barra">
+  <button id="bPausa">⏸ Ferma</button>
+  <button id="bLento" class="on">Al rallentatore</button>
+  <button id="bOssa">Mostra lo scheletro del disegno</button>
+  <button id="bRi">↺ Riparti dal ciclo</button>
+</div>
+
+<canvas id="c" width="1340" height="520"></canvas>
+
+<div class="note">
+  <div class="n"><b>🪨 Il Rimesso Insieme</b><span>Le schegge sono l'armatura. Ogni colpo ne stacca
+  una e quella <em>cade a terra</em>; spogliato, il nucleo è fragile. Ma dopo qualche secondo le
+  schegge <em>risalgono e si riattaccano</em> — o lo finisci nella finestra, o rompi le schegge per
+  terra (che sono gli oggetti rompibili della v2.21).</span></div>
+  <div class="n"><b>🗿 Il Sommerso</b><span>Non attraversa la stanza: ci passa sotto. Il
+  <em>rigonfiamento che corre sul pavimento</em> è il preavviso. Riemerge spaccando, resta fuori
+  qualche secondo — ed è lì che incassa tutto — poi torna sotto.</span></div>
+</div>
+
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d');
+const W = c.width, H = c.height, PAN = W / 2;
+
+/* palette della cripta, la stessa del gioco */
+const TH = { floorB:'#151a26', wall:'#1b2036', wallTop:'#262d4a', accent:'#8be9ff',
+             chiaro:'#d8cfb4', scuro:'#0a0c10' };
+function hx(h){if(h[0]!=='#'){const n=h.match(/[\d.]+/g);return{r:+n[0],g:+n[1],b:+n[2]};}
+  h=h.replace('#','');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function mix(a,b,t){const x=hx(a),y=hx(b);return 'rgb('+Math.round(x.r+(y.r-x.r)*t)+','+Math.round(x.g+(y.g-x.g)*t)+','+Math.round(x.b+(y.b-x.b)*t)+')';}
+const INK = mix(TH.scuro, TH.wall, .18);
+const VIS = 1.45, RG = 16 * VIS;
+let _s = 0x2a7f31c; const rnd = ()=> (_s=(_s*1664525+1013904223)>>>0)/4294967296;
+const rr = (a,b)=> a + rnd()*(b-a);
+function rrect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+const lerp = (a,b,t)=> a + (b-a)*t;
+const ease = t => t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+
+/* pavimento cotto una volta sola */
+const fondo = document.createElement('canvas'); fondo.width=W; fondo.height=H;
+(function(){ const p=fondo.getContext('2d');
+  const PAV=[mix(TH.floorB,TH.chiaro,.34),mix(TH.floorB,TH.chiaro,.28),mix(TH.floorB,TH.chiaro,.40),
+             mix(TH.floorB,TH.chiaro,.23),mix(TH.floorB,TH.chiaro,.45)];
+  p.fillStyle=PAV[0];p.fillRect(0,0,W,H);
+  for(let i=0;i<Math.round(W*H/1750);i++){const x=rr(0,W),y=rr(0,H),r=rr(34,150);
+    const q=p.createRadialGradient(x,y,0,x,y,r);
+    q.addColorStop(0,PAV[(rnd()*PAV.length)|0]);q.addColorStop(1,'rgba(0,0,0,0)');
+    p.globalAlpha=rr(.05,.15);p.fillStyle=q;p.beginPath();p.arc(x,y,r,0,7);p.fill();}
+  p.globalAlpha=1; })();
+
+function giocatore(x,y,a){
+  g.save(); g.translate(x,y);
+  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(2,RG*.55,RG*.95,RG*.42,0,0,7); g.fill();
+  const q=g.createRadialGradient(-RG*.3,-RG*.3,2,0,0,RG);
+  q.addColorStop(0,'#bfe6ff'); q.addColorStop(1,'#3d6f97');
+  g.fillStyle=q; g.strokeStyle='#0d1a26'; g.lineWidth=2.4;
+  g.beginPath(); g.arc(0,0,RG,0,7); g.fill(); g.stroke();
+  g.rotate(a);
+  g.fillStyle='#e8f6ff'; g.beginPath(); g.moveTo(RG*.45,-RG*.34); g.lineTo(RG*1.05,0); g.lineTo(RG*.45,RG*.34); g.closePath(); g.fill();
+  g.restore();
+}
+function etichetta(t,x,y,sz,col){ g.save(); g.font='600 '+(sz||15)+'px system-ui,sans-serif'; g.textAlign='center';
+  g.fillStyle='rgba(0,0,0,.75)'; g.fillText(t,x+1,y+1); g.fillStyle=col||'#d8cfb4'; g.fillText(t,x,y); g.restore(); }
+
+/* ============================================================================
+   1. IL RIMESSO INSIEME — nugolo di schegge attorno a un nucleo
+   ============================================================================ */
+const NS = 15;
+const gol = { x:0, y:0, sch:[], fase:'intero', t:0 };
+function initGolem(cx,cy){
+  gol.x=cx; gol.y=cy; gol.fase='intero'; gol.t=0; gol.sch=[];
+  for(let i=0;i<NS;i++){
+    const anello = i<6 ? 0 : (i<11 ? 1 : 2);
+    gol.sch.push({
+      a: (i/NS)*6.283 + rr(-.3,.3),                 // posizione sull'orbita
+      r: [46,74,102][anello] + rr(-7,7),            // raggio dell'orbita
+      vel: [0.75,-0.52,0.38][anello],               // velocita' angolare (anelli contrari)
+      sp: rr(-3,3),                                 // spinta verticale, per il galleggio
+      w: rr(19,32), h: rr(13,22), rot: rr(0,6.28), vr: rr(-1.2,1.2),
+      giu: false, gx:0, gy:0, k:0                   // caduta: k 0=in orbita 1=a terra
+    });
+  }
+}
+function aggiornaGolem(dt){
+  const G = gol; G.t += dt;
+  for (const s of G.sch){ s.a += s.vel*dt; s.rot += s.vr*dt; }
+  if (G.fase === 'intero'){
+    // le schegge si staccano una alla volta: e' il giocatore che spara
+    if (G.t > 0.45){ G.t = 0;
+      const su = G.sch.filter(s=>!s.giu);
+      if (su.length){ const s = su[(Math.random()*su.length)|0];
+        s.giu = true; s.k = 0;
+        const a = Math.random()*6.283, d = 104 + Math.random()*72;
+        s.gx = G.x + Math.cos(a)*d; s.gy = G.y + Math.sin(a)*d*0.62;
+      } else { G.fase='nudo'; G.t=0; }
+    }
+  } else if (G.fase === 'nudo'){
+    if (G.t > 2.6){ G.fase='rientro'; G.t=0; }
+  } else if (G.fase === 'rientro'){
+    if (G.t > 1.1){ for (const s of G.sch){ s.giu=false; s.k=0; } G.fase='intero'; G.t=0; }
+  }
+  for (const s of G.sch){
+    const vuole = s.giu ? 1 : 0;
+    if (G.fase==='rientro') s.k = Math.max(0, s.k - dt/1.1);
+    else s.k = s.k + (vuole - s.k) * Math.min(1, dt*7);
+  }
+}
+function scheggia(x,y,w,h,rot,luce,alfa){
+  g.save(); g.translate(x,y); g.rotate(rot); g.globalAlpha = alfa;
+  g.fillStyle='rgba(0,0,0,.34)'; rrect(-w/2+2,-h/2+3,w,h,2); g.fill();
+  const q=g.createLinearGradient(0,-h/2,0,h/2);
+  q.addColorStop(0, mix('#6d7686',TH.chiaro,luce*.45));
+  q.addColorStop(.55, '#4a5262'); q.addColorStop(1,'#272d38');
+  g.fillStyle=q; g.strokeStyle=INK; g.lineWidth=2; g.lineJoin='round';
+  g.beginPath();
+  g.moveTo(-w/2,-h*.18); g.lineTo(-w*.28,-h/2); g.lineTo(w*.34,-h*.42);
+  g.lineTo(w/2,h*.10); g.lineTo(w*.18,h/2); g.lineTo(-w*.34,h*.40);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle='rgba(216,207,180,'+(.16+luce*.22)+')';
+  g.beginPath(); g.moveTo(-w*.34,-h*.22); g.lineTo(w*.20,-h*.30); g.lineTo(w*.06,-h*.06); g.closePath(); g.fill();
+  g.globalAlpha=1; g.restore();
+}
+function disegnaGolem(T){
+  const G = gol;
+  const nudo = G.sch.every(s=>s.giu);
+  const puls = 0.5 + 0.5*Math.sin(T*(nudo?7:3));
+  // ombra del nugolo
+  { const om=g.createRadialGradient(G.x+5,G.y+74,8,G.x+5,G.y+74,116);
+    om.addColorStop(0,'rgba(0,0,0,.26)'); om.addColorStop(.55,'rgba(0,0,0,.12)'); om.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=om; g.beginPath(); g.ellipse(G.x+5,G.y+74,116,40,0,0,7); g.fill(); }
+  // le schegge DIETRO (quelle nella meta' alta dell'orbita)
+  const dis = (dietro) => {
+    for (const s of G.sch){
+      const ox = G.x + Math.cos(s.a)*s.r, oy = G.y + Math.sin(s.a)*s.r*0.74 + s.sp + Math.sin(T*1.6+s.a)*3;
+      const x = lerp(ox, s.gx, ease(s.k)), y = lerp(oy, s.gy, ease(s.k));
+      const inDietro = Math.sin(s.a) < 0 && s.k < .5;
+      if (inDietro !== dietro) continue;
+      const luce = s.k>.5 ? 0 : 1;
+      if (s.k > .5){                                     // a terra: piatta, con la sua ombra
+        g.save(); g.globalAlpha=.9;
+        g.fillStyle='rgba(0,0,0,.34)'; g.beginPath(); g.ellipse(x+2,y+5,s.w*.62,s.h*.40,s.rot,0,7); g.fill();
+        g.restore();
+      }
+      // profondita': chi sta dietro e' piu' piccolo e piu' spento, chi sta davanti piu' grande.
+      // Senza, gli anelli si leggono come un mucchio invece che come un'orbita.
+      const prof = 0.80 + (Math.sin(s.a) + 1) / 2 * 0.34;
+      const dim = s.k > .5 ? 1 : prof;
+      scheggia(x, y, s.w*dim*(1 - s.k*0.12), s.h*dim*(1 - s.k*0.12), s.rot, luce*prof, s.k>.5 ? 1 : (0.72 + prof*0.28));
+      if (G.fase==='rientro' && s.k>0.02 && s.k<0.98){    // il filo che la richiama
+        g.strokeStyle='rgba(255,170,90,'+(0.30*(1-s.k))+')'; g.lineWidth=2;
+        g.beginPath(); g.moveTo(x,y); g.lineTo(G.x,G.y); g.stroke(); }
+    }
+  };
+  dis(true);
+  // IL NUCLEO. Spogliato si accende: e' il segnale che adesso e' il momento.
+  g.save(); g.translate(G.x, G.y + Math.sin(T*1.3)*3);
+  const alone = 54 + puls*(nudo?38:12);
+  const ag = g.createRadialGradient(0,0,4,0,0,alone);
+  ag.addColorStop(0,'rgba(255,150,60,'+(nudo?.42:.20)+')'); ag.addColorStop(1,'rgba(255,120,40,0)');
+  g.fillStyle=ag; g.beginPath(); g.arc(0,0,alone,0,7); g.fill();
+  const R0 = 38;
+  g.fillStyle='#2c313c'; g.strokeStyle=INK; g.lineWidth=2.6; g.lineJoin='round';
+  g.beginPath();
+  for(let k=0;k<=9;k++){ const a=k/9*6.283, rad=R0*(0.82+((k*37)%7)/22);
+    const x=Math.cos(a)*rad, y=Math.sin(a)*rad*0.86; k?g.lineTo(x,y):g.moveTo(x,y); }
+  g.closePath(); g.fill(); g.stroke();
+  // le crepe incandescenti: il cuore vero
+  g.strokeStyle='rgba(255,'+Math.round(120+puls*80)+',50,'+(nudo?.95:.65)+')';
+  g.lineWidth = nudo? 3.4 : 2.4; g.lineCap='round';
+  g.beginPath(); g.moveTo(-24,-10); g.lineTo(-6,-2); g.lineTo(-11,13);
+  g.moveTo(-6,-2); g.lineTo(14,-11); g.moveTo(-6,-2); g.lineTo(19,10); g.stroke();
+  const cg = g.createRadialGradient(0,0,1,0,0,14+puls*6);
+  cg.addColorStop(0,'#fff0c0'); cg.addColorStop(.5,'#ff9a3a'); cg.addColorStop(1,'rgba(255,90,20,0)');
+  g.fillStyle=cg; g.beginPath(); g.arc(0,0,14+puls*6,0,7); g.fill();
+  g.lineCap='butt'; g.restore();
+  dis(false);
+}
+
+/* ============================================================================
+   2. IL SOMMERSO — sta sotto, il rigonfiamento corre, riemerge, spacca
+   ============================================================================ */
+const som = { x:0, y:0, bx:0, by:0, fase:'sotto', t:0, onda:0, scia:[] };
+function initSom(cx,cy){ som.x=cx-150; som.y=cy; som.bx=cx-150; som.by=cy;
+  som.fase='sotto'; som.t=0; som.onda=0; som.scia=[]; }
+function aggiornaSom(dt,cx,cy,px,py){
+  const S = som; S.t += dt;
+  if (S.fase==='sotto'){
+    // il rigonfiamento corre verso il bersaglio
+    const n = Math.hypot(px-S.bx, py-S.by) || 1;
+    const v = 118;
+    S.bx += (px-S.bx)/n*v*dt; S.by += (py-S.by)/n*v*dt;
+    { const GR = 15;                                   // un segno ogni 15 px di strada
+      if (!S.scia.length) S.scia.push({x:S.bx,y:S.by});
+      let guardia = 0;
+      while (Math.hypot(S.bx - S.scia[0].x, S.by - S.scia[0].y) >= GR && guardia++ < 30) {
+        const d = Math.hypot(S.bx - S.scia[0].x, S.by - S.scia[0].y), k = GR / d;
+        S.scia.unshift({ x: S.scia[0].x + (S.bx - S.scia[0].x) * k, y: S.scia[0].y + (S.by - S.scia[0].y) * k }); }
+      if (S.scia.length > 24) S.scia.length = 24; }
+    if (Math.hypot(px-S.bx,py-S.by) < 44 || S.t > 4.2){ S.fase='emerge'; S.t=0; S.x=S.bx; S.y=S.by; }
+  } else if (S.fase==='emerge'){
+    if (S.t > 0.55){ S.fase='spacca'; S.t=0; S.onda=0; }
+  } else if (S.fase==='spacca'){
+    S.onda = Math.min(1, S.t/0.45);
+    if (S.t > 0.45){ S.fase='fuori'; S.t=0; }
+  } else if (S.fase==='fuori'){
+    if (S.t > 2.4){ S.fase='sprofonda'; S.t=0; }
+  } else if (S.fase==='sprofonda'){
+    if (S.t > 0.5){ S.fase='sotto'; S.t=0; S.scia.length=0; S.bx=S.x; S.by=S.y; }
+  }
+}
+function disegnaSom(T, px, py){
+  const S = som;
+  // --- IL RIGONFIAMENTO. E' il preavviso, quindi deve vedersi: lastre sollevate, crepe, polvere
+  if (S.fase==='sotto' || S.fase==='sprofonda'){
+    // LA SCIA. E' il preavviso, quindi deve gridare: lastre sollevate e spaccate, non una macchia.
+    // Al primo giro era un'ombrina grigia e non si vedeva — un preavviso che non si vede non e' un
+    // preavviso, e' un'imboscata.
+    for (let i=S.scia.length-1;i>=0;i--){
+      const p=S.scia[i], k=1-i/S.scia.length;
+
+      g.save(); g.globalAlpha = 0.22 + k*0.62;
+      g.translate(p.x,p.y); g.rotate(((i*37)%17)/17*0.6-0.3);
+      const w = 16 + k*22, hh = 9 + k*12;
+      g.fillStyle='rgba(0,0,0,.34)'; rrect(-w/2+2,-hh/2+3,w,hh,2); g.fill();
+      const q=g.createLinearGradient(0,-hh/2,0,hh/2);
+      q.addColorStop(0, mix(TH.floorB,TH.chiaro,.42)); q.addColorStop(1, mix(TH.floorB,TH.scuro,.30));
+      g.fillStyle=q; g.strokeStyle=INK; g.lineWidth=1.8; rrect(-w/2,-hh/2,w,hh,2); g.fill(); g.stroke();
+      g.strokeStyle='rgba(10,12,16,.55)'; g.lineWidth=1.4;
+      g.beginPath(); g.moveTo(-w*.4,-1); g.lineTo(0,2); g.lineTo(w*.4,-2); g.stroke();
+      g.restore();
+    }
+    // la gobba viva in testa alla scia: e' lui, sotto
+    const gb = 1 + Math.sin(T*9)*0.10;
+    g.save(); g.translate(S.bx, S.by);
+    // le crepe che si aprono attorno
+    g.strokeStyle='rgba(10,12,16,.55)'; g.lineWidth=2.6; g.lineCap='round';
+    for (let i=0;i<7;i++){ const a=i/7*6.283 + Math.sin(T*.7)*.3;
+      g.beginPath(); g.moveTo(Math.cos(a)*30, Math.sin(a)*17);
+      g.lineTo(Math.cos(a)*(50+Math.sin(T*3+i)*5), Math.sin(a)*(29+Math.sin(T*3+i)*3)); g.stroke(); }
+    g.strokeStyle='rgba(216,207,180,.14)'; g.lineWidth=1.4;
+    for (let i=0;i<7;i++){ const a=i/7*6.283 + Math.sin(T*.7)*.3;
+      g.beginPath(); g.moveTo(Math.cos(a)*31, Math.sin(a)*18); g.lineTo(Math.cos(a)*48, Math.sin(a)*28); g.stroke(); }
+    g.lineCap='butt';
+    g.fillStyle='rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(4,9,46*gb,22*gb,0,0,7); g.fill();
+    const q2=g.createRadialGradient(-12,-9,4,0,0,50*gb);
+    q2.addColorStop(0, mix(TH.floorB,TH.chiaro,.46)); q2.addColorStop(1, mix(TH.floorB,TH.scuro,.30));
+    g.fillStyle=q2; g.strokeStyle=INK; g.lineWidth=3; g.lineJoin='round';
+    g.beginPath();
+    for(let k=0;k<=13;k++){ const a=k/13*6.283, rad=44*gb*(0.82+((k*29)%9)/28);
+      const x=Math.cos(a)*rad, y=Math.sin(a)*rad*0.56; k?g.lineTo(x,y):g.moveTo(x,y); }
+    g.closePath(); g.fill(); g.stroke();
+    // le lastre spaccate sul dorso della gobba
+    g.strokeStyle='rgba(10,12,16,.6)'; g.lineWidth=2.4; g.lineCap='round';
+    g.beginPath(); g.moveTo(-34,-3); g.lineTo(-11,6); g.lineTo(6,-6); g.lineTo(32,4); g.stroke();
+    g.beginPath(); g.moveTo(-16,-14); g.lineTo(-9,-2); g.moveTo(14,-12); g.lineTo(9,0); g.stroke();
+    g.strokeStyle='rgba(216,207,180,.22)'; g.lineWidth=1.6;
+    g.beginPath(); g.moveTo(-32,-8); g.lineTo(-10,1); g.lineTo(8,-11); g.lineTo(30,-1); g.stroke();
+    g.lineCap='butt';
+    // la polvere che si alza
+    g.fillStyle='rgba(180,168,140,.42)';
+    for(let i=0;i<9;i++){ const a=rr(0,6.283), d=rr(20,52);
+      g.beginPath(); g.arc(Math.cos(a)*d, Math.sin(a)*d*.55 - rr(0,14), rr(1.2,3.2), 0, 7); g.fill(); }
+    g.restore();
+    if (S.fase!=='sprofonda') etichetta('sotto — il rigonfiamento corre', S.bx, S.by-56, 12.5, '#e0b23a');
+    return;
+  }
+  // --- FUORI. L'altezza cresce nell'emergere e cala nello sprofondare: e' tutta l'animazione.
+  let h = 1;
+  if (S.fase==='emerge') h = ease(Math.min(1,S.t/0.55));
+  if (S.fase==='sprofonda') h = 1 - ease(Math.min(1,S.t/0.5));
+  const R = 62;
+  g.save(); g.translate(S.x, S.y);
+  // il cratere di detriti attorno: resta anche mentre e' fuori
+  g.fillStyle='rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(5,34,R*1.15,R*0.44,0,0,7); g.fill();
+  g.fillStyle=mix(TH.floorB,'#6b5a3a',.42);
+  for(let i=0;i<10;i++){ const a=i/10*6.283+0.3, d=R*0.95+((i*13)%7);
+    g.save(); g.translate(Math.cos(a)*d, Math.sin(a)*d*0.5+24); g.rotate(a);
+    g.strokeStyle=INK; g.lineWidth=1.8; rrect(-11,-6,22,12,2); g.fill(); g.stroke(); g.restore(); }
+  // l'onda d'urto dello spacco
+  if (S.onda>0 && S.onda<1){
+    const k=S.onda;
+    g.strokeStyle='rgba(255,180,90,'+(0.75*(1-k))+')'; g.lineWidth=11*(1-k)+3;
+    g.beginPath(); g.ellipse(0,24,(R+k*190),(R+k*190)*0.46,0,0,7); g.stroke();
+    g.strokeStyle='rgba(255,240,200,'+(0.4*(1-k))+')'; g.lineWidth=2.4;
+    g.beginPath(); g.ellipse(0,24,(R+k*190)*0.82,(R+k*190)*0.38,0,0,7); g.stroke();
+  }
+  // il corpo: torso squadrato + due braccia pesanti. Niente gambe: quello che sta sotto resta sotto.
+  g.save();
+  g.translate(0, (1-h)*96);
+  g.beginPath(); g.rect(-R*1.9, -260, R*3.8, 260 + 34); g.clip();   // ritaglio al livello del suolo
+  const tg = g.createLinearGradient(0,-70,0,26);
+  tg.addColorStop(0, '#7b7466'); tg.addColorStop(.45,'#565246'); tg.addColorStop(1,'#2e2b24');
+  g.fillStyle=tg; g.strokeStyle=INK; g.lineWidth=3; g.lineJoin='round';
+  // braccia (prima, cosi' stanno dietro al torso)
+  const sw = Math.sin(T*2.2)*4, pu2 = 0.5+0.5*Math.sin(T*4);
+  for (const s of [-1,1]){
+    g.save(); g.scale(s,1);
+    // spalla e avambraccio sono DUE blocchi con una giuntura in mezzo: un braccio in un pezzo solo
+    // si legge come un'aletta di cartone
+    g.beginPath(); g.moveTo(32,-68); g.lineTo(74,-62+sw); g.lineTo(78,-22+sw); g.lineTo(36,-26);
+    g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(40,-22); g.lineTo(80,-19+sw); g.lineTo(86,20+sw); g.lineTo(46,26);
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle='rgba(216,207,180,.17)';
+    g.beginPath(); g.moveTo(38,-62); g.lineTo(68,-57+sw); g.lineTo(64,-40); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(46,-16); g.lineTo(74,-13+sw); g.lineTo(70,2); g.closePath(); g.fill();
+    g.strokeStyle='rgba(255,150,60,.55)'; g.lineWidth=2.6;      // la giuntura che brucia
+    g.beginPath(); g.moveTo(38,-24); g.lineTo(78,-21+sw); g.stroke();
+    g.strokeStyle=INK; g.lineWidth=3; g.fillStyle=tg;
+    g.fillStyle=tg; g.restore();
+  }
+  // torso
+  g.beginPath();
+  g.moveTo(-42,34); g.lineTo(-47,-46); g.lineTo(-27,-82); g.lineTo(27,-85);
+  g.lineTo(47,-46); g.lineTo(42,34); g.closePath(); g.fill(); g.stroke();
+  // LA FACCIA SUPERIORE, piu' chiara: e' lei a dire che il blocco ha uno spessore e non e' una
+  // sagoma ritagliata. E' lo stesso mestiere delle due facce del Cubo Gelatinoso.
+  { const sg2 = g.createLinearGradient(-40,-100,40,-58);
+    sg2.addColorStop(0,'#9a927f'); sg2.addColorStop(1,'#6d6757');
+    g.fillStyle=sg2; g.strokeStyle=INK; g.lineWidth=2.4;
+    g.beginPath(); g.moveTo(-27,-82); g.lineTo(-17,-100); g.lineTo(19,-103); g.lineTo(27,-85); g.closePath();
+    g.fill(); g.stroke(); g.fillStyle=tg; }
+  // i blocchi che lo compongono: giunti, non muscoli
+  g.strokeStyle='rgba(10,12,16,.45)'; g.lineWidth=2;
+  g.beginPath(); g.moveTo(-45,-22); g.lineTo(45,-25); g.moveTo(-44,6); g.lineTo(44,3);
+  g.moveTo(-6,-84); g.lineTo(-3,34); g.stroke();
+  g.strokeStyle='rgba(255,150,60,'+(0.20+pu2*0.22)+')'; g.lineWidth=2.6;
+  g.beginPath(); g.moveTo(-43,-21); g.lineTo(43,-24); g.moveTo(-42,7); g.lineTo(42,4); g.stroke();
+  g.fillStyle='rgba(216,207,180,.13)';
+  g.beginPath(); g.moveTo(-39,-46); g.lineTo(-25,-78); g.lineTo(3,-79); g.lineTo(-3,-28); g.closePath(); g.fill();
+  // il nucleo nel petto: e' la cosa viva
+  const pu = 0.5+0.5*Math.sin(T*4);
+  const ng = g.createRadialGradient(0,-36,1,0,-36,23+pu*7);
+  ng.addColorStop(0,'#fff0c0'); ng.addColorStop(.45,'#ff9a3a'); ng.addColorStop(1,'rgba(255,90,20,0)');
+  g.fillStyle=ng; g.beginPath(); g.arc(0,-36,23+pu*7,0,7); g.fill();
+  g.strokeStyle='rgba(255,150,60,.8)'; g.lineWidth=2.4; g.lineCap='round';
+  g.beginPath(); g.moveTo(-15,-56); g.lineTo(-3,-38); g.lineTo(-12,-16);
+  g.moveTo(-3,-38); g.lineTo(16,-50); g.moveTo(-3,-38); g.lineTo(13,-22); g.stroke();
+  // due occhi accesi sopra il petto
+  g.fillStyle='#ffb14a';
+  g.beginPath(); g.arc(-13,-68,4.2,0,7); g.arc(13,-68,4.2,0,7); g.fill();
+  g.lineCap='butt';
+  g.restore();
+  // la polvere che cade dai bordi mentre sale
+  if (S.fase==='emerge'||S.fase==='sprofonda'){
+    g.fillStyle='rgba(180,168,140,.5)';
+    for(let i=0;i<14;i++){ const a=rr(0,6.283), d=rr(R*.5,R*1.2);
+      g.beginPath(); g.arc(Math.cos(a)*d, Math.sin(a)*d*.5+rr(-6,22), rr(1,2.6), 0, 7); g.fill(); }
+  }
+  g.restore();
+}
+
+window.som = som; window.gol = gol;   // solo per lo scatto di prova
+/* ================================ SCENA ================================ */
+let pausa=false, lento=true, ossa=false, T=0, last=0, avviato=false;
+function avvia(){ initGolem(PAN*0.5, H/2 - 16); initSom(PAN*1.5, H/2 - 10); avviato=true; }
+
+function telaio(ms){
+  if(!avviato) avvia();
+  const ora=ms/1000; let dt = last ? Math.min(.05, ora-last) : 0; last=ora;
+  if (pausa) dt=0; if (lento) dt*=0.45; T+=dt;
+
+  g.drawImage(fondo,0,0);
+  const gx=[PAN*0.5, PAN*1.5], gy=H-70;
+  // il BERSAGLIO del Sommerso gira per il riquadro: e' il segnalino tratteggiato, non il
+  // giocatore-campione in basso — se no il golem gli emerge addosso e si coprono a vicenda
+  const px = PAN*1.5 + Math.cos(T*0.42)*168, py = H/2 - 10 + Math.sin(T*0.42)*84;
+
+  aggiornaGolem(dt);
+  aggiornaSom(dt, PAN*1.5, H/2-10, px, py);
+
+  disegnaGolem(T);
+  disegnaSom(T, px, py);
+  // il bersaglio inseguito
+  g.save(); g.strokeStyle='rgba(139,233,255,.55)'; g.lineWidth=1.6; g.setLineDash([5,5]);
+  g.beginPath(); g.arc(px,py,16,0,7); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.moveTo(px-7,py); g.lineTo(px+7,py); g.moveTo(px,py-7); g.lineTo(px,py+7); g.stroke();
+  g.restore();
+  for (let i=0;i<2;i++) giocatore(gx[i]-210, gy, i? -2.2 : -0.6);
+
+  if (ossa){
+    g.strokeStyle='rgba(139,233,255,.5)'; g.lineWidth=1.3; g.setLineDash([4,4]);
+    for (const s of gol.sch){
+      const ox=gol.x+Math.cos(s.a)*s.r, oy=gol.y+Math.sin(s.a)*s.r*0.74;
+      g.beginPath(); g.arc(ox,oy,4,0,7); g.stroke(); }
+    for (const r of [46,74,102]){ g.beginPath(); g.ellipse(gol.x,gol.y,r,r*0.74,0,0,7); g.stroke(); }
+    g.beginPath(); g.arc(som.fase==='sotto'?som.bx:som.x, som.fase==='sotto'?som.by:som.y, 46, 0, 7); g.stroke();
+    g.setLineDash([]);
+  }
+
+  g.strokeStyle='rgba(216,207,180,.22)'; g.lineWidth=1.5;
+  g.beginPath(); g.moveTo(PAN,0); g.lineTo(PAN,H); g.stroke();
+  etichetta('IL RIMESSO INSIEME', PAN*0.5, 30, 16);
+  etichetta('IL SOMMERSO', PAN*1.5, 30, 16);
+  const su = gol.sch.filter(s=>!s.giu).length;
+  const fg = { intero:'perde le schegge — '+su+' ancora addosso', nudo:'NUDO: il nucleo e\' scoperto', rientro:'le schegge risalgono' }[gol.fase];
+  etichetta(fg, PAN*0.5, 52, 13, gol.fase==='nudo' ? '#ff9a3a' : '#8b8676');
+  const fs = { sotto:'sotto — il rigonfiamento corre', emerge:'RIEMERGE', spacca:'SPACCA', fuori:'fuori: adesso incassa tutto', sprofonda:'torna sotto' }[som.fase];
+  etichetta(fs, PAN*1.5, 52, 13, (som.fase==='spacca'||som.fase==='fuori') ? '#ffb14a' : '#8b8676');
+  etichetta('← giocatore, scala vera', gx[0]-210, gy+46, 12.5, '#8b8676');
+  etichetta('bersaglio', px, py+32, 12, '#8be9ff');
+
+  requestAnimationFrame(telaio);
+}
+requestAnimationFrame(telaio);
+
+const bP=document.getElementById('bPausa'), bL=document.getElementById('bLento'),
+      bO=document.getElementById('bOssa'), bR=document.getElementById('bRi');
+bP.onclick=()=>{pausa=!pausa; bP.textContent=pausa?'▶ Riprendi':'⏸ Ferma'; bP.classList.toggle('on',pausa);};
+bL.onclick=()=>{lento=!lento; bL.textContent=lento?'Al rallentatore':'Velocità normale'; bL.classList.toggle('on',lento);};
+bO.onclick=()=>{ossa=!ossa; bO.classList.toggle('on',ossa);};
+bR.onclick=()=>{ avvia(); };
+</script></body></html>

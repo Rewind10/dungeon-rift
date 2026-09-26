@@ -99,6 +99,7 @@
     brute: makePuppet('assets/enemies/brute/', 'brute.json'),
     slime: makePuppet('assets/enemies/slime/', 'slime.json'),
     beholder: makePuppet('assets/enemies/beholder/', 'beholder.json'),  // v1.49 — BEHOLDER (raster puppet)
+    padrone: makePuppet('assets/enemies/padrone/', 'padrone.json'),    // v2.23 — IL PADRONE (marionetta dal disegno di Paolo, ali e coda in codice)
   };
   const GHOUL = PUPPETS.ghoul; // alias di compatibilità
   // ===== v1.47 — SPRITE SHEET (frame-by-frame): personaggi animati "alla vecchio 2.5D" (griglia di frame) =====
@@ -124,6 +125,68 @@
   // Ogni profilo espone: OY0 (riga d'ancoraggio verticale), K (scala), order (ordine di disegno),
   // gait ('walk'|'float'), eliteFilter (ctx.filter per gli elite) e pose(t,moving,atk) → {P,bob,lungeX,tilt}.
   const PROF = {
+    // ===== v2.23 — IL PADRONE =============================================================
+    // La marionetta viene dal disegno di Paolo, tagliato in otto pezzi. Le ALI del disegno sono
+    // state tolte apposta e rifatte qui in vettoriale: attaccate al raster sarebbero rimaste
+    // ferme, e un demone con le ali immobili e' una statua. La CODA e' un pezzo raster ma ondeggia
+    // di suo, sfasata rispetto al passo, perche' e' l'unica parte che non ha motivo di stare ferma.
+    // Va LENTO: e' il comandante, non l'assaltatore. Il passo e' largo e pesante (cadenza 0.52
+    // contro 1.05 dello zombi) e il busto dondola poco — chi comanda non corre.
+    padrone: {
+      OY0: 1103, K: 5.0, gait: 'walk', ali: true, eliteFilter: 'hue-rotate(-18deg) saturate(1.7) brightness(1.1)',
+      order: ['coda', 'gambaSx', 'gambaDx', 'cintura', 'torso', 'testa', 'braccioSx', 'braccioDx'],
+      WALK: { cad: 0.52, leg: 21, arm: 13, torso: 4, head: 2.4, bob: 9, sway: 3.4 },
+      pose(t, moving, atk) {
+        const S = _SIN, TAU = _TAU, PI = _PI, W = this.WALK;
+        const ph = moving ? (t * W.cad) % 1 : (t * 0.34) % 1;
+        const a = atk || 0, wind = _bump(a, 0.32, 0.32), strike = _bump(a, 0.66, 0.30);
+        const P = { coda: [0, 0, 0], gambaSx: [0, 0, 0], gambaDx: [0, 0, 0], cintura: [0, 0, 0],
+                    torso: [0, 0, 0], testa: [0, 0, 0], braccioSx: [0, 0, 0], braccioDx: [0, 0, 0] };
+        let bob = 0, lungeX = 0, tilt = 0;
+        // il respiro: c'e' sempre, fermo o in marcia. Senza, quando sta fermo sembra in pausa.
+        const resp = S(TAU * ((t * 0.30) % 1));
+        if (moving) {
+          bob = -W.bob + W.bob * Math.abs(S(TAU * ph));
+          const lat = W.sway * S(TAU * ph);
+          P.gambaSx = [W.leg * S(TAU * ph), 0, 0];
+          P.gambaDx = [W.leg * S(TAU * ph + PI), 0, 0];
+          P.braccioSx = [-W.arm * S(TAU * ph), 0, 0];
+          P.braccioDx = [-W.arm * S(TAU * ph + PI), 0, 0];
+          P.torso = [W.torso * S(TAU * ph), lat, 0];
+          P.testa = [-W.head * S(TAU * ph), lat * 0.6, 0];
+          // il gonnellino resta indietro sul passo: e' stoffa, non e' incollata al bacino
+          P.cintura = [2.2 * S(TAU * ph - 0.9), lat * 0.5, 0];
+          tilt = 2.2;
+        } else {
+          bob = 4 * S(TAU * ph);
+          P.testa = [2 * S(TAU * ph), 0, 1.6 * S(TAU * ph + 0.5)];
+          P.braccioSx = [3 * S(TAU * ph), 0, 0]; P.braccioDx = [-3 * S(TAU * ph), 0, 0];
+          P.torso = [1.2 * S(TAU * ph), 0, 0];
+          P.cintura = [1.4 * S(TAU * ph - 0.7), 0, 0];
+        }
+        P.torso[2] += resp * 1.6; P.testa[2] += resp * 1.2;          // il petto che sale e scende
+        // LA CODA: sfasata dal passo e piu' lenta. Se battesse a tempo col passo si leggerebbe come
+        // un pezzo rigido attaccato al bacino invece che come una coda.
+        P.coda = [11 * S(TAU * ((t * 0.37) % 1)) + 4 * S(TAU * ph + 1.4), 0, 0];
+        if (a > 0.001) {
+          // la frustata: il braccio destro va indietro e poi taglia in avanti, il busto lo segue
+          P.braccioDx[0] += -46 * wind; P.braccioDx[2] += -18 * wind;
+          P.torso[0] += -6 * wind; P.testa[2] += -8 * wind; P.coda[0] += -22 * wind;
+          P.braccioDx[0] += 96 * strike; P.braccioDx[2] += 22 * strike;
+          P.braccioSx[0] += -34 * strike;
+          P.torso[0] += 13 * strike; P.testa[2] += 18 * strike; P.coda[0] += 30 * strike;
+          P.gambaSx[0] += 8 * strike; P.gambaDx[0] += -8 * strike;
+          lungeX += 26 * strike; tilt += 5 * strike;
+        }
+        return { P, bob, lungeX, tilt, swing: Math.max(wind * 0.5, strike), ali: { wind, strike, ph, moving } };
+      },
+      death(p) {
+        const P = { coda: [50 * p, 0, 24 * p], gambaSx: [34 * p, -5 * p, 26 * p], gambaDx: [-34 * p, 5 * p, 26 * p],
+                    cintura: [0, 0, 30 * p], torso: [9 * p, 0, 32 * p], testa: [58 * p, 30 * p, 38 * p],
+                    braccioSx: [44 * p, 0, 18 * p], braccioDx: [-44 * p, 0, 18 * p] };
+        return { P, bob: 30 * p, lungeX: 0, tilt: 8 * p, alpha: 1 - p * 0.75 };
+      },
+    },
     ghoul: {
       OY0: 890, K: 2.7, gait: 'walk', eliteFilter: 'hue-rotate(-38deg) saturate(1.5) brightness(1.05)',
       order: ['legR', 'legL', 'torso', 'head', 'armR', 'armL'],
@@ -2857,6 +2920,59 @@
       ctx.beginPath(); ctx.ellipse(-R * .46, yT - R * .46, R * .12, R * .065, -.5, 0, 7); ctx.fill();
       ctx.restore();
     },
+    // v2.23 — LE ALI E L'ALONE DEL PADRONE (vettoriale sopra la marionetta raster).
+    // Il battito e' UNA rotazione piu' una compressione orizzontale: da sopra non si vede lo
+    // spessore, quindi la sola cosa che racconta il colpo d'ala e' quanto l'ala si accorcia.
+    _aliPadrone(ctx, s, st, t) {
+      const A = st.ali || {}, wind = A.wind || 0, strike = A.strike || 0, mov = A.moving ? 1 : 0;
+      // in marcia batte piano, in carica si spalanca, nell'affondo si chiude di scatto
+      const bat = Math.sin(t * (2.1 + mov * 0.9)) * 0.30 + wind * 0.46 - strike * 0.52;
+      const apri = 1 + wind * 0.22 - strike * 0.30;
+      const RX = 132 * s, RY = -690 * s;              // la spalla, in coordinate della tela
+      for (const lato of [-1, 1]) {
+        ctx.save(); ctx.translate(lato * RX, RY); ctx.scale(lato, 1);
+        ctx.rotate(-0.24 + bat * 0.34);
+        ctx.scale((0.70 + Math.abs(Math.cos(bat)) * 0.34) * apri, 1.04 * apri);
+        const L = 660 * s;                            // apertura dell'ala, in unita' della tela
+        const wg = ctx.createLinearGradient(0, -L * 0.30, L, L * 0.18);
+        wg.addColorStop(0, '#7a1f22'); wg.addColorStop(.45, '#4a1116'); wg.addColorStop(1, '#22070c');
+        ctx.fillStyle = wg; ctx.strokeStyle = '#150508'; ctx.lineWidth = Math.max(1.4, 3 * s * 18);
+        ctx.lineJoin = 'round';
+        const P = (x, y) => [x * L, y * L];
+        // la membrana: curve, non spezzate. Al primo giro era tutta a spigoli e sembrava un
+        // aquilone di carta piegata.
+        ctx.beginPath();
+        let q = P(0.03, -0.07); ctx.moveTo(q[0], q[1]);
+        let c1 = P(0.30, -0.44), c2 = P(0.68, -0.52), e = P(0.99, -0.40);
+        ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], e[0], e[1]);          // il dito lungo
+        c1 = P(0.78, -0.24); e = P(0.90, -0.09); ctx.quadraticCurveTo(c1[0], c1[1], e[0], e[1]);
+        c1 = P(0.70, -0.02); e = P(0.77, 0.16); ctx.quadraticCurveTo(c1[0], c1[1], e[0], e[1]);
+        c1 = P(0.55, 0.09); e = P(0.46, 0.30); ctx.quadraticCurveTo(c1[0], c1[1], e[0], e[1]);
+        c1 = P(0.28, 0.14); e = P(0.03, 0.15); ctx.quadraticCurveTo(c1[0], c1[1], e[0], e[1]);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // le nervature: appena accennate. Marcate, la membrana sembra un ombrello.
+        ctx.strokeStyle = 'rgba(184,92,104,.18)'; ctx.lineWidth = Math.max(0.8, 1.6 * s * 18);
+        for (const d of [[-0.40, 0.92], [-0.06, 0.84], [0.14, 0.70], [0.28, 0.42]]) {
+          const a0 = P(0.05, -0.02), a1 = P(d[1], d[0]);
+          ctx.beginPath(); ctx.moveTo(a0[0], a0[1]);
+          ctx.quadraticCurveTo((a0[0] + a1[0]) * 0.5, (a0[1] + a1[1]) * 0.5 - L * 0.05, a1[0], a1[1]); ctx.stroke(); }
+        // il bordo esterno piu' scuro: da' spessore alla membrana
+        ctx.strokeStyle = 'rgba(12,4,7,.5)'; ctx.lineWidth = Math.max(1.2, 2.4 * s * 18);
+        ctx.beginPath(); const b0 = P(0.99, -0.40), b1 = P(0.90, -0.09), b2 = P(0.77, 0.16), b3 = P(0.46, 0.30);
+        ctx.moveTo(b0[0], b0[1]); ctx.lineTo(b1[0], b1[1]); ctx.lineTo(b2[0], b2[1]); ctx.lineTo(b3[0], b3[1]); ctx.stroke();
+        // gli strappi
+        ctx.fillStyle = 'rgba(8,3,6,.45)';
+        for (const d of [[0.58, -0.22, 0.09], [0.42, 0.06, 0.065]]) {
+          const k0 = P(d[0], d[1]), k1 = P(d[0] + d[2], d[1] + d[2] * 0.4), k2 = P(d[0] + d[2] * 0.4, d[1] + d[2]);
+          ctx.beginPath(); ctx.moveTo(k0[0], k0[1]); ctx.lineTo(k1[0], k1[1]); ctx.lineTo(k2[0], k2[1]); ctx.closePath(); ctx.fill(); }
+        // gli artigli: piccoli. Prima erano palle nere grosse come la testa.
+        ctx.fillStyle = '#3a1016'; ctx.strokeStyle = '#150508'; ctx.lineWidth = Math.max(0.8, 1.4 * s * 18);
+        for (const d of [[0.99, -0.40, 1.0], [0.90, -0.09, 0.8], [0.77, 0.16, 0.7], [0.46, 0.30, 0.6]]) {
+          const cc = P(d[0], d[1]); ctx.beginPath();
+          ctx.arc(cc[0], cc[1], Math.max(1.1, 2.2 * s * 18 * d[2]), 0, 7); ctx.fill(); ctx.stroke(); }
+        ctx.restore();
+      }
+    },
     _rollerF(ctx, m, r, def, atk) {
       const t = this.time, eye = def.eye || '#ff7a3b';
       this._roll = this._roll || {}; this._rollP = this._rollP || {};
@@ -4470,6 +4586,31 @@
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pulse; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 7); ctx.fill(); ctx.restore();
         if (def.bubbles && Math.random() < 0.35) { const bl = MU.rand(0.5, 0.9); this.particles.push({ x: x + MU.rand(-rr * 0.7, rr * 0.7), y: y + rr * 0.4, vx: MU.rand(-6, 6), vy: -MU.rand(18, 42), life: bl, t: bl, color: gc, r: MU.rand(1.5, 3), over: true }); } // v1.44 — bolle acide che salgono
       } else { const gc = def.eye || def.color || '#ff6b6b'; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gr = this._grad('a2|' + gc + '|' + rr.toFixed(1), () => { const q = ctx.createRadialGradient(0, 0, rr * 0.25, 0, 0, rr * 1.75); q.addColorStop(0, gc); q.addColorStop(1, 'rgba(0,0,0,0)'); return q; }); ctx.globalAlpha = (m.mg ? 0.55 : m.b ? 0.5 : m.el ? 0.42 : 0.3) * (0.85 + 0.15 * Math.sin(this.time * 4 + x * 0.05)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr * 1.75, 0, 7); ctx.fill(); ctx.restore(); } // v1.15 alone emissivo
+      // v2.23 — IL RAGGIO DEL COMANDO. Lo disegna il Padrone stesso, sotto di se': l'anello
+      // tratteggiato che gira e' l'unico modo che ha il giocatore di sapere DOVE finisce il
+      // potenziamento, e quindi dove conviene tirare i mostri.
+      if (def.comandoR) {
+        const R = def.comandoR * (window.GAME.Constants.VIS_SCALE || 1), pu = 0.5 + 0.5 * Math.sin(this.time * 1.6);
+        ctx.save();
+        const ag = ctx.createRadialGradient(0, 0, R * 0.72, 0, 0, R);
+        ag.addColorStop(0, 'rgba(255,90,30,0)'); ag.addColorStop(1, 'rgba(255,90,30,' + (0.05 + pu * 0.035) + ')');
+        ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,130,60,' + (0.30 + pu * 0.18) + ')'; ctx.lineWidth = 2.4;
+        ctx.setLineDash([14, 11]); ctx.lineDashOffset = -this.time * 26;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+      }
+      // e chi e' dentro al raggio lo porta addosso: bordo acceso. Senza, il potenziamento
+      // sarebbe un numero invisibile e il giocatore non saprebbe perche' sta prendendo di piu'.
+      if (m.cm) {
+        const pu2 = 0.5 + 0.5 * Math.sin(this.time * 5 + (m.e || 0));
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const q = ctx.createRadialGradient(0, 0, rr * 0.55, 0, 0, rr * 1.75);
+        q.addColorStop(0, 'rgba(255,120,40,' + (0.16 + pu2 * 0.10) + ')'); q.addColorStop(1, 'rgba(255,90,20,0)');
+        ctx.fillStyle = q; ctx.beginPath(); ctx.arc(0, 0, rr * 1.75, 0, 7); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = 'rgba(255,150,70,' + (0.45 + pu2 * 0.3) + ')'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, rr + 4, 0, 7); ctx.stroke();
+      }
       if (m.tr) { ctx.strokeStyle = 'rgba(255,210,80,' + (0.6 + 0.3 * Math.sin(this.time * 7)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8, 0, 7); ctx.stroke(); }
       else if (m.mg) { ctx.strokeStyle = 'rgba(255,45,85,' + (0.5 + 0.3 * Math.sin(this.time * 6)) + ')'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, rr + 12 + Math.sin(this.time * 4) * 3, 0, 7); ctx.stroke(); }
       else if (m.b) { ctx.strokeStyle = 'rgba(255,60,60,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8 + Math.sin(this.time * 4) * 2, 0, 7); ctx.stroke(); }
@@ -4582,6 +4723,7 @@
       else if (shape === 'ghoul') this._puppet('ghoul', ctx, r, eye, t, atk, back, moving, hit, elite);
       else if (shape === 'mage') this._puppet('mage', ctx, r, eye, t, atk, back, moving, hit, elite);
       else if (shape === 'brute') this._puppet('brute', ctx, r, eye, t, atk, back, moving, hit, elite);
+      else if (shape === 'padrone') this._puppet('padrone', ctx, r, eye, t, atk, back, moving, hit, elite);   // v2.23
       else if (shape === 'slime') this._puppet('slime', ctx, r, eye, t, atk, back, moving, hit, elite);
       ctx.restore();
     },
@@ -4612,6 +4754,11 @@
       // tint elite (facoltativo): applicato ai soli pezzi raster
       const partFilter = elite ? prof.eliteFilter : (st.alpha != null ? '' : '');
       const byName = {}; for (const p of man.parts) byName[p.name] = p;
+      // v2.23 — LE ALI DEL PADRONE, disegnate qui e non nel raster. Nel disegno di partenza c'erano
+      // ma erano ferme: un'ala ferma e' un mantello. Tolte dal ritaglio e rifatte in vettoriale,
+      // cosi' battono, si aprono sulla carica e si chiudono nell'affondo. Vanno DIETRO ai pezzi,
+      // quindi si disegnano qui, prima del ciclo che mette giu' la marionetta.
+      if (prof.ali) this._aliPadrone(ctx, s, st, t);
       for (const name of prof.order) {
         const p = byName[name], img = reg.imgs[name]; if (!p || !img) continue;
         const tr = P[name] || [0, 0, 0];

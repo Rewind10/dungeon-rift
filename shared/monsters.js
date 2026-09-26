@@ -47,6 +47,24 @@
     spore_fungus: { id: 'spore_fungus', name: 'Fungo Sporifero', tier: 1, hp: 110, speed: 0, radius: 20, dmg: 11, atkRange: 340, atkCd: 3.1, ai: 'sentry', atk: 'zone', xp: 12, weight: 0, color: '#2f3a24', color2: '#151c10', eye: '#c8ff6a', shape: 'fungus', front: true, fungus: true, immobile: true, sightRange: 340, spores: 2, zoneRadius: 62, zoneDelay: 1.05, zoneMult: 1.0, projColor: '#a6ff3a', eliteHp: 2.0 },
     // v1.58 — SFERA D'OSSA: niente gambe. Carica, poi rotola in linea retta rimbalzando sui muri.
     // Ti obbliga a schivare di lato, cosa che nessun altro nemico faceva.
+    // ===== v2.23 — IL PADRONE =============================================================
+    // La marionetta viene dal disegno di Paolo, tagliato in otto pezzi (testa+corna, torso+spallacci,
+    // due braccia, due gambe, cintura-teschio col gonnellino, coda). Le ali del disegno sono state
+    // tolte e rifatte in vettoriale dal renderer, perche' attaccate al raster sarebbero rimaste
+    // ferme. Frontale come zombi e mago: non si gira, si specchia.
+    //
+    // NON e' solo un'aura. Comanda — i mostri nel suo raggio vanno piu' forte e picchiano di piu' —
+    // ma ha anche due attacchi suoi, uno per distanza: la FRUSTA da vicino (arco largo, telegrafato)
+    // e la CONDANNA da lontano (una zona a terra che si chiude sotto i piedi del bersaglio).
+    // Finche' e' vivo l'ondata vale piu' di quello che dice il conteggio: o lo si abbatte per primo,
+    // o gli passa sopra.
+    padrone: { id: 'padrone', name: 'Il Padrone', tier: 4, hp: 520, speed: 52, radius: 30, dmg: 26,
+      atkRange: 150, atkCd: 3.2, ai: 'padrone', atk: 'melee', xp: 58, weight: 5,
+      color: '#8a2f2a', color2: '#2e0f12', eye: '#ffb14a', shape: 'padrone', front: true, puppet: true,
+      comandoR: 250, comandoVel: 1.28, comandoDmg: 1.22,
+      frustaRaggio: 178, frustaArco: 1.15, frustaWind: 0.85, frustaDmg: 1.0,
+      condannaMin: 240, condannaR: 84, condannaRitardo: 1.25, condannaDmg: 1.35,
+      sightRange: 620, memory: 6, maxAlive: 2, eliteHp: 1.5 },
     // ===== v2.22 — DUE NEMICI SENZA GAMBE ==================================================
     // Paolo: *«e difficile avere nemici che camminano perche' ci sono le animazioni di movimento»*.
     // Vero, ed e' il motivo per cui nel roster funzionano meglio wisp, occhio, nugolo, melma e sfera

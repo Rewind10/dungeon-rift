@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.22.0`
+**Versione attuale:** `2.23.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -2211,6 +2211,42 @@ Tre nemici sono stati **ridisegnati** in stile dark-fantasy vettoriale, con nuov
 - **Morte**: ogni nemico **crolla e svanisce** (il negromante si **dissolve in volute viola**).
 
 Per ora sono coinvolti **solo questi 3** nemici.
+
+## 👑 IL PADRONE *(novita v2.23)*
+
+Ondata 15, 520 pv, raggio 30. Il primo nemico del gioco che **rende piu' forti gli altri**.
+
+**Come e' fatto.** E' una MARIONETTA come lo zombi e il mago: un disegno tagliato in otto pezzi
+(`testa`, `torso`, `braccioSx`, `braccioDx`, `cintura`, `gambaSx`, `gambaDx`, `coda`) piu' un rig
+JSON e un profilo di animazione. Le **ali** del disegno sono state tolte e rifatte **in vettoriale**
+dal renderer: attaccate al raster sarebbero rimaste ferme, e un'ala ferma e' un mantello. La coda
+ondeggia con una fase sfasata dal passo. Frontale: non si gira, si specchia.
+
+*Il formato del rig, per chi lo ritocca:* `w,h` sono i pixel del PNG, `ox,oy` il perno dentro il PNG,
+`ax,ay` dove quel perno va sulla tela da 1024. I PNG stanno a **meta' risoluzione** (il renderer li
+ridisegna a `si = 2s`, perche' `SC = 0.5`).
+
+**Il comando.** I mostri entro **250 unita'** vanno **1,28x piu' veloci** e picchiano **1,22x piu'
+forte**. Si vede: bordo acceso addosso a loro, anello tratteggiato attorno a lui. Non vale fra
+Padroni — due che si potenziassero a vicenda sarebbero una moltiplicazione.
+
+*Nota tecnica:* il comando **non tocca `m.speed` ne' `m.dmg`**. Il Veleno Corrosivo (v2.20) gia' salva
+e ripristina `m.dmg`, e due meccaniche che si passano lo stesso numero prima o poi si pestano i piedi.
+Due moltiplicatori a parte (`cmdV`, `cmdD`), letti nei tre imbuti del danno: `melee`, `shoot`, `spread`.
+
+**I suoi due attacchi**, scelti per distanza:
+
+| | quando | cosa fa |
+|---|---|---|
+| 🔥 **frusta** | da vicino (< 178) | 0,85 s di carica che si vede, poi un arco largo davanti a se' |
+| ☄️ **condanna** | da lontano (> 240) | apre **sotto i piedi** del bersaglio una zona che si chiude |
+
+Si alternano da soli perche' dipendono dalla distanza: **se stai addosso ti frusta, se scappi ti
+condanna**. Non c'e' un posto comodo, ed e' quello che deve insegnare.
+
+**Perche' alla 15.** Dalla 13 alla 19 non arrivava piu' niente di nuovo: sette ondate con solo numeri
+piu' grandi. E a quel punto il giocatore conosce tutto il bestiario, quindi accorgersi che l'ondata
+picchia piu' del solito **vuol dire qualcosa**.
 
 ## 🗡️🟩 DUE NEMICI SENZA GAMBE *(novita v2.22)*
 

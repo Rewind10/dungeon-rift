@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.22.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.23.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,22 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.23.0 (Il Padrone)
+
+Un demone alato costruito come **marionetta** a partire da un disegno di Paolo, tagliato in otto
+pezzi (testa con le corna, torso con gli spallacci, due braccia, due gambe, cintura-teschio col
+gonnellino, coda). Le **ali del disegno sono state tolte e rifatte in vettoriale**: battono, si
+spalancano sulla carica e si chiudono nell'affondo. Frontale come zombi e mago: non si gira.
+
+**Comanda** — i mostri entro 250 unità vanno 1,28× più veloci e picchiano 1,22× più forte, e si vede:
+bordo acceso su di loro, anello tratteggiato attorno a lui. **Ma attacca anche**: da vicino la
+**frusta** (0,85 s di carica telegrafata, poi un arco largo), da lontano la **condanna** (una zona che
+si apre sotto i tuoi piedi e si chiude). Se stai addosso ti frusta, se scappi ti condanna.
+
+Entra all'**ondata 15**, in mezzo alle sette ondate che non portavano più niente di nuovo.
+
+---
 
 ## 🆕 Novità v2.22.0 (due nemici senza gambe)
 
