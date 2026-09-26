@@ -2,11 +2,14 @@
 (function (root, factory) {
   const m = factory(
     (typeof module !== 'undefined' && module.exports) ? require('./monsters.js') : root.GAME.Monsters,
-    (typeof module !== 'undefined' && module.exports) ? require('./mathutils.js') : root.GAME.Math
+    (typeof module !== 'undefined' && module.exports) ? require('./mathutils.js') : root.GAME.Math,
+    // v2.24 — servono i numeri dell'ondata (totale, tetto, soglia delle riserve): stavano gia' in
+    // constants.js e non ha senso ricopiarli qui, dove domani nessuno li aggiornerebbe.
+    (typeof module !== 'undefined' && module.exports) ? require('./constants.js') : root.GAME.Constants
   );
   if (typeof module !== 'undefined' && module.exports) module.exports = m;
   else { root.GAME = root.GAME || {}; root.GAME.Waves = m; }
-})(typeof self !== 'undefined' ? self : this, function (Mon, MU) {
+})(typeof self !== 'undefined' ? self : this, function (Mon, MU, C) {
   'use strict';
   const MONSTERS = Mon.MONSTERS, BOSSES = Mon.BOSSES;
   // v1.89 — I BOSS SONO DUE: uno a META' STRADA (10) e quello finale (20). Erano quattro, uno ogni cinque
@@ -101,10 +104,30 @@
   }
   function buildWave(w, players, mode) {
     const s = scaling(w, players); const pool = poolForWave(w);
-    const count = Math.max(3, Math.round(s.count * (mode ? mode.countMul : 1)));
+    // v2.24 — IL TOTALE DELL'ONDATA. Dalla settima in poi e' FISSO (20 in solitario, +4 per ogni
+    // giocatore in piu'): non cresce piu' con l'ondata. Prima la 20 ne aveva 42 e la partita si
+    // allungava senza diventare piu' interessante. Fino alla sesta resta la curva di prima, ma
+    // tagliata allo stesso tetto, se no in due giocatori la sesta ne avrebbe piu' della settima.
+    const gio = Math.max(1, players | 0);
+    const TOT = (C.ONDATA_TOT || 20) + (C.ONDATA_TOT_GIOC || 4) * (gio - 1);
+    let count = Math.max(3, Math.round(s.count * (mode ? mode.countMul : 1)));
+    count = (w >= (C.ONDATA_TOT_DA || 7)) ? Math.round(TOT * (mode ? mode.countMul : 1)) : Math.min(count, TOT);
     const eliteChance = Math.min(0.6, s.eliteChance * (mode ? mode.eliteMul : 1));
     const list = [];
-    for (let i = 0; i < count; i++) { const pick = MU.weighted(pool); const elite = MU.chance(eliteChance) && !MONSTERS[pick.id].boss; list.push({ type: pick.id, elite }); }
+    // v2.24 — LA VARIETA' NON PUO' PAGARE IL TAGLIO. Paolo: *«nei livelli avanzati voglio varieta',
+    // quindi devono entrare tutti i nemici»*. Con venti posti e una sorte pesata, i tipi rari
+    // (Padrone, Cubo, lo Spettrale) sarebbero usciti una volta su tre ondate. Quindi: se il mazzo
+    // ci sta, prima UNO DI OGNI TIPO, poi il resto a sorte pesata. Cosi' il bestiario si vede tutto
+    // e i pesi decidono solo chi si ripete.
+    const semi = [];
+    if (pool.length && pool.length <= count - 3) for (const p of pool) semi.push(p.id);
+    for (let i = 0; i < count; i++) {
+      const id = i < semi.length ? semi[i] : MU.weighted(pool).id;
+      list.push({ type: id, elite: MU.chance(eliteChance) && !MONSTERS[id].boss });
+    }
+    // mescolata: i "semi" sono in ordine di pool, e senza questa riga i primi che entrano in campo
+    // sarebbero sempre gli stessi nello stesso ordine, ondata dopo ondata
+    for (let z = list.length - 1; z > 0; z--) { const j = (Math.random() * (z + 1)) | 0; const t = list[z]; list[z] = list[j]; list[j] = t; }
     return { list, scaling: s, mode };
   }
   // v1.50 — moltiplicatore PV degli elite reso PER-NEMICO (def.eliteHp, default ELITE_HP). Il 2.4x fisso

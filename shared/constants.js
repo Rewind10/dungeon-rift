@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.23.0',
+    VERSION: '2.24.0',
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
     MELEE_MAX_TARGETS: 5, MELEE_SPLASH: 0.55,
     // v1.51 — level up fra le ondate
@@ -180,7 +180,21 @@
     // v1.99 — LE ONDATE CHE SI GIOCANO NELLA CALDERA: quelle dei due boss. E un elenco apposta —
     // aggiungerne una costa una virgola, e svuotarlo spegne la caldera senza toccare altro.
     CALDERA_ONDATE: [10, 20],
-    MAX_ALIVE: 40,
+    // ===== v2.24 — L'AZZARDO DI PAOLO: ondate corte e affollamento fisso ==================
+    // *«i nemici contemporanei non possono essere piu' di 14; in totale nelle ondate successive
+    // alla sesta saranno 20 con 6 riserve che entreranno quando i nemici rimasti sono 7»*.
+    // E' un cambio grosso e voluto: prima l'ondata 20 in solitario aveva 42 nemici totali e 22 in
+    // campo, adesso ne ha 20 e 14. Si accorcia l'ondata e si abbassa la calca; in cambio ogni
+    // nemico conta di piu', e la varieta' la garantisce il costruttore dell'ondata (sotto).
+    MAX_ALIVE: 14,                 // in campo, in solitario
+    MAX_ALIVE_GIOC: 2,             // +2 per ogni giocatore oltre il primo (16 in due)
+    ONDATA_TOT: 20,                // totale dall'ondata 7 in poi, in solitario
+    ONDATA_TOT_GIOC: 4,            // +4 per ogni giocatore oltre il primo (24 in due)
+    ONDATA_TOT_DA: 7,              // da che ondata vale il totale fisso
+    // le riserve entrano TUTTE INSIEME quando in campo ne restano meta' del tetto: 7 su 14 in
+    // solitario, 8 su 16 in due. Non e' il rifornimento a goccia di prima — e' una seconda ondata,
+    // e la pausa in mezzo e' il momento in cui si respira e si raccolgono le monete.
+    RISERVE_SOGLIA_Q: 0.5,
     // v1.96 — DALL'ONDATA 9 IN POI SE NE VEDONO 22 ALLA VOLTA. Il tetto unico di quaranta era giusto
     // finche' le ondate erano piccole, ma dalla nona in avanti la mappa si riempiva: alla 19 erano
     // quaranta mostri in campo insieme, e non e' piu' un combattimento, e' una calca. Il TOTALE

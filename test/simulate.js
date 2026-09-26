@@ -1352,7 +1352,7 @@ function testV164() {
   room.startGame();
   room.wave = 18; room.nextWave();
   const totale = room.pending + room.monsters.length;
-  assert(totale > C.MAX_ALIVE, 'l ondata scelta e piu grande del tetto (' + totale + ' nemici previsti contro un tetto di ' + C.MAX_ALIVE + ')');
+  assert(totale > room.tettoVivi(), 'l ondata scelta e piu grande del tetto (' + totale + ' nemici previsti contro un tetto di ' + room.tettoVivi() + ')');
 
   // i giocatori non fanno nulla: i mostri si accumulano finche il tetto non li ferma
   let picco = 0;
@@ -1364,21 +1364,42 @@ function testV164() {
     picco = Math.max(picco, room.monsters.filter(x => !x.dead).length);
     if (room.phase !== C.PHASE_COMBAT && room.phase !== C.PHASE_BOSS) break;
   }
-  assert(picco <= C.MAX_ALIVE, 'in campo non se ne vedono mai piu di ' + C.MAX_ALIVE + ' (picco ' + picco + ')');
+  assert(picco <= room.tettoVivi(), 'in campo non se ne vedono mai piu di ' + room.tettoVivi() + ' (picco ' + picco + ')');
   assert(room.pending > 0, 'i nemici in eccesso NON spariscono: restano in coda (' + room.pending + ' ancora da entrare)');
   assert(room.monsters.length + room.pending >= totale - 2, 'il totale da uccidere e rimasto quello: ' + (room.monsters.length + room.pending) + ' su ' + totale);
 
-  // uccidendone qualcuno, la coda riprende a scorrere
+  // uccidendone qualcuno la coda riprende a scorrere — ma NON subito.
+  // v2.24: fino alla v2.23 bastava un posto libero perche' ne entrasse un altro, e il campo restava
+  // sempre incollato al tetto. Ora il primo carico riempie fino al tetto, poi la coda si CHIUDE e le
+  // riserve aspettano che i vivi scendano a meta' tetto. Il test segue la regola nuova e la verifica
+  // in due tempi, perche' il pezzo che vale e' proprio l'attesa.
   const codaPrima = room.pending;
-  // vanno uccisi 12 mostri DISTINTI e ancora vivi: killMonster marca .dead ma la rimozione dall array
-  // avviene dopo, quindi prendere sempre monsters[0] significherebbe ammazzare dodici volte lo stesso.
-  for (const vittima of room.monsters.filter(x => !x.dead).slice(0, 12)) room.killMonster(vittima, null);
-  for (let i = 0; i < C.TICK_RATE * 12; i++) {
+  const vivi = () => room.monsters.filter(x => !x.dead).length;
+  const gira = (sec) => { for (let i = 0; i < C.TICK_RATE * sec; i++) {
     for (const p of pls) { p.hp = 1e9; room.setInput(p.id, { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false }); }
-    room.update(dt);
-  }
-  assert(room.pending < codaPrima, 'appena si fa spazio la coda riprende a entrare (' + codaPrima + ' -> ' + room.pending + ')');
-  assert(room.monsters.filter(x => !x.dead).length <= C.MAX_ALIVE, 'e il tetto continua a valere (' + room.monsters.filter(x => !x.dead).length + ')');
+    room.update(dt); } };
+  // conto sempre i vivi da capo a ogni colpo: killMonster marca .dead e la rimozione avviene al tick
+  // dopo (prendere monsters[0] tre volte vorrebbe dire ammazzare tre volte lo stesso), e soprattutto
+  // le Melme si dividono morendo, quindi "ne uccido N" non vuol dire "ne restano N di meno".
+  const falcia = (finoA, maxColpi) => { let g = 0;
+    while (vivi() > finoA && g++ < maxColpi) { const v = room.monsters.find(x => !x.dead); if (!v) break; room.killMonster(v, null); } };
+
+  // PRIMO TEMPO — posti liberi in campo, ma ancora sopra la soglia: la coda deve restare ferma.
+  falcia(room.tettoVivi() - 3, 40);
+  gira(6);
+  assert(vivi() > room.sogliaRiserve(), 'i vivi sono ancora sopra la soglia (' + vivi() + ' > ' + room.sogliaRiserve() + ')');
+  assert(!room.riserveAperte, 'e le riserve sono ancora chiuse');
+  // NON controllo che ci siano posti liberi in campo: un Negromante evoca e una Melma si divide,
+  // e quei due rioccupano il posto senza passare dalla coda. Il posto libero lo verifica il TEST 83
+  // in una stanza pulita; qui conta che la coda sia ferma.
+  assert(room.pending === codaPrima, 'e la coda NON si muove: le riserve non entrano a goccia (' + codaPrima + ' -> ' + room.pending + ')');
+
+  // SECONDO TEMPO — scesi a meta' tetto, le riserve si aprono e rientrano in blocco.
+  falcia(room.sogliaRiserve(), 60);
+  gira(12);
+  assert(room.riserveAperte, 'scesi alla soglia le riserve si aprono');
+  assert(room.pending < codaPrima, 'e la coda riprende a entrare (' + codaPrima + ' -> ' + room.pending + ')');
+  assert(vivi() <= room.tettoVivi(), 'e il tetto continua a valere (' + vivi() + ')');
   ok('novita v1.64 verificate');
 }
 function testV163() {
@@ -2153,13 +2174,13 @@ function testV168() {
   // Si semina, come per le altre tre prove legate al caso della mappa, e si rimette a posto alla fine.
   const _rndVero38 = Math.random; Math.random = MU.seedRng(0x0D1C);
   // --- 1) il tetto e' 30 e l'ondata NON perde nessuno: gli altri restano in coda ---
-  assert(C.MAX_ALIVE === 40, 'il tetto dei nemici vivi e 40');
+  assert(C.MAX_ALIVE === 14, 'il tetto dei nemici vivi in solitario e 14');
   const room = new Room('v168'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 17; room.mode = Waves.modeForWave(17); room.phase = C.PHASE_COMBAT;
   const w = Waves.buildWave(20, 6, room.mode);      // ondata volutamente enorme: 80+ nemici
   room.waveList = w.list; room.waveScaling = w.scaling; room.pending = w.list.length; room._peakAlive = 0;
   const totale = w.list.length;
-  assert(totale > C.MAX_ALIVE * 2, 'la prova usa un ondata piu che doppia del tetto (' + totale + ')');
+  assert(totale > room.tettoVivi(), 'la prova usa un ondata piu grande del tetto (' + totale + ')');
   // il giocatore va tenuto in piedi: 30 nemici addosso a un fermo lo ammazzano, la partita finisce e con
   // essa la generazione — misureremmo il gameover, non la coda.
   const dt = 1 / C.TICK_RATE; let picco = 0;
@@ -2342,29 +2363,28 @@ function testV170() {
   // combattimento, sono una calca, e la mappa non si vede piu'. Il TOTALE dell'ondata non cambia —
   // l'eccesso aspetta in coda ed entra man mano che ne muore uno.
   const room = new Room('v170'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
-  assert(C.MAX_ALIVE === 40, 'il tetto delle prime ondate e 40');
-  assert(C.MAX_ALIVE_TARDI === 22, 'e quello dalla nona in poi e 22');
-  assert(C.MAX_ALIVE_TARDI_DA === 9, 'e scatta all ondata 9');
-  for (const w of [1, 2, 5, 8]) { room.wave = w; assert(room.tettoVivi() === 40, 'ondata ' + w + ': il tetto e 40 (letto ' + room.tettoVivi() + ')'); }
-  for (const w of [9, 10, 15, 19, 20, 30]) { room.wave = w; assert(room.tettoVivi() === 22, 'ondata ' + w + ': il tetto e 22 (letto ' + room.tettoVivi() + ')'); }
-  // fino all ottava, in singolo, si vedono ancora TUTTI in campo insieme
-  for (let w = 1; w <= 8; w++) if (!Waves.isBossWave(w))
-    assert(Waves.scaling(w, 1).count <= C.MAX_ALIVE, 'ondata ' + w + ' in singolo ci sta tutta in campo (' + Waves.scaling(w, 1).count + ')');
-  // e il totale dell ondata non e stato toccato: dalla nona in poi resta sopra il tetto, ed e' il punto
-  {
-    let sopra = 0;
-    for (let w = 9; w <= 19; w++) if (!Waves.isBossWave(w) && Waves.scaling(w, 1).count > C.MAX_ALIVE_TARDI) sopra++;
-    assert(sopra >= 8, 'e dalla nona in poi il totale resta piu alto del tetto (' + sopra + ' ondate su 11): la coda serve a qualcosa');
-  }
+  // v2.24 — IL TETTO NON DIPENDE PIU' DALL'ONDATA, ma dai GIOCATORI. Era una curva (40 fino
+  // all'ottava, 22 dopo); adesso e' 14 sempre, piu' 2 per ogni giocatore oltre il primo.
+  assert(C.MAX_ALIVE === 14, 'il tetto in solitario e 14');
+  assert(C.MAX_ALIVE_GIOC === 2, 'e cresce di 2 per ogni giocatore in piu');
+  for (const w of [1, 2, 5, 8, 9, 15, 20, 30]) { room.wave = w;
+    assert(room.tettoVivi() === 14, 'ondata ' + w + ': in solitario il tetto resta 14 (letto ' + room.tettoVivi() + ')'); }
+  // il totale dell ondata: dalla settima in poi e FISSO, non cresce piu con l ondata
+  assert(Waves.buildWave(7, 1).list.length === C.ONDATA_TOT, 'dalla settima il totale e ' + C.ONDATA_TOT);
+  assert(Waves.buildWave(20, 1).list.length === C.ONDATA_TOT, 'e alla ventesima e sempre quello');
+  assert(Waves.buildWave(7, 2).list.length === C.ONDATA_TOT + C.ONDATA_TOT_GIOC, 'in due diventa ' + (C.ONDATA_TOT + C.ONDATA_TOT_GIOC));
+  // e resta piu grande del tetto: senza questo, le riserve non esisterebbero
+  for (const w of [7, 12, 20]) if (!Waves.isBossWave(w))
+    assert(Waves.buildWave(w, 1).list.length > 14, 'ondata ' + w + ': il totale supera il tetto, quindi c e una riserva');
   // --- 2) in GRUPPO le ondate crescono e l eccesso resta in coda, senza perdere nessuno ---
   const r2 = new Room('v170b'); const q = r2.addPlayer('c', { send() {} }, 'C', 'arciere'); r2.startGame();
   r2.wave = 12; r2.mode = Waves.modeForWave(12); r2.phase = C.PHASE_COMBAT;
   const w3 = Waves.buildWave(12, 6, r2.mode); r2.waveList = w3.list; r2.waveScaling = w3.scaling; r2.pending = w3.list.length; r2._peakAlive = 0;
-  assert(w3.list.length > C.MAX_ALIVE, 'in sei, l ondata 12 ha piu nemici del tetto (' + w3.list.length + ')');
+  assert(w3.list.length > r2.tettoVivi(), 'in sei, l ondata 12 ha piu nemici del tetto (' + w3.list.length + ' contro ' + r2.tettoVivi() + ')');
   const dt = 1 / C.TICK_RATE; let picco = 0;
   for (let i = 0; i < C.TICK_RATE * 45; i++) { q.hp = r2.effMaxHp(q); q.down = false; q.dead = false; r2.update(dt); let vivi = 0; for (const m of r2.monsters) if (!m.dead) vivi++; picco = Math.max(picco, vivi); }
-  assert(picco <= C.MAX_ALIVE, 'in campo non se ne vedono mai piu di 40 (picco ' + picco + ')');
-  assert(picco >= 20, 'ma l arena si riempie davvero (picco ' + picco + ')');
+  assert(picco <= r2.tettoVivi(), 'in campo non se ne vedono mai piu del tetto (picco ' + picco + ' su ' + r2.tettoVivi() + ')');
+  assert(picco >= Math.round(r2.tettoVivi() * 0.7), 'ma l arena si riempie davvero (picco ' + picco + ')');
   assert(r2.pending > 0 || r2.monsters.length > 0, 'e quelli in eccesso restano in coda, non spariscono');
   // --- 3) l esperienza arriva da piu fonti ---
   const r3 = new Room('v170c'); const z = r3.addPlayer('d', { send() {} }, 'D', 'mago'); r3.startGame();
@@ -5216,6 +5236,13 @@ function testV199() {
     assert(d.caricaCd > 0 && d.caricaDur > 0 && d.caricaMin > 0, 'ha una carica, con il suo tempo di ricarica');
     assert(d.slamPredizione > 0, 'e il pugno anticipa il movimento invece di mirare dove sei');
     // la carica parte davvero: boss lontano, giocatore in vista, e prima o poi si lancia
+    // v2.24 — RISEMINATO QUI. Il seme del test e' uno solo per tutto il blocco, quindi questo pezzo
+    // pescava da un punto dello stream che dipendeva da quanti sorteggi avevano fatto i controlli
+    // sopra. Cambiando la composizione delle ondate (v2.24) il conto dei sorteggi e' cambiato, il
+    // punto di partenza si e' spostato e la carica non partiva piu': non un bug del Colosso, un test
+    // legato a un dettaglio che non doveva riguardarlo. Con un seme suo questo pezzo non dipende piu'
+    // da cosa succede prima.
+    Math.random = MU.seedRng(0x1991);
     const room = new Room('v1991'); const p = room.addPlayer('a', { send() {} }, 'A', 'paladino');
     room.startGame(10);
     room.monsters = room.monsters.filter(x => x.boss); room.pending = 0; room.waveList = [];
@@ -6869,7 +6896,11 @@ function testPassive220() {
   // --- 9) MANO FREDDA: il critico si avvicina a ogni colpo mancato e si azzera quando arriva ---
   { const { r, p } = con('assassino', 'ass_fredda');
     p.stats.critChance = 0; p.freddaAcc = 0;
-    for (let k = 0; k < 3; k++) { p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p); }
+    // UN COLPO SOLO, non tre. Con il conto a zero e la probabilita di critico a zero il primo colpo
+    // non puo' fare critico, quindi il conto sale di sicuro. Tre colpi di fila invece alzavano il
+    // conto abbastanza da far uscire un critico VERO, che azzera tutto: era proprio il meccanismo
+    // sotto esame a far diventare rosso il test una volta ogni tanto.
+    p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p);
     assert(p.freddaAcc > 0, 'Mano Fredda: i colpi non critici caricano il conto (' + p.freddaAcc.toFixed(3) + ')');
     p.stats.critChance = 1; p.fireCd = 0; r.bullets.length = 0; r.firePlayerWeapon(p);
     assert(p.freddaAcc === 0, 'e il critico lo azzera'); }
@@ -7551,10 +7582,20 @@ function testV223() {
     const m = r.spawnMonster('padrone', sp.x, sp.y, {}); m.awake = true; m.impegnato = 1; m.atkT = 0;
     m.speed = 0;                                             // fermo: qui si misura la scelta, non la corsa
     const D = Mon.MONSTERS.padrone;
+    // v2.24 — IL POSTO DOVE METTERE IL GIOCATORE LO CERCO, non lo do per scontato. Prima era
+    // «trecento pixel a destra», e su una mappa a caso trecento pixel a destra ogni tanto e' roccia:
+    // il Padrone non vedeva nessuno, non puntava, e il test diventava rosso per colpa della mappa.
+    let px = 0, py = 0, trovato = false;
+    for (let k = 0; k < 96 && !trovato; k++) {
+      const a = (k / 96) * Math.PI * 2, dd = D.condannaMin + 60;
+      const x = sp.x + Math.cos(a) * dd, y = sp.y + Math.sin(a) * dd;
+      if (!r.isWallAt(x, y) && r.losClear(sp.x, sp.y, x, y)) { px = x; py = y; trovato = true; }
+    }
+    assert(trovato, 'c e un punto libero a distanza di condanna da cui farsi vedere');
     const ev = [];
     for (let i = 0; i < 400 && !m.dead; i++) {
       // il giocatore resta OLTRE la distanza della condanna
-      p.x = sp.x + D.condannaMin + 60; p.y = sp.y;
+      p.x = px; p.y = py;
       r.events.length = 0; r.update(1 / 60);
       for (const e of r.events) if (/^padrone_/.test(e.t)) ev.push(e.t);
       if (ev.includes('padrone_condanna')) break;
@@ -7600,6 +7641,159 @@ function testV223() {
   ok('il Padrone comanda i suoi, frusta da presso e condanna da lontano');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.24 — IL RITMO DELLE ONDATE: tetto basso, riserve che entrano in blocco
+// =================================================================================================
+// L'azzardo di Paolo, parola sua: «i nemici contemporanei non possono essere piu' di 14, in totale
+// nelle ondate successive alla sesta saranno 20 con 6 riserve che entreranno quando i nemici rimasti
+// sono 7». In due: 16 in campo e 24 in totale. E: «nei livelli avanzati voglio varieta', quindi
+// devono entrare tutti i nemici».
+// Tre cose da difendere, e sono indipendenti: il TETTO, il TOTALE, la VARIETA'. La quarta e' la
+// pausa in mezzo, che e' la vera novita': prima il campo restava incollato al tetto dal primo
+// all'ultimo secondo, perche' a ogni morto ne rientrava subito un altro.
+function testV224() {
+  console.log('\n[TEST 83] v2.24 — quattordici in campo, venti in tutto, le riserve aspettano');
+  const Mon = require('../shared/monsters.js');
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) I NUMERI SONO QUELLI CHE HA DETTO PAOLO ------------------------------------------
+  assert(C.MAX_ALIVE === 14, 'in campo, da soli, mai piu di 14 (' + C.MAX_ALIVE + ')');
+  assert(C.MAX_ALIVE_GIOC === 2, 'e +2 per ogni giocatore in piu: 16 in due');
+  assert(C.ONDATA_TOT === 20, 'il totale dell ondata e 20 (' + C.ONDATA_TOT + ')');
+  assert(C.ONDATA_TOT_GIOC === 4, 'e +4 per giocatore: 24 in due');
+  assert(C.ONDATA_TOT_DA === 7, 'e vale dalla settima ondata in poi');
+  {
+    const r1 = new Room('v224n1'); r1.addPlayer('a', { send() {} }, 'A', 'ranger'); r1.startGame();
+    assert(r1.tettoVivi() === 14, 'in solitario il tetto e 14 (' + r1.tettoVivi() + ')');
+    assert(r1.sogliaRiserve() === 7, 'e le riserve entrano quando ne restano 7 (' + r1.sogliaRiserve() + ')');
+    const r2 = new Room('v224n2');
+    r2.addPlayer('a', { send() {} }, 'A', 'ranger'); r2.addPlayer('b', { send() {} }, 'B', 'mago');
+    r2.startGame();
+    assert(r2.tettoVivi() === 16, 'in due il tetto e 16 (' + r2.tettoVivi() + ')');
+    assert(r2.sogliaRiserve() === 8, 'e la soglia si alza con lui (' + r2.sogliaRiserve() + ')');
+  }
+
+  // --- 2) IL TOTALE E' FISSO DALLA SETTIMA IN POI ------------------------------------------
+  // Prima cresceva con l'ondata: alla 18 arrivavano quaranta nemici e la partita diventava una
+  // questione di resistenza. Adesso dalla settima in poi il numero e' sempre quello e a cambiare
+  // e' CHI arriva, non quanti.
+  for (const w of [7, 10, 13, 15, 18, 22]) {
+    if (Waves.isBossWave(w)) continue;
+    const tot1 = Waves.buildWave(w, 1).list.length;
+    const tot2 = Waves.buildWave(w, 2).list.length;
+    assert(tot1 === C.ONDATA_TOT, 'ondata ' + w + ' da solo: ' + tot1 + ' nemici in tutto');
+    assert(tot2 === C.ONDATA_TOT + C.ONDATA_TOT_GIOC, 'ondata ' + w + ' in due: ' + tot2);
+  }
+  // e prima della settima resta la rampa: le prime ondate devono essere piccole
+  assert(Waves.buildWave(1, 1).list.length < C.ONDATA_TOT, 'la prima ondata resta piccola (' + Waves.buildWave(1, 1).list.length + ')');
+
+  // --- 3) LA VARIETA': NEI LIVELLI ALTI CI DEVE ESSERE DI TUTTO ----------------------------
+  // Venti nemici presi a caso da un sacchetto pesato vuol dire, in pratica, sei Zombi e quattro
+  // Pipistrelli: il tetto piu' basso RIDUCE i nemici, e se non si fa niente riduce anche i tipi.
+  // Per questo l'ondata semina prima uno di ogni tipo disponibile, e solo dopo riempie a peso.
+  for (const w of [15, 18]) {
+    if (Waves.isBossWave(w)) continue;
+    const pool = Waves.poolForWave(w).map(x => x.id);
+    const tipi = new Set(Waves.buildWave(w, 1).list.map(x => x.type));
+    assert(tipi.size >= Math.min(pool.length, C.ONDATA_TOT - 3),
+      'ondata ' + w + ': ci sono ' + tipi.size + ' tipi diversi su ' + pool.length + ' disponibili');
+  }
+  // e non e' una fila ordinata: l ordine di ingresso cambia da una partita all altra
+  {
+    let diverse = 0;
+    for (let k = 0; k < 8; k++) {
+      const a = Waves.buildWave(15, 1).list.map(x => x.type).join(',');
+      const b = Waves.buildWave(15, 1).list.map(x => x.type).join(',');
+      if (a !== b) diverse++;
+    }
+    assert(diverse >= 6, 'e l ordine di ingresso e mescolato, non sempre lo stesso (' + diverse + '/8)');
+  }
+
+  // --- 4) LA PAUSA IN MEZZO: le riserve NON entrano a goccia --------------------------------
+  // Stanza pulita, un tipo solo e innocuo: niente Negromanti che evocano e niente Melme che si
+  // dividono, cosi' i posti in campo li libera e li occupa solo la coda, e la regola si vede nuda.
+  {
+    const r = new Room('v224p'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.wave = 8; r.nextWave();
+    r.monsters.length = 0; r.bullets.length = 0;
+    const TOT = 20;
+    r.pending = TOT; r.waveList = Array.from({ length: TOT }, () => ({ type: 'skeleton' }));
+    r.riserveAperte = false; r.caricoFatto = false;
+    const vivi = () => r.monsters.filter(x => !x.dead).length;
+    let visteRiserve = false;
+    const gira = (sec) => { for (let i = 0; i < C.TICK_RATE * sec; i++) {
+      p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      r.update(dt);
+      if (r.events.some(e => e.t === 'riserve')) visteRiserve = true; } };
+
+    // il primo carico riempie il campo fino al tetto, e li si ferma
+    gira(20);
+    assert(vivi() === r.tettoVivi(), 'il primo carico riempie il campo (' + vivi() + ' su ' + r.tettoVivi() + ')');
+    assert(r.pending === TOT - r.tettoVivi(), 'e il resto resta in riserva (' + r.pending + ')');
+    assert(r.caricoFatto, 'e il primo carico risulta chiuso');
+    assert(!r.riserveAperte, 'le riserve sono ancora ferme');
+
+    // ne muoiono alcuni ma non abbastanza: il campo ha posti liberi e la coda NON si muove.
+    // E' il cuore della v2.24: prima, con un posto libero, ne entrava subito un altro.
+    const codaPrima = r.pending;
+    while (vivi() > r.sogliaRiserve() + 3) { const v = r.monsters.find(x => !x.dead); if (!v) break; r.killMonster(v, null); }
+    gira(8);
+    assert(vivi() < r.tettoVivi(), 'ci sono posti liberi in campo (' + vivi() + ' su ' + r.tettoVivi() + ')');
+    assert(vivi() > r.sogliaRiserve(), 'ma siamo ancora sopra la soglia (' + vivi() + ' > ' + r.sogliaRiserve() + ')');
+    assert(r.pending === codaPrima, 'e la coda NON si muove: qui si respira (' + codaPrima + ' -> ' + r.pending + ')');
+    assert(!r.riserveAperte, 'e le riserve restano chiuse');
+
+    // scesi alla soglia, si aprono — e lo dicono al client
+    while (vivi() > r.sogliaRiserve()) { const v = r.monsters.find(x => !x.dead); if (!v) break; r.killMonster(v, null); }
+    gira(12);
+    assert(r.riserveAperte, 'arrivati a ' + r.sogliaRiserve() + ' le riserve si aprono');
+    assert(visteRiserve, 'e l evento arriva al client');
+    { const fs = require('fs'), path = require('path');
+      const srcM = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'main.js'), 'utf8');
+      assert(srcM.indexOf("case 'riserve'") >= 0, 'e il client sa cosa farne: lo annuncia'); }
+    assert(r.pending === 0, 'ed entrano tutte (' + r.pending + ' rimaste)');
+    assert(vivi() <= r.tettoVivi(), 'senza mai sfondare il tetto (' + vivi() + ')');
+  }
+
+  // --- 5) E IL TETTO VALE ANCHE QUANDO LE RISERVE SONO APERTE -------------------------------
+  // Una volta aperte restano aperte per tutta l'ondata: se il tetto non le fermasse piu', l'ultima
+  // parte dell'ondata diventerebbe l'ammasso che questa versione doveva togliere.
+  {
+    const r = new Room('v224t'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    r.wave = 8; r.nextWave();
+    r.monsters.length = 0;
+    r.pending = 40; r.waveList = Array.from({ length: 40 }, () => ({ type: 'skeleton' }));
+    r.riserveAperte = true; r.caricoFatto = true;          // il caso peggiore: coda spalancata
+    let picco = 0;
+    for (let i = 0; i < C.TICK_RATE * 40; i++) {
+      p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      r.update(dt);
+      picco = Math.max(picco, r.monsters.filter(x => !x.dead).length);
+    }
+    assert(picco <= r.tettoVivi(), 'col tetto a ' + r.tettoVivi() + ', anche a coda aperta il picco e ' + picco);
+    assert(r.pending > 0, 'e quello che non ci sta resta in coda (' + r.pending + ')');
+  }
+
+  // --- 6) I TRE RITOCCHI AI NEMICI ----------------------------------------------------------
+  // Paolo, insieme all azzardo: «sistema il diavolo, fallo fluttuare con le gambe ferme e la frusta
+  // che colpisce il personaggio. La spada mi sembra troppo grossa, riducila».
+  {
+    const fs = require('fs'), path = require('path');
+    const ROOT = path.join(__dirname, '..') + path.sep;
+    assert(Mon.MONSTERS.lama.radius < 14, 'la Lama e stata rimpicciolita (raggio ' + Mon.MONSTERS.lama.radius + ', era 14)');
+    assert(Mon.MONSTERS.padrone.fluttua > 0, 'il Padrone fluttua: l ombra resta a terra staccata');
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    const i0 = srcR.indexOf('padrone: {');
+    const prof = srcR.slice(i0, i0 + 3000);
+    assert(i0 > 0 && /gait:\s*'float'/.test(prof), 'e il suo profilo dice che galleggia, non che cammina');
+    // LE GAMBE FERME. Paolo: «le gambe devono restare ferme altrimenti sembra una marionetta appena».
+    // Se un domani qualcuno rimette la falcata, il demone torna a sembrare di cartone.
+    assert(!/P\.gambaSx\s*=\s*\[W\.leg/.test(prof) && !/P\.gambaDx\s*=\s*\[W\.leg/.test(prof),
+      'e nella marcia le gambe non si muovono');
+  }
+  ok('quattordici in campo, venti in tutto, e in mezzo si respira');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

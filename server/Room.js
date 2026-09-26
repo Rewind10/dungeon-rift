@@ -502,6 +502,8 @@ class Room {
     else { if (!this.crates.length) this.spawnCrates(); }
     if (Waves.isBossWave(this.wave)) { this.spawnBoss(); this.pending = Math.round(4 + this.wave * 0.5); }
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
+    // v2.24 — il primo carico e' quanto ci sta in campo; il resto sono RISERVE e aspettano.
+    this.riserveAperte = false; this.caricoFatto = false;
     // v2.8 — se uno esce dal villaggio SENZA parlare con l’oracolo, la missione in evidenza resterebbe
     // "trova l’oracolo" per venti ondate, mentre sta gia' scendendo. Chi salta ha saltato: la missione
     // diventa comunque la discesa, perche' e' quello che sta facendo.
@@ -736,12 +738,33 @@ class Room {
   // v1.96 — resta vero per le prime otto ondate, ma DALLA NONA il tetto scende a MAX_ALIVE_TARDI (22).
   // Alla 19 erano quaranta mostri in campo insieme e la mappa non si vedeva piu'. Il totale dell'ondata
   // non cambia: chi non ci sta aspetta in coda (this.pending) ed entra quando ne muore uno.
+  // v2.24 — IL TETTO NON DIPENDE PIU' DALL'ONDATA, ma dai GIOCATORI. Era una curva che saliva
+  // (40 fino all'ottava, 22 dopo): adesso e' 14 sempre, piu' 2 per ogni giocatore oltre il primo.
+  // Il totale dell'ondata lo decide waves.js; questo decide solo quanti ne hai addosso insieme.
   tettoVivi() {
-    const w = Math.max(1, this.wave | 0);
-    const cur = C.MAX_ALIVE_CURVE;
-    if (cur && cur.length) return w >= cur.length ? (C.MAX_ALIVE || 40) : cur[w - 1];
-    if (C.MAX_ALIVE_TARDI && w >= (C.MAX_ALIVE_TARDI_DA || 9)) return C.MAX_ALIVE_TARDI;
-    return C.MAX_ALIVE || 40;
+    const gio = Math.max(1, (this.veri && this.veri.length) || this.alivePlayers.length || 1);
+    return (C.MAX_ALIVE || 14) + (C.MAX_ALIVE_GIOC || 2) * (gio - 1);
+  }
+  // quanti ne devono restare in campo perche' le riserve entrino: meta' del tetto (7 su 14).
+  sogliaRiserve() { return Math.max(1, Math.round(this.tettoVivi() * (C.RISERVE_SOGLIA_Q || 0.5))); }
+  // v2.24 — LE RISERVE ENTRANO IN BLOCCO, NON A GOCCIA. Prima ne rientrava uno ogni volta che ne
+  // moriva uno: il campo restava pieno dal primo all'ultimo secondo. Adesso l'ondata mette giu' il
+  // suo carico, poi TACE finche' non ne restano pochi, e allora entra il resto. La pausa in mezzo
+  // e' voluta: e' il momento in cui si respira, si raccolgono le monete e si sceglie dove mettersi.
+  _puoSpawnare() {
+    let vivi = 0; for (const m of this.monsters) if (!m.dead) vivi++;
+    // il campo pieno chiude il primo carico. Lo decido guardando QUANTI SONO IN CAMPO e non quanti
+    // sono usciti dalla coda: una Melma che si divide e un evocato occupano un posto che la coda non
+    // ha speso, e col contatore delle uscite il primo carico non si sarebbe mai chiuso.
+    if (this.tettoVivi() - vivi <= 0) { this.caricoFatto = true; return false; }
+    if (this.riserveAperte) return true;
+    if (!this.caricoFatto) return true;                                    // sta ancora riempiendo
+    if (vivi <= this.sogliaRiserve()) {
+      this.riserveAperte = true;
+      this.events.push({ t: 'riserve', n: this.pending });
+      return true;
+    }
+    return false;
   }
   _nearestPlayer(x, y) {
     let best = null, bd = Infinity;
@@ -3678,7 +3701,7 @@ class Room {
     // resta il ritmo di sempre (0,25-0,6s, e' la salita che da' il senso di ondata che monta), ma quando
     // e' gia' stata piena e si sono aperti dei buchi il rimpiazzo e' quasi immediato (0,10-0,22s).
     if (inCombat && this.monsters.length > (this._peakAlive || 0)) this._peakAlive = this.monsters.length;
-    if (inCombat && this.pending > 0 && this._postiLiberi() > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
+    if (inCombat && this.pending > 0 && this._puoSpawnare()) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     // v1.70 — il rifornimento della SOPRAVVIVENZA aveva un 14 scritto a mano che scavalcava il tetto:
     // all ondata 2 (tetto 10) si arrivava a 14 vivi. Ora passa dalla stessa porta di tutti gli altri.

@@ -342,10 +342,14 @@
         if (m.pfT >= (D.frustaWind || 0.85)) {
           m.pf = 'sferza'; m.pfT = 0;
           const R = D.frustaRaggio || 178, a = m.facing;
-          // L'arco si paga con un cerchio spostato in avanti: il settore vero costerebbe un'altra
-          // macchina, e a queste distanze la differenza non si gioca. Il disegno resta un arco.
-          ctx.areaDamage(m.x + Math.cos(a) * R * 0.55, m.y + Math.sin(a) * R * 0.55,
-            R * 0.62, Math.round(m.dmg * (D.frustaDmg || 1)), '#ff7a2b', 2.4);
+          // v2.23.1 — LA FRUSTA DEVE ARRIVARE ADDOSSO. Prima il cerchio del danno stava a una
+          // distanza FISSA (0,55 del raggio) davanti al Padrone: se il bersaglio era piu' vicino o
+          // piu' lontano di quel punto, la frustata si vedeva e non toccava nessuno. Adesso il
+          // cerchio si porta DOVE STA il bersaglio, limitato alla gittata: dentro la portata prende
+          // sempre, fuori non prende mai, e l'arco disegnato dice il vero.
+          const dd = Math.min(MU.dist(m.x, m.y, p.x, p.y), R * 0.86);
+          ctx.areaDamage(m.x + Math.cos(a) * dd, m.y + Math.sin(a) * dd,
+            R * 0.46, Math.round(m.dmg * (D.frustaDmg || 1)), '#ff7a2b', 2.4);
           ctx.emit({ t: 'padrone_frusta', e: m.eid, x: m.x, y: m.y, a, r: R, arco: D.frustaArco || 1.15 });
           m.atkT = D.atkCd;
         }

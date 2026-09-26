@@ -446,6 +446,10 @@
       case 'boss_spawn': A.boss(); R.addShake(ev.mega ? 22 : 16); HUD.killfeed('⚠ <b style="color:' + (ev.mega ? '#ff2d55' : '#ff5252') + '">' + esc(ev.name) + '</b> ' + (ev.mega ? 'INCOMBE!' : 'è apparso!')); break;
       case 'par_ok': HUD.killfeed('\u23F1 ONDATA VELOCE \u2014 +' + ev.xp + ' XP, +' + ev.monete + ' \uD83E\uDE99'); break;
       case 'wave': A.wave(); HUD.killfeed((ev.final ? '☠ ONDATA FINALE ' : (ev.boss ? '⚠ ONDATA BOSS ' : '🌊 Ondata ')) + ev.wave); /* v1.78 — qui si annunciava la modalita dell ondata: non esistono piu, l ondata e una sola. */ break;
+      // v2.24 — LE RISERVE. La pausa a meta ondata e la novita della versione, ma senza un avviso
+      // sembra solo che l ondata sia finita male: il campo si svuota, non entra piu nessuno, e
+      // poi all improvviso arrivano. Una riga lo dice, e riaccende l attenzione al momento giusto.
+      case 'riserve': A.wave(); HUD.killfeed('\u26A0 Riserve in arrivo \u2014 altri ' + ev.n); break;
       case 'shop': HUD.killfeed('✨ Scegli un potere e spendi la XP'); break;
       case 'xp': A.xp(); R.floater(ev.x, ev.y - 8, '+' + ev.v, '#8bffb0'); break;
       case 'coin': if (ev.who === Net.id) { A.buy(); R.floater(ev.x, ev.y - 8, '\uD83E\uDE99 +' + ev.v, '#ffcf4a'); } break;

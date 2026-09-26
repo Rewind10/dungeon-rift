@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.23.0`
+**Versione attuale:** `2.24.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -127,11 +127,40 @@ anticipano; non servono ad arrivarci.
 | XP cumulata | 200 | 500 | 2.040 | 4.230 | 6.640 | **9.470** |
 | ondata attesa | 2 | 3-4 | 6-7 | 10-11 | 13-14 | **16-17** |
 
-### Quanti nemici *(v1.79.1, tetto rivisto in v1.79.2)*
-Il conteggio e `10 + 1,6·ondata`: **12 nemici alla prima ondata** (erano 7), 16 alla quarta, 40 alla
-diciannovesima (erano 39). Le prime ondate quasi raddoppiano, le ultime restano dov'erano. I nemici
-**vivi insieme** li decide il tetto, che dalla v1.79.2 e **uno solo: 40**. In singolo nessuna ondata lo
-supera, quindi si vedono tutti; in gruppo l eccesso resta in coda — cambia quanto dura l'ondata, non quanti se ne vedono.
+### Quanti nemici *(rifatto in v2.24)*
+**In campo: mai piu' di 14** in solitario, **+2 per ogni giocatore in piu'** (16 in due). Era 40, che
+nella pratica voleva dire «tutti»: il tetto era una valvola di sicurezza del motore (v1.80), non una
+regola di gioco. Adesso e' una regola di gioco.
+
+**In tutto: 20 dalla settima ondata in poi** (24 in due), e non cresce piu' con l'ondata — prima la
+diciannovesima ne portava 40. Fino alla sesta resta la rampa di prima (`10 + 1,6·ondata`), tagliata
+allo stesso totale.
+
+**L'ondata ha due tempi.** Fino alla v2.23 la coda scorreva uno per uno: moriva un mostro, ne entrava
+subito un altro, e il campo restava incollato al tetto dall'inizio alla fine. Adesso:
+
+1. **il carico** — entrano fino a riempire il campo (14), poi la coda si chiude;
+2. **l'attesa** — non entra piu' nessuno. E' il momento in cui si raccolgono le monete e ci si
+   rimette a posto;
+3. **le riserve** — scesi a **7** (meta' tetto, `RISERVE_SOGLIA_Q`), la coda si riapre e rientra il
+   resto, con un avviso a schermo.
+
+Il primo carico si considera chiuso guardando **quanti sono in campo**, non quanti sono usciti dalla
+coda: un Negromante che evoca o una Melma che si divide occupano un posto che la coda non ha speso.
+
+**E la varieta' non paga il taglio.** Con venti posti e una sorte pesata i tipi rari sarebbero usciti
+una volta ogni tre ondate, quindi l'ondata semina **prima uno di ogni tipo disponibile** (quando il
+mazzo ci sta) e solo dopo riempie a peso, poi mescola. Alla quindicesima entrano **17 tipi diversi su
+17**; prima della v2.24 erano otto.
+
+| costante | valore | cosa decide |
+|---|---|---|
+| `MAX_ALIVE` | 14 | in campo, in solitario |
+| `MAX_ALIVE_GIOC` | 2 | quanto sale il tetto per ogni giocatore in piu' |
+| `ONDATA_TOT` | 20 | totale dell'ondata, in solitario |
+| `ONDATA_TOT_GIOC` | 4 | quanto sale il totale per ogni giocatore in piu' |
+| `ONDATA_TOT_DA` | 7 | da quale ondata il totale e' fisso |
+| `RISERVE_SOGLIA_Q` | 0,5 | a che frazione del tetto si aprono le riserve |
 
 ### L'esperienza e' condivisa
 Ogni uccisione vale per **tutti i giocatori vivi**: la crescita e' del gruppo, la corsa alla sfera non e'
@@ -2244,6 +2273,16 @@ Due moltiplicatori a parte (`cmdV`, `cmdD`), letti nei tre imbuti del danno: `me
 Si alternano da soli perche' dipendono dalla distanza: **se stai addosso ti frusta, se scappi ti
 condanna**. Non c'e' un posto comodo, ed e' quello che deve insegnare.
 
+*Corretto in v2.24:* il cerchio del danno della frusta si apriva a **distanza fissa** dal Padrone, e
+chi stava piu' vicino se lo vedeva passare oltre senza essere toccato. Adesso il centro del colpo va
+**alla distanza del bersaglio**, fermata al raggio massimo della frusta.
+
+**Fluttua** *(v2.24)*. Le gambe non fanno piu' la falcata — Paolo: *«le gambe devono restare ferme
+altrimenti sembra una marionetta appena»*, e due pezzi raster tagliati da un disegno piatto che si
+alternano sono esattamente la cosa che fa vedere il cartone. Il corpo si alza di un pezzo fisso e
+**l'ombra resta a terra dov'era**: e' quel distacco, non il dondolio, a dire che i piedi non toccano.
+Il movimento lo raccontano l'inclinazione in avanti e le ali, che battono piu' forte quando avanza.
+
 **Perche' alla 15.** Dalla 13 alla 19 non arrivava piu' niente di nuovo: sette ondate con solo numeri
 piu' grandi. E a quel punto il giocatore conosce tutto il bestiario, quindi accorgersi che l'ondata
 picchia piu' del solito **vuol dire qualcosa**.
@@ -2257,7 +2296,7 @@ strisciano** — non camminano.
 
 | | ondata | pv | cosa fa |
 |---|---|---|---|
-| 🗡️ **Lama Errante** *(spada volante, D&D)* | 2 | 42 | gira → punta → **carica mezzo secondo** → scatta dritta, e rimbalza sui muri |
+| 🗡️ **Lama Errante** *(spada volante, D&D)* | 2 | 42 | gira → punta → **carica mezzo secondo** → scatta dritta, e rimbalza sui muri. *Rimpicciolita in v2.24: raggio 14 → 11.* |
 | 🟩 **Cubo Gelatinoso** *(D&D)* | 6 | 260 | scivola lento e **ferma i proiettili**, anche i perforanti |
 
 ### La carica e' un contratto, non una decorazione

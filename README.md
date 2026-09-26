@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.23.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.24.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,28 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.24.0 (l'azzardo sul ritmo delle ondate)
+
+**Mai più di 14 nemici in campo** (16 in due), e dalla settima ondata in poi **20 in tutto** (24 in
+due): il numero non cresce più con l'ondata, a cambiare è *chi* arriva.
+
+**E in mezzo all'ondata adesso si respira.** Prima, appena un mostro moriva ne entrava subito un
+altro: il campo restava pieno dal primo all'ultimo secondo. Ora l'ondata mette giù il suo carico
+(14), poi **la coda si chiude**: si combatte quello che c'è, il campo si svuota, e nessuno entra.
+Scesi a **7**, le **riserve** si riaprono tutte insieme — con un avviso, perché un campo che si
+svuota senza spiegazione sembra un'ondata finita, non una pausa.
+
+**Il taglio non doveva costare varietà** (Paolo: *«nei livelli avanzati voglio varietà, quindi devono
+entrare tutti i nemici»*). Con venti posti e una sorte pesata, i tipi rari sarebbero usciti una volta
+ogni tre ondate. Quindi l'ondata semina **prima uno di ogni tipo disponibile**, poi riempie a peso:
+alla quindicesima entrano **17 tipi diversi su 17**, dove prima erano otto.
+
+**Tre ritocchi ai nemici**: il Padrone **fluttua** — gambe ferme, corpo alzato e ombra che resta a
+terra — e la sua **frusta arriva davvero addosso** (prima l'arco passava oltre chi stava troppo
+vicino); la **Lama Errante** è più piccola (raggio 14 → 11).
+
+---
 
 ## 🆕 Novità v2.23.0 (Il Padrone)
 

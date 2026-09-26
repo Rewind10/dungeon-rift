@@ -133,7 +133,7 @@
     // Va LENTO: e' il comandante, non l'assaltatore. Il passo e' largo e pesante (cadenza 0.52
     // contro 1.05 dello zombi) e il busto dondola poco — chi comanda non corre.
     padrone: {
-      OY0: 1103, K: 5.0, gait: 'walk', ali: true, eliteFilter: 'hue-rotate(-18deg) saturate(1.7) brightness(1.1)',
+      OY0: 1103, K: 5.0, gait: 'float', ali: true, eliteFilter: 'hue-rotate(-18deg) saturate(1.7) brightness(1.1)',
       order: ['coda', 'gambaSx', 'gambaDx', 'cintura', 'torso', 'testa', 'braccioSx', 'braccioDx'],
       WALK: { cad: 0.52, leg: 21, arm: 13, torso: 4, head: 2.4, bob: 9, sway: 3.4 },
       pose(t, moving, atk) {
@@ -146,17 +146,20 @@
         // il respiro: c'e' sempre, fermo o in marcia. Senza, quando sta fermo sembra in pausa.
         const resp = S(TAU * ((t * 0.30) % 1));
         if (moving) {
-          bob = -W.bob + W.bob * Math.abs(S(TAU * ph));
-          const lat = W.sway * S(TAU * ph);
-          P.gambaSx = [W.leg * S(TAU * ph), 0, 0];
-          P.gambaDx = [W.leg * S(TAU * ph + PI), 0, 0];
-          P.braccioSx = [-W.arm * S(TAU * ph), 0, 0];
-          P.braccioDx = [-W.arm * S(TAU * ph + PI), 0, 0];
-          P.torso = [W.torso * S(TAU * ph), lat, 0];
-          P.testa = [-W.head * S(TAU * ph), lat * 0.6, 0];
-          // il gonnellino resta indietro sul passo: e' stoffa, non e' incollata al bacino
-          P.cintura = [2.2 * S(TAU * ph - 0.9), lat * 0.5, 0];
-          tilt = 2.2;
+          // v2.23.1 — NIENTE FALCATA. Paolo: *«le gambe devono restare ferme altrimenti sembra una
+          // marionetta appena»*. Aveva ragione: la falcata di due pezzi raster tagliati da un
+          // disegno piatto e' esattamente la cosa che fa vedere il cartone. Le gambe restano ferme
+          // e il Padrone SCIVOLA, che per un demone alato e' anche piu' giusto di una camminata.
+          // Il movimento lo raccontano il galleggio, l'inclinazione in avanti e le ali, che battono
+          // piu' forte quando avanza.
+          bob = -2.5 + 5.5 * S(TAU * ph * 0.55);
+          const lat = W.sway * S(TAU * ph * 0.55);
+          P.braccioSx = [-W.arm * 0.5 * S(TAU * ph * 0.55), 0, 0];
+          P.braccioDx = [-W.arm * 0.5 * S(TAU * ph * 0.55 + PI), 0, 0];
+          P.torso = [W.torso * 0.5 * S(TAU * ph * 0.55), lat, 0];
+          P.testa = [-W.head * 0.5 * S(TAU * ph * 0.55), lat * 0.6, 0];
+          P.cintura = [2.6 * S(TAU * ph * 0.55 - 0.9), lat * 0.6, 0];
+          tilt = 3.2;                                     // si protende in avanti: e' lui che avanza
         } else {
           bob = 4 * S(TAU * ph);
           P.testa = [2 * S(TAU * ph), 0, 1.6 * S(TAU * ph + 0.5)];
@@ -165,6 +168,10 @@
           P.cintura = [1.4 * S(TAU * ph - 0.7), 0, 0];
         }
         P.torso[2] += resp * 1.6; P.testa[2] += resp * 1.2;          // il petto che sale e scende
+        // v2.23.1 — FLUTTUA. Paolo: *«fallo fluttuare con le gambe ferme»*. Il corpo si alza di un
+        // pezzo fisso e l'ombra resta dov'e', a terra: e' quel distacco, non il galleggio, a dire
+        // che i piedi non toccano. Col passo tolto era anche l'unica lettura sensata rimasta.
+        bob -= 30;
         // LA CODA: sfasata dal passo e piu' lenta. Se battesse a tempo col passo si leggerebbe come
         // un pezzo rigido attaccato al bacino invece che come una coda.
         P.coda = [11 * S(TAU * ((t * 0.37) % 1)) + 4 * S(TAU * ph + 1.4), 0, 0];
@@ -175,7 +182,6 @@
           P.braccioDx[0] += 96 * strike; P.braccioDx[2] += 22 * strike;
           P.braccioSx[0] += -34 * strike;
           P.torso[0] += 13 * strike; P.testa[2] += 18 * strike; P.coda[0] += 30 * strike;
-          P.gambaSx[0] += 8 * strike; P.gambaDx[0] += -8 * strike;
           lungeX += 26 * strike; tilt += 5 * strike;
         }
         return { P, bob, lungeX, tilt, swing: Math.max(wind * 0.5, strike), ali: { wind, strike, ph, moving } };
@@ -2767,7 +2773,8 @@
     // cosa che dice "questa cosa galleggia" invece di "questa cosa striscia". Il bagliore e il
     // rinculo della carica arrivano dagli eventi `lama_wind`/`lama_go`, come per la Sfera d'Ossa.
     _lamaF(ctx, m, rr, def, atk) {
-      const t = this.time, sc = rr / 14;                       // rr e' gia' scalato: si riporta a 1
+      const t = this.time, sc = rr / 16;   // v2.23.1 — Paolo: *«la spada mi sembra troppo grossa»*.
+      // Il raggio e' sceso da 14 a 11 e il disegno da rr/14 a rr/16: in tutto un terzo in meno.
       const car = atk;                                        // il cronometro dei telegrafi: lo stesso della Sfera d'Ossa
       const bob = Math.sin(t * 3.1 + (m.e || 0)) * 3 * sc;
       ctx.save();
@@ -2926,7 +2933,7 @@
     _aliPadrone(ctx, s, st, t) {
       const A = st.ali || {}, wind = A.wind || 0, strike = A.strike || 0, mov = A.moving ? 1 : 0;
       // in marcia batte piano, in carica si spalanca, nell'affondo si chiude di scatto
-      const bat = Math.sin(t * (2.1 + mov * 0.9)) * 0.30 + wind * 0.46 - strike * 0.52;
+      const bat = Math.sin(t * (2.1 + mov * 1.5)) * (0.30 + mov * 0.16) + wind * 0.46 - strike * 0.52;
       const apri = 1 + wind * 0.22 - strike * 0.30;
       const RX = 132 * s, RY = -690 * s;              // la spalla, in coordinate della tela
       for (const lato of [-1, 1]) {

@@ -60,7 +60,7 @@
     // o gli passa sopra.
     padrone: { id: 'padrone', name: 'Il Padrone', tier: 4, hp: 520, speed: 52, radius: 30, dmg: 26,
       atkRange: 150, atkCd: 3.2, ai: 'padrone', atk: 'melee', xp: 58, weight: 5,
-      color: '#8a2f2a', color2: '#2e0f12', eye: '#ffb14a', shape: 'padrone', front: true, puppet: true,
+      color: '#8a2f2a', color2: '#2e0f12', eye: '#ffb14a', shape: 'padrone', front: true, puppet: true, fluttua: 30,
       comandoR: 250, comandoVel: 1.28, comandoDmg: 1.22,
       frustaRaggio: 178, frustaArco: 1.15, frustaWind: 0.85, frustaDmg: 1.0,
       condannaMin: 240, condannaR: 84, condannaRitardo: 1.25, condannaDmg: 1.35,
@@ -76,7 +76,7 @@
     // L'animazione e' una rotazione piu' uno scatto: zero frame. E' il primo nemico del gioco che
     // TELEGRAFA il colpo, e serve a quello: ai livelli bassi si impara solo a sparare, questa insegna
     // a schivare, perche' la carica e' leggibile e lo scatto e' dritto (basta spostarsi di lato).
-    lama: { id: 'lama', name: 'Lama Errante', tier: 1, hp: 42, speed: 96, radius: 14, dmg: 11, atkRange: 34, atkCd: 0.7, ai: 'lama', atk: 'melee', xp: 7, weight: 14, color: '#9aa6b6', color2: '#3a424e', eye: '#8be9ff', shape: 'lama', lama: true, sightRange: 480, girCd: 1.0, puntaT: 0.35, caricaT: 0.5, scattoT: 0.30, scattoMul: 7.6, rinculo: 46, spin: 2.2, eliteHp: 1.4 },
+    lama: { id: 'lama', name: 'Lama Errante', tier: 1, hp: 42, speed: 96, radius: 11, dmg: 11, atkRange: 34, atkCd: 0.7, ai: 'lama', atk: 'melee', xp: 7, weight: 14, color: '#9aa6b6', color2: '#3a424e', eye: '#8be9ff', shape: 'lama', lama: true, sightRange: 480, girCd: 1.0, puntaT: 0.35, caricaT: 0.5, scattoT: 0.30, scattoMul: 7.6, rinculo: 46, spin: 2.2, eliteHp: 1.4 },
     // B — CUBO GELATINOSO (D&D, quello classico). Scivola lento e non insegue davvero: va dove c'e'
     // spazio. FERMA I PROIETTILI — gli si conficcano dentro e si spengono — e dentro si vede la roba
     // di chi ci e' finito prima, che cade a terra quando muore. L'animazione non esiste: e' un blocco
