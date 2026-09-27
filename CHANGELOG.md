@@ -2,6 +2,152 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.26.0] — 2026-09-27 · "La schermata di avvio, rifatta"
+
+Paolo: *«non mi piace molto la schermata iniziale, mi dai un paio di idee? La mia idea sarebbe:
+titolo, box (width 100%) con nome, stanza e box scelta eroe. Sotto invece il box con i comandi. Cosa
+si potrebbe aggiungere?»* — e delle proposte ha scelto le quattro leggere.
+
+---
+
+### 📐 Da due colonne a una pila
+
+La disposizione è la sua, e funziona per un motivo che non è estetico: **nella colonna stretta i
+comandi erano una lista alta di undici righe**, e una lista di undici righe non la legge nessuno fino
+in fondo. A tutta larghezza diventano una **griglia su tre colonne** — si leggono in un colpo
+d'occhio e occupano metà dell'altezza.
+
+E il box largo risolve un problema vecchio di due versioni. Nella v2.19.9 Paolo aveva chiesto
+*«creala più grossa, lo spazio c'è»* riferito alla scheda dell'eroe, e la scheda era diventata alta
+**520 px** — l'unico modo di far entrare i cinque attributi in una colonna stretta. Adesso la scheda
+si apre in orizzontale: artwork al 26%, e la parte scritta su **due colonne** — a sinistra chi sei e
+gli attributi, a destra cosa sai fare. Stessa roba, **360 px** invece di 520.
+
+**Nome e Stanza vanno affiancati**: sono due campi corti, e uno sotto l'altro sprecavano mezza riga
+di larghezza in un box largo il doppio.
+
+**Il metro della misura non è la bellezza, è il pulsante.** Su un portatile 1280×800 — la misura più
+diffusa che esista — la prima versione della pila lasciava «ENTRA IN PARTITA» **sotto la piega**: un
+menu in cui devi scorrere per trovare il tasto che fa partire il gioco è un menu rotto, per quanto
+sia ordinato. Sotto i 900 px di altezza la scheda dell'eroe segue la finestra (`clamp(230px, 34vh,
+360px)`) e il resto si stringe con lei. Misurato in quattro formati:
+
+| finestra | il pulsante ENTRA |
+|---|---|
+| 1600×950 | visibile a y 879 ✔ |
+| 1280×800 | visibile a y 741 ✔ *(era 875: fuori)* |
+| 900×900 | la pila scorre, come prima |
+| 420×820 (telefono) | la pila scorre, come prima |
+
+E nessuno dei quattro ha scroll orizzontale.
+
+---
+
+### 🏆 Il record — la sola cosa che il gioco si ricordava di te era niente
+
+Fino alla v2.25: morivi, leggevi il riepilogo, tornavi al menu — e il menu era **identico a quello
+della prima partita**. Una run che non lascia traccia è una run che non è successa.
+
+Adesso sotto il titolo c'è *«🏆 Record: ondata 13 · Arciere Lv.11 · 341 nemici»*. Chi non ne ha
+ancora uno non vede un box vuoto né uno spento: legge che ce n'è **uno da scrivere**.
+
+**Il metro è l'ONDATA**, non le uccisioni: un arciere morto alla 14 con dieci uccisioni ha fatto
+meglio di un barbaro morto alla 6 con duecento, e il record deve dire la stessa cosa. Le partite in
+**modalità di prova non contano** — quella modalità ti fa partire dall'ondata che vuoi, quindi un
+record preso di lì direbbe solo da quale pulsante hai cominciato.
+
+E quando lo batti te lo dice **dove stai già guardando**, nel riepilogo di fine partita: dirlo solo
+nel menu vorrebbe dire dirlo a chi ha già smesso di pensare alla partita appena finita.
+
+---
+
+### 💾 La partita salvata è una scheda, non un pulsante
+
+Era un bottone in fondo alla colonna, **sotto** la scelta dell'eroe. Ma chi ha una partita in corso
+non è lì per scegliere un eroe: è lì per tornarci dentro. Adesso è la **prima cosa** del box —
+ritratto della classe, *«Legolas — Arciere Lv.9 · ondata 12 · salvata 3 giorni fa»*, e due pulsanti.
+
+Il secondo pulsante è **Scarta**, che prima non esisteva: l'unico modo di liberarsi di un
+salvataggio era svuotare i dati del sito. Chiede conferma una volta sola (il testo diventa *«Sicuro?»*
+per quattro secondi) perché è **l'unico punto del gioco che cancella una partita** — morire non la
+tocca, ed è il senso di averla.
+
+---
+
+### 💡 Un consiglio a caso
+
+Il box dei comandi dice **quali tasti**; questa riga dice **come si gioca**, che è l'altra metà e non
+stava da nessuna parte. Venti righe in `shared/consigli.js`, una a caso a ogni caricamento: che i
+barili fanno male anche a te, che il Cubo ferma anche i proiettili perforanti, che la Lama si carica
+mezzo secondo prima di scattare, che a metà ondata la coda si ferma, che **scaduto il tempo obiettivo
+i mostri vengono a cercarti** (v2.25 — una meccanica nuova di ieri che nessuno aveva modo di
+scoprire, se non morendo).
+
+**Regola per chi ne aggiunge una: deve essere vera e verificabile nel codice**, non atmosfera. Un
+consiglio sbagliato è peggio di nessun consiglio — il giocatore ci costruisce sopra una strategia e
+poi muore per un motivo che non capisce. Il test prende i numeri citati nelle frasi e li confronta
+con le costanti: il 42% delle tele contro `RAGNATELA_MULT`, la metà danno dei barili contro
+`BARILE_QUOTA_GIOCATORE`, la pausa a metà ondata contro `RISERVE_SOGLIA_Q`.
+
+---
+
+### 🆕 Le novità della versione
+
+Tre righe accanto ai comandi. Il changelog è un file `.md` che non apre nessuno, e una versione ogni
+due giorni vuol dire che chi torna dopo una settimana non sa cosa è cambiato.
+
+Il testo sta in `constants.js` (`C.NOVITA`) **accanto al numero di versione**, così i due non possono
+separarsi — e se si separassero lo stesso, il box **non compare affatto** invece di annunciare con
+sicurezza le novità di una versione che non stai giocando. C'è un test che pretende
+`NOVITA.v === VERSION`: da qui in avanti, salire di versione senza aggiornare le tre righe fa
+diventare rossa la suite.
+
+---
+
+### 🧪 Numeri e file toccati
+
+**Test: 5266 passati, 0 falliti.** TEST 85 nuovo: 126 controlli in più rispetto alla v2.25.
+
+La schermata è stata **misurata nel browser vero**, a quattro formati, senza generare immagini:
+posizione e dimensione di ogni riquadro, presenza dello scroll orizzontale, e la domanda che conta —
+il pulsante ENTRA sta sopra la piega? È così che è saltato fuori il problema del 1280×800.
+
+Quattro sabotaggi deliberati:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| le novità restano alla versione scorsa | ✅ 1 controllo rosso |
+| la tela rallenta meno ma il consiglio dice ancora 42% | ✅ 2 controlli rossi *(uno è il test vecchio della tela)* |
+| il record si scrive anche nelle partite di prova | ✅ 1 controllo rosso |
+| i comandi tornano una lista invece che una griglia | ✅ 1 controllo rosso |
+
+**Un errore preso al volo, e vale la pena scriverlo.** Il record leggeva il livello da `me.level`. Nello
+snapshot il livello si chiama **`lvl`**: `lv` sono le **vite**, e `level` non esiste proprio — il
+record avrebbe scritto «Lv.0» su qualunque personaggio. Ed è lo stesso genere di inciampo della
+v2.24, quando contavo le uscite dalla coda invece dei vivi in campo: il nome giusto per la cosa
+sbagliata. Adesso c'è un controllo che pretende `me.lvl` e vieta `me.level`.
+
+**E un inciampo di CSS.** La media query che apre la scheda dell'eroe su due colonne l'avevo scritta
+**prima** delle regole che sovrascrive: stessa specificità, vince l'ultima, e la media query non
+faceva niente — la scheda restava alta 520 px e sembrava che la modifica non fosse stata applicata.
+Spostata dopo, funziona. Non l'avrebbe detto nessun test: l'ha detto la misura nel browser.
+
+| file | cosa |
+|---|---|
+| `public/index.html` | la pila, la striscia sotto il titolo, la scheda della partita salvata, il riquadro delle novità |
+| `public/style.css` | `#menuColonne` a colonna, i comandi a griglia, la scheda eroe su due colonne, le misure per schermi bassi |
+| `public/js/hud.js` | `strisciaMenu`, `novitaMenu`, `schedaRiprendi`; la riga del record battuto a fine partita |
+| `public/js/main.js` | l'archivio del record, il pulsante Scarta, la scheda al posto del vecchio pulsante |
+| `shared/consigli.js` | **nuovo** — venti consigli |
+| `shared/constants.js` | `C.NOVITA`; versione |
+| `shared/salvataggio.js` | l'etichetta torna anche `heroId`, che serve al ritratto |
+| `test/simulate.js` | TEST 85 |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.25.0] — 2026-09-26 · "I semplici entrano prima, e il tempo scaduto si paga"
 
 Due richieste di Paolo nello stesso messaggio. Non c'entrano niente l'una con l'altra, se non che

@@ -60,6 +60,66 @@
         box.appendChild(riga);
       }
     },
+    // ============================================================================================
+    // v2.26 — LE TRE COSE NUOVE DELLA SCHERMATA DI AVVIO
+    // ============================================================================================
+    // Stanno qui e non in main.js perche' sono disegno: main.js legge il browser e decide, l'HUD
+    // mette le parole sullo schermo. La divisione e' la stessa del resto del file.
+
+    // LA STRISCIA: record a sinistra, consiglio a caso a destra.
+    // Il record e' la risposta a un difetto vecchio: fino alla v2.25 il gioco non si ricordava
+    // niente di te. Morivi, leggevi il riepilogo, tornavi al menu e il menu era identico a quello
+    // della prima volta. Chi non ha ancora un record NON vede un box vuoto ne' uno spento con
+    // scritto "nessun record": legge una riga che gli dice che ce n'e' uno da scrivere.
+    strisciaMenu(rec) {
+      const r = $('recordBox');
+      if (r) {
+        if (rec && rec.ondata > 0) {
+          r.className = 'chip rec';
+          r.innerHTML = '\uD83C\uDFC6 Record: ondata <b>' + rec.ondata + '</b>'
+            + (rec.classe ? ' \u00b7 ' + rec.classe : '')
+            + (rec.livello ? ' Lv.' + rec.livello : '')
+            + (rec.uccisi ? ' \u00b7 ' + rec.uccisi + ' nemici' : '');
+        } else {
+          r.className = 'chip rec vuoto';
+          r.innerHTML = '\uD83C\uDFC6 Nessun record ancora \u2014 lo scrive la tua prima run';
+        }
+      }
+      const t = $('consiglioBox');
+      const CO = window.GAME && window.GAME.Consigli;
+      if (t && CO) t.innerHTML = CO.aCaso();
+    },
+
+    // LE NOVITA' DELLA VERSIONE: tre righe da C.NOVITA. Se un domani il blocco resta indietro
+    // rispetto a VERSION, il box non compare affatto invece di annunciare le novita' di una versione
+    // che non e' quella che stai giocando — e un test in piu' lo pretende uguale.
+    novitaMenu() {
+      const C2 = window.GAME.Constants, box = $('novitaCard'); if (!box) return;
+      const N = C2.NOVITA;
+      if (!N || !N.righe || !N.righe.length || N.v !== C2.VERSION) { box.classList.add('hidden'); return; }
+      box.classList.remove('hidden');
+      const v = $('novitaVer'); if (v) v.textContent = 'v' + N.v;
+      const ul = $('novitaLista'); if (!ul) return;
+      ul.innerHTML = '';
+      for (const riga of N.righe) { const li = document.createElement('li'); li.innerHTML = riga; ul.appendChild(li); }
+    },
+
+    // LA SCHEDA DELLA PARTITA SALVATA. `e` e' quello che torna da Salvataggio.etichetta(): ondata,
+    // livello, classe, nome, quando. `quando` arriva gia' scritto a parole da main.js, che e' l'unico
+    // che sa che ora e'. Torna true se la scheda e' visibile, cosi' chi chiama sa se collegare i tasti.
+    schedaRiprendi(e, quando) {
+      const card = $('riprendiCard'); if (!card) return false;
+      if (!e) { card.classList.add('hidden'); return false; }
+      card.classList.remove('hidden');
+      const img = $('rpArt');
+      if (img) { img.src = '/assets/classi/' + (e.heroId || 'barbaro') + '.png'; img.alt = e.classe || ''; }
+      const d = $('rpDet');
+      if (d) d.innerHTML = '<b>' + (e.nome || e.classe) + '</b> \u2014 ' + e.classe + ' Lv.' + e.livello
+        + ' \u00b7 ondata <b>' + e.ondata + '</b>'
+        + (quando ? '<small>salvata ' + quando + '</small>' : '');
+      return true;
+    },
+
     buildProva(max, cb) {
       const g = $('provaGrid'); if (!g) return;
       g.innerHTML = '';
@@ -1399,12 +1459,15 @@
     },
     lobby(room, players, meId, onStart, onChange) { $('lobby').classList.remove('hidden'); $('lobbyRoom').textContent = room; const lp = $('lobbyPlayers'); lp.innerHTML = ''; players.forEach(p => { const h = HERO[p.h] || HERO.barbaro; const el = document.createElement('div'); el.className = 'lp'; el.innerHTML = `<span class="dot" style="background:${h.color}"></span>${HeroIcon[p.h] || '🎮'} <b>${p.n}</b> ${p.i === meId ? '(tu)' : ''}`; lp.appendChild(el); }); $('startBtn').onclick = onStart; $('changeHeroBtn').onclick = onChange; },
     hideLobby() { $('lobby').classList.add('hidden'); },
-    end(victory, snap, me, runStats, dur) {
+    end(victory, snap, me, runStats, dur, record) {
       const scr = $('endScreen');
       $('endTitle').textContent = victory ? '🏆 VITTORIA!' : '☠ SCONFITTA';
       $('endTitle').style.color = victory ? '#ffd24a' : '#ff4b6b';
       const fmtT = (s) => { s = s || 0; const m = Math.floor(s / 60), ss = s % 60; return m + ':' + String(ss).padStart(2, '0'); };
       let html = `<div class="big">Ondata ${snap.wave}/${window.GAME.Constants.FINAL_WAVE}${dur ? ' · ⏱ ' + fmtT(dur) : ''}</div>`;
+      // v2.26 — se hai battuto il tuo record te lo dice QUI, dove stai gia' guardando. Dirlo solo
+      // nel menu vorrebbe dire dirlo a chi ha gia' smesso di pensare alla partita appena finita.
+      if (record) html += `<div class="rec-new">🏆 Nuovo record personale</div>`;
       html += victory ? `<div class="sub">Hai sconfitto AZ'GAROTH, il Divoratore di Mondi!</div>` : `<div class="sub">La squadra è caduta. Riprova!</div>`;
       const WN = {}; for (const k of Object.keys(LOOT.WEAPONS)) { const w = LOOT.WEAPONS[k]; WN[k] = { name: w.name, icon: w.icon }; if (w.evo) WN[w.evo.id] = { name: w.evo.name, icon: w.icon }; }
       if (runStats && runStats.length) {

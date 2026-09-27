@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.25.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.26.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,27 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.26.0 (la schermata di avvio, rifatta)
+
+Titolo, **un box solo a tutta larghezza** con nome, stanza e scelta dell'eroe, e **sotto i comandi**,
+che a tutta larghezza diventano una griglia su tre colonne invece di una lista alta undici righe. La
+scheda dell'eroe si apre in orizzontale — artwork, attributi, competenze — e passa da 520 a 360 px di
+altezza.
+
+E quattro cose che prima non c'erano:
+
+- **🏆 Il record.** Fino a ieri il gioco non si ricordava niente di te: morivi, leggevi il riepilogo,
+  e il menu era identico a quello della prima partita. Adesso la tua run migliore sta sotto il titolo,
+  e quando la batti te lo dice a fine partita. Il metro è l'**ondata**; le partite di prova non contano.
+- **💾 La partita salvata è una scheda**, in cima al box: ritratto, classe, livello, ondata, quando
+  l'hai lasciata — e adesso si può anche **scartare**.
+- **💡 Un consiglio a caso** a ogni caricamento. I comandi dicono quali tasti; questo dice come si
+  gioca: i barili fanno male anche a te, il Cubo ferma i perforanti, scaduto il tempo ti cercano.
+- **🆕 Le novità della versione**, tre righe accanto ai comandi: il changelog è un file che non apre
+  nessuno.
+
+---
 
 ## 🆕 Novità v2.25.0 (i semplici entrano prima, e il tempo scaduto si paga)
 

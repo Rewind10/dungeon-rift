@@ -7968,6 +7968,131 @@ function testV225() {
   ok('i semplici entrano prima, e scaduto il tempo la mappa ti viene addosso');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.26 — LA SCHERMATA DI AVVIO: una pila, e tre cose che prima non c'erano
+// =================================================================================================
+// Paolo: *«non mi piace molto la schermata iniziale. La mia idea sarebbe: titolo, box (width 100%)
+// con nome, stanza e box scelta eroe; sotto invece il box con i comandi. Cosa si potrebbe
+// aggiungere?»* — e delle proposte ha preso le quattro leggere: la partita salvata come scheda, il
+// record personale, un consiglio a caso, le novita' della versione.
+//
+// Una schermata non si prova con un test unitario: si guarda. Quello che si puo' difendere qui e' che
+// i DATI che ci finiscono dentro siano veri e restino veri — un consiglio che cita un numero
+// sbagliato e' peggio di nessun consiglio, e un box che annuncia le novita' della versione scorsa e'
+// peggio che non averlo.
+function testV226() {
+  console.log('\n[TEST 85] v2.26 — la schermata di avvio: dati veri, e che restino veri');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const CO = require('../shared/consigli.js');
+  const SV = require('../shared/salvataggio.js');
+
+  // --- 1) LE NOVITA' NON POSSONO RESTARE INDIETRO -------------------------------------------
+  // E' l'unico modo in cui questo box puo' fare danno: la versione sale, il blocco resta quello di
+  // prima, e il menu annuncia con sicurezza le novita' di una versione che non stai giocando.
+  assert(C.NOVITA && Array.isArray(C.NOVITA.righe), 'il blocco delle novita esiste');
+  assert(C.NOVITA.v === C.VERSION, 'e parla della versione che si sta giocando (' + C.NOVITA.v + ' contro ' + C.VERSION + ')');
+  assert(C.NOVITA.righe.length >= 2 && C.NOVITA.righe.length <= 4, 'sono da due a quattro righe (' + C.NOVITA.righe.length + '): di piu non e un riquadro, e un changelog');
+  for (const r of C.NOVITA.righe) assert(typeof r === 'string' && r.length > 20 && r.length < 220, 'ogni riga e una frase, non un titolo ne un paragrafo');
+
+  // --- 2) I CONSIGLI DICONO COSE VERE -------------------------------------------------------
+  // Un consiglio sbagliato e' peggio di nessun consiglio: il giocatore ci costruisce sopra una
+  // strategia e poi muore per un motivo che non capisce. Qui si prendono i numeri citati nel testo e
+  // si confrontano con le costanti vere, cosi' il giorno che una manopola cambia il test lo dice.
+  assert(CO.CONSIGLI.length >= 15, 'ce ne sono abbastanza da non ripetersi subito (' + CO.CONSIGLI.length + ')');
+  for (const c of CO.CONSIGLI) {
+    assert(typeof c === 'string' && c.length > 30, 'ogni consiglio e una frase intera');
+    assert(!/undefined|NaN|\[object/.test(c), 'e nessuno ha un buco dentro: ' + c.slice(0, 40));
+  }
+  assert(new Set(CO.CONSIGLI).size === CO.CONSIGLI.length, 'e non ce ne sono due uguali');
+  {
+    const tela = CO.CONSIGLI.find(c => /tele dei ragni/i.test(c));
+    assert(tela, 'c e il consiglio sulle tele');
+    const pct = (tela.match(/(\d+)%/) || [])[1] | 0;
+    const vero = Math.round((1 - C.RAGNATELA_MULT) * 100);
+    assert(pct === vero, 'e il rallentamento che dice e quello vero (' + pct + '% contro ' + vero + '%)');
+  }
+  {
+    const bar = CO.CONSIGLI.find(c => /barili<\/b> esplodono/i.test(c));
+    assert(bar, 'c e il consiglio sui barili');
+    assert(/met[àa] danno/i.test(bar) === (C.BARILE_QUOTA_GIOCATORE === 0.5),
+      'e la quota che dice e quella vera (' + C.BARILE_QUOTA_GIOCATORE + ')');
+  }
+  {
+    const ond = CO.CONSIGLI.find(c => /met[àa] ondata la coda si ferma/i.test(c));
+    assert(ond, 'c e il consiglio sulla pausa a meta ondata');
+    assert(C.RISERVE_SOGLIA_Q === 0.5, 'e le riserve entrano davvero a meta tetto (' + C.RISERVE_SOGLIA_Q + ')');
+  }
+  {
+    const tmp = CO.CONSIGLI.find(c => /tempo obiettivo<\/b> i mostri/i.test(c));
+    assert(tmp, 'c e il consiglio sulla braccata');
+    const srcA = fs.readFileSync(ROOT + 'shared/ai.js', 'utf8');
+    assert(/ctx\.braccata/.test(srcA), 'e la braccata esiste ancora nel gioco');
+  }
+  // aCaso() pesca dall elenco e non da altrove
+  for (let i = 0; i < 40; i++) assert(CO.CONSIGLI.indexOf(CO.aCaso()) >= 0, 'aCaso pesca dall elenco');
+
+  // --- 3) LA SCHEDA DELLA PARTITA SALVATA HA IL RITRATTO ------------------------------------
+  // La scheda mostra l'artwork della classe, che e' un file col nome della classe: se l'etichetta
+  // smettesse di dire QUALE classe, la scheda mostrerebbe un riquadro vuoto senza un errore.
+  {
+    const d = { f: SV.FORMATO, v: C.VERSION, quando: Date.now(), ondata: 12, nome: 'Legolas', heroId: 'arciere', level: 9 };
+    const e = SV.etichetta(d);
+    assert(e, 'un salvataggio buono produce la sua etichetta');
+    assert(e.heroId === 'arciere', 'che dice anche QUALE classe (serve al ritratto)');
+    assert(e.ondata === 12 && e.livello === 9, 'oltre a ondata e livello');
+    const src = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+    assert(/assets\/classi\/'\s*\+\s*\(e\.heroId/.test(src), 'e il ritratto lo costruisce da li');
+  }
+
+  // --- 4) LA PILA, E LE QUATTRO AGGIUNTE, SONO DAVVERO NELLA PAGINA -------------------------
+  // Controlli di impianto: non dicono se la schermata e' bella, dicono che i pezzi ci sono e sono
+  // collegati. Un box che nessuno riempie resta vuoto senza lamentarsi.
+  {
+    const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    for (const id of ['striscia', 'recordBox', 'consiglioBox', 'riprendiCard', 'rpDet', 'scartaBtn', 'menuSotto', 'novitaCard', 'novitaLista'])
+      assert(html.indexOf('id="' + id + '"') >= 0, 'la pagina ha il pezzo #' + id);
+    assert(html.indexOf('/shared/consigli.js') >= 0, 'e carica i consigli');
+    // il pulsante Riprendi sta DENTRO la scheda: se restasse fuori, la scheda direbbe a che punto sei
+    // e non ti lascerebbe tornarci.
+    const i0 = html.indexOf('id="riprendiCard"'), i1 = html.indexOf('id="riprendiBtn"');
+    assert(i0 >= 0 && i1 > i0 && i1 - i0 < 900, 'e il pulsante Riprendi sta dentro la scheda');
+    // nome e stanza affiancati
+    assert(/class="riga2"/.test(html), 'nome e stanza stanno su una riga sola');
+
+    const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+    assert(/#menuColonne\{display:flex;flex-direction:column/.test(css), 'il menu e una pila, non due colonne');
+    assert(/#infoCard \.tasti\{display:grid/.test(css), 'e i comandi sono una griglia: a tutta larghezza una lista sarebbe alta il doppio');
+
+    const hud = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+    for (const f of ['strisciaMenu', 'novitaMenu', 'schedaRiprendi'])
+      assert(hud.indexOf(f + '(') >= 0, 'l HUD sa disegnare ' + f);
+    const main = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    for (const f of ['HUD.strisciaMenu(', 'HUD.novitaMenu(', 'HUD.schedaRiprendi('])
+      assert(main.indexOf(f) >= 0, 'e il menu lo chiama: ' + f);
+    assert(main.indexOf("$('scartaBtn')") >= 0, 'e il pulsante Scarta e collegato');
+  }
+
+  // --- 5) IL RECORD: come si scrive, e quando NON si scrive ---------------------------------
+  // Due regole, e tutte e due contano. Il metro e' l'ONDATA: un arciere morto alla 14 con dieci
+  // uccisioni ha fatto meglio di un barbaro morto alla 6 con duecento. E le partite di PROVA non
+  // contano: la modalita' di prova ti fa partire dall'ondata che vuoi, quindi un record preso di li'
+  // direbbe solo da quale pulsante hai cominciato.
+  {
+    const main = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    const blocco = main.slice(main.indexOf('const Record = {'), main.indexOf('const Record = {') + 900);
+    assert(/if \(v && v\.ondata >= nuovo\.ondata\) return false;/.test(blocco), 'il record si aggiorna solo se l ondata e piu alta');
+    assert(/catch \(_\)/.test(blocco), 'e tutto sta dentro try/catch: localStorage SOLLEVA in finestra anonima');
+    const se = main.indexOf('function showEnd');
+    const fine = main.slice(se, se + 1400);
+    assert(/if \(!G\.provaOnda\)/.test(fine), 'le partite di prova non scrivono il record');
+    assert(/Record\.forse\(/.test(fine), 'e una partita vera si');
+    assert(/me\.lvl/.test(fine) && !/me\.level/.test(fine),
+      'e il livello si legge da `lvl`: `lv` sono le VITE, e avrebbe scritto Lv.2 su un personaggio al quindicesimo');
+  }
+  ok('la schermata nuova ha i suoi pezzi, e i numeri che racconta sono quelli veri');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

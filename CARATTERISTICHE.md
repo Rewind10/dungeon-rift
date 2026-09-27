@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.25.0`
+**Versione attuale:** `2.26.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -1561,12 +1561,54 @@ basta. Adesso sono tre creature della stessa famiglia, **dipinte a codice** come
 
 | | PV | Danno | Raggio | Morso | Entra |
 |---|---|---|---|---|---|
-| 👁 Occhio Viola | 120 | 13 | 320 px, 45% del danno a tick | 90 px | ondata 9 |
-| 👁 Occhio di Carne | 210 | 18 | 340 px, 50% | 105 px | ondata 12 |
-| 👁 Occhio Spettrale | 260 | 22 | 400 px, 60%, attraversa i muri | 95 px | ondata 15 |
+| 👁 Occhio Viola | 120 | 13 | 320 px, 45% del danno a tick | 90 px | ondata 8 |
+| 👁 Occhio di Carne | 210 | 18 | 340 px, 50% | 105 px | ondata 10 |
+| 👁 Occhio Spettrale | 260 | 22 | 400 px, 60%, attraversa i muri | 95 px | ondata 12 |
+
+*(Le ondate di ingresso erano 9, 12 e 15 e questa tabella era rimasta indietro: i tre si sono fatti
+avanti nella v1.81, e la rampa completa sta nella sezione LA RAMPA DEGLI ARCHETIPI.)*
 
 Il raggio ruota i tre sguardi (indebolimento, rallentamento, corrosione) **e consuma vita** finche' ti
 tiene nel cono; sotto la distanza di morso smette di guardare e azzanna. Una cosa alla volta.
+
+## 🚪 LA SCHERMATA DI AVVIO *(rifatta in v2.26)*
+Paolo: *«titolo, box (width 100%) con nome, stanza e box scelta eroe; sotto invece il box con i
+comandi»*. Erano due colonne — a sinistra si entrava in partita, a destra la guida — ed erano nate
+nella v2.8.2 per non tenere la guida chiusa in un accordion che nessuno apre.
+
+**Perche' la pila funziona meglio, e non e' una questione di gusto.** Nella colonna stretta i comandi
+erano una lista alta di undici righe, e una lista di undici righe non la legge nessuno fino in fondo.
+A tutta larghezza diventano una griglia (`auto-fit`, minimo 250 px per cella: tre colonne a 1180,
+due a 800, una sul telefono, con una regola sola). E la scheda dell'eroe, che dalla v2.19.9 era alta
+**520 px** per far entrare gli attributi in una colonna stretta, si apre in orizzontale — artwork al
+26%, il resto su due colonne — e scende a **360**.
+
+**Il metro della misura e' il pulsante, non la bellezza.** Su un portatile 1280x800 la prima versione
+della pila lasciava ENTRA IN PARTITA sotto la piega: un menu in cui devi scorrere per trovare il
+tasto che fa partire il gioco e' rotto per quanto sia ordinato. Sotto i 900 px di altezza la scheda
+segue la finestra (`clamp(230px, 34vh, 360px)`) e il resto si stringe con lei.
+
+| cosa | dove | da dove viene il testo |
+|---|---|---|
+| 🏆 **Record** | striscia sotto il titolo | `localStorage` chiave `dr_record` |
+| 💡 **Consiglio a caso** | striscia sotto il titolo | `shared/consigli.js` |
+| 💾 **Partita salvata** | in cima al box largo | `Salvataggio.etichetta()` |
+| 🆕 **Novita' della versione** | accanto ai comandi | `C.NOVITA` in `constants.js` |
+
+**Il record** e' la risposta a un difetto vecchio: fino alla v2.25 morivi, leggevi il riepilogo, e il
+menu era identico a quello della prima partita. Il metro e' l'**ondata** e non le uccisioni — un
+arciere morto alla 14 con dieci uccisioni ha fatto meglio di un barbaro morto alla 6 con duecento — e
+le partite in **modalita' di prova non contano**, perche' li' l'ondata di partenza la scegli tu.
+
+**I consigli** sono l'altra meta' di quello che i comandi non dicono: i tasti stanno nella griglia,
+*come si gioca* stava solo nella testa di chi era gia' morto abbastanza volte. Regola per chi ne
+aggiunge uno: **deve essere vero e verificabile nel codice**. Il test prende i numeri citati nelle
+frasi e li confronta con le costanti (il 42% delle tele contro `RAGNATELA_MULT`, la meta' danno dei
+barili contro `BARILE_QUOTA_GIOCATORE`).
+
+**Le novita'** stanno in `constants.js` accanto al numero di versione, e se i due si separano il box
+**non compare** invece di annunciare le novita' della versione sbagliata. Un test pretende
+`NOVITA.v === VERSION`: salire di versione senza aggiornare le tre righe fa diventare rossa la suite.
 
 ## 🧭 IL MENU DI FINE ONDATA *(rifatto in v1.79)*
 Quattro sezioni con una barra in basso, e sotto — **da solo e centrato** — il pulsante che fa partire la

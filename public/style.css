@@ -86,25 +86,72 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 #titolone .ver{margin-left:10px}
 /* v2.20.1 — qui stavano le tre regole del RICHIAMO (`.occhiello`), tolte insieme al testo che vestivano:
    una regola senza niente da vestire e' solo un pezzo di CSS che qualcuno un giorno legge e non capisce. */
-/* le due colonne. La guida non e' un ripensamento: ha la stessa larghezza del pannello di sinistra,
-   perche' leggerla e' meta' del lavoro di chi arriva la prima volta. */
-#menuColonne{display:flex;gap:22px;align-items:flex-start;justify-content:center;flex:none;
+/* v2.26 — NON PIU' DUE COLONNE: UNA PILA. Paolo: *«titolo, box (width 100%) con nome, stanza e box
+   scelta eroe; sotto invece il box con i comandi»*. Il motivo per cui funziona meglio non e' estetico:
+   nella colonna stretta i comandi erano una lista alta di undici righe, che nessuno legge fino in
+   fondo. A tutta larghezza diventano una griglia su tre colonne, si leggono in un colpo d'occhio e
+   occupano meta' dell'altezza. E il box largo lascia respirare la scheda dell'eroe, che era il pezzo
+   piu' stretto di tutti (v2.19.9: *«creala piu' grossa, lo spazio c'e'»* — adesso c'e' davvero).
+   Qui NON si scorre piu' per colonne: a scorrere e' la pagina, perche' con una pila sola non ci sono
+   due contenuti a contendersi l'altezza. */
+#menuColonne{display:flex;flex-direction:column;gap:18px;align-items:stretch;flex:none;
   width:min(1180px,96vw);animation:cardIn .5s cubic-bezier(.16,.84,.44,1) both}
-/* ogni colonna scorre per conto suo invece di far scorrere la pagina: il titolo resta sempre in cima,
-   e su uno schermo basso non si perde ne' il pulsante di sinistra ne' la guida di destra. */
-#menuColonne>*{flex:1 1 0;min-width:0;max-height:calc(100vh - 232px);overflow:auto;
-  scrollbar-width:thin;scrollbar-color:rgba(146,164,214,.30) transparent}
-#menuColonne>*::-webkit-scrollbar{width:8px}
-#menuColonne>*::-webkit-scrollbar-thumb{background:rgba(146,164,214,.28);border-radius:8px}
-#menuColonne>*::-webkit-scrollbar-track{background:transparent}
-/* un filo di sfumatura in fondo: dice che la colonna continua. E' largo 18 px, meno del padding di 20,
-   cosi' quando si e' in fondo sfuma il margine e non l'ultima riga di testo. */
-#menuColonne>*{-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent 100%);
-  mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent 100%)}
-@supports not (mask-image:linear-gradient(#000,#000)){#menuColonne>*{-webkit-mask-image:none}}
 #menu .menu-card{width:auto}
-/* v2.19.9 — la colonna della scelta prende piu' spazio della guida: e' quella che si guarda davvero */
-@media (min-width:1081px){#menuColonne>.menu-card{flex:1.45 1 0}}
+/* la riga di sotto: i comandi larghi e le novita' strette accanto. Sotto i 1080 px vanno in pila. */
+#menuSotto{display:flex;gap:18px;align-items:flex-start}
+#menuSotto>#infoCard{flex:1 1 0;min-width:0}
+#menuSotto>#novitaCard{flex:0 0 clamp(240px,26%,320px);min-width:0}
+
+/* v2.26 — I COMANDI A GRIGLIA. `auto-fit` e non un numero fisso di colonne: la stessa regola regge
+   tre colonne a 1180 px, due a 800 e una sul telefono, senza tre media query che dicono la stessa
+   cosa. Il minimo di 250 px e' la misura della riga piu' lunga («Click dx / Shift — Scatto»): sotto
+   quella si spezzerebbe in due righe e la griglia diventerebbe un elenco disordinato. */
+#infoCard .tasti{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px 22px}
+#infoCard .tasto{align-content:start}
+
+/* nome e stanza affiancati dentro il box largo */
+.riga2{display:flex;gap:16px}
+.riga2>.field{flex:1 1 0;min-width:0}
+
+/* v2.26 — LA SCHEDA DELLA PARTITA SALVATA, in cima al box. Ritratto, a che punto sei, e i due
+   pulsanti. Il bordo ambra e' lo stesso giallo delle monete: e' la riga che deve prendersi l'occhio
+   per prima, perche' chi ha una partita in corso e' li' per quella. */
+#riprendiCard{display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:10px 12px;border-radius:12px;
+  background:linear-gradient(90deg,rgba(255,207,74,.10),rgba(255,207,74,.03));
+  border:1px solid rgba(255,207,74,.28)}
+#riprendiCard.hidden{display:none}
+.rp-art{flex:0 0 54px;width:54px;height:54px;border-radius:10px;overflow:hidden;background:#05060a;border:1px solid rgba(255,207,74,.22)}
+.rp-art img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block}
+.rp-txt{flex:1 1 auto;min-width:0}
+.rp-tit{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#d8b45a}
+.rp-det{font-size:calc(14px + var(--fz));color:#e7ecf5;line-height:1.35;margin-top:2px}
+.rp-det b{color:#ffcf4a}
+.rp-det small{display:block;font-size:12px;color:#939db4;font-weight:400}
+.rp-btn{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.rp-btn .primary{margin:0;padding:9px 16px;font-size:14px}
+.rp-btn .ghost{padding:5px 12px;font-size:12px;border-radius:9px;cursor:pointer;
+  background:transparent;border:1px solid rgba(146,164,214,.24);color:#939db4}
+.rp-btn .ghost:hover{border-color:rgba(255,120,120,.45);color:#ffb4b4}
+
+/* v2.26 — LA STRISCIA sotto il titolo: record a sinistra, consiglio a destra. Il consiglio prende
+   lo spazio che avanza perche' e' una frase e il record sono quattro parole. */
+#striscia{display:flex;gap:12px;align-items:stretch;justify-content:center;
+  width:min(1180px,96vw);margin:12px auto 0;text-align:left}
+#striscia .chip{padding:8px 14px;border-radius:11px;font-size:13.5px;line-height:1.4;
+  background:rgba(17,21,36,.62);border:1px solid rgba(146,164,214,.16);backdrop-filter:blur(10px)}
+#striscia .rec{flex:0 0 auto;color:#d9c07a;border-color:rgba(255,207,74,.24);background:rgba(255,207,74,.06);white-space:nowrap}
+#striscia .rec b{color:#ffcf4a}
+#striscia .rec.vuoto{color:#8d97ae;border-color:rgba(146,164,214,.16);background:rgba(17,21,36,.62)}
+#striscia .tip{flex:1 1 auto;min-width:0;color:#b9c3d8}
+#striscia .tip b{color:#e7ecf5}
+#striscia .tip::before{content:'💡 ';opacity:.9}
+
+/* v2.26 — le novita' della versione */
+.info-card.novita .nov-lista{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:7px}
+.info-card.novita .nov-lista li{font-size:13px;line-height:1.45;color:#c4cee1}
+.info-card.novita .nov-lista b{color:#e7ecf5}
+.info-card.novita .nov-pie{margin:12px 0 0;font-size:12px;color:#7f8AA0}
+#novitaVer{color:#00f0c8;letter-spacing:.06em}
 /* v2.19.9 — UN PUNTO IN PIU' A TUTTO IL TESTO DEL MENU. Paolo: *«aumenta di 1 punto il font del testo nel
    menu, e' troppo piccolo»*. Le regole della scheda usano gia' `var(--fz)`; qui la si accende per il
    menu, e si alzano di uno le poche regole che hanno la misura scritta fissa. */
@@ -152,12 +199,22 @@ h2.info-h:not(:first-child){margin-top:17px}
 
 /* sotto i 1080 px le due colonne non ci stanno affiancate: la guida scende sotto, e resta leggibile. */
 @media (max-width:1080px){
-  #menuColonne{flex-direction:column;width:min(560px,94vw)}
-  /* impilate, le due colonne NON si dividono l'altezza: ognuna e' alta quanto il suo contenuto e a
-     scorrere e' la pagina. Senza questa riga il `flex:1 1 0` di sopra le schiaccia a un centinaio di px. */
-  #menuColonne>*{flex:none;max-height:none;overflow:visible;-webkit-mask-image:none;mask-image:none}
+  #menuColonne{width:min(620px,94vw)}
+  /* i comandi e le novita' vanno in pila, e la striscia del titolo pure: due chip affiancate su uno
+     schermo stretto diventano due colonne di tre parole l'una. */
+  #menuSotto{flex-direction:column}
+  #menuSotto>#novitaCard{flex:none;width:auto}
+  #striscia{flex-direction:column;width:min(620px,94vw)}
+  #striscia .rec{white-space:normal}
   #menu{padding-top:28px}
   #titolone h1{font-size:clamp(32px,9vw,52px)}
+}
+/* e la scheda della partita salvata, sul telefono, si impila: ritratto e testo sopra, pulsanti sotto */
+@media (max-width:560px){
+  #riprendiCard{flex-wrap:wrap}
+  .rp-btn{flex:1 1 100%;flex-direction:row}
+  .rp-btn .primary{flex:1 1 auto}
+  .riga2{flex-direction:column;gap:0}
 }
 
 /* v2.18 — LA SCELTA DELLA CLASSE: un box quadrato, artwork a sinistra e scheda a destra, due frecce
@@ -173,6 +230,7 @@ h2.info-h:not(:first-child){margin-top:17px}
 /* v2.19.9 — PIU' GRANDE. Paolo: *«creala piu' grossa, lo spazio c'e'»*. Non e' piu' un quadrato: e' alta
    quanto serve alle competenze (almeno 520px), e la colonna di sinistra del menu si e' allargata (vedi
    #menuColonne sotto). L'artwork resta a sinistra, piu' largo. */
+
 #heroScelta{position:relative;flex:1 1 0;min-width:0;min-height:520px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .hcard{position:absolute;inset:0;display:grid;grid-template-columns:36% 1fr}
 .hcard .art{position:relative;overflow:hidden;background:#05060a}
@@ -200,6 +258,40 @@ h2.info-h:not(:first-child){margin-top:17px}
 .hcard .sc b,.hcard .sc em,.hcard .sc span{overflow:hidden;text-overflow:ellipsis}
 .hcard .sc em{font-style:normal;color:var(--pick)}
 .hcard .sc span{color:var(--muted)}
+
+/* v2.26 — LA SCHEDA DELL'EROE IN UN BOX LARGO. Col menu a due colonne la scheda era alta e stretta e
+   doveva essere alta 520 px per far entrare gli attributi sotto il nome. Adesso il box e' largo il
+   doppio: l'artwork si stringe in proporzione (26% invece del 36%) e la parte scritta si apre su DUE
+   colonne — a sinistra chi sei e i cinque attributi, a destra cosa sai fare. Stessa roba, meta'
+   altezza, e non serve piu' scorrere per vedere il pulsante di sotto. */
+@media (min-width:1081px){
+  #heroScelta{min-height:360px}
+  .hcard{grid-template-columns:26% 1fr}
+  .hcard .info{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;align-content:center;padding:18px 20px}
+  .hcard .info>:first-child{grid-column:1 / -1}   /* nome ed epiteto stanno larghi su tutte e due */
+  .hcard .stats{align-self:start}
+  .hcard .comp{border-top:none;padding-top:0;align-self:start}
+  .hcard .scuole{grid-column:2;border-top:1px solid var(--line)}
+}
+/* v2.26 — E SU UNO SCHERMO BASSO si stringe ancora. Il metro non e' la bellezza: e' che il pulsante
+   ENTRA IN PARTITA stia sopra la piega. Su un portatile 1280x800 — la misura piu' diffusa che esista —
+   con la scheda a 360 px il pulsante finiva sotto, e un menu in cui bisogna scorrere per trovare il
+   tasto che fa partire il gioco e' un menu rotto, per quanto sia ordinato. */
+@media (min-width:1081px) and (max-height:900px){
+  /* la scheda segue l'altezza della finestra invece di avere una misura fissa: 34vh e' quanto le si
+     puo' dare senza spingere il pulsante sotto la piega, e su uno schermo alto il tetto di 360 la
+     riporta alla misura buona. */
+  #heroScelta{min-height:clamp(230px,34vh,360px)}
+  #riprendiCard{padding:8px 10px;margin-bottom:12px}
+  .rp-art{flex:0 0 44px;width:44px;height:44px}
+  #titolone{margin-bottom:min(2vh,14px)}
+  #titolone h1{font-size:clamp(30px,4.4vw,48px)}
+  #menuColonne{gap:14px}
+  #menu{padding-top:min(1.6vh,16px)}
+  #striscia{margin-top:8px}
+  #menu .menu-card{padding:18px 22px}
+  #menu h2{margin:12px 0 8px}
+}
 #heroPallini{display:flex;justify-content:center;gap:6px;margin:10px 0 2px}
 #heroPallini i{width:6px;height:6px;border-radius:50%;background:var(--line);cursor:pointer;transition:.15s}
 #heroPallini i.on{background:var(--gold);transform:scale(1.3)}
@@ -1297,3 +1389,7 @@ h2.info-h:not(:first-child){margin-top:17px}
 #bauleAvviso{margin:0 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.35}
 #bauleAvviso.ba-no{background:rgba(255,80,80,.12);border:1px solid rgba(255,110,110,.55);color:#ffd4d4}
 #bauleAvviso.ba-ok{background:rgba(95,224,138,.12);border:1px solid rgba(95,224,138,.55);color:#d9ffe6}
+
+/* v2.26 — la riga del record battuto, nel riepilogo di fine partita */
+.rec-new{margin:6px 0 2px;font-size:15px;font-weight:800;letter-spacing:.06em;color:#ffcf4a;
+  text-shadow:0 0 18px rgba(255,207,74,.35)}

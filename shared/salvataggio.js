@@ -84,7 +84,9 @@
   };
   function etichetta(d) {
     if (!valido(d)) return null;
-    return { ondata: d.ondata | 0, livello: d.level | 0, classe: NOMI[d.heroId] || d.heroId, nome: d.nome || '', quando: d.quando || 0 };
+    // v2.26 — torna anche l'ID della classe: la scheda della partita salvata mostra il RITRATTO,
+    // e il ritratto e' un file che si chiama come la classe. Prima bastava il nome scritto.
+    return { ondata: d.ondata | 0, livello: d.level | 0, classe: NOMI[d.heroId] || d.heroId, heroId: d.heroId, nome: d.nome || '', quando: d.quando || 0 };
   }
 
   // Un salvataggio si rifiuta INTERO o si carica INTERO. Qui si guarda solo la forma: che sia un oggetto,

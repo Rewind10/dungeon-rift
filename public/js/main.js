@@ -50,6 +50,31 @@
     scrivi(d) { try { localStorage.setItem(SV.CHIAVE, JSON.stringify(d)); return true; } catch (_) { return false; } },
     // non si cancella mai da soli: morire NON toglie il salvataggio. E' il punto di averlo.
   };
+  // ===== v2.26 — IL RECORD: la sola cosa che il gioco si ricorda di te ===========================
+  // Fino alla v2.25 morivi, leggevi il riepilogo, tornavi al menu — e il menu era identico a quello
+  // della prima partita. Una run che non lascia traccia e' una run che non e' successa.
+  // Si scrive SOLO se e' meglio di quello che c'era, e il metro e' l'ONDATA: livello e uccisioni
+  // seguono, ma non vincono da soli. Un arciere morto alla 14 con dieci uccisioni ha fatto meglio di
+  // un barbaro morto alla 6 con duecento, e il record deve dire la stessa cosa.
+  // Stesso trattamento del salvataggio: tutto dentro try/catch, perche' localStorage SOLLEVA.
+  const CHIAVE_REC = 'dr_record';
+  const Record = {
+    leggi() {
+      try { const t = localStorage.getItem(CHIAVE_REC); if (!t) return null;
+        const d = JSON.parse(t);
+        if (!d || typeof d !== 'object' || !(d.ondata >= 0 && d.ondata <= 99)) return null;
+        return d; } catch (_) { return null; }
+    },
+    // torna true se il record e' stato battuto: serve al riepilogo di fine partita per dirlo.
+    forse(nuovo) {
+      if (!nuovo || !(nuovo.ondata > 0)) return false;
+      const v = Record.leggi();
+      if (v && v.ondata >= nuovo.ondata) return false;
+      try { localStorage.setItem(CHIAVE_REC, JSON.stringify(nuovo)); } catch (_) { return false; }
+      return true;
+    },
+  };
+
   // quando e' stato salvato, detto come lo direbbe una persona
   function quandoTesto(ms) {
     if (!ms) return '';
@@ -61,14 +86,12 @@
   }
   // Il pulsante RIPRENDI c'e' solo se c'e' davvero un salvataggio, e dice a che punto sei: "riprendi"
   // e basta non dice se stai per tornare all'ondata 3 o alla 17, ed e' l'unica cosa che vuoi sapere.
+  // v2.26 — adesso e' una SCHEDA in cima al box, non un pulsante in fondo: chi ha una partita in
+  // corso non e' li' per scegliere un eroe, e' li' per tornarci dentro. Il disegno lo fa l'HUD.
   function aggiornaRiprendi() {
-    const b = $('riprendiBtn'); if (!b) return null;
     const d = Archivio.leggi(); const e = d && SV.etichetta(d);
-    if (!e) { b.classList.add('hidden'); b.onclick = null; return null; }
-    b.classList.remove('hidden');
-    b.innerHTML = '\u25B6\uFE0F  RIPRENDI \u2014 ondata <b>' + e.ondata + '</b> \u00b7 ' + e.classe +
-      ' Lv.' + e.livello + '<small style="display:block;opacity:.7;font-weight:400">salvata ' + quandoTesto(e.quando) + '</small>';
-    return d;
+    HUD.schedaRiprendi(e, e ? quandoTesto(e.quando) : '');
+    return e ? d : null;
   }
   // ============================================================================================
   // v2.19.10 — IL NOME PRESELEZIONATO VIENE DALLA CLASSE. Paolo: *«nomi casuali di eroi del fantasy,
@@ -110,6 +133,18 @@
       G.provaOnda = 0; G.riprendiDati = d; G.meHero = d.heroId || G.meHero;
       entra('ripresa-' + Math.floor(Math.random() * 9000 + 1000));
     };
+    // v2.26 — SCARTA: chiede conferma una volta e cancella il salvataggio dal browser. E' l'unico
+    // punto del gioco che cancella una partita salvata — morire non la tocca, ed e' il senso di
+    // averla — quindi la conferma non e' pignoleria: chi clicca qui sta buttando via ore.
+    const sc = $('scartaBtn');
+    if (sc) sc.onclick = () => {
+      if (sc.dataset.sicuro !== '1') { sc.dataset.sicuro = '1'; sc.textContent = 'Sicuro?'; setTimeout(() => { sc.dataset.sicuro = '0'; sc.textContent = 'Scarta'; }, 4000); return; }
+      try { localStorage.removeItem(SV.CHIAVE); } catch (_) {}
+      aggiornaRiprendi();
+    };
+    // v2.26 — le tre aggiunte della schermata nuova
+    HUD.strisciaMenu(Record.leggi());
+    HUD.novitaMenu();
     // v1.91 — MODALITA' DI PROVA: venti pulsanti, uno per ondata. Serve a guardare prestazioni e
     // giocabilita' di un'ondata alta senza rigiocare le quattordici che vengono prima. Si entra in una
     // stanza tutta propria (nome a caso) e la run parte da sola: niente sala d'attesa da attraversare.
@@ -509,7 +544,20 @@
       case 'reveal': R.ring(ev.x, ev.y, '#ff3b3b', 6, 50, 0.4); R.addShake(4); break;
     }
   }
-  function showEnd(victory, ev) { G.started = false; const st = ev && ev.stats; const dur = ev && ev.dur; setTimeout(() => { const snap = Net.latest() || { wave: G.world.wave }; HUD.end(victory, snap, G.world.me, st, dur); $('hud').classList.add('hidden'); }, 900); }
+  function showEnd(victory, ev) { G.started = false; const st = ev && ev.stats; const dur = ev && ev.dur;
+    // v2.26 — IL RECORD SI SCRIVE QUI, e NON per le partite di prova: la modalita' di prova ti fa
+    // partire dall'ondata che vuoi, quindi un record preso di li' direbbe solo da quale pulsante hai
+    // cominciato. Il conto delle uccisioni e' quello di chi sta giocando, non del gruppo.
+    let battuto = false;
+    if (!G.provaOnda) {
+      const me = G.world.me || {};
+      const mia = (st || []).find(r => r.i === Net.id) || {};
+      // il livello nello snapshot si chiama `lvl` — `lv` sono le VITE, e prenderlo per il livello
+      // avrebbe scritto «Lv.2» su un personaggio al quindicesimo.
+      battuto = Record.forse({ ondata: (ev && ev.wave) | 0, livello: me.lvl | 0, classe: (window.GAME.Heroes.HEROES[mia.h || G.meHero] || {}).name || '',
+        uccisi: mia.k | 0, vinta: victory ? 1 : 0, quando: Date.now() });
+    }
+    setTimeout(() => { const snap = Net.latest() || { wave: G.world.wave }; HUD.end(victory, snap, G.world.me, st, dur, battuto); $('hud').classList.add('hidden'); }, 900); }
   $('restartBtn').onclick = () => { HUD.hideEnd(); location.reload(); };
 
   // v2.10 — si sta giocando davvero? Cioe': nessuno dei pannelli a tutto schermo e' aperto. Lo decide lo
