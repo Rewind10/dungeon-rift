@@ -267,15 +267,15 @@
     riga(sc.righe[st.r], G.capo !== false);
   }
   // v2.8 — una riga e' `{ chi, t }`. `chi` decide RITRATTO e nome: 'tu' e' l'avatar (quindi la classe di
-  // chi sta leggendo — in tre a schermo ognuno vede il suo), 'oracolo' e' lui, '' e' la voce senza volto
-  // del risveglio. E `{eroe}` dentro il testo diventa il nome della classe: e' quando l’oracolo nomina
+  // chi sta leggendo — in tre a schermo ognuno vede il suo), 'anziano' e' lui, '' e' la voce senza volto
+  // del risveglio. E `{eroe}` dentro il testo diventa il nome della classe: e' quando l’Anziano nomina
   // "quel guerriero" che la rivelazione smette di essere astratta.
   function riga(r, conTasti) {
     const H = (window.GAME.Heroes && window.GAME.Heroes.HEROES) || {};
     const mio = G.meHero || 'barbaro';
     const nomeEroe = (H[mio] && H[mio].name) ? H[mio].name.charAt(0) + H[mio].name.slice(1).toLowerCase() : 'eroe';
     const testo = String(r.t || '').replace(/\{eroe\}/g, nomeEroe);
-    const NOMI = { oracolo: 'Oracolo', guardia: 'Guardia' };
+    const NOMI = { anziano: 'Anziano', guardia: 'Guardia' };
     const nome = r.chi === 'tu' ? nomeEroe : (NOMI[r.chi] || '');
     // v2.9 — `p` e' la PAUSA del copione: la riga aspetta un attimo in silenzio prima di scriversi.
     HUD.mostraDialogo(r.chi, testo, conTasti, mio, nome, !!r.p);

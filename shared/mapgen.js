@@ -1049,8 +1049,18 @@
     // addosso all'uscita — il portale adesso e' un posto dove si va, non un bottone sotto i piedi — ma
     // nemmeno dall'altra parte del paese: da qui sono una quindicina di tessere, tre secondi e mezzo.
     spawn: { x: 18, y: 21 },
-    // le due guardie: ferme nella via, ai due lati della soglia. Scenografia, non mercanti.
-    guardie: [{ x: 17.6, y: 5.4, face: 0 }, { x: 17.6, y: 8.6, face: 0 }],
+    // le guardie: ferme nella via, ai due lati della soglia. Scenografia, non mercanti.
+    // v2.27 — DUE ANCHE ALL'ANZIANO. Paolo: *«rendi la casa dell'Anziano piu' riconoscibile: magari
+    // un ingresso particolare, delle guardie fuori... evita i cartelli»*. Il cartello sarebbe la
+    // soluzione comoda e la peggiore: dice il nome e non dice niente. Due uomini fermi davanti a una
+    // porta dicono in un colpo solo che li' dentro c'e' qualcuno che conta e che non ci entra
+    // chiunque — e si vedono da in fondo alla via, mentre un cartello va letto da vicino.
+    // La porta dell'antro e' a ponente (tessera 43, aperta sulle righe 17 e 18): loro stanno nella
+    // via, una tessera sopra e una sotto l'apertura, girati verso chi arriva. La soglia resta libera.
+    guardie: [
+      { x: 17.6, y: 5.4,  face: 0 }, { x: 17.6, y: 8.6,  face: 0 },              // casa del portale
+      { x: 41.4, y: 15.9, face: Math.PI }, { x: 41.4, y: 19.1, face: Math.PI },  // casa dell'Anziano
+    ],
     // LE STANZE. Rettangolo INTERNO: la roccia attorno e' il muro, e la porta si apre in quella roccia.
     //   kind 'bottega' = ci lavora un mercante · 'casa' = ci abita qualcuno · 'portale' = c'e' la faglia
     //   porta: [tessera x, tessera y, lato] — il lato e' quello da cui si ENTRA, visto dalla stanza
@@ -1106,7 +1116,10 @@
       // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO. Le sue carte erano spente da tempo
       // (CARTOMANTE_ATTIVA), quindi non si perde niente: cambia chi abita l'antro. Per ora non fa
       // nulla — niente `crd`, quindi il server non gli attacca nemmeno il richiamo di prossimita'.
-      { x: 53.4, y: 17,   kind: 'oracolo',  name: 'Oracolo',   sub: 'spiriti',
+      // v2.27 — e l'Oracolo e' diventato l'ANZIANO: non e' solo un nome, e' un'altra persona (vedi
+      // il discorso in storia.js). Il `kind` cambia con lui perche' e' la chiave con cui il server lo
+      // cerca fra gli abitanti e con cui il renderer sceglie come vestirlo.
+      { x: 53.4, y: 17,   kind: 'anziano',  name: 'Anziano',   sub: 'il più vecchio del villaggio',
         col: '#7fd6c0', room: 'antro' },
       { x: 53.4, y: 26,   kind: 'crier',     name: 'Capitano',   bnd: 1, sub: 'taglie e usato',
         col: '#ff9a8a', room: 'retro' },
@@ -1250,12 +1263,16 @@
         [35.4, 31.7, 0, 'formaggi', '#e0c070', 'FORMAGGI'],
         [20.6, 16.2, 1, 'spezie',   '#b8703a', 'SPEZIE'],
         [20.6, 27.8, 1, 'pellami',  '#8a5a34', 'PELLAMI'],
-        [38.9, 16.2, 1, 'ferro',    '#8d97a5', 'FERRO'],
+        // v2.27 — il cartello di questo banco finiva a due tessere dalla porta dell'Anziano, proprio
+        // in mezzo all'ingresso che la stessa versione rende riconoscibile. Il banco resta dov'e', il
+        // cartello passa dall'altro lato (`sdx` negativo): e' roba sua, non deve stare sull'uscio di
+        // un altro.
+        [38.9, 16.2, 1, 'ferro',    '#8d97a5', 'FERRO', -1.15],
         [38.9, 27.8, 1, 'vino',     '#8e3b52', 'VINO'],
       ];
-      for (const [bx, by, verso, mest, col, txt] of BANCHI) {
+      for (const [bx, by, verso, mest, col, txt, sdx] of BANCHI) {
         P('bancarella', bx, by, 1, { col, mest, r: verso });
-        P('signpost', bx + (verso ? 0.95 : 1.25), by + (verso ? 1.05 : (by < 20 ? -0.55 : 0.55)), 0.8, { txt });
+        P('signpost', bx + (sdx != null ? sdx : (verso ? 0.95 : 1.25)), by + (verso ? 1.05 : (by < 20 ? -0.55 : 0.55)), 0.8, { txt });
       }
     }
 
@@ -1393,13 +1410,42 @@
       P('barrel', r.x0 + 4.4, r.y0 + 0.8, 0.95); P('sack', r.x0 + 6.0, r.y0 + 0.8, 0.9);
     }
 
-    // ===================== L'ANTRO DELL’ORACOLO =====================
-    // v2.6 — era la stanza della cartomante, col tappeto e il ventaglio di carte. Adesso ci abita lo
-    // oracolo: il fuoco per terra, i cristalli, le ossa appese. Non vende niente e non parla — sta li'.
+    // ===================== LA SOGLIA DELL’ANZIANO =====================
+    // v2.27 — DA FUORI si deve capire quale casa e'. Tutte le porte del villaggio sono uguali: un
+    // buco nella roccia. Questa no.
+    //
+    // Quattro cose, e nessuna e' scritta: un ARCO di pietra sull'apertura (l'unico del paese), due
+    // BRACIERI accesi ai lati (l'unico fuoco che sta fuori da una casa), una PASSATOIA che porta
+    // dentro, e due STENDARDI nel verderame che e' il colore di chi ci abita. Le due guardie stanno
+    // nell'elenco di sopra, con le altre.
+    //
+    // Tutto quello che sta sulla linea della porta e' ATTRAVERSABILE — arco, passatoia, stendardi non
+    // sono nella tabella degli ingombri — e i bracieri, che un corpo ce l'hanno, stanno mezza tessera
+    // fuori dall'apertura. Un ingresso riconoscibile che non si riesce ad attraversare sarebbe la
+    // beffa peggiore.
+    {
+      // ATTENZIONE ALLE COORDINATE: `P` mette il prop al CENTRO della tessera, cioe' mezza tessera
+      // piu' in la' del numero che gli passi. Al primo tentativo il braciere di sopra, passato a
+      // y 16.5, e' finito disegnato a 17.0 — l'angolo esatto della porta — e un braciere e' un corpo
+      // solido. Qui sotto si ragiona in tessere DISEGNATE e si sottrae 0.5 al momento di scrivere.
+      const D = (t) => t - 0.5;                          // da tessera disegnata a tessera passata
+      // l'apertura nella roccia: colonna 43, righe 17 e 18 — disegnata, va da y 17.0 a y 19.0
+      const AX = 43, AY0 = 17, AY1 = 19, cy = (AY0 + AY1) / 2;
+      P('arch', D(AX + 0.5), D(cy), 1.15, { col: '#7fd6c0' });            // in mezzo alla porta, si passa
+      P('brazier', D(AX - 0.4), D(AY0 - 0.7), 1.05);                      // fuori dalla bocca, sopra
+      P('brazier', D(AX - 0.4), D(AY1 + 0.7), 1.05);                      // e sotto
+      P('tappeto', D(AX - 0.7), D(cy), 1.15, { col: '#2f5a52' });         // la passatoia che porta dentro
+      P('flag', D(AX - 0.3), D(AY0 - 1.6), 1.2, { col: '#7fd6c0' });
+      P('flag', D(AX - 0.3), D(AY1 + 1.6), 1.2, { col: '#7fd6c0' });
+    }
+
+    // ===================== L'ANTRO DELL’ANZIANO =====================
+    // v2.6 — era la stanza della cartomante, col tappeto e il ventaglio di carte. Adesso ci abita
+    // l'Anziano: il fuoco per terra, i cristalli, le ossa appese. Non vende niente: sta li' e parla.
     {
       const r = R('antro'), cy = (r.y0 + r.y1) / 2;
       P('tappeto', r.x1 - 2.4, cy, 1.3, { col: '#2f5a52' });
-      // v2.19.11 — il fuoco stava in mezzo alla strada fra l'uscio e l'oracolo: spostato di lato.
+      // v2.19.11 — il fuoco stava in mezzo alla strada fra l'uscio e l'Anziano: spostato di lato.
       P('focolare', r.x1 - 4.6, cy - 1.5, 1.05);
       P('candelabra', r.x1 - 0.9, r.y0 + 0.9, 1); P('candelabra', r.x1 - 0.9, r.y1 - 0.9, 1);
       P('scaffale', r.x0 + 0.8, cy - 1.6, 1, { r: 1, col: '#7fd6c0' });

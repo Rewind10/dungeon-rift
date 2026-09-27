@@ -1507,7 +1507,7 @@
     // senza pensarci.
     VEL: 34,                                    // millisecondi per lettera
     // v2.9 — LA PAUSA. Una riga marcata `p:1` nel copione aspetta questo prima di cominciare a scriversi:
-    // sono le "Pause" e le didascalie (`l'oracolo osserva`, `sorride appena`). Scritte a schermo direbbero
+    // sono le "Pause" e le didascalie (`l'Anziano osserva`, `sorride appena`). Scritte a schermo direbbero
     // al giocatore cosa dovrebbe provare; un silenzio di mezzo secondo prima di «Un Dio.» glielo fa
     // provare. Il riquadro col volto resta li' muto: e' il volto che fa la pausa, non il testo.
     PAUSA: 900,                                 // millisecondi di silenzio prima di una riga marcata
@@ -1532,8 +1532,8 @@
       const g = cv.getContext('2d'), W = cv.width, H = cv.height;
       g.clearRect(0, 0, W, H);
       const P = {
-        oracolo:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
-        // v2.9.2 — la guardia: acciaio e ottone. Volutamente LONTANA dal verderame dell'oracolo, perche'
+        anziano:  { veste: '#3f6b60', vesteDk: '#1c332e', pelle: '#d6b48f', acc: '#7fd6c0' },
+        // v2.9.2 — la guardia: acciaio e ottone. Volutamente LONTANA dal verderame dell'Anziano, perche'
         // quando compare quel riquadro il giocatore deve capire in mezzo secondo che non e' il vecchio.
         guardia:   { veste: '#6b7382', vesteDk: '#262c36', pelle: '#dcae7e', acc: '#c9a227' },
         guerriero: { veste: '#7f8895', vesteDk: '#2f3742', pelle: '#e0b183', acc: '#e0a52c' },
@@ -1559,7 +1559,7 @@
         g.beginPath(); g.ellipse(cx - R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7);
         g.ellipse(cx + R * 0.33, cy + dy, R * 0.13, R * 0.17, 0, 0, 7); g.fill(); };
 
-      if (chi === 'oracolo') {
+      if (chi === 'anziano') {
         // CORNA e cappuccio: si riconosce dalla sagoma, prima ancora che dal colore
         g.strokeStyle = '#e8e0cc'; g.lineWidth = 5; g.lineCap = 'round';
         for (const lato of [-1, 1]) { g.beginPath(); g.moveTo(cx + lato * R * 0.7, cy - R * 0.5);
@@ -1577,7 +1577,7 @@
         // v2.9.2 — ELMO APERTO COL NASALE. L'elmo del guerriero e' chiuso e ha la feritoia: li' dentro non
         // c'e' nessuno da guardare negli occhi, ed e' giusto cosi' per un eroe. La guardia invece deve
         // poterti guardare MALE, quindi la faccia si vede: occhi, bocca dritta, e una barra di ferro in
-        // mezzo. Basta la sagoma a dire che non e' ne' l'oracolo ne' il tuo avatar.
+        // mezzo. Basta la sagoma a dire che non e' ne' l'Anziano ne' il tuo avatar.
         occhi(-R * 0.02);
         g.strokeStyle = '#3a2a1c'; g.lineWidth = 3.2; g.lineCap = 'round';       // la bocca: una linea dritta
         g.beginPath(); g.moveTo(cx - R * 0.30, cy + R * 0.60); g.lineTo(cx + R * 0.30, cy + R * 0.60); g.stroke();

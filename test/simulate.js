@@ -905,10 +905,13 @@ function testV152() {
     assert(room.map.portale.x >= st.x0 && room.map.portale.x <= st.x1 + 1 &&
            room.map.portale.y >= st.y0 && room.map.portale.y <= st.y1 + 1, 'e la faglia sta dentro quella casa');
     assert(MU.dist(pw.x, pw.y, cxw, cyw) > T * 8, 'e quindi NON e piu al centro del villaggio');
-    const gd = room.map.village.extras.filter(e => e.kind === 'guardia');
-    assert(gd.length === 2, 'due guardie, non una e non tre (ne ho ' + gd.length + ')');
+    // v2.27 — le guardie adesso sono QUATTRO: due qui e due sulla soglia dell'Anziano. Il controllo
+    // guarda quelle di QUESTA porta, non il totale, se no aggiungere un presidio da un'altra parte
+    // farebbe diventare rosso un test che parla della casa del portale.
     const soglia = { x: st.porta[0] * T + T / 2, y: st.porta[1] * T + T / 2 };
-    for (const q of gd) assert(MU.dist(q.x, q.y, soglia.x, soglia.y) < T * 3.5, 'e stanno sulla soglia, non sparse per il paese');
+    const gd = room.map.village.extras.filter(e => e.kind === 'guardia' && MU.dist(e.x, e.y, soglia.x, soglia.y) < T * 3.5);
+    assert(gd.length === 2, 'due guardie sulla soglia del portale, non una e non tre (ne ho ' + gd.length + ')');
+    assert(Math.sign(gd[0].y - soglia.y) !== Math.sign(gd[1].y - soglia.y), 'una per lato');
   }
   assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, cxw, cyw) < T * 6, 'il falo invece resta in mezzo alla piazza, che e il centro del paese');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, pw.x, pw.y) < T * 24, 'la fucina si raggiunge dalla piazza');
@@ -1101,10 +1104,9 @@ function testV157() {
   assert(Math.abs(m.portale.x - (stanzaP.x0 + stanzaP.x1 + 1) / 2) <= 0.6 &&
          Math.abs(m.portale.y - (stanzaP.y0 + stanzaP.y1 + 1) / 2) <= 0.6, 'anzi: nel centro di quella stanza');
   // e le due guardie stanno sulla soglia, una per lato
-  { const gd = m.village.extras.filter(e => e.kind === 'guardia');
-    assert(gd.length === 2, 'due guardie all ingresso (' + gd.length + ')');
-    const sx2 = stanzaP.porta[0] * T + T / 2, sy2 = stanzaP.porta[1] * T + T / 2;
-    assert(gd.every(q => Math.hypot(q.x - sx2, q.y - sy2) < T * 3.5), 'e stanno sulla soglia');
+  { const sx2 = stanzaP.porta[0] * T + T / 2, sy2 = stanzaP.porta[1] * T + T / 2;
+    const gd = m.village.extras.filter(e => e.kind === 'guardia' && Math.hypot(e.x - sx2, e.y - sy2) < T * 3.5);
+    assert(gd.length === 2, 'due guardie all ingresso del portale (' + gd.length + ')');
     assert(Math.sign(gd[0].y - sy2) !== Math.sign(gd[1].y - sy2), 'una per lato della porta, non tutte e due dalla stessa parte'); }
   const seen = new Set(), q = [[(m.spawn.x / T) | 0, (m.spawn.y / T) | 0]];
   while (q.length) { const [x, y] = q.pop(); const k = y * m.w + x;
@@ -1168,14 +1170,16 @@ function testV157() {
   assert(venditori.every(n => ['guerriero', 'ladro', 'mago'].indexOf(n.cat) >= 0), 'e sono i tre di gear.js');
   assert((m.village.botteghe || []).length === 3, 'e il villaggio le espone tutte e tre al server');
   assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
-  // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO, e per ora non fa nulla: niente `crd`, quindi il
-  // server non gli attacca nemmeno il richiamo di prossimita'. Le sue carte erano gia' spente
+  // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO. Le sue carte erano gia' spente
   // (CARTOMANTE_ATTIVA), quindi non si e' perso niente: e' cambiato chi abita l'antro.
+  // v2.27 — e l'Oracolo e' diventato l'ANZIANO. Non vende ancora niente e non ha il richiamo di
+  // prossimita' dei mercanti (`crd`): quello che fa e' PARLARE, e se ne occupa `updateAnziano`.
   assert(m.village.npcs.filter(n => n.crd).length === 0, 'la cartomante non c e piu');
-  assert(m.village.npcs.filter(n => n.kind === 'oracolo').length === 1, 'al suo posto c e l’oracolo');
+  assert(m.village.npcs.filter(n => n.kind === 'anziano').length === 1, 'al suo posto c e l’Anziano');
+  assert(m.village.npcs.filter(n => n.kind === 'oracolo').length === 0, 'e dell oracolo non resta traccia');
   assert(m.village.npcs.every(n => n.kind !== 'seer'), 'e di cartomanti non ne resta traccia');
-  { const sc = m.village.npcs.find(n => n.kind === 'oracolo');
-    assert(!sc.shop && !sc.pot && !sc.bnd && !sc.crd && !sc.inn, 'e per ora non vende e non fa niente'); }
+  { const sc = m.village.npcs.find(n => n.kind === 'anziano');
+    assert(!sc.shop && !sc.pot && !sc.bnd && !sc.crd && !sc.inn, 'e non vende niente: parla e basta'); }
   assert(m.village.npcs.filter(n => n.inn).length === 1, "e l'Ostessa in v1.74");
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
@@ -2909,12 +2913,19 @@ function testV175() {
     // v2.6 — e nemmeno ragnatele e sassi sono mobili: si attraversano, e stanno agli sbocchi delle vie
     // proprio perche' il paese e' SCAVATO. La regola qui e' 'niente mobili in mezzo alla strada'.
     if (p.type === 'web' || p.type === 'rock') continue;
+    // v2.27 — e nemmeno la passatoia, gli stendardi e l'arco della soglia dell'Anziano: sono per
+    // terra, appesi al muro e sopra la testa. La regola parla di MOBILI in mezzo alla strada, e una
+    // cosa che non ha un corpo non e' un mobile — non puo' stare in mezzo a niente.
+    if (p.type === 'tappeto' || p.type === 'flag' || p.type === 'arch') continue;
     // v2.5 — le BANCARELLE stanno in strada per mestiere: un banco del pane dentro una stanza chiusa non
     // e' un banco del pane. Che non tappino il passaggio lo prova la misura delle porte piu' sotto, che
     // tiene conto dei corpi solidi; qui si contano i mobili che in strada NON dovrebbero starci.
     if (p.type === 'bancarella' || (p.type === 'signpost' && p.txt && p.txt !== 'TAGLIE')) continue;
     // v2.6 — e i bracieri del giro della piazza: stanno a meno di due tessere dal battuto, e sono la luce
     if (p.type === 'brazier' && tx >= V.piazza.x0 - 2 && tx <= V.piazza.x1 + 2 && ty >= V.piazza.y0 - 2 && ty <= V.piazza.y1 + 2) continue;
+    // v2.27 — e i due bracieri della soglia dell'Anziano, per lo stesso motivo dei precedenti: sono
+    // li' apposta, e stanno FUORI dalla bocca della porta (lo misura il TEST 86, che prova a passarci).
+    if (p.type === 'brazier' && tx >= 41 && tx <= 43 && (ty === 16 || ty === 19)) continue;
     if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
     if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
   }
@@ -2950,7 +2961,10 @@ function testV1752() {
                   'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
                   'bancarella',                   // v2.5 — e il banco delle botteghe di contorno
                   'bersaglio'];                   // v2.19 — la balla di paglia dell'archeria
-  const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot'];
+  // v2.27 — l'ARCO della soglia dell'Anziano sta fra i passanti, e deve restarci: e' l'unica cosa
+  // del villaggio che sta IN MEZZO a una porta. Il giorno che qualcuno gli desse un corpo,
+  // l'ingresso piu' riconoscibile del paese diventerebbe l'unico in cui non si entra.
+  const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot', 'arch'];
   for (const t of SOLIDI) assert(m.props.some(p => p.type === t), 'nel villaggio c e almeno un "' + t + '"');
   for (const t of PASSANTI) assert(m.props.some(p => p.type === t), 'e almeno un "' + t + '"');
   const persone = m.solids.filter(s2 => s2.chi);
@@ -5804,17 +5818,17 @@ function testStoria() {
   p.x = r.faglia.x; p.y = r.faglia.y; r.update(1 / C.TICK_RATE);
   assert(r.phase === C.PHASE_MARKET, 'attraversando si arriva al villaggio');
   assert(r.wave === 0, 'che e ancora l ondata zero: non si e combattuto niente');
-  assert(r.missione === 'oracolo', 'e la missione cambia: trova l’oracolo');
+  assert(r.missione === 'anziano', 'e la missione cambia: trova l’Anziano');
   assert(r.storia && r.storia.scena === 'arrivo', 'con le righe di benvenuto');
   for (let i = 0; i < Storia.arrivo.righe.length; i++) r.avanzaStoria('a', false);
 
-  // --- 3) L’ORACOLO: parla avvicinandosi, e una volta sola ---
-  const sh = r.map.village.npcs.find(n => n.kind === 'oracolo');
-  assert(!!sh, 'nel villaggio c e l’oracolo');
+  // --- 3) L’ANZIANO: parla avvicinandosi, e una volta sola ---
+  const sh = r.map.village.npcs.find(n => n.kind === 'anziano');
+  assert(!!sh, 'nel villaggio c e l’Anziano');
   p.x = sh.x + 40; p.y = sh.y; r.update(1 / C.TICK_RATE);
-  assert(r.storia && r.storia.scena === 'oracolo', 'avvicinandosi parte il discorso');
-  assert(r.storia.n === Storia.oracolo.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
-  const tutto = Storia.oracolo.righe.map(q => q.t).join(' ');
+  assert(r.storia && r.storia.scena === 'anziano', 'avvicinandosi parte il discorso');
+  assert(r.storia.n === Storia.anziano.righe.length, 'tutte le righe del discorso (' + r.storia.n + ')');
+  const tutto = Storia.anziano.righe.map(q => q.t).join(' ');
   // ==========================================================================================
   // v2.20.2 — COSA DEVE RESTARE NEL DISCORSO, dopo la riscrittura di Paolo
   // ==========================================================================================
@@ -5838,20 +5852,20 @@ function testStoria() {
   assert(miss && miss.t.indexOf('AZ') >= 0, 'il boss lo nomina la missione');
   assert(miss && /[Vv]enti/.test(miss.d), 'ed e la missione a dire quante volte si scende');
   // ed e' un DIALOGO: parlano in due, se no e' una conferenza
-  const diTu = Storia.oracolo.righe.filter(q => q.chi === 'tu').length;
+  const diTu = Storia.anziano.righe.filter(q => q.chi === 'tu').length;
   assert(diTu >= 4, 'e l avatar risponde (' + diTu + ' battute sue): e un dialogo, non un monologo');
   // il numero di righe si prende PRIMA del giro: all'ultima `storia` diventa null, e una condizione
   // che rilegge r.storia.n a ogni giro esplode sull'ultima iterazione.
   { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
   assert(r.storia === null, 'finito il discorso');
   assert(r.missione === 'discesa', 'e la missione diventa la discesa');
-  // tornandoci non ricomincia da capo: v2.9 — dice le sue quattro righe di congedo (`oracoloAncora`), che
+  // tornandoci non ricomincia da capo: v2.9 — dice le sue righe di congedo (`anzianoAncora`), che
   // e' una scena come le altre e non piu' una riga sola sparata a un giocatore solo.
   p._nearOra = false; p.x = sh.x + 400; r.update(1 / C.TICK_RATE);
   p.x = sh.x + 40; r.update(1 / C.TICK_RATE);
-  assert(r.storia && r.storia.scena === 'oracoloAncora', 'e tornandoci non lo ripete: dice il congedo');
-  assert(r.storia.n === Storia.oracoloAncora.righe.length && r.storia.n < Storia.oracolo.righe.length,
-    'ed e piu corto del discorso (' + r.storia.n + ' righe contro ' + Storia.oracolo.righe.length + ')');
+  assert(r.storia && r.storia.scena === 'anzianoAncora', 'e tornandoci non lo ripete: dice il congedo');
+  assert(r.storia.n === Storia.anzianoAncora.righe.length && r.storia.n < Storia.anziano.righe.length,
+    'ed e piu corto del discorso (' + r.storia.n + ' righe contro ' + Storia.anziano.righe.length + ')');
   { const n = r.storia.n; for (let i = 0; i < n; i++) r.avanzaStoria('a', false); }
   assert(r.storia === null && r.missione === 'discesa', 'finito il congedo la missione resta la discesa');
 
@@ -5920,22 +5934,22 @@ function testStoria() {
   assert(r2.storia === null && r2.phase === C.PHASE_PROLOGO, 'saltando, la voce tace ma si resta nella cella');
   assert(r2.missione === 'faglia', 'e la missione resta');
   p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
-  assert(r2.phase === C.PHASE_MARKET && r2.missione === 'oracolo', 'si arriva al villaggio lo stesso');
+  assert(r2.phase === C.PHASE_MARKET && r2.missione === 'anziano', 'si arriva al villaggio lo stesso');
   r2.avanzaStoria('a', true);
-  const sh2 = r2.map.village.npcs.find(n => n.kind === 'oracolo');
+  const sh2 = r2.map.village.npcs.find(n => n.kind === 'anziano');
   p2.x = sh2.x + 40; p2.y = sh2.y; r2.update(1 / C.TICK_RATE);
   r2.avanzaStoria('a', true);
   assert(r2.missione === 'discesa', 'e saltando il discorso la missione cambia lo stesso');
   p2.x = r2.faglia.x; p2.y = r2.faglia.y; r2.update(1 / C.TICK_RATE);
   scendi(r2, 'a', p2);
   assert(r2.wave === 1, 'e si scende lo stesso all ondata 1');
-  // v2.8 — e chi esce SENZA nemmeno parlargli non resta con "trova l’oracolo" appeso per venti ondate
+  // v2.8 — e chi esce SENZA nemmeno parlargli non resta con "trova l’Anziano" appeso per venti ondate
   {
     const r6 = new Room('sto6'); const p6 = r6.addPlayer('a', conn, 'A', 'mago');
     avviaConStoria(r6); r6.avanzaStoria('a', true);
     p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
     r6.avanzaStoria('a', true);
-    assert(r6.missione === 'oracolo', 'appena arrivato la missione e trovare l’oracolo');
+    assert(r6.missione === 'anziano', 'appena arrivato la missione e trovare l’Anziano');
     p6.x = r6.faglia.x; p6.y = r6.faglia.y; r6.update(1 / C.TICK_RATE);
     scendi(r6, 'a', p6);
     assert(r6.wave === 1 && r6.missione === 'discesa', 'ma uscendo senza parlargli diventa comunque la discesa');
@@ -5968,34 +5982,37 @@ function testStoria() {
 
   // --- 9) IL TESTO: non e' codice, ma ha comunque delle regole ---
   // v2.8 — ogni riga dice CHI parla. La voce del risveglio ha `chi: ''` e non e' una dimenticanza: e'
-  // l’oracolo, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
-  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora', 'guardia1', 'guardia2', 'guardia3', 'finale']) {
+  // l’Anziano, e il giocatore lo scopre solo quando gli parla — per questo non ha nome ne ritratto.
+  for (const sc of ['prologo', 'arrivo', 'anziano', 'anzianoAncora', 'guardia1', 'guardia2', 'guardia3', 'finale']) {
     assert(Array.isArray(Storia[sc].righe) && Storia[sc].righe.length > 0, 'la scena ' + sc + ' ha delle righe');
     for (const q of Storia[sc].righe) {
       assert(typeof q.t === 'string' && q.t.length > 0, 'ogni riga di ' + sc + ' ha un testo');
-      assert(['tu', 'oracolo', 'guardia', 'nota', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
+      assert(['tu', 'anziano', 'guardia', 'nota', ''].indexOf(q.chi) >= 0, 'e dice chi parla (' + sc + ': "' + q.chi + '")');
     }
   }
   assert(Storia.prologo.righe.some(q => q.chi === ''), 'nel risveglio parla una voce senza volto');
-  assert(!Storia.prologo.righe.some(q => q.chi === 'oracolo'), 'e non si presenta: e lui, ma non si sa ancora');
+  assert(!Storia.prologo.righe.some(q => q.chi === 'anziano'), 'e non si presenta: e lui, ma non si sa ancora');
   assert(Storia.arrivo.righe.every(q => q.chi === ''), 'e al villaggio e ancora una voce');
-  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.oracolo.righe).map(q => q.t).filter(t => t.length > 130);
+  // v2.27 — il testo di Paolo e' fatto di frasi INTERE, non piu' di battute di tre parole: il tetto
+  // sale da 130 a 210 caratteri, che a schermo restano due righe e mezzo. Il controllo serve ancora —
+  // esiste perche' nessuno infili un paragrafo in un riquadro di dialogo — solo con la misura giusta.
+  const lunghe = [].concat(Storia.prologo.righe, Storia.arrivo.righe, Storia.anziano.righe).map(q => q.t).filter(t => t.length > 210);
   assert(lunghe.length === 0, 'e nessuna riga e un paragrafo: si leggono a schermo, non su carta (' + lunghe.length + ' troppo lunghe)');
   for (const k in Storia.missioni) { const m = Storia.missioni[k];
     assert(m.t && m.t.length <= 34, 'la missione ' + k + ' sta nel riquadro (' + m.t.length + ' caratteri)'); }
   // v2.9 — LE PAUSE. Sono le didascalie del copione diventate silenzio. Se sparissero il discorso
   // continuerebbe a funzionare ma le tre rivelazioni arriverebbero tutte con lo stesso passo.
-  const pause = Storia.oracolo.righe.filter(q => q.p).length;
+  const pause = Storia.anziano.righe.filter(q => q.p).length;
   assert(pause >= 5, 'il discorso respira: ' + pause + ' righe aspettano prima di scriversi');
   // v2.20.2 — LE DIDASCALIE ADESSO SI VEDONO, per scelta di Paolo: *«aggiungi anche le scritte tra
   // parentesi, aiutano a dare profondita' al dialogo»*. Quindi il controllo si gira: una riga fra
   // parentesi e' ammessa, ma DEVE essere marcata `chi: 'nota'` — se arriva come battuta di qualcuno, il
-  // client le mette il ritratto e il nome accanto, e una didascalia con la faccia dell'oracolo che dice
-  // «(L'Oracolo guarda verso lo schermo)» e' esattamente il pasticcio che questo test esiste per evitare.
-  for (const sc of ['prologo', 'arrivo', 'oracolo', 'oracoloAncora'])
+  // client le mette il ritratto e il nome accanto, e una didascalia con la faccia dell'Anziano che dice
+  // «(L'Anziano guarda verso lo schermo)» e' esattamente il pasticcio che questo test esiste per evitare.
+  for (const sc of ['prologo', 'arrivo', 'anziano', 'anzianoAncora'])
     for (const q of Storia[sc].righe)
       assert(!/^\(/.test(q.t) || q.chi === 'nota', sc + ': la riga fra parentesi e una didascalia, non una battuta (' + q.t + ')');
-  assert(Storia.oracolo.righe.some(q => q.chi === 'nota'), 'e il discorso dell oracolo ne ha almeno una');
+  assert(Storia.anziano.righe.some(q => q.chi === 'nota'), 'e il discorso dell Anziano ne ha almeno una');
   ok('la storia v2.9 verificata');
 }
 
@@ -8093,6 +8110,145 @@ function testV226() {
   ok('la schermata nuova ha i suoi pezzi, e i numeri che racconta sono quelli veri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.27 — L'ANZIANO: il discorso riscritto da Paolo, e la sua casa riconoscibile da fuori
+// =================================================================================================
+// Due richieste nello stesso messaggio: il testo nuovo (che ha scritto lui, parola per parola) e
+// *«rendi la casa dell'Anziano sulla mappa piu' riconoscibile: magari un ingresso particolare, delle
+// guardie fuori... evita i cartelli»*.
+//
+// Un dialogo non si prova con un test: si legge. Quello che si difende qui e' che il testo di Paolo
+// arrivi INTERO fino allo schermo — stesso numero di righe, stesse pause, stesse voci — e che
+// l'ingresso nuovo resti un ingresso: attraversabile.
+function testV227() {
+  console.log('\n[TEST 86] v2.27 — l Anziano, e la sua soglia');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const MapGen = require('../shared/mapgen.js');
+  const Storia = require('../shared/storia.js');
+  const T = C.TILE;
+
+  // --- 1) DELL'ORACOLO NON RESTA UN IDENTIFICATORE ------------------------------------------
+  // La rinomina passa per sei file: se ne restasse indietro uno, il sintomo non sarebbe un errore ma
+  // un Anziano muto — il server cercherebbe fra gli abitanti un `kind` che non esiste piu' e la
+  // scena non partirebbe mai. Meglio accorgersene qui.
+  {
+    assert(!Storia.oracolo && !Storia.oracoloAncora, 'le scene si chiamano anziano / anzianoAncora');
+    assert(Storia.anziano && Storia.anzianoAncora, 'e ci sono tutte e due');
+    assert(Storia.missioni.anziano && !Storia.missioni.oracolo, 'e la missione pure');
+    const m = MapGen.generateMarket(77);
+    assert(m.village.npcs.some(n => n.kind === 'anziano'), 'nel villaggio abita un `anziano`');
+    assert(!m.village.npcs.some(n => n.kind === 'oracolo'), 'e nessun `oracolo`');
+    for (const f of ['server/Room.js', 'public/js/main.js', 'public/js/hud.js', 'public/js/renderer.js']) {
+      const src = fs.readFileSync(ROOT + f, 'utf8');
+      // si cercano gli USI, non la parola: nei commenti «oracolo» ci sta, e' la storia del file.
+      assert(!/['"]oracolo['"]/.test(src), f + ': nessun identificatore `oracolo` rimasto');
+    }
+  }
+
+  // --- 2) IL TESTO DI PAOLO, INTERO ---------------------------------------------------------
+  // Non si controlla la bellezza: si controlla che nessuno lo abbia accorciato per farlo stare da
+  // qualche parte. Le battute chiave sono quelle su cui gira la scena.
+  {
+    const R = Storia.anziano.righe, tutto = R.map(q => q.t).join(' ');
+    assert(R.length >= 60, 'il discorso e lungo quanto lo ha scritto Paolo (' + R.length + ' righe)');
+    assert(/Siediti\. Hai camminato abbastanza/.test(tutto), 'comincia come deve cominciare');
+    assert(/hai scelto davvero di farlo/.test(tutto), 'e la domanda che rovescia la scena c e');
+    assert(/Dovrebbe prepararti/.test(tutto), 'e la risposta sul fallimento');
+    assert(/Sempre che io mi ricordi di te/.test(tutto), 'e l ultima battuta resta all avatar');
+    // e non e' una conferenza: parlano in due
+    const diTu = R.filter(q => q.chi === 'tu').length;
+    assert(diTu >= 20, 'e l avatar risponde per davvero (' + diTu + ' battute sue)');
+    // le voci sono quelle giuste e nessun'altra
+    for (const q of R) assert(['tu', 'anziano', 'nota'].indexOf(q.chi) >= 0, 'voce ammessa: "' + q.chi + '"');
+  }
+
+  // --- 3) LE PAUSE SONO DOVE ERANO ----------------------------------------------------------
+  // Sono il ritmo della scena, e il ritmo non e' cambiato: sette respiri, e ognuno cade su una
+  // didascalia. Una pausa attaccata a una battuta qualunque non si sentirebbe come un silenzio: si
+  // sentirebbe come un ritardo.
+  {
+    const R = Storia.anziano.righe, conPausa = R.filter(q => q.p);
+    assert(conPausa.length === 7, 'sette pause, come nella versione prima (' + conPausa.length + ')');
+    for (const q of conPausa) assert(q.chi === 'nota', 'e ogni pausa sta su una didascalia, non su una battuta');
+    for (const q of R) if (/^\(/.test(q.t)) assert(q.chi === 'nota' && q.p, 'e ogni didascalia ha la sua pausa: ' + q.t);
+    assert(Storia.anzianoAncora.righe[Storia.anzianoAncora.righe.length - 1].p,
+      'e il congedo si prende il suo silenzio prima dell ultima riga');
+  }
+
+  // --- 4) LA SOGLIA SI RICONOSCE DA FUORI, E NON C'E' UN CARTELLO ---------------------------
+  // Paolo: *«evita i cartelli»*. Il cartello e' la soluzione comoda e la peggiore: dice il nome e non
+  // dice niente, e va letto da vicino. Qui si pretende che davanti alla porta non ce ne sia — e ce
+  // n'era uno: quello del banco del FERRO, a due tessere, spostato in v2.27.
+  {
+    const m = MapGen.generateMarket(4242);
+    const antro = MapGen.VILLAGE.rooms.find(r => r.id === 'antro');
+    const px = antro.porta[0] * T + T / 2, py = (antro.porta[1] + 0.5) * T + T / 2;
+    const vicino = (tipo, quanto) => m.props.filter(p => p.type === tipo && MU.dist(p.x, p.y, px, py) < T * quanto);
+    assert(vicino('signpost', 3.5).length === 0, 'davanti alla porta dell Anziano non c e nessun cartello');
+    assert(vicino('arch', 2).length === 1, 'c e l arco sulla soglia: l unico del paese');
+    assert(m.props.filter(p => p.type === 'arch').length === 1, 'e infatti e uno solo in tutto il villaggio');
+    assert(vicino('brazier', 3).length === 2, 'e i due bracieri accesi ai lati (' + vicino('brazier', 3).length + ')');
+    assert(vicino('tappeto', 2).length === 1, 'e la passatoia che porta dentro');
+    assert(vicino('flag', 3.5).length === 2, 'e i due stendardi');
+    // le guardie: due, una per lato, e girate verso chi arriva
+    const gd = m.village.extras.filter(e => e.kind === 'guardia' && MU.dist(e.x, e.y, px, py) < T * 4);
+    assert(gd.length === 2, 'due guardie sulla soglia (' + gd.length + ')');
+    assert(Math.sign(gd[0].y - py) !== Math.sign(gd[1].y - py), 'una per lato, non tutte e due dalla stessa parte');
+    for (const q of gd) assert(Math.abs(Math.abs(q.face) - Math.PI) < 0.3, 'e guardano verso la via, non verso il muro');
+  }
+
+  // --- 5) MA RESTA UNA PORTA: CI SI PASSA ---------------------------------------------------
+  // E' il rischio vero di tutta questa versione, ed e' gia' successo mentre la scrivevo: il primo
+  // braciere era finito sull'angolo esatto dell'apertura, perche' `P` mette il prop al CENTRO della
+  // tessera — mezza tessera piu' in la' del numero che gli passi. Un ingresso riconoscibile in cui
+  // non si entra sarebbe la beffa peggiore, quindi qui ci si prova davvero, col corpo del giocatore
+  // e i corpi solidi veri.
+  {
+    const room = new Room('v227'); const p = room.addPlayer('a', { send() {} }, 'A', 'arciere');
+    room.startGame(); room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('a');
+    const an = room.map.village.npcs.find(n => n.kind === 'anziano');
+    assert(!!an, 'l Anziano e in campo');
+    const antro = MapGen.VILLAGE.rooms.find(r => r.id === 'antro');
+    const r = p.radius * 0.8;
+    const libero = (x, y) => !room._blk(x, y, r);
+    // la bocca della porta, tessera per tessera
+    for (const ty of [antro.porta[1], antro.porta[1] + 1])
+      assert(libero(antro.porta[0] * T + T / 2, ty * T + T / 2), 'la tessera ' + ty + ' della porta e libera');
+    // e si arriva davvero dalla piazza fino a lui, coi mobili e le persone in mezzo
+    const passo = T / 2, visti = new Set();
+    const key = (x, y) => x + ',' + y;
+    const start = [Math.round(room.map.spawn.x / passo), Math.round(room.map.spawn.y / passo)];
+    const coda = [start]; visti.add(key(start[0], start[1]));
+    let arrivato = false, giri = 0;
+    while (coda.length && !arrivato && giri++ < 40000) {
+      const [gx, gy] = coda.pop();
+      const wx = gx * passo, wy = gy * passo;
+      if (MU.dist(wx, wy, an.x, an.y) < T * 1.6) { arrivato = true; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = gx + dx, ny = gy + dy, k = key(nx, ny);
+        if (visti.has(k)) continue;
+        const px2 = nx * passo, py2 = ny * passo;
+        if (px2 < 0 || py2 < 0 || px2 > room.map.w * T || py2 > room.map.h * T) continue;
+        if (!libero(px2, py2)) continue;
+        visti.add(k); coda.push([nx, ny]);
+      }
+    }
+    assert(arrivato, 'e dalla piazza si arriva fino all Anziano, guardie e bracieri compresi');
+  }
+
+  // --- 6) IL PONTE COL CLIENT ---------------------------------------------------------------
+  {
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    assert(/anziano: 'Anziano'/.test(srcM), 'il client sa come si chiama chi parla');
+    const srcH = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+    assert(/chi === 'anziano'/.test(srcH), 'e sa disegnargli il ritratto');
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    assert(/anziano:\s*\{ body:/.test(srcR), 'e come vestirlo nel villaggio');
+  }
+  ok('l Anziano parla col testo di Paolo, e la sua casa si riconosce dalla via');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

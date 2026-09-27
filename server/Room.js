@@ -171,7 +171,7 @@ class Room {
     this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = []; this.events = [];
     // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
     // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
-    this.storia = null; this.missione = null; this._oracolo = null; this._oracoloDetto = false;
+    this.storia = null; this.missione = null; this._anziano = null; this._anzianoDetto = false;
     this._sollecito = 0; this._sollecitoDetto = false; this._finaleDetto = false;
     this.phase = C.PHASE_LOBBY; this.wave = 0; this.time = 0; this.map = null;
     this.waveT0 = 0; this.parT = 0; this.waveMostri = 0; this.parPreso = 0;   // v1.77.2 — sempre numeri, mai undefined
@@ -504,8 +504,8 @@ class Room {
     else { const w = Waves.buildWave(this.wave, this.veri.length || 1, this.mode); this.waveList = w.list; this.waveScaling = w.scaling; this.pending = w.list.length; }
     // v2.24 — il primo carico e' quanto ci sta in campo; il resto sono RISERVE e aspettano.
     this.riserveAperte = false; this.caricoFatto = false; this._braccAnnuncio = false;
-    // v2.8 — se uno esce dal villaggio SENZA parlare con l’oracolo, la missione in evidenza resterebbe
-    // "trova l’oracolo" per venti ondate, mentre sta gia' scendendo. Chi salta ha saltato: la missione
+    // v2.8 — se uno esce dal villaggio SENZA parlare con l’Anziano, la missione in evidenza resterebbe
+    // "trova l’Anziano" per venti ondate, mentre sta gia' scendendo. Chi salta ha saltato: la missione
     // diventa comunque la discesa, perche' e' quello che sta facendo.
     if (this.wave >= 1 && this.missione && this.missione !== 'discesa') {
       this.missione = 'discesa'; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } });
@@ -888,7 +888,7 @@ class Room {
   // v2.7 — LA STORIA
   // ============================================================================================
   // Tre pezzi: il RISVEGLIO (una sala, una faglia, una voce), l'ARRIVO al villaggio con la missione in
-  // evidenza, e il DISCORSO dell’oracolo. Il testo sta tutto in shared/storia.js.
+  // evidenza, e il DISCORSO dell’Anziano. Il testo sta tutto in shared/storia.js.
   //
   // CHI COMANDA FA SCORRERE. In due o piu' si e' scelto che il dialogo lo faccia avanzare chi ha aperto
   // la stanza: gli altri leggono. L'alternativa — tutti devono premere — trasforma ogni riga in
@@ -917,7 +917,7 @@ class Room {
     this._storiaChiudi();
     // saltare non salta la PARTITA: la scena finisce, ma quello che doveva succedere dopo succede lo
     // stesso. E' la differenza fra "salta il filmato" e "salta il gioco", ed e' facile sbagliarla.
-    if (scena === 'oracolo') { this.missione = 'discesa'; this._oracoloDetto = true; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } }); }
+    if (scena === 'anziano') { this.missione = 'discesa'; this._anzianoDetto = true; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } }); }
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_fine', scena } });
   }
   enterPrologo() {
@@ -927,7 +927,7 @@ class Room {
     this.newMap((Math.random() * 1e9) | 0, 0, false, true);
     const T = C.TILE, pt = this.map.portale;
     this.faglia = { x: Math.round(pt.x * T + T / 2), y: Math.round(pt.y * T + T / 2) };
-    this.missione = 'faglia'; this._sollecito = 0; this._oracoloDetto = false; this._arrivoDetto = false;
+    this.missione = 'faglia'; this._sollecito = 0; this._anzianoDetto = false; this._arrivoDetto = false;
     this._storiaApri('prologo');
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'prologo' } });
   }
@@ -939,31 +939,31 @@ class Room {
       this._storiaChiudi();
       this.wave = 0;                      // il villaggio d'apertura non consuma un'ondata
       this.enterMarket();
-      this.missione = 'oracolo';
+      this.missione = 'anziano';
       this._storiaApri('arrivo'); this._arrivoDetto = true;
-      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'oracolo' } });
+      this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'anziano' } });
       return;
     }
   }
   // v2.7 — L’ORACOLO. Non vende niente (e' scritto nella pianta: niente `crd`), quindi il richiamo di
   // prossimita' dei mercanti non lo tocca. Qui ce n'e' uno suo, e serve a una cosa sola: la prima volta
-  // che gli si arriva davanti parte il discorso. Le volte dopo ne parte uno piu' corto (`oracoloAncora`):
+  // che gli si arriva davanti parte il discorso. Le volte dopo ne parte uno piu' corto (`anzianoAncora`):
   // v2.9 — prima era una riga sola sparata al singolo giocatore, ma una riga sola non e' una scena — non
   // si vedeva in due, non si saltava, non bloccava i piedi. Adesso e' una scena come le altre.
-  updateOracolo(dt) {
+  updateAnziano(dt) {
     if (this.phase !== C.PHASE_MARKET || !this.map.village) return;
-    if (!this._oracolo) {
-      const sh = this.map.village.npcs.find(n => n.kind === 'oracolo');
-      this._oracolo = sh ? { x: sh.x, y: sh.y } : null;
-      if (!this._oracolo) return;
+    if (!this._anziano) {
+      const sh = this.map.village.npcs.find(n => n.kind === 'anziano');
+      this._anziano = sh ? { x: sh.x, y: sh.y } : null;
+      if (!this._anziano) return;
     }
     if (this.storia) return;                       // sta gia' parlando qualcuno
     const RANGE = C.MARKET_MERCH_RANGE;
     for (const p of this.alivePlayers) {
-      const near = MU.dist(p.x, p.y, this._oracolo.x, this._oracolo.y) <= RANGE;
+      const near = MU.dist(p.x, p.y, this._anziano.x, this._anziano.y) <= RANGE;
       if (near && !p._nearOra) {
         p._nearOra = true;
-        this._storiaApri(this._oracoloDetto ? 'oracoloAncora' : 'oracolo');
+        this._storiaApri(this._anzianoDetto ? 'anzianoAncora' : 'anziano');
       } else if (!near && p._nearOra) p._nearOra = false;
     }
   }
@@ -2045,7 +2045,7 @@ class Room {
     // e si riapre il VILLAGGIO di quell'ondata, non l'ondata: e' li' che il giocatore aveva lasciato.
     this.wave = onda;
     this.enterMarket();
-    this.missione = 'discesa'; this._oracoloDetto = true; this._arrivoDetto = true;
+    this.missione = 'discesa'; this._anzianoDetto = true; this._arrivoDetto = true;
     this.broadcast({ t: C.MSG.EVENT, ev: { t: 'missione', id: 'discesa' } });
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'ripreso', ondata: onda, livello: p.level } });
     this._inviaPannelloDopoRipresa(p);
@@ -3817,7 +3817,7 @@ class Room {
           this.broadcast({ t: C.MSG.EVENT, ev: { t: 'storia_riga_sola', chi: so.chi, testo: so.t } }); }
       }
     }
-    if (this.phase === C.PHASE_MARKET) { this._checkMarketExit(); this.updateOracolo(dt); }
+    if (this.phase === C.PHASE_MARKET) { this._checkMarketExit(); this.updateAnziano(dt); }
     // la riga corrente invecchia: chi legge piano non deve premere niente, chi va di fretta preme Spazio
     if (this.storia) { this.storia.t += dt;
       if (this.storia.t > (C.STORIA_RIGA || 5.5)) { this.storia.t = 0; this.storia.riga++;

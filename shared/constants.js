@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.26.0',
+    VERSION: '2.27.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.26.0',
+      v: '2.27.0',
       righe: [
-        'La <b>schermata di avvio</b> rifatta: un box solo per nome, stanza ed eroe, i comandi sotto.',
-        'Il gioco adesso <b>si ricorda di te</b>: la tua run migliore resta scritta sotto il titolo.',
-        'La partita salvata si riprende da una <b>scheda</b> che dice a che punto eri, non da un pulsante.',
+        'L’Oracolo adesso è l’<b>Anziano</b>, e i dialoghi dell’inizio sono riscritti da capo.',
+        'La sua casa si riconosce dalla via: <b>arco, bracieri accesi e due guardie</b> sulla soglia.',
+        'Niente cartello: quale casa sia lo dicono le guardie, non una scritta.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)

@@ -2,6 +2,129 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.27.0] — 2026-09-27 · "L'Anziano"
+
+I dialoghi dell'inizio **li ha scritti Paolo**, parola per parola, e l'Oracolo è diventato l'**Anziano**.
+Insieme al testo: *«rendi la casa dell'Anziano sulla mappa più riconoscibile: magari un ingresso
+particolare, delle guardie fuori… evita i cartelli»*.
+
+---
+
+### ✍️ Perché il testo vecchio non andava
+
+Le battute erano di due o tre parole — *«No…»*, *«Dove?»*, *«Attraversa.»*, *«Abbastanza.»* — e in una
+storia che dura due minuti quel taglio secco somigliava più a un promemoria che a una scena. Chi apre
+il gioco per la prima volta non sa niente, e frasi così non gli dicono niente.
+
+Adesso ogni riga è una frase intera. **Il risveglio** spiega quello che sta succedendo mentre succede
+(*«Quella non è una luce. È come se ci fosse qualcosa dall'altra parte»*), e **l'Anziano conversa**
+invece di pronunciare sentenze: chiede all'avatar cosa pensa lo abbia portato fin lì, aspetta la
+risposta, e la rivelazione arriva dal confronto invece che da un annuncio. La differenza si sente
+subito:
+
+| | prima | adesso |
+|---|---|---|
+| risveglio | 14 righe, 46 parole | 14 righe, **164 parole** |
+| l'Anziano | 52 righe | **66 righe** |
+| battute dell'avatar | 19 | **26** |
+| riga più lunga | 74 caratteri | 193 |
+
+Quello che **non** è cambiato è la spina dorsale: il ciclo (*«non sei il primo»*, *«sono tornati
+all'inizio»*), qualcuno che ti osserva mentre giochi, e l'ultima battuta in mano all'avatar —
+*«Sempre che io mi ricordi di te»*, *«Esatto»*.
+
+**E le sette pause sono rimaste esattamente dov'erano.** Sono il ritmo della scena, e il ritmo non
+dipendeva dalle parole: cadono tutte e sette su una **didascalia** (*«(Pausa.)»*, *«(L'Anziano lo
+osserva in silenzio.)»*), mai su una battuta. Una pausa attaccata a una battuta qualunque non si
+sente come un silenzio, si sente come un ritardo — e c'è un test che lo pretende.
+
+---
+
+### 🏷️ La rinomina: sei file, e un solo modo di sbagliarla
+
+`oracolo` non era una parola scritta in un punto: era il **`kind`** con cui il server cerca chi parla
+fra gli abitanti del villaggio, la **chiave** con cui il renderer sceglie come vestirlo, il **`chi`**
+di ogni riga del copione, il nome della **scena**, quello della **missione**. Sei file.
+
+Il modo di sbagliarla è insidioso, perché non produce un errore: se ne restasse indietro **uno solo**,
+il sintomo sarebbe un Anziano **muto** — il server cercherebbe un `kind` che non esiste più e la scena
+non partirebbe mai, in silenzio. Per questo il test nuovo non cerca la parola nei commenti (lì ci sta,
+è la storia del file): cerca gli **identificatori**, `'oracolo'` fra virgolette, e pretende che non ce
+ne sia più nessuno.
+
+---
+
+### 🚪 La casa si riconosce dalla via
+
+Il cartello sarebbe stato la soluzione comoda e la peggiore: dice il nome e non dice niente, e va
+letto da vicino. Quattro cose, e nessuna è scritta:
+
+| | perché si nota |
+|---|---|
+| **un arco di pietra** sull'apertura | è l'unico di tutto il villaggio |
+| **due bracieri accesi** ai lati | è l'unico fuoco che sta *fuori* da una casa |
+| **una passatoia** che porta dentro | nel verderame di chi ci abita |
+| **due guardie**, una per lato | girate verso la via, non verso il muro |
+
+Le guardie non sono un meccanismo nuovo: esistevano già davanti alla **casa del portale** dalla v2.6.
+Adesso sono quattro, due per soglia — e i test che ne pretendevano «due, non una e non tre» adesso
+contano quelle **di quella porta**, non il totale: aggiungere un presidio da un'altra parte non deve
+far diventare rosso un test che parla di un'altra casa.
+
+**E un cartello davanti alla porta c'era per davvero.** Quello del banco del **FERRO**, due tessere
+dalla soglia, proprio in mezzo all'ingresso che questa versione rende riconoscibile. Il banco resta
+dov'è, il cartello è passato dall'altro lato.
+
+---
+
+### 🐞 L'errore che ho fatto, ed è di mezza tessera
+
+`P('brazier', 43 - 0.6, 17 - 0.5)` mette il braciere **al centro della tessera**, cioè mezza tessera
+più in là del numero che gli passi. Il primo braciere è finito disegnato a `y = 17.0`: **l'angolo
+esatto dell'apertura della porta**. E un braciere è un corpo solido.
+
+Un ingresso riconoscibile in cui non si entra sarebbe la beffa peggiore. Adesso il codice ragiona in
+tessere **disegnate** e sottrae lo mezzo al momento di scrivere (`const D = (t) => t - 0.5`), e il
+test non si fida delle coordinate: prende il **corpo del giocatore** e prova ad arrivare dalla piazza
+fino all'Anziano, con guardie e bracieri in mezzo.
+
+Il sabotaggio conferma che morde — e a prenderlo non è stato il controllo nuovo, ma **due test vecchi**
+(v2.0) che pretendono di poter entrare in ogni bottega del villaggio.
+
+---
+
+### 🧪 Numeri e file toccati
+
+**Test: 5413 passati, 0 falliti.** TEST 86 nuovo: 114 controlli in più rispetto alla v2.26.
+
+Quattro sabotaggi deliberati:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| un braciere torna sull'angolo della porta | ✅ 2 controlli rossi, **tutti e due vecchi** |
+| torna il cartello del FERRO davanti alla soglia | ✅ 1 controllo rosso |
+| una pausa finisce su una battuta invece che su una didascalia | ✅ 2 controlli rossi |
+| una guardia si sposta dalla stessa parte dell'altra | ✅ 1 controllo rosso |
+
+E una verifica che non è un test: **l'arco, l'Anziano e la guardia sono stati disegnati davvero**, su
+una tela fuori schermo nel browser, contando i pixel accesi (6294, 3147, 1608). È la lezione della
+v2.21, quando la cassa del deposito era piazzata sulla mappa ma il renderer non aveva un caso per
+disegnarla: un prop nuovo che nessuno disegna non fallisce, **sparisce**.
+
+| file | cosa |
+|---|---|
+| `shared/storia.js` | tutto il testo nuovo; `oracolo` → `anziano`, scene e missione comprese |
+| `shared/mapgen.js` | l'NPC rinominato; la soglia (arco, bracieri, passatoia, stendardi); due guardie in più; il cartello del FERRO spostato |
+| `server/Room.js` | `updateAnziano`, i campi e i nomi delle scene |
+| `public/js/renderer.js` · `hud.js` · `main.js` | la rinomina lato client: come lo si veste, il ritratto nel dialogo, il nome accanto alla battuta |
+| `shared/constants.js` | versione e novità |
+| `test/simulate.js` | TEST 86; e nove controlli vecchi aggiornati alla rinomina |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.26.0] — 2026-09-27 · "La schermata di avvio, rifatta"
 
 Paolo: *«non mi piace molto la schermata iniziale, mi dai un paio di idee? La mia idea sarebbe:

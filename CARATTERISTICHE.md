@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.26.0`
+**Versione attuale:** `2.27.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -402,7 +402,7 @@ verra' aggiunta domani.
 
 ---
 
-## 📖 LA STORIA *(v2.7 · testo riscritto e l’oracolo in v2.9)*
+## 📖 LA STORIA *(v2.7 · l’oracolo in v2.9 · **tutto riscritto da Paolo in v2.27**)*
 
 Fino alla v2.6 la partita cominciava con l'ondata 1: apparivi in una grotta e ti venivano addosso. Il boss
 dell'ondata 20 — AZ'GAROTH — esisteva da sempre e **non lo nominava nessuno**. Quello era il buco.
@@ -440,7 +440,7 @@ I ritratti sono disegnati a codice come tutto il resto — zero asset:
 | **Guerriero** | elmo con la feritoia, e due occhi che brillano dentro |
 | **Mago** | cappello a punta con la stella, barba |
 | **Ladro** | cappuccio calato, fazzoletto sul viso |
-| **Oracolo** | corna, cappuccio, barba bianca |
+| **Anziano** | corna, cappuccio, barba bianca |
 | **Guardia** *(v2.9.2)* | elmo **aperto** col nasale e la borchia d'ottone, bocca dritta — l'elmo del guerriero e' chiuso e ha la feritoia: li' dentro non c'e' nessuno da guardare negli occhi, e per un eroe va bene. Una guardia invece deve poterti guardare **male** |
 | *la voce del risveglio* | **nessun ritratto** — ed e' la scena, non una mancanza |
 
@@ -481,7 +481,7 @@ guadagna lui, e dirlo serve a far capire perche' ci sono due monete diverse.
 
 ### 🎭 Il colpo di scena
 
-Il discorso dell’oracolo e' un **dialogo**: l'avatar non capisce e continua a chiedere, ed e' giusto —
+Il discorso dell’Anziano e' un **dialogo**: l'avatar non capisce e continua a chiedere, ed e' giusto —
 e' lui il posseduto, non l'informato.
 
 > **TU** — Diverso come?
@@ -534,31 +534,56 @@ tutto. Niente *«o valoroso eroe»*, niente profezie recitate, niente aggettivi 
 > **TU** — *«Non hai ancora risposto.»*
 > **VOCE** — *«Attraversa. Le risposte sono dall'altra parte.»*
 
-**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' l’oracolo, e il
+**La voce non si presenta mai, e `chi: ''` non e' una dimenticanza: e' il punto.** E' l’Anziano, e il
 giocatore lo scopre solo quando gli parla: al villaggio la stessa voce dice *«Eccoti. Ora vieni da me»*, e
 la casa con le ossa appese e' la sua.
 
 Se uno gira invece di entrare, la voce insiste **una volta sola** e poi tace — *«Non e' la finestra.»* —
 perche' insistere la trasformerebbe in un tutorial.
 
-### 🧿 L’oracolo
+### 🧿 L’Anziano *(era l’oracolo fino alla v2.26)*
 
-*(In v2.6 era la **cartomante**, in v2.7-2.8 lo **sciamano**. Dalla v2.9 e' l'**oracolo**: stesso antro,
-stessa casa con le ossa appese, stesso ritratto — corna, cappuccio, barba. Il nome sta in `mapgen` come
-`kind: 'oracolo'` e da li' lo leggono renderer, HUD e server: uno solo, non cinque.)*
+*(In v2.6 era la **cartomante**, in v2.7-2.8 lo **sciamano**, dalla v2.9 l'**oracolo**. Dalla **v2.27**
+e' l'**ANZIANO**, e stavolta non e' solo un nome: e' un'altra persona. L'oracolo pronunciava sentenze
+di tre parole e sapeva tutto in anticipo; l'Anziano **conversa** — chiede all'avatar cosa lo abbia
+portato fin li', aspetta la risposta, e la rivelazione arriva dal confronto invece che da un annuncio.
+Il nome sta in `mapgen` come `kind: 'anziano'` e da li' lo leggono renderer, HUD e server: uno solo,
+non cinque.)*
 
-Si arriva al villaggio all'**ondata 0** con la missione in evidenza — **«Trova l'oracolo · Villaggio, la
-casa con le ossa appese»**. Avvicinandosi parte il discorso, ed e' li' che il gioco dice di cosa parla:
-sotto il villaggio dorme una cosa che non avrebbe mai dovuto svegliarsi, si chiama **AZ'GAROTH**, e le
-**venti fratture** sono la strada per arrivarci. *«Poi scopriremo se il Dio ha scelto bene.»*
+Si arriva al villaggio all'**ondata 0** con la missione in evidenza — **«Trova l'Anziano · Villaggio,
+la casa con le guardie sulla soglia»**. Avvicinandosi parte il discorso, ed e' li' che il gioco dice di
+cosa parla: nelle profondita' dorme qualcosa che non avrebbe mai dovuto essere risvegliato, le creature
+che lo servono stanno salendo, e alla fine del cammino c'e' **colui che le ha chiamate**.
 
 Dopo, la missione diventa **"Scendi fino ad AZ'GAROTH"**, e dal villaggio d'apertura la faglia porta
 **all'ondata 1** invece che al menu di fine ondata: all'ondata 0 non c'e' nessun menu a cui tornare.
 
-**Tornandogli davanti** non ripete il discorso: dalla v2.9 dice un **congedo** di cinque righe
-(`oracoloAncora`) che si chiude con l'unico dubbio di tutto il racconto — *«Il resto… lo decide lui. O
-forse lo decidi tu.»* Fino alla v2.8 era **una riga sola** sparata al singolo giocatore: non si vedeva in
-due, non si saltava, non bloccava i piedi. Adesso e' una scena come le altre.
+**Tornandogli davanti** non ripete il discorso: dice un **congedo** di cinque righe (`anzianoAncora`)
+che si chiude con l'unico dubbio di tutto il racconto — *«Il resto… non dipende da cio' che io posso
+dirti. Lo decide lui. O forse, questa volta, lo decidi tu.»* Fino alla v2.8 era **una riga sola**
+sparata al singolo giocatore: non si vedeva in due, non si saltava, non bloccava i piedi. Adesso e' una
+scena come le altre.
+
+### 🚪 E la sua casa si riconosce dalla via *(v2.27)*
+
+Paolo: *«rendi la casa dell'Anziano sulla mappa piu' riconoscibile: magari un ingresso particolare,
+delle guardie fuori... evita i cartelli»*. Il cartello sarebbe la soluzione comoda e la peggiore: dice
+il nome e non dice niente, e va letto da vicino. Quattro cose, e nessuna e' scritta:
+
+| | |
+|---|---|
+| **un arco di pietra** sull'apertura | l'unico di tutto il villaggio |
+| **due bracieri accesi** ai lati | l'unico fuoco che sta FUORI da una casa |
+| **una passatoia** che porta dentro | nel verderame di chi ci abita |
+| **due guardie**, una per lato | girate verso la via, non verso il muro |
+
+Tutto quello che sta sulla linea della porta — arco, passatoia, stendardi — **non ha un corpo**, e i
+bracieri, che un corpo ce l'hanno, stanno mezza tessera fuori dall'apertura. Un ingresso riconoscibile
+che non si riesce ad attraversare sarebbe la beffa peggiore, e c'e' un test che ci prova davvero: porta
+il corpo del giocatore dalla piazza fino all'Anziano, con guardie e bracieri in mezzo.
+
+*E il cartello davanti alla porta c'era per davvero*: quello del banco del **FERRO**, a due tessere
+dalla soglia. Il banco resta dov'e', il cartello e' passato dall'altro lato.
 
 All'inizio dell'ondata 20 una riga sola chiude il cerchio: *«E' sotto di te. Non sa che esisti, e per ora
 e' l'unico vantaggio che abbiamo.»*
@@ -572,14 +597,15 @@ dialogo e una didascalia.
 
 ### ⏸️ E ogni tanto tacciono *(v2.9)*
 
-Il copione dell'oracolo ha delle **didascalie**: *«Pausa.»*, *«l'oracolo osserva il giocatore per qualche
-istante»*, *«sorride appena»*. Stamparle a schermo sarebbe l'errore piu' facile del mondo — una didascalia
+Il copione dell'Anziano ha delle **didascalie**: *«Pausa.»*, *«l'Anziano lo osserva in silenzio»*,
+*«l'Anziano guarda verso lo schermo»*. Stamparle a schermo sarebbe l'errore piu' facile del mondo — una didascalia
 **dice** al giocatore cosa dovrebbe provare, e dirglielo e' il modo piu' sicuro perche' non lo provi.
 
 Quindi non si scrivono: si **sentono**. Una riga marcata `p: 1` in `storia.js` resta **900 ms in silenzio**
-col volto gia' a schermo e il cursore che lampeggia, e solo dopo comincia a scriversi. Otto righe del
-discorso sono marcate cosi', e sono esattamente le tre rivelazioni e i loro appoggi: *«Da qualcuno che non
-vive in questo mondo.»* · *«Un Dio.»* · *«E ti sta guidando.»* · *«Non lo hai ancora capito?»*
+col volto gia' a schermo e il cursore che lampeggia, e solo dopo comincia a scriversi. **Sette righe**
+del discorso sono marcate cosi', e sono tutte e sette **didascalie**: il silenzio cade dove il copione
+dice di respirare, non in mezzo a una battuta. (Il testo e' cambiato due volte — v2.20.2 e v2.27 — ma
+le sette pause sono rimaste dov'erano: e' il ritmo della scena, e quello non e' cambiato.)
 
 Tecnicamente la pausa e' un **`t0` spostato in avanti**, non un `setTimeout`: cosi' e' lo stesso orologio
 che governa le lettere, e lo Spazio che ha fretta la salta senza dover anche spegnere un timer. L'unica
@@ -696,7 +722,7 @@ riconoscibile a colpo d'occhio dall'alto: **due file di case che si guardano**, 
 | Dove | Cosa |
 |---|---|
 | **Fila di ponente** | casa del portale · **osteria** · **fucina** · due case |
-| **Fila di levante** | **erboristeria** · **antro dell’oracolo** · **gilda** · due case |
+| **Fila di levante** | **erboristeria** · **antro dell’Anziano** · **gilda** · due case |
 | **Nello spiazzo** | una casa a settentrione, due a mezzogiorno |
 | **Al centro** | la **piazza**: 16x18 di terra battuta, il falo' nel mezzo, il pozzo di fianco |
 | **Attorno alla piazza** | **dodici torce** e **dodici bancarelle**, alternate, girate verso il centro |

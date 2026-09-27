@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.26.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.27.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,21 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.27.0 (l'Anziano)
+
+**I dialoghi dell'inizio sono riscritti da capo**, e l'Oracolo è diventato l'**Anziano**. Le battute
+erano di due o tre parole — *«No…»*, *«Dove?»*, *«Attraversa.»* — e a chi apre il gioco per la prima
+volta non dicevano niente. Adesso sono frasi intere, e l'Anziano **conversa**: chiede all'avatar cosa
+pensa lo abbia portato fin lì, aspetta la risposta, e quello che c'è da capire arriva dal confronto
+invece che da un annuncio. Le sette **pause** sono rimaste dov'erano: cadono sulle didascalie, mai in
+mezzo a una battuta.
+
+**E la sua casa si riconosce dalla via**: un arco di pietra sulla porta (l'unico del villaggio), due
+bracieri accesi ai lati (l'unico fuoco fuori da una casa), una passatoia che porta dentro e **due
+guardie**, una per lato. Nessun cartello — quale casa sia lo dicono le guardie, non una scritta.
+
+---
 
 ## 🆕 Novità v2.26.0 (la schermata di avvio, rifatta)
 
