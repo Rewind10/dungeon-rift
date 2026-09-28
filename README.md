@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.28.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.28.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,19 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🔧 v2.28.1 — le luci illuminano davvero
+
+Il buio della grotta è un **velo** steso sopra al mondo, e l'unica cosa che lo bucava era la torcia del
+giocatore: bracieri, casse, barili e torce a muro venivano *dipinti sotto* al velo, cioè non
+illuminavano niente. Adesso le sorgenti fisse si dichiarano in un elenco solo, che **prima buca il
+velo e poi ci appoggia il colore**. Misurato: un braciere acceso passa da 23 a **83** di luminosità,
+una cassa da 23 a 32 — luccica senza illuminare la stanza, che è il mestiere del braciere.
+
+**Anche il Mercante Nero è chiuso** (spento, non cancellato): durante le ondate non compare più nessun
+banco.
+
+---
 
 ## 🆕 Novità v2.28.0 (sei cose da toccare)
 

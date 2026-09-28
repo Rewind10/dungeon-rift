@@ -2,6 +2,96 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.28.1] — 2026-09-28 · "Nessun bagliore senza il suo buco"
+
+Paolo, provando la v2.28: *«verifica bene gli oggetti: le torce in realtà non illuminano. Il mercante
+nero è ancora attivo..»*. Due segnalazioni, due errori miei, e il primo era più vecchio della
+versione che lo ha fatto notare.
+
+---
+
+### 💡 Il bug: la luce stava sotto la coperta
+
+Il buio della grotta **non è assenza di luce: è un velo** steso sopra al mondo. E l'unica cosa che lo
+bucava era il cono della torcia del giocatore.
+
+Tutto il resto — i bracieri accesi della v2.28, le casse, i barili, le torce a muro cotte nella mappa
+dalla v2.1 — non bucava niente: veniva **dipinto**, cioè appoggiato *sotto* al velo. Un bagliore sotto
+una coperta nera non illumina niente.
+
+Ed è per questo che il pezzo grosso della v2.28 non si era visto: avevo alzato la luce delle casse da
+60 a 120 «per farle vedere da lontano», e **non era cambiato assolutamente nulla**. Misurata la
+differenza fra cassa presente e cassa assente nella stessa scena: **zero**.
+
+**Il villaggio la lezione l'aveva già imparata** nella v2.20.3, e c'era pure scritto — *«il rimedio
+non è limare un numero: è che i due passaggi leggano LA STESSA LISTA. Nessun bagliore senza il suo
+buco»*. La grotta no, perché fino alla v2.28 non c'era niente da illuminare oltre alla torcia. E il
+commento di allora prometteva *«il test verifica proprio questo»*: quel test **non esisteva**. Adesso
+esiste, e vale per tutti e due i posti.
+
+Adesso le sorgenti fisse della grotta si dichiarano in un elenco solo (`_sorgentiFisse`), che **prima
+buca il velo e poi ci appoggia il colore**. Misurato sulla stessa scena, stesso istante, cambiando
+solo lo stato del braciere:
+
+| | prima del fuoco | col fuoco acceso |
+|---|---:|---:|
+| **braciere** | 23,5 | **82,6** *(+59)* |
+| **cassa** | 23,5 | **32,2** *(+8,7)* |
+
+Il braciere acceso è più luminoso del cono della torcia (67,7): è un fuoco che hai acceso tu, deve
+esserlo. La cassa **luccica e basta** — il buco è più stretto del bagliore di proposito: illuminare la
+stanza è il mestiere del braciere, non suo.
+
+*Ci sono voluti due tentativi anche per la taratura*: col primo taglio nel velo il braciere acceso
+misurava 21 su 255 — si vedeva che c'era un fuoco, ma non illuminava niente. La sfumatura adesso è
+**piatta in mezzo e ripida sul bordo**, e le lampade sono **due concentriche** invece di una: è così
+che fa il cono della torcia, ed è il motivo per cui funziona.
+
+---
+
+### 🏪 E anche il Mercante Nero è chiuso
+
+Nella v2.28 lo avevo lasciato acceso **di mia iniziativa**, ragionando che i suoi patti sono scelte
+con un prezzo e quindi reggono ancora. Ma la richiesta di Paolo era sui mercanti delle ondate, non su
+uno solo, e la mia motivazione — per quanto sensata — non era quello che aveva chiesto.
+
+`MERCANTE_NERO_ATTIVO: false`. Stesso trattamento dell'altro: **spento, non cancellato**. Catalogo,
+offerte e acquisto restano interi, e c'è un test che lo pretende — se un domani qualcuno togliesse il
+catalogo «facendo pulizia», riaccendere l'interruttore darebbe un mercante senza niente da vendere.
+
+**Durante le ondate adesso non compare nessun banco.** Verificato su trenta mappe: zero.
+
+---
+
+### 🧪 Numeri
+
+**Test: 5647 passati, 0 falliti.** TEST 88 nuovo.
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| le sorgenti tornano a dipingere senza bucare | ✅ 1 controllo rosso |
+| le casse escono dall'elenco delle sorgenti | ✅ 1 controllo rosso *(e alla prima stesura **no**: il controllo cercava la parola `world.crates`, che restava lì anche senza il `push`. Adesso pretende la riga intera)* |
+| il Mercante Nero si riaccende | ✅ 2 controlli rossi |
+
+**E un test mio che flakeava, per l'ennesima volta la stessa famiglia di errore.** Il richiamo della
+campana misurato su cinque secondi secchi: su duecento prove, **nell'1% dei casi** il mostro parte
+incastrato fra il giocatore e una parete, spinge nella direzione giusta e per qualche secondo non
+avanza di un passo. Non è un difetto del richiamo — è un corpo contro un altro corpo — ma bastava a
+far diventare rosso il test una volta su tre. Adesso la finestra è di dodici secondi e la campana si
+risuona se scade nel frattempo: la durata della campana si prova altrove, qui si prova che ci vada.
+
+| file | cosa |
+|---|---|
+| `public/js/renderer.js` | `_sorgentiFisse`: l'elenco unico che buca il velo e poi lo accende |
+| `shared/constants.js` | `MERCANTE_NERO_ATTIVO`; versione e novità |
+| `server/Room.js` | i due interruttori dei mercanti |
+| `test/simulate.js` | TEST 88; il controllo della campana reso stabile |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.28.0] — 2026-09-28 · "Sei cose da toccare"
 
 Paolo: *«il mercante errante per il momento lo disattiverei perché non ha più senso. Non cancellarlo

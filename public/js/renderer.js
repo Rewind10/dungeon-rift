@@ -3687,10 +3687,51 @@
       if (this._veloCv.width !== w || this._veloCv.height !== h) { this._veloCv.width = w; this._veloCv.height = h; }
       return s;
     },
+    // v2.28.1 — LE SORGENTI FISSE DELLA GROTTA. Ci sono voluti due passaggi per capirlo, e Paolo lo ha
+    // visto prima di me: *«le torce in realta' non illuminano»*.
+    //
+    // Il buio della grotta e' un VELO steso sopra al mondo, e l'unica cosa che lo bucava era il cono
+    // della torcia del giocatore. Tutto il resto — i bracieri accesi, le casse, i barili — veniva
+    // DIPINTO, cioe' appoggiato sotto al velo: un bagliore sotto una coperta nera non illumina niente.
+    // Il villaggio aveva gia' imparato la lezione (`_villSrc`, v2.20.3: «nessun bagliore senza il suo
+    // buco»); la grotta no, perche' fino alla v2.28 non c'era niente da illuminare oltre alla torcia.
+    //
+    // Questa lista si costruisce una volta per fotogramma e la leggono TUTTI E DUE i passaggi: prima
+    // buca il velo, poi ci appoggia il colore. Se un domani si aggiunge una sorgente, si aggiunge qui
+    // e funziona in tutti e due, che e' esattamente il punto.
+    _sorgentiFisse(world) {
+      const L = this._sorgFisse || (this._sorgFisse = []); L.length = 0;
+      const TG = C.OGG_TIPI || [];
+      for (const o of (world.ogg || [])) {
+        const k = TG[o.k];
+        if (k === 'braciere' && o.st === 1) {
+          // DUE LAMPADE, non una. Il cono della torcia ne accende tre sovrapposte, ed e' per questo
+          // che illumina davvero: una sola sorgente larga da' un alone tiepido e uniforme, due
+          // concentriche danno un centro caldo e una coda. Misurato: con una sola il braciere acceso
+          // stava a 29 su 255 contro i 68 del cono, con due arriva a poco meno della torcia — che e'
+          // la taratura giusta, perche' un fuoco fermo non deve battere quello che hai in mano.
+          L.push([o.x, o.y - 8, (C.BRACIERE_LUCE || 250), '#ff9a3b', 0.46]);
+          L.push([o.x, o.y - 8, (C.BRACIERE_LUCE || 250) * 0.45, '#ffc070', 0.38]);
+        }
+        else if (k === 'barile') L.push([o.x, o.y - 12, 44, '#ff8a3a', 0.34]);
+        else if (k === 'campana') L.push([o.x, o.y - 8, o.st === 1 ? 170 : 64, '#ffd27a', o.st === 1 ? 0.5 : 0.26]);
+        else if (k === 'fonte' && o.st !== 1) L.push([o.x, o.y, 86, '#6fd0ff', 0.34]);
+        else if (k === 'cristallo') L.push([o.x, o.y - 8, 104, '#9fe6ff', 0.38]);
+      }
+      // LE CASSE. La v2.28 aveva alzato la loro luce da 60 a 120 per farle vedere da lontano, e non
+      // era cambiato NIENTE per lo stesso motivo: il bagliore stava sotto il velo. Il buco e' piu'
+      // stretto del bagliore di proposito — una cassa deve luccicare nel buio, non illuminare la
+      // stanza: quello e' il mestiere del braciere.
+      for (const c of (world.crates || [])) L.push([c.x, c.y, (C.CASSA_LUCE || 120) * 0.62, '#ffcf5a', 0.42]);
+      // e le torce a muro cotte nella mappa, che avevano lo stesso problema dalla v2.1
+      for (const tc of this.torches) L.push([tc.x, tc.y, 130, '#ff9a3b', 0.5]);
+      return L;
+    },
     _drawLighting(ctx, world, camX, camY) {
       ctx.save(); const g = ctx;
       const _lit = !!(this.map && this.map.lit);
       const _fov = _lit ? null : this._fovSagome(world);
+      const _sorg = _lit ? null : this._sorgentiFisse(world);
       if (_fov) {
         // --- IL BUIO, e dentro il buio la sagoma di cio' che si vede ---
         const s = this._veloTela(), vg = this._veloCtx, B = C.FOV_BUIO || 0.93, M = this._veloM;
@@ -3717,6 +3758,24 @@
             vg.globalAlpha = st[1];
             vg.beginPath(); this._fovContorno(vg, this._fovBuf, f.off, f.n, sx, sy, st[0], 4); vg.fill();
           }
+        }
+        // v2.28.1 — E ADESSO LE SORGENTI FISSE BUCANO IL VELO. Un gradiente radiale per ognuna: il
+        // centro toglie quasi tutto il velo, il bordo non toglie niente, e in mezzo sfuma. Non tiene
+        // conto dei muri — un braciere si intravede anche da dietro l'angolo — e va bene cosi': una
+        // stanza illuminata che si annuncia prima di entrarci e' esattamente cio' che uno cerca
+        // quando accende un fuoco.
+        if (_sorg) for (const q of _sorg) {
+          const sx = q[0] - camX, sy = q[1] - camY, rr = q[2];
+          if (sx < -rr || sy < -rr || sx > this.w + rr || sy > this.h + rr) continue;   // fuori schermo
+          const gr = vg.createRadialGradient(sx, sy, 0, sx, sy, rr);
+          // la sfumatura e' PIATTA in mezzo e ripida sul bordo: col primo taglio (0,95 al centro e
+          // 0,55 a meta' raggio) il braciere acceso misurava 21 su 255 contro i 68 del cono della
+          // torcia — si vedeva che c'era un fuoco ma non illuminava niente. Cosi' invece la parte
+          // centrale del cerchio e' luce piena e solo l'ultimo terzo sfuma.
+          gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.92)');
+          gr.addColorStop(0.82, 'rgba(0,0,0,0.42)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+          vg.globalAlpha = 1; vg.fillStyle = gr;
+          vg.beginPath(); vg.arc(sx, sy, rr, 0, 7); vg.fill();
         }
         vg.globalAlpha = 1;
         vg.setTransform(1, 0, 0, 1, 0, 0);
@@ -3830,7 +3889,7 @@
       // lista lunga qui sotto e' quella delle grotte, dove il velo e' il campo visivo e il ritaglio tiene
       // ogni bagliore dentro la visuale; li' non c'e' niente da tenere in riga.
       if (_lit) { for (const s of this._villSrc) light(s[0], s[1], s[2], s[3], s[4]); } else {
-      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, (C.CASSA_LUCE || 120), '#ffcf5a', 0.42); /* v2.28 — le casse si illuminavano da sole per 60 px mentre la torcia arriva a 350: erano invisibili finche' non ci eri sopra. */ { const TG = C.OGG_TIPI || []; for (const o of (world.ogg || [])) { const k = TG[o.k]; if (k === 'barile') light(o.x, o.y - 12, 34, '#ff8a3a', 0.34); else if (k === 'braciere' && o.st === 1) light(o.x, o.y - 8, (C.BRACIERE_LUCE || 250), '#ff9a3b', 0.5); else if (k === 'campana') light(o.x, o.y - 8, o.st === 1 ? 150 : 46, '#ffd27a', o.st === 1 ? 0.5 : 0.26); else if (k === 'fonte' && o.st !== 1) light(o.x, o.y, 70, '#6fd0ff', 0.34); else if (k === 'cristallo') light(o.x, o.y - 8, 90, '#9fe6ff', 0.38); } } for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); /* v2.28.1 — il colore delle sorgenti fisse viene dalla STESSA lista che ha bucato il velo: nessun bagliore senza il suo buco, nessun buco senza il suo bagliore. Le casse e i barili sono qui dentro, non piu' in due righe per conto loro. */ { const SF = _sorg || this._sorgentiFisse(world); for (const q of SF) light(q[0], q[1], q[2], q[3], q[4]); } for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();

@@ -597,14 +597,15 @@ function testV112() {
   const snap = room.snapshot(); assert(snap.merchD && typeof snap.merchD.x === 'number', 'lo snapshot espone il mercante nero'); const me = snap.players.find(x => x.i === 'b'); assert(me && 'nmd' in me, 'lo snapshot espone il flag prossimita mercante nero');
   // apparizione casuale IN SOSTITUZIONE dell'ufficiale: mai entrambi, il nero compare a volte si a volte no
   let appear = 0, both = 0, none = 0; for (let i = 0; i < 40; i++) { room.newMap((Math.random() * 1e9) | 0, 1 + (i % 10)); if (room.darkMerchant) appear++; if (room.merchant && room.darkMerchant) both++; if (!room.merchant && !room.darkMerchant) none++; }
-  assert(appear > 0 && appear < 40, 'il mercante nero appare in modo casuale (non sempre): ' + appear + '/40');
+  // v2.28.1 — I DUE MERCANTI SONO SPENTI, e i controlli seguono gli interruttori invece di imporre
+  // una scelta: rimettendo le costanti a true tornano a pretendere quello che pretendevano prima,
+  // senza che nessuno debba ricordarsi di riscrivere il test. Quello che vale SEMPRE, acceso o
+  // spento, e' che i due non compaiano mai insieme.
   assert(both === 0, 'mai entrambi i mercanti insieme (il nero sostituisce quello ufficiale)');
-  // v2.28 — l'errante e' SPENTO (C.MERCANTE_ATTIVO), quindi nel 70% delle ondate non c'e' nessun
-  // banco in campo: la regola che valeva qui — «ce n'e' sempre almeno uno» — non e' piu' la regola.
-  // Quella che resta, e che conta, e' che i due non compaiano MAI insieme. Il controllo segue
-  // l'interruttore invece di imporre una scelta: rimettendo MERCANTE_ATTIVO a true torna a pretendere
-  // il mercante in ogni ondata, senza che nessuno debba ricordarsi di riscrivere il test.
+  if (C.MERCANTE_NERO_ATTIVO !== false) assert(appear > 0 && appear < 40, 'il mercante nero appare in modo casuale (non sempre): ' + appear + '/40');
+  else assert(appear === 0, 'col Nero spento non compare mai (' + appear + '/40)');
   if (C.MERCANTE_ATTIVO !== false) assert(none === 0, 'ce sempre almeno un mercante per round');
+  else if (C.MERCANTE_NERO_ATTIVO === false) assert(none === 40, 'spenti tutti e due, durante le ondate non c e nessun banco (' + none + '/40)');
   else { assert(none > 0, 'con l errante spento ci sono ondate senza banco (' + none + '/40)');
          assert(appear + none === 40, 'e quando non c e il Nero non c e proprio nessuno'); }
   ok('novita v1.12 verificate');
@@ -8363,9 +8364,19 @@ function testV228() {
     const passi = () => PF228.stepDir(r.flowRich, r.map.grid, r.map.w, r.map.h, (m.x / T228) | 0, (m.y / T228) | 0).d;
     const q0 = passi();
     assert(q0 > 4, 'e dal punto dov e la campana si raggiunge (' + q0 + ' passi)');
-    for (let i = 0; i < C.TICK_RATE * 5; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
-    const q1 = passi();
-    assert(q1 < q0, 'e alla campana ci va: mancano meno passi di prima (' + q0 + ' -> ' + q1 + ')');
+    // GLI SI DA' TEMPO FINO A DODICI SECONDI. Misurato su duecento prove: nell'1% dei casi il mostro
+    // parte incastrato fra il giocatore e una parete, spinge nella direzione giusta e per qualche
+    // secondo non avanza di un passo. Non e' un difetto del richiamo — e' un corpo contro un altro
+    // corpo — ma con una finestra di cinque secondi secchi il test diventava rosso una volta su tre.
+    let q1 = q0, att = 0;
+    while (q1 >= q0 && att++ < C.TICK_RATE * 12) {
+      p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); q1 = passi();
+      // e se nel frattempo il richiamo scade, la si risuona: la finestra di dodici secondi serve al
+      // mostro incastrato, non a misurare quanto dura la campana — quello si prova qui sotto.
+      if (!r.richiamo) { o.cd = 0; r.colpisciOggetti(o.x, o.y, 8, p); }
+    }
+    assert(q1 < q0, 'e alla campana ci va: mancano meno passi di prima (' + q0 + ' -> ' + q1 + ', ' + (att / C.TICK_RATE).toFixed(1) + 's)');
+    for (let i = 0; i < C.TICK_RATE * 3; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
     assert(MU.dist(m.x, m.y, p.x, p.y) > 160, 'mollando quello che stava facendo: e questo il punto');
     // e finisce
     for (let i = 0; i < C.TICK_RATE * 6; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
@@ -8561,6 +8572,80 @@ function testV228() {
   ok('sei oggetti nuovi in campo, e le casse si vedono');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.28.1 — NESSUN BAGLIORE SENZA IL SUO BUCO
+// =================================================================================================
+// Paolo, provando la v2.28: *«le torce in realta' non illuminano»*. Aveva ragione, e il bug era piu'
+// vecchio della v2.28.
+//
+// Il buio della grotta e' un VELO steso sopra al mondo, e l'unica cosa che lo bucava era il cono
+// della torcia del giocatore. Tutto il resto — bracieri accesi, casse, barili, le torce a muro — non
+// veniva bucato: veniva DIPINTO, cioe' appoggiato sotto al velo. Un bagliore sotto una coperta nera
+// non illumina niente, e infatti alzare la luce delle casse da 60 a 120 (v2.28) non aveva cambiato
+// assolutamente nulla.
+//
+// Il villaggio la lezione l'aveva gia' imparata nella v2.20.3 — «i due passaggi leggano LA STESSA
+// LISTA» — ma il commento diceva «il test verifica proprio questo» e quel test non esisteva. Adesso
+// esiste, e vale per tutti e due i posti.
+function testV2281() {
+  console.log('\n[TEST 88] v2.28.1 — le luci bucano il buio, e i due mercanti sono spenti');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const src = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+
+  // --- 1) LA LISTA C'E', ED E' UNA SOLA ----------------------------------------------------
+  assert(/_sorgentiFisse\(world\) \{/.test(src), 'la grotta dichiara le sue sorgenti fisse in un posto solo');
+  const i0 = src.indexOf('_sorgentiFisse(world) {');
+  const lista = src.slice(i0, src.indexOf('_drawLighting(ctx, world', i0));
+  for (const q of ['braciere', 'barile', 'campana', 'fonte', 'cristallo'])
+    assert(lista.indexOf("'" + q + "'") >= 0, 'e comprende il ' + q);
+  // e non basta che la parola compaia: la riga deve METTERLE NELLA LISTA. Provato col sabotaggio —
+  // lasciando il `for` e togliendo il `push`, un controllo sulla sola parola passava liscio.
+  assert(/\(world\.crates \|\| \[\]\)\) L\.push\(/.test(lista), 'e le casse ci finiscono dentro');
+  assert(/of this\.torches\) L\.push\(/.test(lista), 'e le torce a muro, che avevano lo stesso problema dalla v2.1');
+
+  // --- 2) E LA LEGGONO TUTTI E DUE I PASSAGGI ----------------------------------------------
+  // E' questa la regola. Il buco senza il bagliore da' un cerchio di pavimento nudo, il bagliore
+  // senza il buco non si vede: servono tutti e due, dalla stessa lista.
+  assert(/const _sorg = _lit \? null : this\._sorgentiFisse\(world\)/.test(src), 'si costruisce una volta per fotogramma');
+  assert(/if \(_sorg\) for \(const q of _sorg\)/.test(src), 'il primo passaggio ci buca il velo');
+  assert(/const SF = _sorg \|\| this\._sorgentiFisse\(world\); for \(const q of SF\) light\(/.test(src),
+    'e il secondo ci appoggia il colore, dalla stessa lista');
+  // e nessuno accende piu' niente per conto suo nel ramo della grotta: era cosi' che il bug e' nato
+  assert(!/for \(const c of \(world\.crates \|\| \[\]\)\) light\(/.test(src),
+    'e le casse non hanno piu una riga di luce tutta loro');
+  assert(!/for \(const tc of this\.torches\) light\(/.test(src),
+    'e nemmeno le torce a muro');
+
+  // --- 3) IL VILLAGGIO: la stessa regola, e stavolta il test c'e' davvero -------------------
+  assert(/const VS = this\._villSrc/.test(src), 'il villaggio ha la sua lista');
+  assert(/for \(const s of this\._villSrc\) light\(/.test(src), 'e la usa per il colore');
+  assert(/for \(const s of VS\) buco\(/.test(src), 'e per i buchi');
+
+  // --- 4) I DUE MERCANTI SONO SPENTI, E IL CODICE C'E' ANCORA ------------------------------
+  // Spento non vuol dire cancellato: e' la condizione che Paolo ha posto («non cancellarlo pero'»),
+  // e vale per tutti e due. Se un domani qualcuno togliesse il catalogo pensando di fare pulizia,
+  // riaccendere l'interruttore darebbe un mercante senza niente da vendere.
+  assert(C.MERCANTE_ATTIVO === false, 'il Mercante Errante e spento');
+  assert(C.MERCANTE_NERO_ATTIVO === false, 'e il Mercante Nero pure');
+  {
+    const srcR = fs.readFileSync(ROOT + 'server/Room.js', 'utf8');
+    assert(/merchantWaresPool\(\)/.test(srcR) && /darkWaresPool\(\)/.test(srcR), 'ma i due cataloghi sono ancora li');
+    assert(/buyMerchant\(pid, wareId\)/.test(srcR) && /buyDark/.test(srcR), 'e cosi l acquisto');
+    const r = new Room('v2281'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame(3);
+    assert(r.merchantWaresPool().length >= 5, 'il catalogo dell errante risponde ancora (' + r.merchantWaresPool().length + ' voci)');
+    assert(r.darkWaresPool().length >= 4, 'e quello del Nero (' + r.darkWaresPool().length + ' patti)');
+  }
+  // e in campo non ce n'e' nessuno dei due, ondata dopo ondata
+  {
+    const r = new Room('v2281b'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame();
+    let visti = 0;
+    for (let i = 0; i < 30; i++) { r.newMap((Math.random() * 1e9) | 0, 1 + (i % 12)); if (r.merchant || r.darkMerchant) visti++; }
+    assert(visti === 0, 'e durante le ondate non compare nessun banco (' + visti + '/30)');
+  }
+  ok('le sorgenti bucano il buio prima di accenderlo, e i banchi sono chiusi');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

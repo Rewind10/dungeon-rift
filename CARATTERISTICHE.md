@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.28.0`
+**Versione attuale:** `2.28.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -976,6 +976,42 @@ if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
 *che altro* dipingeva sopra la stessa mappa. Quando si rimuove una cosa si controlla anche **quello che non
 si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose: che la guardia ci sia, e che
 `_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
+
+### 💡 E nelle grotte? Lo stesso difetto, scoperto tre anni dopo *(v2.28.1)*
+
+Paolo, provando gli oggetti nuovi: *«le torce in realta' non illuminano»*. Aveva ragione, e il bug era
+piu' vecchio della versione che lo ha fatto notare.
+
+**Il buio della grotta non e' assenza di luce: e' un VELO** steso sopra al mondo (`FOV_BUIO`, 0,93). E
+l'unica cosa che lo bucava era il cono della torcia del giocatore. Tutto il resto — i bracieri accesi
+della v2.28, le casse, i barili, le **torce a muro** cotte nella mappa dalla v2.1 — non bucava niente:
+veniva DIPINTO, cioe' appoggiato *sotto* al velo. Un bagliore sotto una coperta nera non illumina.
+
+Ed e' per questo che il pezzo grosso della v2.28 non si era visto: la luce delle casse era stata alzata
+da 60 a 120 «per farle vedere da lontano», e non era cambiato **niente**.
+
+Il villaggio, qui sopra, la lezione l'aveva gia' imparata nella v2.20.3 — *«i due passaggi leggano LA
+STESSA LISTA»*. La grotta no, perche' fino alla v2.28 non c'era niente da illuminare oltre alla torcia.
+E il commento di allora prometteva «il test verifica proprio questo»: quel test **non esisteva**.
+
+Adesso le sorgenti fisse della grotta stanno in un elenco solo (`_sorgentiFisse`) che **prima buca il
+velo e poi ci appoggia il colore**, e il test c'e' per tutti e due i posti. Misurato sulla stessa
+scena, stesso istante, cambiando solo lo stato del braciere:
+
+| | prima | dopo |
+|---|---:|---:|
+| braciere acceso | 23,5 | **82,6** |
+| cassa presente | 23,5 | **32,2** |
+| *(riferimento: dentro il cono della torcia)* | | *67,7* |
+
+Il braciere e' piu' luminoso della torcia, ed e' giusto: e' un fuoco che hai acceso tu. La cassa
+**luccica e basta** — il suo buco e' piu' stretto del suo bagliore di proposito, perche' illuminare la
+stanza e' il mestiere del braciere.
+
+*Due tentativi anche per la taratura:* col primo taglio nel velo il braciere misurava 21 su 255 — si
+vedeva che c'era un fuoco ma non illuminava niente. La sfumatura adesso e' **piatta in mezzo e ripida
+sul bordo**, e le lampade sono **due concentriche** invece di una: e' cosi' che fa il cono della
+torcia, ed e' il motivo per cui quello funziona.
 
 ### 🧰 Le bancarelle di contorno *(v2.5)*
 
@@ -2874,8 +2910,10 @@ delle piccole notifiche in alto a destra.
 > scelgono e non cambiano niente dell'ondata in cui le compri. E il prezzo non cresce con l'ondata,
 > quindi dalla decima in poi non e' nemmeno piu' una spesa.
 >
-> **Il Mercante Nero resta al suo 30%**: lui vende PATTI, cioe' scelte con un prezzo, e quelli non
-> hanno smesso di avere senso. Nel restante 70% delle ondate non c'e' nessun banco in campo.
+> **v2.28.1 — e anche il Mercante Nero e' chiuso** (`MERCANTE_NERO_ATTIVO: false`). Nella v2.28 lo
+> avevo lasciato acceso di mia iniziativa, ragionando che i suoi PATTI sono scelte con un prezzo e
+> quindi reggono ancora; ma la richiesta era sui mercanti delle ondate, non su uno solo. Stesso
+> trattamento: spento, non cancellato. **Durante le ondate non compare piu' nessun banco.**
 
 Com'era, e come tornera' se lo si riaccende: un **mercante errante** neutrale appare in mappa (spesso
 in una micro-area), con bancarella e lanterna. Avvicinandoti si apre un pannello con **3 offerte

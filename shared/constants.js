@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.28.0',
+    VERSION: '2.28.1',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.28.0',
+      v: '2.28.1',
       righe: [
         'Sei oggetti nuovi nelle grotte: <b>campana</b>, <b>braciere</b>, <b>masso</b>, <b>sarcofago</b>, <b>fonte</b>, <b>cristallo</b>.',
-        'La <b>campana</b> raduna tutti i mostri dove vuoi tu; il <b>braciere</b> illumina la stanza per sempre.',
-        'E le <b>casse</b> si vedono da lontano: più grandi, e soprattutto molto più luminose.',
+        'Il <b>braciere</b> adesso illumina davvero: i fuochi bucano il buio invece di starci sotto.',
+        'E le <b>casse</b> si vedono da lontano. I due mercanti delle ondate sono chiusi.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
@@ -305,6 +305,11 @@
     // 70% delle ondate non c'e' nessun mercante. E' voluto: il Nero vende PATTI, cioe' scelte con un
     // prezzo, e quelli non hanno smesso di avere senso.
     MERCANTE_ATTIVO: false,
+    // v2.28.1 — E ANCHE IL MERCANTE NERO. Nella v2.28 lo avevo lasciato acceso di mia iniziativa,
+    // ragionando che i suoi PATTI sono scelte con un prezzo e quindi reggono ancora. Paolo: *«il
+    // mercante nero e' ancora attivo..»* — e la sua era una richiesta sui MERCANTI, non su uno solo.
+    // Stesso trattamento: spento, non cancellato. Adesso durante le ondate non compare nessun banco.
+    MERCANTE_NERO_ATTIVO: false,
     // v1.79 — XP CONDIVISA. Ogni uccisione da' esperienza a TUTTI i giocatori vivi, non a chi arriva
     // primo sulla sfera. Ma le ondate crescono col gruppo meno che proporzionalmente (misurato: un trio
     // genera solo il +27% di XP totale rispetto a un solista), quindi senza correzione un gruppo

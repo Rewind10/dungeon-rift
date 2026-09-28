@@ -235,9 +235,10 @@ class Room {
     this.spawnCrates(); this.spawnOggetti();
     this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave });
     // v1.13 — UN SOLO mercante per round: il Nero SOSTITUISCE casualmente l'ufficiale (mai entrambi).
-    // v2.28 — l'errante e' spento (C.MERCANTE_ATTIVO). Il Nero resta al suo 30%; nel restante 70%
-    // non c'e' nessun banco in campo finche' il catalogo dell'errante non verra' rifatto.
-    if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
+    // v2.28.1 — SONO SPENTI TUTTI E DUE (C.MERCANTE_ATTIVO, C.MERCANTE_NERO_ATTIVO): durante le
+    // ondate non compare nessun banco. Il codice di tutti e due resta intero — catalogo, offerte,
+    // acquisto — e basta rimettere le costanti a true per riaverli com'erano.
+    if (C.MERCANTE_NERO_ATTIVO !== false && Math.random() < 0.30) this.spawnDarkMerchant();  // il nero SOSTITUISCE l'ufficiale
     else if (C.MERCANTE_ATTIVO !== false) this.spawnMerchant();
   }
   spawnCrates() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; this.crates.push({ eid: NEXT++, x: c.x, y: c.y, r: 16, mimic: Math.random() < (C.MIMIC_PROB == null ? 0.06 : C.MIMIC_PROB), opened: false }); } }
