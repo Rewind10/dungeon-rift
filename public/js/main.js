@@ -349,6 +349,30 @@
       // granate — se avesse un effetto piu' timido si leggerebbe come meno pericoloso di quanto e'.
       case 'urna': A.crate && A.crate(); R.burst(ev.x, ev.y, '#b6a37c', 14, 130, 0.45); R.ring(ev.x, ev.y, '#c9b68c', 4, 30, 0.3); R.floater(ev.x, ev.y - 18, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', false); break;
       case 'barile': A.explosion && A.explosion(); R.ring(ev.x, ev.y, '#ff9a3b', 9, ev.r, 0.38); R.burst(ev.x, ev.y, '#ff7a2b', 26, 260, 0.55); R.burst(ev.x, ev.y, '#4a2c1e', 12, 180, 0.5); R.fire(ev.x, ev.y, 22, 110); R.addShake(8); break;
+      // ===================== v2.28 — I SEI OGGETTI NUOVI =====================
+      // Ognuno ha il suo rumore e il suo segno. La campana e il masso hanno anche uno SCUOTIMENTO:
+      // sono le due cose che cambiano l'ondata mentre la stai giocando, e chi ha appena colpito deve
+      // sentire di aver fatto qualcosa di grosso.
+      case 'campana': A.ability && A.ability('rift'); R.ring(ev.x, ev.y, '#ffd27a', 7, 150, 0.7);
+        R.ring(ev.x, ev.y, '#ffb84a', 5, 260, 1.0); R.burst(ev.x, ev.y, '#ffe6a8', 16, 150, 0.5);
+        R.floater(ev.x, ev.y - 30, 'RICHIAMO', '#ffd27a', true); R.addShake(5); break;
+      case 'campana_fine': break;                       // il richiamo finisce in silenzio: lo si vede dai mostri
+      case 'braciere': A.ability && A.ability('fire'); R.fire(ev.x, ev.y - 6, 16, 90);
+        R.ring(ev.x, ev.y, '#ff9a3b', 5, 60, 0.45); R.burst(ev.x, ev.y - 6, '#ffb44a', 14, 120, 0.5); break;
+      case 'masso': A.explosion && A.explosion(); R.burst(ev.x, ev.y, '#8b8378', 18, 190, 0.5);
+        R.addShake(6); break;
+      case 'masso_stop': R.burst(ev.x, ev.y, '#6a6259', 22, 220, 0.6); R.addShake(7); break;
+      case 'sarcofago': A.crate && A.crate();
+        if (ev.mostro) { R.ring(ev.x, ev.y, '#ff4b6b', 6, 70, 0.5); R.burst(ev.x, ev.y, '#5a6070', 20, 200, 0.6);
+          R.floater(ev.x, ev.y - 30, 'NON ERA VUOTO', '#ff4b6b', true); R.addShake(5); }
+        else { R.burst(ev.x, ev.y, '#8f98a6', 16, 160, 0.5); R.floater(ev.x, ev.y - 26, '+' + ev.v + ' \uD83E\uDE99', '#ffcf4a', false); }
+        break;
+      case 'fonte': A.drink && A.drink(); R.ring(ev.x, ev.y, '#6fd0ff', 5, 60, 0.45);
+        R.burst(ev.x, ev.y, '#a0e6ff', 18, 130, 0.5);
+        if (ev.v > 0) R.floater(ev.x, ev.y - 26, '+' + ev.v, '#7dffb0', false); break;
+      case 'cristallo': A.ability && A.ability('arcane'); R.ring(ev.x, ev.y, '#9fe6ff', 6, ev.r || 220, 0.6);
+        R.burst(ev.x, ev.y, '#d2faff', 22, 200, 0.55); break;
+      case 'cristallo_tu': R.floater(ev.x, ev.y - 34, 'ABILITÀ PRONTE', '#9fe6ff', true); break;
       case 'grata': if (R.grateAperte) R.grateAperte.add(ev.id); A.ability && A.ability('rift'); R.ring(ev.x, ev.y, '#7de08a', 6, 70, 0.5); R.burst(ev.x, ev.y, '#8f98a6', 18, 170, 0.6); R.floater(ev.x, ev.y - 26, 'GRATA APERTA', '#7de08a', true); R.addShake(4); break;
       case 'chiave_elite': R.ring(ev.x, ev.y, '#ffd24a', 5, 60, 0.6); break;
       case 'chiave_cade': R.ring(ev.x, ev.y, '#ffd24a', 6, 54, 0.5); R.burst(ev.x, ev.y, '#ffe08a', 16, 150, 0.6); break;

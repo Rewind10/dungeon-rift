@@ -2,6 +2,160 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.28.0] — 2026-09-28 · "Sei cose da toccare"
+
+Paolo: *«il mercante errante per il momento lo disattiverei perché non ha più senso. Non cancellarlo
+però. Piuttosto hai altre idee per oggetti interattivi sulla mappa? Stavo anche pensando di rendere
+grandi il doppio le casse, sono poco visibili»*.
+
+---
+
+### 🚫 Il Mercante Errante è spento, non cancellato
+
+`MERCANTE_ATTIVO: false`, e basta rimetterlo a `true` per riaverlo com'era: catalogo, banco, acquisto
+e la regola «un oggetto solo e poi sparisce» della v2.19.8 sono tutti dov'erano.
+
+Il motivo non è un bug, è che **il suo catalogo è fermo alla v1.11**, quando equipaggiamento e
+statistiche non esistevano. Quattro delle sette voci — +8% velocità, +12% danno, −6% danni subiti,
++30 PV massimi — fanno oggi il mestiere del fabbro e dei punti statistica, solo peggio: non si
+vedono, non si scelgono, e non cambiano niente dell'ondata in cui le compri. E il prezzo non cresce
+con l'ondata, quindi dalla decima in poi non è nemmeno più una spesa.
+
+**Il Mercante Nero resta al suo 30%**: lui vende *patti*, cioè scelte con un prezzo, e quelli non
+hanno smesso di avere senso. Nel restante 70% delle ondate non c'è nessun banco in campo.
+
+---
+
+### 🎲 Sei oggetti, sei verbi
+
+Di cose da rompere la mappa ne aveva tre (urna, barile, grata) e tutte e tre facevano la stessa cosa:
+**sparivano**. Questi sei fanno sei cose diverse, e la metà di loro non sparisce affatto — cambia
+stato, e resta lì a dirti che l'hai già usata.
+
+| | oggetto | come si usa | cosa fa |
+|---|---|---|---|
+| 🔔 | **Campana** | colpendola | per 8 s **ogni mostro in campo va lì**, mollando quello che stava facendo |
+| 🔥 | **Braciere** | colpendolo | si accende e **resta acceso**: quella stanza è illuminata per sempre |
+| 🪨 | **Masso** | colpendolo | rotola nella direzione del colpo finché non trova roccia, e schiaccia |
+| ⚰️ | **Sarcofago** | calpestandolo | o bottino o un inquilino — **45%** che sia abitato |
+| 💧 | **Fonte** | calpestandola | cura il **35% dei PV massimi**, una volta sola, poi si prosciuga |
+| 💎 | **Cristallo** | colpendolo | **azzera le ricariche delle abilità** a te e a chi è entro 220 px |
+
+**Due famiglie, e la differenza non è un capriccio**: quello che si rompe lo si colpisce da lontano —
+e quindi entra nella catena dei barili — quello che si usa lo si calpesta, come le casse e le leve. Il
+gioco non ha un tasto "usa" e non era il momento di inventarlo.
+
+**Non tutti su ogni mappa**: due o tre tipi sorteggiati dal seme. Con tutti e sei ogni volta, ognuno
+smetterebbe di essere una cosa che *trovi* e diventerebbe arredamento. Misurato su sessanta mappe:
+
+| | per mappa | | | per mappa |
+|---|---:|---|---|---:|
+| urna | 4,3 | | masso | 0,5 |
+| barile | 2,5 | | campana | 0,5 |
+| braciere | 0,8 | | fonte | 0,5 |
+| cristallo | 0,7 | | sarcofago | 0,4 |
+
+---
+
+### 🔔 La campana è il rovescio della braccata
+
+È l'oggetto che mi interessa di più, perché **risponde alla v2.25**. Lì, scaduto il tempo, sono i
+mostri a decidere dove sei tu; qui sei tu a decidere dove saranno loro. Otto secondi, e poi
+ventisei di ricarica.
+
+Sotto non c'è nessuna IA nuova: è **un secondo campo di flusso**, costruito verso la campana
+esattamente come quello verso i giocatori, e `ctx.flowStep` restituisce quello finché il richiamo
+dura. Così i mostri ci arrivano **girando attorno ai muri** — puntarli tutti in linea retta avrebbe
+lasciato mezza ondata a strusciare contro la roccia.
+
+Mentre camminano non attaccano: è per questo che la ricarica è lunga. Ma non è un pulsante di
+salvezza gratis — otto secondi in cui nessuno muore sono otto secondi tolti al tempo obiettivo. **I
+boss la ignorano**: una campana che sposta il Colosso renderebbe banale l'ondata 10.
+
+---
+
+### 📦 Le casse: il problema non era la dimensione
+
+L'idea di partenza era **raddoppiarle**. Misurando, il motivo per cui non si vedevano era un altro:
+
+| | |
+|---|---|
+| cassa disegnata | 28×22 px — **quanto uno zombi** |
+| la sua luce | raggio **60** |
+| il fascio della torcia | raggio **250–350** |
+
+Si illuminava da sola per sessanta pixel mentre la torcia arriva a trecentocinquanta: la vedevi solo
+quando ci eri quasi sopra. Quindi: **disegno ×1,5** (42×33) e **luce da 60 a 120**. Si vedono da due
+volte più lontano senza diventare ingombranti.
+
+E soprattutto **il corpo resta 16**. Raddoppiare il disegno avrebbe portato la cassa a 56×44 — quanto
+il Cubo Gelatinoso — ma il guaio vero sarebbe stato il raggio di raccolta, che si calcola sul corpo
+lato server: le casse si sarebbero aperte **passandoci accanto**. E aprire per sbaglio una cassa che
+è un mimic è un modo di morire senza aver scelto niente. C'è un test che tiene il corpo a 16.
+
+---
+
+### 🐞 Quattro errori, e tre erano nei test
+
+**Il primo era nel gioco.** La campana dirottava il campo di flusso, e basta. Ma chi non ti vede il
+campo di flusso non lo usa — **vaga** — quindi metà dei mostri restava dov'era e il richiamo sembrava
+rotto. Misurato: 500 → 407 px in cinque secondi, cioè quasi niente. Adesso c'è una riga in cima
+all'IA che vale per tutti: 500 → 224.
+
+**Gli altri tre erano miei, nel test**, e li scrivo perché sono tre modi diversi di sbagliare una
+misura:
+
+- le celle di generazione della mappa sono in **tessere**, non in pixel. Usandole come coordinate del
+  mondo, il mostro finiva a un cinquantesimo della distanza giusta — cioè dentro il muro del bordo — e
+  da dentro un muro il campo di flusso vale −1. Il test dava la colpa alla campana;
+- misuravo la distanza **in linea d'aria**. Un mostro che gira attorno a uno sperone si *allontana* in
+  linea d'aria mentre sta arrivando: una volta su tre il test diventava rosso su un comportamento
+  giusto. Adesso guarda **quanti passi mancano** sul campo di flusso, che scende sempre e scende solo
+  se sta percorrendo quella strada;
+- il masso «fa male anche a te» lo verificavo con `p.hp < prima`. Il danno al giocatore ha un
+  pavimento di **1 punto**, quindi azzerando la quota il colpo faceva comunque 1 e il controllo
+  passava lo stesso. **Provato col sabotaggio, e passava.**
+
+E c'era un quarto controllo che non mordeva: il richiamo misurato su un mostro *lontano*. Quello ci va
+comunque, perché chi è oltre l'anello rientra col campo di flusso — che era già dirottato. Il test
+passava anche togliendo dall'IA la riga della campana, cioè non provava niente. Adesso il mostro è
+**attaccato al giocatore**, e la domanda è quella vera: molla quello che sta facendo e ci va?
+
+---
+
+### 🧪 Numeri e file toccati
+
+**Test: 5625 passati, 0 falliti.** TEST 87 nuovo: 211 controlli in più rispetto alla v2.27.
+
+Cinque sabotaggi deliberati, più i due ripetuti dopo aver rinforzato i controlli:
+
+| cosa ho rotto apposta | il test se n'è accorto |
+|---|---|
+| la campana non dirotta più chi non ti vede | ✅ 4 controlli rossi *(dopo il rinforzo: prima solo 2, ed erano letture del sorgente)* |
+| il masso non fa male ai giocatori | ✅ 2 controlli rossi *(prima: nessuno)* |
+| il corpo della cassa cresce col disegno | ✅ 3 controlli rossi |
+| un tipo nuovo senza il suo disegno | ✅ 1 controllo rosso |
+| la fonte cura all'infinito | ✅ 3 controlli rossi |
+
+E la verifica che non è un test: **tutti e otto i tipi, in tutti i loro stati, disegnati davvero** su
+una tela fuori schermo contando i pixel accesi. La campana che suona passa da 1825 a 3131 pixel, il
+sarcofago aperto da 2859 a 3342, la fonte da azzurra (136,206,236) a muschio (43,49,40).
+
+| file | cosa |
+|---|---|
+| `shared/constants.js` | l'elenco `OGG_TIPI` (una fonte sola per server e client), le manopole dei sei, `MERCANTE_ATTIVO`, `CASSA_SCALA` e `CASSA_LUCE` |
+| `shared/mapgen.js` | il piazzamento: due o tre tipi per mappa, e il masso solo dove ha almeno sei tessere di corsa |
+| `server/Room.js` | i sei comportamenti, il campo di flusso del richiamo, il masso che rotola, lo snapshot con tipo e stato |
+| `shared/ai.js` | la riga del richiamo, in cima e valida per tutte le IA |
+| `public/js/renderer.js` | i sei disegni con i loro stati, le luci, la cassa più grande |
+| `public/js/main.js` | i sette eventi nuovi |
+| `test/simulate.js` | TEST 87; e il controllo del mercante ora segue l'interruttore invece di imporre una scelta |
+
+**Ancora rosso, e non è di questa versione**: `test/client.js` è rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.27.0] — 2026-09-27 · "L'Anziano"
 
 I dialoghi dell'inizio **li ha scritti Paolo**, parola per parola, e l'Oracolo è diventato l'**Anziano**.

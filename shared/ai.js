@@ -592,6 +592,15 @@
     // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
     // a meta' si vedrebbe.
     const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto' || mon.pf === 'carica' || mon.pf === 'sferza' || mon.pf === 'punta';
+    // v2.28 — LA CAMPANA. Finche' suona, chi non e' in mezzo a un colpo gia' partito lascia perdere
+    // tutto e ci va. Sta PRIMA di ogni altra cosa, e il motivo e' quello che avevo sbagliato al primo
+    // giro: avevo dirottato solo il campo di flusso, ma chi non ti vede non usa il campo di flusso —
+    // vaga — quindi meta' dei mostri restava dov'era e il richiamo sembrava rotto. Qui invece passa
+    // di qui chiunque: chi insegue, chi vaga, chi aspetta all'anello.
+    // Restano fuori i BOSS (una campana che sposta il Colosso renderebbe banale l'ondata 10) e chi e'
+    // immobile per mestiere. E mentre camminano non attaccano: sono otto secondi in cui la mischia si
+    // sposta, ed e' per questo che la campana ha una ricarica lunga.
+    if (ctx.richiamo && !azione && !mon.def.boss && !mon.def.immobile) { seek(mon, ctx, 1); return; }
     // v2.25 — e durante la BRACCATA il tetto alla folla non parcheggia piu' nessuno: se restassero
     // all'anello, «vengono a cercarti» varrebbe solo per i primi sei e gli altri continuerebbero a
     // girare a vuoto. Il tetto ai VIVI in campo (v2.24) resta intatto: quello lo fa la coda, non

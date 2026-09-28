@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.27.0`
+**Versione attuale:** `2.28.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -2453,7 +2453,7 @@ Dentro il Cubo si vedeva **una spada sola**. Le posizioni degli otto oggetti ven
 zero — quindi tutti e otto finivano nello stesso punto. Il codice funzionava: disegnava solo la cosa
 sbagliata. L'ha preso il **render di prova**, cioe' guardare il risultato.
 
-## 🏺 GLI OGGETTI CHE FANNO QUALCOSA *(novita v2.21)*
+## 🏺 GLI OGGETTI CHE FANNO QUALCOSA *(v2.21, e altri sei in v2.28)*
 
 Fino alla v2.20.3 **nessun oggetto della grotta era toccabile**: `INGOMBRI` conteneva solo i mobili del
 villaggio, e rocce, lapidi, bare, ossa e catene si attraversavano tutte. Erano carta da parati. Da qui
@@ -2475,6 +2475,61 @@ danno arrivato da una catena che il giocatore non ha nessun modo di prevedere.
 insegnare a starne lontani, non abbastanza per morire per distrazione. Per lo stesso motivo il disegno
 e' parte della meccanica — doghe scure, cerchi rossi, miccia accesa — e non deve somigliare al `barrel`
 del deposito.
+
+### 🎲 Gli altri sei *(v2.28)*
+
+Dei tre di sopra, tutti e tre facevano la stessa cosa: **sparivano**. Questi sei fanno sei verbi
+diversi, e la meta' di loro non sparisce affatto — cambia STATO, e resta li' a dire che l'hai gia'
+usata. E' per questo che lo snapshot ha imparato a mandare `st` insieme al tipo.
+
+| oggetto | come si usa | cosa fa | per mappa |
+|---|---|---|---:|
+| 🔔 **campana** | colpendola | per **8 s** ogni mostro in campo va LI', mollando quello che stava facendo. Ricarica **26 s** | 0,5 |
+| 🔥 **braciere** | colpendolo | si accende e **resta acceso**: luce **250** permanente su quella stanza | 0,8 |
+| 🪨 **masso** | colpendolo | rotola a **420 px/s** nella direzione del colpo finche' non trova roccia. **58 + 7 per ondata**, e **60%** anche a te | 0,5 |
+| ⚰️ **sarcofago** | calpestandolo | **45%** un inquilino (dal pool dell'ondata in corso), se no **26 + 4 per ondata** monete e 22 px | 0,4 |
+| 💧 **fonte** | calpestandola | cura il **35% dei PV massimi**, una volta sola | 0,5 |
+| 💎 **cristallo** | colpendolo | **azzera le ricariche delle abilita'** a chi e' entro **220 px** | 0,7 |
+
+**Due famiglie, e la differenza non e' un capriccio.** Quello che si ROMPE lo si colpisce da lontano —
+e quindi entra nella catena dei barili: uno scoppio accende anche i bracieri — quello che si USA lo si
+calpesta, come le casse e le leve. Il gioco non ha un tasto "usa" e non era il momento di inventarlo.
+
+**Due o tre tipi per mappa**, sorteggiati dal seme (`OGG_NUOVI_PER_MAPPA`). Con tutti e sei ogni volta
+ognuno smetterebbe di essere una cosa che TROVI e diventerebbe arredamento: la campana all'angolo, il
+braciere in fondo, il sarcofago di la'.
+
+**L'elenco dei tipi sta in `C.OGG_TIPI`, e solo li'.** Lo leggono il server (per costruirli), lo
+snapshot (che manda l'INDICE, non la parola: viaggia sessanta volte al secondo) e il renderer (che
+dall'indice risale al disegno). Tre elenchi scritti a mano in tre file e' il modo piu' rapido di
+ritrovarsi con un oggetto che il server mette in campo e il client non disegna — successo davvero in
+v2.21 con la cassa del deposito, invisibile per ventisette versioni.
+
+#### 🔔 La campana e' il rovescio della braccata
+Nella v2.25, scaduto il tempo, sono i mostri a decidere dove sei tu. Qui sei tu a decidere dove saranno
+loro. Sotto non c'e' nessuna IA nuova: e' un **secondo campo di flusso**, costruito verso la campana
+esattamente come quello verso i giocatori, e `ctx.flowStep` restituisce quello finche' il richiamo
+dura — cosi' i mostri ci arrivano **girando attorno ai muri**. Puntarli in linea retta avrebbe lasciato
+mezza ondata a strusciare contro la roccia.
+
+Mentre camminano non attaccano, ed e' il motivo della ricarica lunga. Ma otto secondi in cui nessuno
+muore sono otto secondi tolti al tempo obiettivo, quindi non e' un pulsante di salvezza gratis. **I
+boss la ignorano**: una campana che sposta il Colosso renderebbe banale l'ondata 10.
+
+*Errore preso durante la scrittura:* dirottare il campo di flusso NON bastava. Chi non ti vede il campo
+di flusso non lo usa — vaga — quindi meta' dei mostri restava dov'era. Misurato: 500 → 407 px in cinque
+secondi, cioe' quasi niente. Con la riga in cima all'IA: 500 → 224.
+
+### 📦 E le casse si vedono *(v2.28)*
+
+Non erano piccole: erano **buie**. La cassa si illuminava da sola per **60 px** mentre il fascio della
+torcia arriva a **350**, quindi la vedevi solo quando ci eri quasi sopra — ed e' grande quanto uno
+zombi, non e' mai stata un francobollo.
+
+Quindi: disegno **×1,5** (42×33 invece di 28×22) e luce **da 60 a 120**. Ma il **corpo resta 16**, e
+non e' un dettaglio: il raggio di raccolta si calcola sul corpo, lato server. Raddoppiando anche
+quello, le casse si sarebbero aperte passandoci accanto — e aprire per sbaglio una cassa che e' un
+mimic e' un modo di morire senza aver scelto niente.
 
 **Il ripostiglio e' scavato nella roccia piena.** Non si ricava da spazio esistente: si scava, e si
 pretende piena anche la cornice 5x5 attorno. Cosi' aprirlo o non aprirlo **non puo' in nessun caso
@@ -2807,11 +2862,25 @@ più lontano dallo spawn. Il suo pannello mostra chiaramente **beneficio** e **r
 pulsazione quando l'abilità è pronta) e **eventi al centro** dello schermo — grandi e molto visibili — al posto
 delle piccole notifiche in alto a destra.
 
-## 🧙 NPC Mercante *(novità v1.11)*
+## 🧙 NPC Mercante *(v1.11 · **SPENTO in v2.28**)*
 
-Un **mercante errante** neutrale appare in mappa (spesso in una micro-area), con bancarella e lanterna.
-Avvicinandoti si apre un pannello con **3 offerte casuali** acquistabili con le **monete**: cura, +PV massimi,
-cassa armi, un potere, vita extra, +danno, +velocità o riduzione danni. I nemici lo ignorano.
+> ⚠️ **Il Mercante Errante e' disattivato** (`MERCANTE_ATTIVO: false`). Non e' cancellato: catalogo,
+> banco, acquisto e la regola «un oggetto solo e poi sparisce» della v2.19.8 sono tutti dov'erano, e
+> basta rimettere la costante a `true` per riaverlo com'era.
+>
+> **Perche'.** Il suo catalogo e' fermo alla v1.11, quando equipaggiamento e statistiche non
+> esistevano. Quattro delle sette voci — +8% velocita', +12% danno, −6% danni subiti, +30 PV massimi —
+> fanno oggi il mestiere del fabbro e dei punti statistica, solo peggio: non si vedono, non si
+> scelgono e non cambiano niente dell'ondata in cui le compri. E il prezzo non cresce con l'ondata,
+> quindi dalla decima in poi non e' nemmeno piu' una spesa.
+>
+> **Il Mercante Nero resta al suo 30%**: lui vende PATTI, cioe' scelte con un prezzo, e quelli non
+> hanno smesso di avere senso. Nel restante 70% delle ondate non c'e' nessun banco in campo.
+
+Com'era, e come tornera' se lo si riaccende: un **mercante errante** neutrale appare in mappa (spesso
+in una micro-area), con bancarella e lanterna. Avvicinandoti si apre un pannello con **3 offerte
+casuali** acquistabili con le **monete**: cura, +PV massimi, un potere, vita extra, +danno, +velocita'
+o riduzione danni. I nemici lo ignorano.
 
 ## 📦 Cosa c'e' dentro una cassa *(aggiornato in v1.84.1)*
 

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.27.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.28.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,33 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🆕 Novità v2.28.0 (sei cose da toccare)
+
+Nelle grotte adesso c'è **roba che fa cose**, e ogni oggetto fa una cosa diversa:
+
+- 🔔 **Campana** — la colpisci e per otto secondi **ogni mostro in campo va lì**, mollando quello che
+  stava facendo. È il rovescio della braccata (v2.25): lì sono loro a decidere dove sei tu, qui sei tu
+  a decidere dove saranno loro. I boss la ignorano.
+- 🔥 **Braciere** — lo accendi e **resta acceso**: quella stanza è illuminata per sempre. In un gioco
+  in cui vedi solo dove arriva la torcia, è il modo di conquistare la mappa un pezzo alla volta.
+- 🪨 **Masso** — gli spari e **rotola** nella direzione del colpo finché non trova roccia. Schiaccia i
+  mostri, e come il barile schiaccia anche te.
+- ⚰️ **Sarcofago** — lo apri camminandoci sopra: o bottino o un inquilino. A differenza del mimic, si
+  vede benissimo che è una bara: il rischio lo dichiara la forma.
+- 💧 **Fonte** — cura una volta e si prosciuga. In due è una decisione: chi la beve.
+- 💎 **Cristallo** — lo rompi e le **abilità tornano pronte**, a te e a chi ti sta vicino.
+
+Non tutti su ogni mappa: due o tre tipi sorteggiati, se no diventano arredamento.
+
+**Le casse si vedono.** Non erano piccole — erano *buie*: si illuminavano da sole per 60 px mentre la
+torcia arriva a 350. Disegno una volta e mezza e **luce doppia**, ma il corpo resta quello: continuano
+ad aprirsi da dove si aprivano prima, e non ci si inciampa dentro per sbaglio.
+
+**Il Mercante Errante è spento** (non cancellato): il suo catalogo era fermo alla v1.11 e quattro voci
+su sette facevano il mestiere del fabbro, solo peggio. Il Mercante Nero resta.
+
+---
 
 ## 🆕 Novità v2.27.0 (l'Anziano)
 

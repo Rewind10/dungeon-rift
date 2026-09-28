@@ -1758,6 +1758,148 @@
           for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(giu ? 11 + i * 1.2 : -11 - i * 1.2, -6 + i * 4.5, 2.2, 3.2, 0, 0, 7); g.stroke(); }
           g.fillStyle = giu ? '#7de08a' : '#e0b23a'; g.beginPath(); g.arc(0, -2, 2.6, 0, 7); g.fill();
           g.lineCap = 'butt'; break; }
+
+        // ===================== v2.28 — I SEI OGGETTI NUOVI =====================
+        // Regola comune a tutti: devono distinguersi dall'ARREDAMENTO. Nelle grotte ci sono gia' un
+        // braciere decorativo (`brazier`), dei cristalli (`crystal_cluster`), dei sassi (`rock`) e
+        // delle bare (`coffin`) che non fanno niente — se questi gli somigliassero, il giocatore non
+        // saprebbe mai cosa vale la pena colpire. Quindi: bordo piu' marcato, un accento di colore
+        // che l'arredo non ha, e un segno che dice cosa succede quando ci fai qualcosa.
+        case 'campana': { // LA CAMPANA. Un bronzo appeso a un cavalletto. Quando ha appena suonato
+          // oscilla e le onde escono da sola: sono il "sta succedendo adesso" che serve a chi non ha
+          // sentito il suono, e spariscono con la ricarica.
+          const suona = p.st === 1, t = this.time;
+          const dond = suona ? Math.sin(t * 9) * 0.22 : 0;
+          g.fillStyle = 'rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(2, 16, 15, 6, 0, 0, 7); g.fill();
+          g.strokeStyle = '#4b535f'; g.lineWidth = 3.4; g.lineCap = 'round';   // il cavalletto
+          g.beginPath(); g.moveTo(-13, 16); g.lineTo(-9, -10); g.moveTo(13, 16); g.lineTo(9, -10); g.stroke();
+          g.beginPath(); g.moveTo(-10, -10); g.lineTo(10, -10); g.stroke();
+          g.save(); g.translate(0, -10); g.rotate(dond);
+          const bg = g.createLinearGradient(-10, 0, 10, 0);
+          bg.addColorStop(0, suona ? '#8a6a22' : '#6b5520'); bg.addColorStop(.45, suona ? '#f0c855' : '#c9a44a'); bg.addColorStop(1, '#5c4a1c');
+          g.fillStyle = bg; g.strokeStyle = '#2a2008'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(-4, 1); g.quadraticCurveTo(-12, 3, -11, 16);
+          g.lineTo(11, 16); g.quadraticCurveTo(12, 3, 4, 1); g.closePath(); g.fill(); g.stroke();
+          g.beginPath(); g.ellipse(0, 16, 11, 3.4, 0, 0, 7); g.fill(); g.stroke();
+          g.fillStyle = '#3a2f10'; g.beginPath(); g.arc(0, 17, 2.6, 0, 7); g.fill();   // il battaglio
+          g.restore();
+          if (suona) { g.strokeStyle = 'rgba(255,214,120,.5)'; g.lineWidth = 2;
+            for (let i = 0; i < 3; i++) { const rr = 16 + ((t * 70 + i * 16) % 34);
+              g.globalAlpha = 0.55 * (1 - (rr - 16) / 34); g.beginPath(); g.arc(0, 0, rr, 0, 7); g.stroke(); }
+            g.globalAlpha = 1; }
+          g.lineCap = 'butt'; break; }
+
+        case 'braciere': { // IL BRACIERE DA ACCENDERE. Spento e' cenere grigia in un treppiede; acceso
+          // e' fuoco. La differenza si deve vedere da mezza stanza, se no non si capisce quali restano
+          // da accendere — ed e' l'unica cosa che rende la mappa "conquistabile".
+          const on = p.st === 1, t = this.time;
+          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(2, 14, 13, 5, 0, 0, 7); g.fill();
+          g.strokeStyle = '#3f4650'; g.lineWidth = 3; g.lineCap = 'round';        // il treppiede
+          g.beginPath(); g.moveTo(-9, 14); g.lineTo(-3, 0); g.moveTo(9, 14); g.lineTo(3, 0); g.moveTo(0, 14); g.lineTo(0, 2); g.stroke();
+          const cg = g.createLinearGradient(0, -8, 0, 4);
+          cg.addColorStop(0, on ? '#6b4a1e' : '#4a4f59'); cg.addColorStop(1, on ? '#3a2410' : '#2b2f37');
+          g.fillStyle = cg; g.strokeStyle = '#171a21'; g.lineWidth = 2;
+          g.beginPath(); g.moveTo(-12, -8); g.lineTo(12, -8); g.lineTo(8, 4); g.lineTo(-8, 4); g.closePath(); g.fill(); g.stroke();
+          if (!on) {                                                              // cenere
+            g.fillStyle = '#6a7180'; g.beginPath(); g.ellipse(0, -7, 9, 2.6, 0, 0, 7); g.fill();
+            g.fillStyle = 'rgba(180,195,215,.5)'; for (let i = 0; i < 4; i++) g.fillRect(-7 + i * 4, -9, 2, 2);
+          } else {                                                                // fiamma
+            for (let i = 0; i < 3; i++) {
+              const ph = t * 5 + i * 2.1, h = 16 + Math.sin(ph) * 5, w = 7 - i * 1.6;
+              g.fillStyle = ['rgba(255,150,40,.95)', 'rgba(255,200,70,.9)', 'rgba(255,240,160,.85)'][i];
+              g.beginPath(); g.moveTo(-w, -7); g.quadraticCurveTo(-w * 0.4, -7 - h * 0.6, 0, -7 - h);
+              g.quadraticCurveTo(w * 0.4, -7 - h * 0.6, w, -7); g.closePath(); g.fill();
+            }
+          }
+          g.lineCap = 'butt'; break; }
+
+        case 'masso': { // IL MASSO IN BILICO. Fermo sul suo cuneo, e il cuneo e' tutto il messaggio:
+          // dice che sta per cadere. Mentre rotola gira davvero (l'angolo viene dal tempo) e si porta
+          // dietro la polvere: senza rotazione sembrerebbe un sasso che scivola.
+          const corre = p.st === 1, fermo = p.st === 2, t = this.time;
+          g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(2, 16, 17, 6, 0, 0, 7); g.fill();
+          if (!corre && !fermo) { g.fillStyle = '#4a3f33'; g.strokeStyle = '#221c14'; g.lineWidth = 2;   // il cuneo
+            g.beginPath(); g.moveTo(-16, 16); g.lineTo(16, 16); g.lineTo(6, 8); g.lineTo(-6, 8); g.closePath(); g.fill(); g.stroke(); }
+          g.save(); if (corre) g.rotate((t * 6) % (Math.PI * 2));
+          const rg = g.createRadialGradient(-5, -6, 2, 0, 0, 20);
+          rg.addColorStop(0, '#8b8378'); rg.addColorStop(.6, '#6a6259'); rg.addColorStop(1, '#3e3933');
+          g.fillStyle = rg; g.strokeStyle = '#201c18'; g.lineWidth = 2.4;
+          g.beginPath(); g.moveTo(-17, -3); g.lineTo(-10, -15); g.lineTo(6, -17); g.lineTo(17, -5);
+          g.lineTo(14, 9); g.lineTo(-2, 16); g.lineTo(-14, 10); g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(30,26,22,.55)'; g.lineWidth = 1.4;                    // le crepe
+          g.beginPath(); g.moveTo(-8, -9); g.lineTo(-1, -2); g.lineTo(5, -6); g.stroke();
+          g.beginPath(); g.moveTo(-3, 9); g.lineTo(2, 2); g.stroke();
+          g.restore();
+          if (corre) { g.fillStyle = 'rgba(190,175,150,.35)';                           // la polvere
+            for (let i = 0; i < 4; i++) { const a = t * 3 + i * 1.7;
+              g.beginPath(); g.arc(-14 - i * 4, 10 + Math.sin(a) * 3, 4 - i * 0.6, 0, 7); g.fill(); } }
+          break; }
+
+        case 'sarcofago': { // IL SARCOFAGO. Aperto o chiuso, e da chiuso NON dice cosa c'e' dentro: e'
+          // una scommessa, e la differenza col mimic e' che qui si vede benissimo che e' una bara. Il
+          // rischio lo dichiara la forma, non un simbolo.
+          const ap = p.st === 1;
+          g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(3, 17, 19, 7, 0, 0, 7); g.fill();
+          const sg = g.createLinearGradient(-16, 0, 16, 0);
+          sg.addColorStop(0, '#59606d'); sg.addColorStop(.45, '#7d8593'); sg.addColorStop(1, '#474d58');
+          g.fillStyle = sg; g.strokeStyle = '#1b1f27'; g.lineWidth = 2.4; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(-13, 16); g.lineTo(-16, -10); g.lineTo(-8, -18);     // la cassa
+          g.lineTo(8, -18); g.lineTo(16, -10); g.lineTo(13, 16); g.closePath(); g.fill(); g.stroke();
+          if (ap) {                                                                     // il vuoto dentro
+            g.fillStyle = '#0a0c12'; g.beginPath(); g.moveTo(-10, 12); g.lineTo(-12, -8);
+            g.lineTo(-6, -14); g.lineTo(6, -14); g.lineTo(12, -8); g.lineTo(10, 12); g.closePath(); g.fill();
+            g.save(); g.translate(20, 8); g.rotate(0.5);                                // il coperchio scivolato
+            g.fillStyle = '#6e7684'; g.strokeStyle = '#1b1f27'; g.lineWidth = 2;
+            this._rr(g, -13, -5, 26, 10, 2); g.fill(); g.stroke(); g.restore();
+          } else {
+            g.fillStyle = 'rgba(30,34,44,.5)'; this._rr(g, -10, -14, 20, 27, 2); g.fill();
+            g.strokeStyle = '#aeb6c4'; g.lineWidth = 1.8;                               // la figura incisa
+            g.beginPath(); g.arc(0, -8, 3.4, 0, 7); g.stroke();
+            g.beginPath(); g.moveTo(0, -4); g.lineTo(0, 8); g.moveTo(-5, 1); g.lineTo(5, 1); g.stroke();
+          }
+          break; }
+
+        case 'fonte': { // LA FONTE. Piena e' acqua che si muove e riflette; secca e' una vasca di
+          // pietra con del muschio. Se da secca somigliasse ancora a una fonte, si tornerebbe a
+          // provarci ogni volta che ci si passa davanti.
+          const secca = p.st === 1, t = this.time;
+          g.fillStyle = 'rgba(0,0,0,.36)'; g.beginPath(); g.ellipse(2, 14, 17, 6, 0, 0, 7); g.fill();
+          g.fillStyle = '#5a6068'; g.strokeStyle = '#1d2128'; g.lineWidth = 2.4;        // la vasca
+          g.beginPath(); g.ellipse(0, 6, 17, 8, 0, 0, 7); g.fill(); g.stroke();
+          g.fillStyle = '#464c55'; g.beginPath(); g.ellipse(0, 4, 13, 6, 0, 0, 7); g.fill();
+          if (!secca) {
+            const ag = g.createRadialGradient(-3, 1, 1, 0, 3, 13);
+            ag.addColorStop(0, 'rgba(160,230,255,.95)'); ag.addColorStop(.6, 'rgba(70,170,220,.9)'); ag.addColorStop(1, 'rgba(30,90,140,.9)');
+            g.fillStyle = ag; g.beginPath(); g.ellipse(0, 3, 12, 5.4, 0, 0, 7); g.fill();
+            g.strokeStyle = 'rgba(220,250,255,.55)'; g.lineWidth = 1.2;                 // i cerchi sull'acqua
+            for (let i = 0; i < 2; i++) { const rr = 3 + ((t * 9 + i * 5) % 10);
+              g.globalAlpha = 0.5 * (1 - rr / 13); g.beginPath(); g.ellipse(0, 3, rr, rr * 0.45, 0, 0, 7); g.stroke(); }
+            g.globalAlpha = 1;
+          } else {
+            g.fillStyle = '#2b3128'; g.beginPath(); g.ellipse(0, 3, 12, 5.4, 0, 0, 7); g.fill();
+            g.fillStyle = '#4a5c3a'; for (let i = 0; i < 5; i++) {                       // il muschio
+              const a = i * 1.3; g.beginPath(); g.ellipse(Math.cos(a) * 7, 3 + Math.sin(a) * 3, 3, 1.6, a, 0, 7); g.fill(); }
+          }
+          break; }
+
+        case 'cristallo': { // IL CRISTALLO DI RISONANZA. Nelle grotte ci sono gia' i `crystal_cluster`
+          // decorativi, e questo NON deve somigliargli: uno solo, piu' alto, e con l'anello che pulsa
+          // attorno — l'anello e' il raggio entro cui la rottura vale anche per i compagni.
+          const t = this.time, pul = 0.5 + 0.5 * Math.sin(t * 2.4);
+          g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(2, 14, 11, 4, 0, 0, 7); g.fill();
+          g.strokeStyle = 'rgba(150,230,255,' + (0.20 + 0.18 * pul) + ')'; g.lineWidth = 1.6;
+          g.beginPath(); g.ellipse(0, 12, 20 + pul * 3, 7 + pul * 1.2, 0, 0, 7); g.stroke();
+          g.fillStyle = '#2b3a4a'; g.strokeStyle = '#121a24'; g.lineWidth = 2;           // la base
+          g.beginPath(); g.moveTo(-9, 14); g.lineTo(9, 14); g.lineTo(6, 8); g.lineTo(-6, 8); g.closePath(); g.fill(); g.stroke();
+          const kg = g.createLinearGradient(-6, -22, 6, 10);
+          kg.addColorStop(0, 'rgba(210,250,255,.98)'); kg.addColorStop(.5, 'rgba(110,205,240,.95)'); kg.addColorStop(1, 'rgba(40,110,160,.95)');
+          g.fillStyle = kg; g.strokeStyle = '#0e2230'; g.lineWidth = 2; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(0, -24); g.lineTo(7, -6); g.lineTo(4, 9); g.lineTo(-4, 9); g.lineTo(-7, -6); g.closePath(); g.fill(); g.stroke();
+          g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.4;
+          g.beginPath(); g.moveTo(0, -22); g.lineTo(0, 8); g.stroke();
+          g.fillStyle = 'rgba(200,245,255,' + (0.25 + 0.3 * pul) + ')';
+          g.beginPath(); g.arc(0, -8, 4 + pul * 1.6, 0, 7); g.fill();
+          break; }
       }
       g.restore();
     },
@@ -1894,7 +2036,10 @@
       { const mp = this.map || {};
         for (const q of (mp.grate || [])) if (!this.grateAperte.has(q.id)) this._bakeProp(ctx, { type: 'saracinesca', x: q.x, y: q.y, s: 1, r: 0 });
         for (const l of (mp.leve || [])) this._bakeProp(ctx, { type: 'leva', x: l.x, y: l.y, s: 1, r: 0, tirata: this.grateAperte.has(l.gid) }); }
-      for (const o of (world.ogg || [])) this._bakeProp(ctx, { type: o.k ? 'barile' : 'urna', x: o.x, y: o.y, s: (o.s || 100) / 100, r: 0 });
+      // v2.28 — il tipo arriva come INDICE in C.OGG_TIPI (sono otto, non piu' due) e `st` porta lo
+      // stato: braciere acceso, campana che suona, masso in corsa, sarcofago aperto, fonte secca.
+      { const TG = window.GAME.Constants.OGG_TIPI || ['urna', 'barile'];
+        for (const o of (world.ogg || [])) this._bakeProp(ctx, { type: TG[o.k] || 'urna', x: o.x, y: o.y, s: (o.s || 100) / 100, r: 0, st: o.st || 0 }); }
       if (world.merch) this._drawMerchant(ctx, world.merch, me);
       if (world.merchD) this._drawDarkMerchant(ctx, world.merchD, me);
       // v2.19 — I MERCANTI LI DISEGNA QUESTA RIGA, TUTTI E SETTE. Prima il fabbro era saltato qui e
@@ -3237,7 +3382,11 @@
       const gr = ctx.createRadialGradient(it.x, y, 2, it.x, y, 26); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + it.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(it.x, y, 26, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
       ctx.fillStyle = col; ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(it.x, y, 8, 0, 7); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#0a0c12'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(def.glyph || '?', it.x, y + 4); ctx.textAlign = 'left'; },
-    _drawCrate(ctx, c) { const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; },
+    // v2.28 — UNA VOLTA E MEZZA, non il doppio. Raddoppiarla l'avrebbe portata a 56x44 — quanto il
+    // Cubo Gelatinoso — e avrebbe raddoppiato anche il raggio di raccolta, che e' calcolato sul
+    // corpo lato server: si sarebbero aperte passandoci accanto. Il disegno cresce di meta', il
+    // corpo resta quello, e a farle vedere da lontano ci pensa la luce (CASSA_LUCE, sopra).
+    _drawCrate(ctx, c) { const SC = (window.GAME.Constants.CASSA_SCALA || 1); if (SC !== 1) { ctx.save(); ctx.translate(c.x, c.y); ctx.scale(SC, SC); ctx.translate(-c.x, -c.y); } const t = this.time; const x = c.x, y = c.y + Math.sin(t * 2 + c.e) * 1.2; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 15, 6, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, 'rgba(255,200,80,' + (0.28 + 0.12 * Math.sin(t * 4 + c.e)) + ')'); gr.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#6b4a28'; ctx.strokeStyle = '#2c1c0e'; ctx.lineWidth = 2; this._rr(ctx, x - 14, y - 11, 28, 22, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3d20'; this._rr(ctx, x - 14, y - 3, 28, 6, 2); ctx.fill(); ctx.strokeStyle = '#b98b4a'; ctx.beginPath(); ctx.moveTo(x - 14, y - 3); ctx.lineTo(x + 14, y - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke(); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y - 1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,235,150,.9)'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('?', x, y - 16 + Math.sin(t * 3 + c.e) * 2); ctx.textAlign = 'left'; if (SC !== 1) ctx.restore(); },
     _drawWeapon(ctx, wd) { const W = window.GAME.Loot.WEAPONS[wd.wt] || {}; const col = W.color || '#ffd24a'; const t = this.time; const x = wd.x, y = wd.y + Math.sin(t * 2.5 + wd.e) * 1.6; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(wd.x, wd.y + 14, 13, 5, 0, 0, 7); ctx.fill(); const gr = ctx.createRadialGradient(x, y, 2, x, y, 30); gr.addColorStop(0, col + 'cc'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5 + wd.e); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.globalAlpha = 1; ctx.save(); ctx.translate(x, y); ctx.strokeStyle = '#0a0c12'; ctx.lineWidth = 2; if (wd.wt === 'scatter') { ctx.fillStyle = col; this._rr(ctx, -10, -4, 20, 8, 2); ctx.fill(); ctx.stroke(); } else if (wd.wt === 'burst') { ctx.fillStyle = col; this._rr(ctx, -9, -3, 16, 6, 2); ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -7); ctx.lineTo(11, 0); ctx.lineTo(0, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.restore(); for (let i = 0; i < 3; i++) { ctx.fillStyle = i < (wd.lv || 1) ? col : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x - 8 + i * 8, y - 15, 2.4, 0, 7); ctx.fill(); } },
     _drawChains(ctx) { for (const c of this.chains) { const a = c.t / 0.18; ctx.strokeStyle = 'rgba(140,220,255,' + a + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); const seg = 4; ctx.moveTo(c.x1, c.y1); for (let i = 1; i < seg; i++) { const t = i / seg; ctx.lineTo(MU.lerp(c.x1, c.x2, t) + MU.rand(-6, 6), MU.lerp(c.y1, c.y2, t) + MU.rand(-6, 6)); } ctx.lineTo(c.x2, c.y2); ctx.stroke(); } },
     // v1.63 — LA FAGLIA AI MARGINI. L'alone si chiude dai bordi dello schermo mentre la carica sale, e
@@ -3681,7 +3830,7 @@
       // lista lunga qui sotto e' quella delle grotte, dove il velo e' il campo visivo e il ritaglio tiene
       // ogni bagliore dentro la visuale; li' non c'e' niente da tenere in riga.
       if (_lit) { for (const s of this._villSrc) light(s[0], s[1], s[2], s[3], s[4]); } else {
-      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, 60, '#ffcf5a', 0.3); for (const o of (world.ogg || [])) if (o.k) light(o.x, o.y - 12, 34, '#ff8a3a', 0.34); for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const tc of this.torches) light(tc.x, tc.y, 120, '#ff9a3b', 0.5); for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); for (const c of (world.crates || [])) light(c.x, c.y, (C.CASSA_LUCE || 120), '#ffcf5a', 0.42); /* v2.28 — le casse si illuminavano da sole per 60 px mentre la torcia arriva a 350: erano invisibili finche' non ci eri sopra. */ { const TG = C.OGG_TIPI || []; for (const o of (world.ogg || [])) { const k = TG[o.k]; if (k === 'barile') light(o.x, o.y - 12, 34, '#ff8a3a', 0.34); else if (k === 'braciere' && o.st === 1) light(o.x, o.y - 8, (C.BRACIERE_LUCE || 250), '#ff9a3b', 0.5); else if (k === 'campana') light(o.x, o.y - 8, o.st === 1 ? 150 : 46, '#ffd27a', o.st === 1 ? 0.5 : 0.26); else if (k === 'fonte' && o.st !== 1) light(o.x, o.y, 70, '#6fd0ff', 0.34); else if (k === 'cristallo') light(o.x, o.y - 8, 90, '#9fe6ff', 0.38); } } for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();

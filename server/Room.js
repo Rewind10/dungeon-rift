@@ -17,6 +17,9 @@ const Salva = require('../shared/salvataggio.js');   // v2.11 — cosa c'e' dent
 const PF = require('../shared/pathfinding.js');
 const AI = require('../shared/ai.js');
 const Waves = require('../shared/waves.js');
+// v2.28 — l'elenco dei tipi di oggetto interattivo: sta in constants.js, e da li' lo leggono sia
+// lo snapshot (che manda l'indice) sia il renderer (che dall'indice risale al disegno).
+const TIPI_OGG = C.OGG_TIPI || ['urna', 'barile'];
 let NEXT = 1;
 
 // v1.69 — le CARTE DI RANGO scrivono qui. Separato dai boon di proposito: i boon sono generici e
@@ -168,6 +171,7 @@ class Room {
   constructor(id) {
     this.id = id; this.players = new Map(); this.monsters = []; this.bullets = []; this.orbs = []; this.meteors = [];
     this.oggetti = []; this.grate = []; this.leve = []; this.oggVer = 0; this.oggInviata = -1;   // v2.21 — rompibili, grate, leve
+    this.richiamo = null; this.flowRich = null;   // v2.28 — la campana: dove stanno andando tutti
     this.crates = []; this.weaponDrops = []; this.groundXp = []; this.groundCoins = []; this.items = []; this.zones = []; this.ragnatele = []; this.muri = []; this.trappole = []; this.nebbie = []; this.mercData = null; this.mercCount = 0; this.recinto = null; this.chiave = null; this.faglia = null; this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = []; this.events = [];
     // v2.7 — la storia: la scena in corso (null quando non parla nessuno), la missione in evidenza, e
     // i segni di cio' che e' gia' stato detto — perche' una storia detta due volte non e' una storia.
@@ -211,7 +215,7 @@ class Room {
     // collisione torna a costare esattamente quanto prima: un solo confronto con null.
     this.solids = (this.map.solids && this.map.solids.length) ? this.map.solids : null;
     this.crates.length = 0; this.weaponDrops.length = 0; this.groundXp.length = 0; this.groundCoins.length = 0; this.items.length = 0;
-    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1;
+    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1; this.richiamo = null; this.flowRich = null;
     for (const p of this.players.values()) { p.x = this.map.spawn.x + MU.rand(-40, 40); p.y = this.map.spawn.y + MU.rand(-40, 40); p.edgeT = 0; p.edgeLv = 0; p.edgeTick = 0; p._edgeWarn = 0; }
     this.merchant = null; this.darkMerchant = null; this.gearMerchant = null; this.gearMerchants = [];
     if (market) {
@@ -231,8 +235,10 @@ class Room {
     this.spawnCrates(); this.spawnOggetti();
     this.broadcast({ t: C.MSG.MAP, map: this.map, wave: this.wave });
     // v1.13 — UN SOLO mercante per round: il Nero SOSTITUISCE casualmente l'ufficiale (mai entrambi).
+    // v2.28 — l'errante e' spento (C.MERCANTE_ATTIVO). Il Nero resta al suo 30%; nel restante 70%
+    // non c'e' nessun banco in campo finche' il catalogo dell'errante non verra' rifatto.
     if (Math.random() < 0.30) this.spawnDarkMerchant(); // 30% mercato nero al posto di quello ufficiale
-    else this.spawnMerchant();
+    else if (C.MERCANTE_ATTIVO !== false) this.spawnMerchant();
   }
   spawnCrates() { const s = (this.map.crateSpawns || []).slice(); if (!s.length) return; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n && s.length; i++) { const c = s.splice((Math.random() * s.length) | 0, 1)[0]; this.crates.push({ eid: NEXT++, x: c.x, y: c.y, r: 16, mimic: Math.random() < (C.MIMIC_PROB == null ? 0.06 : C.MIMIC_PROB), opened: false }); } }
   // v1.66 — le armi non si raccolgono piu' dalla mappa: saranno disponibili SOLO dal negozio, e l'acquisto
@@ -264,10 +270,14 @@ class Room {
   // Urne, barili, grate e leve. Sono entita' del server e non decorazione, perche' devono poter
   // sparire e cambiare stato: la decorazione viene cotta una volta sola nel fondo della mappa.
   spawnOggetti() {
-    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1; this.oggVer++; this.oggInviata = -1;
+    this.oggetti.length = 0; this.grate.length = 0; this.leve.length = 0; this.oggVer++; this.oggInviata = -1; this.oggVer++; this.oggInviata = -1; this.richiamo = null; this.flowRich = null;
+    // v2.28 — ogni tipo ha il suo ingombro e il suo STATO. Lo stato serve perche' meta' degli oggetti
+    // nuovi non sparisce quando la usi: il braciere resta acceso, la campana resta li' in ricarica,
+    // la fonte resta prosciugata. `dead` vuol dire «non c'e' piu'», `st` vuol dire «e' cambiato».
+    const RAGGIO = { urna: 12, barile: 15, campana: 16, braciere: 14, masso: 18, sarcofago: 20, fonte: 18, cristallo: 13 };
     for (const o of (this.map.rompibili || []))
       this.oggetti.push({ eid: NEXT++, tipo: o.tipo, x: o.x, y: o.y, s: o.s || 1,
-        r: o.tipo === 'barile' ? 15 : 12, dead: false });
+        r: RAGGIO[o.tipo] || 12, dead: false, st: 0, cd: 0, vx: 0, vy: 0 });
     for (const gt of (this.map.grate || []))
       this.grate.push({ id: gt.id, tiles: gt.tiles.slice(), x: gt.x, y: gt.y, premio: gt.premio, aperta: false });
     for (const lv of (this.map.leve || []))
@@ -286,22 +296,177 @@ class Room {
     let n = 0;
     for (const o of this.oggetti) { if (o.dead) continue;
       if (MU.dist(x, y, o.x, o.y) > r + o.r) continue;
-      this.rompiOggetto(o, src); n++; }
+      // v2.28 — la DIREZIONE del colpo, che serve al masso per sapere da che parte rotolare. Si
+      // prende da chi ha colpito e non dal punto d'impatto: per un proiettile il punto d'impatto e'
+      // praticamente addosso all'oggetto, e il vettore verrebbe zero. Per un'esplosione invece `src`
+      // puo' mancare, e allora vale il centro dello scoppio — che e' esattamente da dove spinge.
+      let dx = o.x - x, dy = o.y - y;
+      if (src && typeof src.x === 'number' && MU.dist(src.x, src.y, o.x, o.y) > 1) { dx = o.x - src.x; dy = o.y - src.y; }
+      this.rompiOggetto(o, src, MU.norm(dx, dy)); n++; }
     return n;
   }
-  rompiOggetto(o, src) {
-    if (o.dead) return; o.dead = true; this.oggVer++;      // PRIMA di tutto: e' cosi' che la catena
+  rompiOggetto(o, src, dir) {
+    if (o.dead) return;
+    // v2.28 — I SEI NUOVI passano di qui, e quattro di loro NON muoiono: cambiano stato. Per questo
+    // `o.dead = true` non sta piu' in cima ma dentro ogni ramo che lo merita. La catena dei barili
+    // continua a non poter tornare indietro perche' il barile la sua riga ce l'ha per primo.
+    if (o.tipo === 'campana') return this._suonaCampana(o);
+    if (o.tipo === 'braciere') return this._accendiBraciere(o);
+    if (o.tipo === 'masso') return this._spingiMasso(o, dir, src);
+    if (o.tipo === 'cristallo') return this._rompiCristallo(o, src);
+    o.dead = true; this.oggVer++;                          // PRIMA di tutto: e' cosi' che la catena
     if (o.tipo === 'barile') {                             // dei barili non puo' tornare indietro
       this.events.push({ t: 'barile', x: o.x, y: o.y, r: C.BARILE_RAGGIO });
       this._scoppioBarile(o, src);
       return;
     }
+    if (o.tipo === 'sarcofago' || o.tipo === 'fonte') { o.dead = false; return; }  // questi si calpestano
     const val = Math.round((C.URNA_MONETE + this.wave * C.URNA_MONETE_ONDATA) * MU.rand(0.75, 1.3));
     for (const cp of Loot.coinsFor(val, C.COINS)) { const a = Math.random() * Math.PI * 2, rd = MU.rand(4, 18);
       this.groundCoins.push({ eid: NEXT++, x: o.x + Math.cos(a) * rd, y: o.y + Math.sin(a) * rd, v: cp.v, cid: cp.id, t: 30 }); }
     this.events.push({ t: 'urna', x: o.x, y: o.y, v: val });
     this.xpCondivisa(C.URNA_XP, 'urna');
   }
+  // ===================== v2.28 — I SEI OGGETTI NUOVI =====================
+
+  // LA CAMPANA. Otto secondi in cui ogni mostro in campo smette di badare a te e va LI'.
+  // Il richiamo NON e' un'invenzione nuova nell'IA: e' un secondo campo di flusso, costruito verso la
+  // campana esattamente come quello verso i giocatori, e `ctx.flowStep` restituisce questo finche'
+  // dura. Cosi' i mostri ci arrivano GIRANDO ATTORNO AI MURI — se avessi puntato tutti verso il punto
+  // in linea retta, mezza ondata sarebbe rimasta a strusciare contro la roccia.
+  // Chi tira da lontano continua a spararti mentre cammina: la campana sposta la mischia, non ti
+  // rende invisibile.
+  _suonaCampana(o) {
+    if (o.cd > 0) return;
+    o.cd = C.CAMPANA_RICARICA || 26; o.st = 1; this.oggVer++;
+    const gx = (o.x / C.TILE) | 0, gy = (o.y / C.TILE) | 0;
+    this.richiamo = { x: o.x, y: o.y, t: C.CAMPANA_DUR || 8 };
+    this.flowRich = PF.build(this.map.grid, this.map.w, this.map.h, [{ gx, gy }]);
+    this.events.push({ t: 'campana', x: o.x, y: o.y, dur: this.richiamo.t });
+  }
+
+  // IL BRACIERE. Si accende una volta e resta acceso: e' tutto qui, e in un gioco in cui vedi solo
+  // dove arriva la torcia e' parecchio. La luce la disegna il client dallo stato — mandarla in rete
+  // sessanta volte al secondo per una cosa che non cambia piu' sarebbe peso inutile.
+  _accendiBraciere(o) {
+    if (o.st) return;
+    o.st = 1; this.oggVer++;
+    this.events.push({ t: 'braciere', x: o.x, y: o.y, r: C.BRACIERE_LUCE || 250 });
+  }
+
+  // IL MASSO. Gli spari e parte nella direzione del colpo. Da qui in poi e' una cosa che si muove, e
+  // se ne occupa `updateMassi`: qui si decide solo che e' partito e da che parte.
+  _spingiMasso(o, dir, src) {
+    if (o.st) return;                                      // uno che rotola non si rilancia
+    const d = (dir && (dir.x || dir.y)) ? dir : { x: 1, y: 0 };
+    o.st = 1; o.vx = d.x * (C.MASSO_VEL || 420); o.vy = d.y * (C.MASSO_VEL || 420);
+    o.spinta = src && src.id ? src.id : null;              // di chi e' la colpa, se centra un compagno
+    this.oggVer++;
+    this.events.push({ t: 'masso', x: o.x, y: o.y, dx: d.x, dy: d.y });
+  }
+
+  // IL CRISTALLO. Azzera le ricariche delle abilita' a chi lo rompe e a chi gli sta vicino: in due
+  // conviene romperlo stando insieme, ed e' l'unico oggetto che premia lo stare vicini.
+  _rompiCristallo(o, src) {
+    o.dead = true; this.oggVer++;
+    const R = C.CRISTALLO_RAGGIO || 220;
+    let quanti = 0;
+    for (const p of this.alivePlayers) {
+      if (MU.dist(o.x, o.y, p.x, p.y) > R) continue;
+      for (let i = 0; i < p.cdAb.length; i++) p.cdAb[i] = 0;
+      quanti++;
+      this.sendTo(p.id, { t: C.MSG.EVENT, ev: { t: 'cristallo_tu', x: o.x, y: o.y } });
+    }
+    this.events.push({ t: 'cristallo', x: o.x, y: o.y, n: quanti, r: R });
+  }
+
+  // I DUE CHE SI CALPESTANO. Stessa porta delle casse e delle leve — ci si cammina sopra — perche' il
+  // gioco non ha un tasto "usa" e inventarne uno per due oggetti sarebbe un tasto in piu' da imparare
+  // per il resto della partita.
+  updateOggettiUsabili() {
+    for (const o of this.oggetti) {
+      if (o.dead || o.st) continue;
+      if (o.tipo !== 'sarcofago' && o.tipo !== 'fonte') continue;
+      for (const p of this.raccoglitori) {
+        if (MU.dist(o.x, o.y, p.x, p.y) > p.radius + o.r + 6) continue;
+        o.st = 1; this.oggVer++;
+        if (o.tipo === 'fonte') this._beviFonte(o, p);
+        else this._apriSarcofago(o, p);
+        break;
+      }
+    }
+  }
+
+  // LA FONTE: cura una volta e si prosciuga.
+  _beviFonte(o, p) {
+    const max = this.effMaxHp(p);
+    const cura = Math.round(max * (C.FONTE_CURA || 0.35));
+    const prima = p.hp;
+    p.hp = Math.min(max, p.hp + cura);
+    this.events.push({ t: 'fonte', x: o.x, y: o.y, v: p.hp - prima, chi: p.name });
+  }
+
+  // IL SARCOFAGO: o bottino o un inquilino. La differenza col mimic e' che il mimic ti frega — sembra
+  // una cassa qualunque — mentre una bara si vede che e' una bara: il rischio e' dichiarato dalla
+  // forma dell'oggetto, e aprirla resta una scelta tua.
+  _apriSarcofago(o, p) {
+    if (Math.random() < (C.SARCOFAGO_PROB_MOSTRO == null ? 0.45 : C.SARCOFAGO_PROB_MOSTRO)) {
+      // l'inquilino e' uno dei mostri di QUESTA ondata, non uno a caso: un nemico che non hai ancora
+      // mai visto, sbucato da una bara, si leggerebbe come un premio sbagliato invece che come un
+      // rischio. E se il campo e' gia' pieno (v2.24) non ne entra nessuno: il tetto vale anche qui.
+      const pool = Waves.poolForWave(this.wave || 1);
+      const tipo = pool.length ? pool[(Math.random() * pool.length) | 0].id : 'skeleton';
+      if (this._postiLiberi() > 0) {
+        const m = this.spawnMonster(this._capType(tipo), o.x, o.y, { scaling: this.waveScaling });
+        if (m) { m.awake = true; m.impegnato = 1; }
+      }
+      this.events.push({ t: 'sarcofago', x: o.x, y: o.y, mostro: 1 });
+      return;
+    }
+    const val = Math.round((C.SARCOFAGO_MONETE + this.wave * C.SARCOFAGO_MONETE_ONDATA) * MU.rand(0.8, 1.25));
+    for (const cp of Loot.coinsFor(val, C.COINS)) { const a = Math.random() * Math.PI * 2, rd = MU.rand(6, 22);
+      this.groundCoins.push({ eid: NEXT++, x: o.x + Math.cos(a) * rd, y: o.y + Math.sin(a) * rd, v: cp.v, cid: cp.id, t: 30 }); }
+    this.xpCondivisa(C.SARCOFAGO_XP || 22, 'sarcofago');
+    this.events.push({ t: 'sarcofago', x: o.x, y: o.y, mostro: 0, v: val });
+  }
+
+  // IL MASSO CHE ROTOLA. Va dritto finche' non trova roccia, e schiaccia quello che passa — mostri e
+  // giocatori. Il danno a chi gioca e' il 60%: come il barile, e per lo stesso motivo. Una macina
+  // gratis non sarebbe una scelta, sarebbe un bottone.
+  updateMassi(dt) {
+    for (const o of this.oggetti) {
+      if (o.dead || o.tipo !== 'masso' || o.st !== 1) continue;
+      const nx = o.x + o.vx * dt, ny = o.y + o.vy * dt;
+      if (this.isWallAt(nx, ny)) {                          // arrivato: si ferma e non si rilancia
+        o.st = 2; o.vx = o.vy = 0; this.oggVer++;
+        this.events.push({ t: 'masso_stop', x: o.x, y: o.y });
+        continue;
+      }
+      o.x = nx; o.y = ny; this.oggVer++;
+      const R = C.MASSO_RAGGIO || 30, D = Math.round((C.MASSO_DANNO || 58) + this.wave * (C.MASSO_DANNO_ONDATA || 7));
+      const src = o.spinta ? this.players.get(o.spinta) : null;
+      for (const m of this.monsters) {
+        if (m.dead || m._massoT === o.eid) continue;        // uno schiacciamento a testa per passata
+        if (MU.dist(o.x, o.y, m.x, m.y) > R + m.radius) continue;
+        m._massoT = o.eid;
+        this.damageMonster(m, D, o.x, o.y, 220, src || null);
+      }
+      const Dp = Math.max(1, Math.round(D * (C.MASSO_QUOTA_GIOCATORE == null ? 0.6 : C.MASSO_QUOTA_GIOCATORE)));
+      for (const p of this.alivePlayers) {
+        if (p.buffs.iframe || p.buffs.i_invuln || p._massoT === o.eid) continue;
+        if (MU.dist(o.x, o.y, p.x, p.y) > R + p.radius) continue;
+        p._massoT = o.eid;
+        this.damagePlayer(p, Dp, o.x, o.y, 1);
+      }
+    }
+  }
+
+  // il tempo della campana e quello delle ricariche
+  updateOggettiTempo(dt) {
+    if (this.richiamo) { this.richiamo.t -= dt; if (this.richiamo.t <= 0) { this.richiamo = null; this.flowRich = null; this.events.push({ t: 'campana_fine' }); } }
+    for (const o of this.oggetti) if (o.cd > 0) { o.cd -= dt; if (o.cd <= 0 && o.tipo === 'campana') { o.st = 0; this.oggVer++; } }
+  }
+
   _scoppioBarile(o, src) {
     const R = C.BARILE_RAGGIO, D = Math.round(C.BARILE_DANNO + this.wave * C.BARILE_DANNO_ONDATA);
     for (const m of this.monsters) if (!m.dead && MU.dist(o.x, o.y, m.x, m.y) <= R + m.radius)
@@ -690,7 +855,18 @@ class Room {
       // v2.25 — la braccata si calcola UNA volta per tick, qui, e non dentro l'IA di ogni mostro:
       // e' la stessa risposta per tutti e sarebbe un confronto ripetuto quattordici volte al tick.
       braccata: this.braccata(), braccataVel: C.BRACCATA_VEL || 0.9,
-      flowStep(m) { if (!self.flow) return { x: 0, y: 0, d: -1 }; const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0; return PF.stepDir(self.flow, self.map.grid, self.map.w, self.map.h, gx, gy); },
+      // v2.28 — la campana sta suonando: per l'IA e' l'unica cosa che conta finche' dura.
+      richiamo: !!this.richiamo,
+      // v2.28 — LA CAMPANA passa da qui, e da nessun'altra parte. Finche' suona, il passo che l'IA
+      // chiede non porta piu' ai giocatori ma alla campana: un secondo campo di flusso, costruito
+      // allo stesso modo del primo. Un solo punto di innesto vuol dire che ogni comportamento — chi
+      // insegue, chi vaga, chi aspetta all'anello — la sente, senza doverlo scrivere in otto IA.
+      flowStep(m) {
+        const F = (self.richiamo && self.flowRich) ? self.flowRich : self.flow;
+        if (!F) return { x: 0, y: 0, d: -1 };
+        const gx = (m.x / C.TILE) | 0, gy = (m.y / C.TILE) | 0;
+        return PF.stepDir(F, self.map.grid, self.map.w, self.map.h, gx, gy);
+      },
       losClear: (a, b, c, d) => self.losClear(a, b, c, d),
       // v2.17 — per l'IA il muro di fuoco E' un muro: cosi' lo aggirano invece di suicidarcisi dentro,
       // il negromante non ci si teletrasporta e la Sfera d'Ossa ci rimbalza contro (rimbalza gia' sui muri).
@@ -3732,7 +3908,7 @@ class Room {
     if (running) {
       // v2.19.7 — l'IA a OGNI alleato, non solo al primo: mercenario e zombie possono stare in campo insieme
       for (const mc of this.alleatiIA) { const capo = this.players.get(mc.mercOwner); this.setInput(mc.id, Merc.pensa(this, mc, capo && !capo.dead ? capo : null)); }
-      this.applicaComando(); this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateLeve(); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
+      this.applicaComando(); this.updatePlayers(dt); this.updateMonsters(dt); this.updateBullets(dt); this.updateOrbs(dt); this.updateMeteors(dt); this.updateZones(dt); this.updateRagnatele(dt); this.updateMuri(dt); this.updateTrappole(dt); this.updateNebbie(dt); this._updatePrigionieri(); this.updatePickups(dt); this.updateLeve(); this.updateOggettiUsabili(); this.updateMassi(dt); this.updateOggettiTempo(dt); this.updateMerchant(dt); this.updateDarkMerchant(dt); this.updateGearMerchant(); this.updateHerbalist(); this.updateBandit(); this.updateSeer(); this.updateInn();
       if (this.bulletTime) { this.bulletTime.t -= dt; if (this.bulletTime.t <= 0) this.bulletTime = null; }
     }
     // failsafe anti-stallo
@@ -4518,7 +4694,10 @@ class Room {
     // `grata`: sono due oggetti per partita, mandarli sessanta volte al secondo sarebbe solo peso.
     let ogg = null;
     if (!slim || this.oggInviata !== this.oggVer) {
-      ogg = []; for (const o of this.oggetti) if (!o.dead) ogg.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), k: o.tipo === 'barile' ? 1 : 0, s: Math.round((o.s || 1) * 100) });
+      // v2.28 — `k` non e' piu' «e' un barile si/no» ma l'INDICE in C.OGG_TIPI, e arriva `st`: lo
+      // stato (braciere acceso, campana in ricarica, fonte prosciugata, masso in corsa o fermo). Un
+      // numero al posto della parola perche' questo viaggia sessanta volte al secondo.
+      ogg = []; for (const o of this.oggetti) if (!o.dead) ogg.push({ e: o.eid, x: Math.round(o.x), y: Math.round(o.y), k: TIPI_OGG.indexOf(o.tipo), s: Math.round((o.s || 1) * 100), st: o.st || 0 });
       if (slim) this.oggInviata = this.oggVer;
     }
     const wdrops = []; for (const d of this.weaponDrops) wdrops.push({ e: d.eid, x: Math.round(d.x), y: Math.round(d.y), wt: d.wt, lv: d.level });

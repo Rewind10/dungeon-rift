@@ -977,6 +977,49 @@
         rompibili.push({ tipo: 'urna', x: wcx(c) + MU.rand(-9, 9), y: wcy(c) + MU.rand(-9, 9), s: MU.rand(0.9, 1.1) });
         urne.push(c);
       }
+
+      // ===================== v2.28 — I SEI NUOVI =====================
+      // NON tutti su ogni mappa: due o tre tipi sorteggiati (C.OGG_NUOVI_PER_MAPPA). Con tutti e sei
+      // ogni volta, ognuno smetterebbe di essere una cosa che TROVI e diventerebbe arredamento: la
+      // campana all'angolo, il braciere in fondo, il sarcofago di la'. Cosi' invece una mappa ha la
+      // campana e due bracieri, la successiva un masso e una fonte, e si guardano ancora.
+      //
+      // Il sorteggio e' del SEME della mappa, quindi due giocatori nella stessa stanza vedono la
+      // stessa roba senza che nessuno debba mandarla in rete.
+      {
+        const presi = [...urne, ...messi];
+        const lontano = (c, q) => presi.every(u => Math.hypot(u.x - c.x, u.y - c.y) > q);
+        const metti = (tipo, c, sc) => { rompibili.push({ tipo, x: wcx(c) + MU.rand(-6, 6), y: wcy(c) + MU.rand(-6, 6), s: sc || MU.rand(0.95, 1.08) }); presi.push(c); };
+        const TIPI = ['campana', 'braciere', 'masso', 'sarcofago', 'fonte', 'cristallo'];
+        for (let z = TIPI.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = TIPI[z]; TIPI[z] = TIPI[j]; TIPI[j] = t; }
+        const QUANTI = (C.OGG_NUOVI_PER_MAPPA || [2, 3]);
+        const scelti = TIPI.slice(0, QUANTI[0] + rint(0, Math.max(0, QUANTI[1] - QUANTI[0])));
+        // quanti pezzi per tipo: di campane ne basta UNA (due vorrebbero dire due richiami in
+        // concorrenza, e il richiamo e' una decisione, non un rumore di fondo), di bracieri anche tre
+        // perche' sono il modo in cui la mappa si illumina a pezzi.
+        const NUM = { campana: [1, 1], braciere: [2, 3], masso: [1, 2], sarcofago: [1, 1], fonte: [1, 1], cristallo: [1, 2] };
+        for (const tipo of scelti) {
+          const n = NUM[tipo][0] + rint(0, NUM[tipo][1] - NUM[tipo][0]);
+          let fatti = 0;
+          for (const c of apc) {
+            if (fatti >= n) break;
+            if (!lontano(c, 7)) continue;
+            // IL MASSO ha bisogno di una corsa: se lo metti in una nicchia rotola per mezza tessera e
+            // si ferma contro la parete, e uno che rotola per mezza tessera non e' un masso, e' un
+            // sasso. Gli si chiede almeno sei tessere libere in una delle quattro direzioni.
+            if (tipo === 'masso') {
+              let corsa = false;
+              for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                let k = 1; while (k <= 6 && grid[idx(c.x + dx * k, c.y + dy * k)] === C.T_FLOOR) k++;
+                if (k > 6) { corsa = true; break; }
+              }
+              if (!corsa) continue;
+            }
+            metti(tipo, c, tipo === 'masso' ? MU.rand(1.0, 1.15) : null);
+            fatti++;
+          }
+        }
+      }
     }
     return { w: W, h: H, tile: TILE, seed, level, theme, archetipo, camere, edgeField, muri: muriTipo ? Array.from(muriTipo) : null, grid: Array.from(grid), spawn: { x: wcx(start), y: wcy(start) }, exit: exit ? { x: exit.x, y: exit.y } : null, enemySpawns: spawnCells, crateSpawns, props, microAreas, rompibili, grate, leve };
   }

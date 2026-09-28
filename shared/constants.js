@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.27.0',
+    VERSION: '2.28.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.27.0',
+      v: '2.28.0',
       righe: [
-        'L’Oracolo adesso è l’<b>Anziano</b>, e i dialoghi dell’inizio sono riscritti da capo.',
-        'La sua casa si riconosce dalla via: <b>arco, bracieri accesi e due guardie</b> sulla soglia.',
-        'Niente cartello: quale casa sia lo dicono le guardie, non una scritta.',
+        'Sei oggetti nuovi nelle grotte: <b>campana</b>, <b>braciere</b>, <b>masso</b>, <b>sarcofago</b>, <b>fonte</b>, <b>cristallo</b>.',
+        'La <b>campana</b> raduna tutti i mostri dove vuoi tu; il <b>braciere</b> illumina la stanza per sempre.',
+        'E le <b>casse</b> si vedono da lontano: più grandi, e soprattutto molto più luminose.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
@@ -50,6 +50,12 @@
     // capita una ogni quattro-cinque ondate: abbastanza di rado da fartene dimenticare, che e' il punto.
     MIMIC_PROB: 0.06,
     CASSA_MONETE_PROB: 0.5, CASSA_MONETE: 22, CASSA_MONETE_ONDATA: 3,
+    // v2.28 — LE CASSE SI VEDONO POCO, e il motivo misurato non era la dimensione: era la LUCE. La
+    // cassa si illuminava da sola per 60 px mentre il fascio della torcia arriva a 350, quindi la
+    // vedevi solo quando c'eri quasi sopra. Raddoppiarla — l'idea di partenza — l'avrebbe portata a
+    // 56x44, quanto il Cubo Gelatinoso, e avrebbe raddoppiato anche il raggio di raccolta: si
+    // sarebbero aperte passandoci accanto. Invece: disegno una volta e mezza, e luce doppia.
+    CASSA_SCALA: 1.5, CASSA_LUCE: 120,
     // v2.21 — GLI OGGETTI CHE SI ROMPONO. L'urna e' una mancia, non un forziere: vale meno di mezza
     // cassa, altrimenti aprire le casse smetterebbe di essere la ragione per attraversare il centro.
     // Il barile fa male ai mostri e fa male anche a chi lo fa scoppiare: a meta' danno sui giocatori,
@@ -57,6 +63,44 @@
     URNA_MONETE: 9, URNA_MONETE_ONDATA: 1.5, URNA_XP: 8,
     BARILE_RAGGIO: 112, BARILE_DANNO: 34, BARILE_DANNO_ONDATA: 6, BARILE_QUOTA_GIOCATORE: 0.5,
     GRATA_RAGGIO: 34,
+    // ===================== v2.28 — SEI OGGETTI INTERATTIVI IN PIU' =====================
+    // L'ELENCO DEI TIPI STA QUI E SOLO QUI. Lo leggono il server (per costruire gli oggetti), lo
+    // snapshot (che manda l'INDICE, non la parola: un numero al posto di 'sarcofago' sessanta volte
+    // al secondo) e il renderer (per sapere cosa disegnare). Tre posti con tre elenchi scritti a mano
+    // e' il modo piu' rapido di ritrovarsi con un oggetto che il server mette in campo e il client non
+    // disegna — successo davvero in v2.21 con la cassa del deposito, invisibile per ventisette
+    // versioni. Aggiungere un tipo vuol dire aggiungerlo QUI, e il test lo pretende disegnabile.
+    OGG_TIPI: ['urna', 'barile', 'campana', 'braciere', 'masso', 'sarcofago', 'fonte', 'cristallo'],
+    // COME SI USANO. Due famiglie, e la differenza non e' un capriccio: quello che si ROMPE lo si
+    // colpisce da lontano (e quindi puo' entrare nella catena dei barili), quello che si USA lo si
+    // calpesta, come le casse e le leve — il gioco non ha un tasto "usa" e non e' questo il momento
+    // di inventarlo.
+    //   colpendo   → urna · barile · campana · braciere · masso · cristallo
+    //   calpestando → sarcofago · fonte
+    //
+    // LA CAMPANA: la colpisci e per otto secondi ogni mostro in campo va LI'. E' il rovescio della
+    // braccata (v2.25): invece di essere cercato, decidi tu dove si radunano. Mentre camminano non
+    // attaccano — e' il motivo per cui la ricarica e' lunga — ma non e' un pulsante di salvezza
+    // gratis: otto secondi in cui nessuno muore sono otto secondi tolti al tempo obiettivo, e i boss
+    // la ignorano.
+    CAMPANA_DUR: 8, CAMPANA_RICARICA: 26,
+    // IL BRACIERE: si accende e resta acceso. Serve a una cosa sola, ed e' il motivo per cui esiste in
+    // un gioco al buio: la stanza illuminata resta illuminata anche quando gli volti le spalle.
+    BRACIERE_LUCE: 250,
+    // IL MASSO: gli spari e rotola nella direzione del colpo finche' non trova roccia. Schiaccia i
+    // mostri e schiaccia anche te — come il barile, e per lo stesso motivo: una macina gratis non
+    // sarebbe una scelta.
+    MASSO_VEL: 420, MASSO_DANNO: 58, MASSO_DANNO_ONDATA: 7, MASSO_RAGGIO: 30, MASSO_QUOTA_GIOCATORE: 0.6,
+    // IL SARCOFAGO: o bottino o un inquilino. La differenza col mimic e' che il mimic ti frega — sembra
+    // una cassa — mentre una bara si vede che e' una bara: il rischio e' dichiarato dalla forma.
+    SARCOFAGO_PROB_MOSTRO: 0.45, SARCOFAGO_MONETE: 26, SARCOFAGO_MONETE_ONDATA: 4, SARCOFAGO_XP: 22,
+    // LA FONTE: cura una volta e si prosciuga. In due e' una decisione: chi la beve.
+    FONTE_CURA: 0.35,
+    // IL CRISTALLO: lo rompi e le ricariche delle abilita' tornano a zero, a te e a chi ti sta vicino.
+    CRISTALLO_RAGGIO: 220,
+    // Quanti tipi NUOVI compaiono su una mappa: due o tre, sorteggiati. Tutti e sei su ogni mappa
+    // sarebbe un parco giochi, e ognuno smetterebbe di essere una cosa che trovi.
+    OGG_NUOVI_PER_MAPPA: [2, 3],
     PRIGIONE_PROB: 0.35,        // quante mappe hanno un recinto
     PRIGIONE_MONETE: 100,       // per testa
     PRIGIONE_MAX: 5,
@@ -244,6 +288,23 @@
     // v1.79 — LA CARTOMANTE E' CHIUSA. La struttura resta nel villaggio (porta, interno, insegna): si
     // spegne solo la funzione, che verra' ridisegnata. Rimettere questo a true la riaccende com'era.
     CARTOMANTE_ATTIVA: false,
+    // v2.28 — IL MERCANTE ERRANTE E' SPENTO. Paolo: *«per il momento lo disattiverei perche' non ha
+    // piu' senso. Non cancellarlo pero'»*. Il motivo non e' un bug: il suo catalogo e' fermo alla
+    // v1.11, quando equipaggiamento e statistiche non esistevano. Quattro delle sette voci sono bonus
+    // percentuali permanenti (+8% velocita', +12% danno, -6% danni subiti, +30 PV massimi) che oggi
+    // fanno esattamente il mestiere del fabbro e dei punti statistica, solo peggio: non si vedono, non
+    // si scelgono e non cambiano niente dell'ondata in cui li compri. E il prezzo non cresce con
+    // l'ondata, quindi dalla decima in poi non e' nemmeno piu' una spesa.
+    //
+    // Spento vuol dire che non compare in campo. Il codice — il catalogo, il banco, l'acquisto, il
+    // «un oggetto solo e poi sparisce» della v2.19.8 — resta tutto dov'e': rimettere questo a true lo
+    // riaccende com'era, e il giorno che il catalogo verra' rifatto si riparte da li'.
+    //
+    // ATTENZIONE A COSA COMPORTA: la generazione tirava il 30% per il Mercante NERO e, se falliva,
+    // metteva in campo l'errante. Spegnendo solo l'errante, il Nero resta al suo 30% e nel restante
+    // 70% delle ondate non c'e' nessun mercante. E' voluto: il Nero vende PATTI, cioe' scelte con un
+    // prezzo, e quelli non hanno smesso di avere senso.
+    MERCANTE_ATTIVO: false,
     // v1.79 — XP CONDIVISA. Ogni uccisione da' esperienza a TUTTI i giocatori vivi, non a chi arriva
     // primo sulla sfera. Ma le ondate crescono col gruppo meno che proporzionalmente (misurato: un trio
     // genera solo il +27% di XP totale rispetto a un solista), quindi senza correzione un gruppo

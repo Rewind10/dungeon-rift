@@ -599,7 +599,14 @@ function testV112() {
   let appear = 0, both = 0, none = 0; for (let i = 0; i < 40; i++) { room.newMap((Math.random() * 1e9) | 0, 1 + (i % 10)); if (room.darkMerchant) appear++; if (room.merchant && room.darkMerchant) both++; if (!room.merchant && !room.darkMerchant) none++; }
   assert(appear > 0 && appear < 40, 'il mercante nero appare in modo casuale (non sempre): ' + appear + '/40');
   assert(both === 0, 'mai entrambi i mercanti insieme (il nero sostituisce quello ufficiale)');
-  assert(none === 0, 'ce sempre almeno un mercante per round');
+  // v2.28 — l'errante e' SPENTO (C.MERCANTE_ATTIVO), quindi nel 70% delle ondate non c'e' nessun
+  // banco in campo: la regola che valeva qui — «ce n'e' sempre almeno uno» — non e' piu' la regola.
+  // Quella che resta, e che conta, e' che i due non compaiano MAI insieme. Il controllo segue
+  // l'interruttore invece di imporre una scelta: rimettendo MERCANTE_ATTIVO a true torna a pretendere
+  // il mercante in ogni ondata, senza che nessuno debba ricordarsi di riscrivere il test.
+  if (C.MERCANTE_ATTIVO !== false) assert(none === 0, 'ce sempre almeno un mercante per round');
+  else { assert(none > 0, 'con l errante spento ci sono ondate senza banco (' + none + '/40)');
+         assert(appear + none === 40, 'e quando non c e il Nero non c e proprio nessuno'); }
   ok('novita v1.12 verificate');
 }
 function testV113() {
@@ -8249,6 +8256,311 @@ function testV227() {
   ok('l Anziano parla col testo di Paolo, e la sua casa si riconosce dalla via');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =================================================================================================
+// v2.28 — SEI OGGETTI INTERATTIVI, E LE CASSE CHE SI VEDONO
+// =================================================================================================
+// Paolo: *«hai altre idee per oggetti interattivi sulla mappa? Stavo anche pensando di rendere grandi
+// il doppio le casse, sono poco visibili»*.
+//
+// Di cose che si rompono la mappa ne aveva gia' tre (urna, barile, grata) e tutte e tre facevano la
+// stessa cosa: sparivano. Questi sei fanno sei verbi diversi — radunare, illuminare, schiacciare,
+// scommettere, curare, ricaricare — e la meta' di loro NON sparisce: cambia stato. E' li' che si
+// rompono le cose, quindi e' li' che guarda questo test.
+function testV228() {
+  console.log('\n[TEST 87] v2.28 — i sei oggetti nuovi, e le casse');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const MapGen = require('../shared/mapgen.js');
+  const dt = 1 / C.TICK_RATE, T228 = C.TILE, PF228 = require('../shared/pathfinding.js');
+  const NUOVI = ['campana', 'braciere', 'masso', 'sarcofago', 'fonte', 'cristallo'];
+
+  // trova una stanza che abbia quel tipo in campo: le mappe sono generate a caso e non tutte lo hanno
+  const stanza = (tipo, wave) => {
+    for (let s = 1; s < 80; s++) {
+      const r = new Room('t228' + tipo + s); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger');
+      r.startGame(wave || 4);
+      const o = r.oggetti.find(q => q.tipo === tipo);
+      if (o) return { r, p, o };
+    }
+    return null;
+  };
+
+  // --- 1) L'ELENCO DEI TIPI E' UNO SOLO, E IL CLIENT SA DISEGNARLI TUTTI -------------------
+  // E' la lezione della cassa del deposito (v2.21): era piazzata dalla mappa e il renderer non aveva
+  // un caso per disegnarla. Non falliva niente — semplicemente non si vedeva, per ventisette
+  // versioni. Un tipo in `C.OGG_TIPI` senza il suo disegno e' esattamente quel bug.
+  {
+    assert(Array.isArray(C.OGG_TIPI) && C.OGG_TIPI.length === 8, 'l elenco dei tipi sta in constants (' + (C.OGG_TIPI || []).length + ')');
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    for (const t of C.OGG_TIPI)
+      assert(srcR.indexOf("case '" + t + "'") >= 0, 'il renderer sa disegnare "' + t + '"');
+    assert(/TG\[o\.k\]/.test(srcR), 'e ci arriva dall indice dello snapshot, non da un elenco suo');
+    const srcM = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    for (const e of ['campana', 'braciere', 'masso', 'sarcofago', 'fonte', 'cristallo'])
+      assert(srcM.indexOf("case '" + e + "'") >= 0, 'e il client sa cosa fare con l evento ' + e);
+  }
+
+  // --- 2) SULLA MAPPA CI SONO, MA NON TUTTI INSIEME ---------------------------------------
+  // Due o tre tipi per mappa: con tutti e sei ogni volta ognuno smetterebbe di essere una cosa che
+  // trovi e diventerebbe arredamento.
+  {
+    const visti = new Set(); let maxTipi = 0;
+    for (let s = 1; s <= 40; s++) {
+      const m = MapGen.generate(s * 37, 5);
+      const tipi = new Set(m.rompibili.filter(r => NUOVI.indexOf(r.tipo) >= 0).map(r => r.tipo));
+      for (const t of tipi) visti.add(t);
+      maxTipi = Math.max(maxTipi, tipi.size);
+      assert(tipi.size <= (C.OGG_NUOVI_PER_MAPPA || [2, 3])[1], 'mappa ' + s + ': non piu di tre tipi nuovi (' + tipi.size + ')');
+      // e le urne e i barili non sono spariti per far posto
+      assert(m.rompibili.some(r => r.tipo === 'urna') && m.rompibili.some(r => r.tipo === 'barile'),
+        'mappa ' + s + ': urne e barili ci sono ancora');
+    }
+    for (const t of NUOVI) assert(visti.has(t), 'su quaranta mappe il tipo "' + t + '" compare almeno una volta');
+    assert(maxTipi >= 2, 'e su qualche mappa ce n e piu di uno (' + maxTipi + ')');
+  }
+
+  // --- 3) LA CAMPANA: tutti vanno li, e poi finisce ---------------------------------------
+  // IL MOSTRO GIUSTO DA MISURARE E' QUELLO CHE TI STA GIA' ADDOSSO. Al primo tentativo lo mettevo
+  // lontano da tutto: quello ci andava lo stesso, ma per un altro motivo — chi e' oltre l'anello
+  // rientra col campo di flusso, e il campo di flusso era gia' dirottato. Il test passava anche
+  // togliendo dall'IA la riga della campana, cioe' non provava niente. Qui invece il mostro e'
+  // attaccato al giocatore, e la domanda e' quella vera: molla quello che sta facendo e ci va?
+  {
+    const s = stanza('campana'); assert(s, 'si trova una mappa con la campana');
+    const { r, p, o } = s;
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const celle = (r.map.enemySpawns || []).map(c => ({ x: c.x * T228 + T228 / 2, y: c.y * T228 + T228 / 2 }))
+      .filter(c => !r.isWallAt(c.x, c.y))
+      .sort((a, b) => Math.abs(MU.dist(a.x, a.y, o.x, o.y) - 520) - Math.abs(MU.dist(b.x, b.y, o.x, o.y) - 520));
+    assert(celle.length, 'la mappa ha punti di generazione calpestabili');
+    const dove = celle[0];
+    p.x = dove.x; p.y = dove.y;                       // il giocatore lontano dalla campana
+    // e il mostro accanto a lui, ma su una tessera VERA: «quaranta pixel a levante» su una mappa
+    // scavata a caso e' spesso roccia, e un mostro dentro la roccia non riceve nessun campo di flusso
+    // — ne quello dei giocatori ne quello della campana. Restava fermo, e il test dava la colpa alla
+    // campana.
+    let mp = null;
+    for (const d of [[40, 0], [-40, 0], [0, 40], [0, -40], [30, 30], [-30, -30]])
+      if (!mp && !r.isWallAt(p.x + d[0], p.y + d[1])) mp = { x: p.x + d[0], y: p.y + d[1] };
+    assert(mp, 'c e posto accanto al giocatore per mettere un mostro');
+    const m = r.spawnMonster('skeleton', mp.x, mp.y, {}); m.awake = true; m.impegnato = 1;
+    const d0 = MU.dist(m.x, m.y, o.x, o.y);
+    assert(d0 > 260, 'e la campana e lontana da tutti e due (' + (d0 | 0) + ' px)');
+    // se da li' la campana non e' raggiungibile, questa mappa non puo' dire niente sul richiamo
+    // prima: il mostro sta addosso al giocatore e ci resta
+    for (let i = 0; i < C.TICK_RATE * 2; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    assert(MU.dist(m.x, m.y, p.x, p.y) < 120, 'prima della campana il mostro sta addosso a te');
+    // si suona
+    r.colpisciOggetti(o.x, o.y, 8, p);
+    assert(r.richiamo && r.flowRich, 'colpendola parte il richiamo, col suo campo di flusso');
+    assert(o.st === 1 && !o.dead, 'e la campana resta in campo: non si rompe, entra in ricarica');
+    assert(r.events.some(e => e.t === 'campana'), 'e lo dice al client');
+    // LA DISTANZA GIUSTA DA GUARDARE E' QUELLA SUL CAMPO DI FLUSSO, non quella in linea d'aria. Un
+    // mostro che gira attorno a uno sperone si ALLONTANA in linea d'aria mentre sta arrivando, e il
+    // test lo dava per fermo — su una mappa scavata a caso succedeva una volta su tre. Il numero che
+    // il campo di flusso tiene su ogni tessera e' «quanti passi mancano»: quello scende sempre, e
+    // scende solo se il mostro sta percorrendo la strada verso la campana.
+    const passi = () => PF228.stepDir(r.flowRich, r.map.grid, r.map.w, r.map.h, (m.x / T228) | 0, (m.y / T228) | 0).d;
+    const q0 = passi();
+    assert(q0 > 4, 'e dal punto dov e la campana si raggiunge (' + q0 + ' passi)');
+    for (let i = 0; i < C.TICK_RATE * 5; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    const q1 = passi();
+    assert(q1 < q0, 'e alla campana ci va: mancano meno passi di prima (' + q0 + ' -> ' + q1 + ')');
+    assert(MU.dist(m.x, m.y, p.x, p.y) > 160, 'mollando quello che stava facendo: e questo il punto');
+    // e finisce
+    for (let i = 0; i < C.TICK_RATE * 6; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    assert(!r.richiamo && !r.flowRich, 'dopo la sua durata il richiamo si spegne');
+    // la ricarica: colpirla di nuovo subito non fa niente
+    r.events.length = 0; r.colpisciOggetti(o.x, o.y, 8, p);
+    assert(!r.richiamo, 'e non si puo risuonare subito: ha una ricarica');
+  }
+  // E CHI NON TI VEDE? E' il caso che il richiamo esiste per risolvere, ed e' quello che il controllo
+  // di sopra NON prova: un mostro che ti sta addosso userebbe il campo di flusso comunque, quindi va
+  // alla campana anche senza la riga nell'IA. Chi invece non ti vede VAGA, e il vagabondaggio il
+  // campo di flusso non lo guarda proprio: senza quella riga resterebbe a girare per conto suo.
+  // Montarlo su una mappa vera vorrebbe dire cercare un punto vicino al giocatore ma senza linea di
+  // vista; qui si chiama l'IA da sola, con un contesto finto, e si guarda solo cosa CHIEDE di fare.
+  {
+    const AI = require('../shared/ai.js');
+    const Mon2 = require('../shared/monsters.js');
+    const def = Mon2.MONSTERS.skeleton;
+    const fintoCtx = (richiamo) => ({
+      dt: 1 / 60, now: 0, richiamo, braccata: false, braccataVel: 0.9, ANELLO: 900,
+      nearest: () => ({ x: 9999, y: 9999, radius: 14, hp: 100, buffs: {} }),   // un giocatore lontanissimo
+      flowStep: () => ({ x: 1, y: 0, d: 12 }),                                 // «la campana e' a levante»
+      losClear: () => false,                                                   // e non lo vedi
+      isWallAt: () => false, emit: () => {}, melee: () => {}, shoot: () => {},
+    });
+    const nuovo = () => ({ def, type: 'skeleton', x: 500, y: 500, mx: 0, my: 0, facing: 0, speed: 100,
+      radius: 14, hp: 50, maxHp: 50, dmg: 5, atkT: 0, stun: 0, impegnato: 1, awake: true, cdAb: [] });
+    const senza = nuovo(); AI.update(senza, fintoCtx(false));
+    const con = nuovo(); AI.update(con, fintoCtx(true));
+    assert(Math.hypot(con.mx, con.my) > senza.speed * 0.85,
+      'col richiamo chi non ti vede marcia a passo pieno (' + Math.hypot(con.mx, con.my).toFixed(0) + ')');
+    assert(con.mx > Math.abs(con.my), 'e nella direzione che il campo di flusso della campana indica');
+    assert(Math.hypot(senza.mx, senza.my) < senza.speed * 0.7,
+      'mentre senza richiamo vaga, e vagare e piu lento (' + Math.hypot(senza.mx, senza.my).toFixed(0) + ')');
+  }
+
+  // i BOSS la ignorano: una campana che sposta il Colosso renderebbe banale l'ondata 10
+  {
+    const srcA = fs.readFileSync(ROOT + 'shared/ai.js', 'utf8');
+    const riga = srcA.match(/if \(ctx\.richiamo[^\n]*\n/);
+    assert(riga && /!mon\.def\.boss/.test(riga[0]), 'i boss non rispondono alla campana');
+    assert(riga && /!azione/.test(riga[0]), 'e chi e in mezzo a un colpo gia partito lo finisce');
+  }
+
+  // --- 4) IL BRACIERE: si accende una volta e resta acceso ---------------------------------
+  {
+    const s = stanza('braciere'); assert(s, 'si trova una mappa col braciere');
+    const { r, p, o } = s;
+    assert(o.st === 0, 'parte spento');
+    r.colpisciOggetti(o.x, o.y, 8, p);
+    assert(o.st === 1 && !o.dead, 'colpito si accende, e resta in campo');
+    assert(r.events.some(e => e.t === 'braciere'), 'e lo dice al client');
+    for (let i = 0; i < C.TICK_RATE * 20; i++) r.update(dt);
+    assert(o.st === 1, 'e vent anni dopo e ancora acceso: e il senso di accenderlo');
+    // e nello snapshot viaggia lo stato, se no il client disegnerebbe sempre la cenere
+    const so = r.snapshot().ogg.find(q => q.e === o.eid);
+    assert(so && so.st === 1, 'e lo stato arriva al client (st)');
+    assert(so.k === C.OGG_TIPI.indexOf('braciere'), 'e il tipo viaggia come indice (' + so.k + ')');
+  }
+
+  // --- 5) IL MASSO: rotola, schiaccia, si ferma nella roccia -------------------------------
+  {
+    const s = stanza('masso'); assert(s, 'si trova una mappa col masso');
+    const { r, p, o } = s;
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    const x0 = o.x, y0 = o.y;
+    // LA SPINTA VA DATA DALLA PARTE GIUSTA. Il masso rotola dove lo mandi, e se lo mandi contro la
+    // parete a due tessere fa due tessere: giusto cosi' nel gioco, sbagliato in un test che vuole
+    // misurare la corsa. Si cerca la direzione che ha spazio e ci si mette dall'altro lato.
+    let dir = { x: 1, y: 0 }, meglio = 0;
+    for (const d of [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]) {
+      let k = 1; while (k < 12 && !r.isWallAt(o.x + d.x * T228 * k, o.y + d.y * T228 * k)) k++;
+      if (k > meglio) { meglio = k; dir = d; }
+    }
+    assert(meglio >= 4, 'il masso ha davanti almeno quattro tessere libere (' + meglio + ')');
+    p.x = o.x - dir.x * 70; p.y = o.y - dir.y * 70;
+    r.colpisciOggetti(o.x, o.y, 8, p);
+    assert(o.st === 1, 'colpito parte');
+    assert(o.vx * dir.x + o.vy * dir.y > 300, 'e va dalla parte da cui e stato colpito');
+    // QUANTO CI METTE dipende da quanto ha davanti: a 420 px al secondo, su una caverna larga
+    // trentacinque tessere, quattro secondi non bastano a arrivare in fondo — e il test lo dava per
+    // «non si ferma». Si aspetta che si fermi, con un tetto generoso, e si misura quanto ha corso.
+    let tic = 0;
+    while (o.st === 1 && tic++ < C.TICK_RATE * 15) r.update(dt);
+    const corso = MU.dist(x0, y0, o.x, o.y);
+    assert(corso > 120, 'e fa una corsa vera (' + (corso | 0) + ' px)');
+    assert(o.st === 2, 'poi trova la roccia e si ferma (' + (tic / C.TICK_RATE).toFixed(1) + 's)');
+    assert(r.events.some(e => e.t === 'masso_stop'), 'e lo dice');
+    // fermo non si rilancia: se no sarebbe una macina a ripetizione
+    const dove = { x: o.x, y: o.y };
+    r.colpisciOggetti(o.x, o.y, 8, p);
+    for (let i = 0; i < C.TICK_RATE; i++) r.update(dt);
+    assert(MU.dist(dove.x, dove.y, o.x, o.y) < 2, 'e da fermo non riparte');
+  }
+  // e fa male anche a te, come il barile
+  {
+    const s = stanza('masso'); assert(s, 'ancora una mappa col masso');
+    const { r, p, o } = s;
+    r.monsters.length = 0; r.pending = 0; r.waveList = [];
+    p.hp = 1e6; p.stats.dmgReduce = 0;
+    const pv0 = p.hp;
+    o.st = 1; o.vx = 300; o.vy = 0;                  // lanciato a mano: qui si misura il danno, non la spinta
+    p.x = o.x + 40; p.y = o.y;
+    for (let i = 0; i < C.TICK_RATE * 2; i++) r.update(dt);
+    // NON basta «p.hp e sceso»: il danno al giocatore ha un pavimento di 1 punto, quindi azzerando la
+    // quota il colpo farebbe comunque 1 e il controllo passerebbe lo stesso — provato, e passava. Si
+    // misura la QUOTA: dev'essere vicina a quella dichiarata rispetto al danno pieno del masso.
+    const pieno = Math.round((C.MASSO_DANNO || 58) + r.wave * (C.MASSO_DANNO_ONDATA || 7));
+    const preso = pv0 - p.hp;
+    // NON si pretende una percentuale esatta: fra corazza, equipaggiamento e riduzioni il numero che
+    // arriva varia parecchio. Si pretende che sia un danno VERO — con la quota a zero il colpo
+    // varrebbe il pavimento di 1 punto, e il controllo va rosso. (Provato: senza questa soglia il
+    // sabotaggio passava liscio.)
+    assert(preso > 5, 'il masso schiaccia anche chi lo ha spinto, e non per finta (' + preso + ' su ' + pieno + ' pieni)');
+  }
+
+  // --- 6) IL SARCOFAGO: o bottino o inquilino, e si apre camminandoci sopra ----------------
+  {
+    let mostri = 0, bottini = 0;
+    for (let k = 0; k < 16; k++) {
+      const s = stanza('sarcofago'); if (!s) break;
+      const { r, p, o } = s;
+      r.monsters.length = 0; r.pending = 0; r.waveList = [];
+      p.x = o.x; p.y = o.y; r.update(dt);
+      const ev = r.events.find(e => e.t === 'sarcofago');
+      assert(ev, 'calpestandolo si apre');
+      assert(o.st === 1, 'e resta aperto');
+      if (ev.mostro) { mostri++; assert(r.monsters.filter(m => !m.dead).length > 0, 'e se era abitato, l inquilino e in campo'); }
+      else { bottini++; assert(r.groundCoins.length > 0, 'e se non lo era, ci sono monete a terra'); }
+    }
+    assert(mostri > 0, 'su sedici sarcofagi qualcuno era abitato (' + mostri + ')');
+    assert(bottini > 0, 'e qualcun altro no (' + bottini + ')');
+  }
+
+  // --- 7) LA FONTE: cura una volta sola ----------------------------------------------------
+  {
+    const s = stanza('fonte'); assert(s, 'si trova una mappa con la fonte');
+    const { r, p, o } = s;
+    p.hp = 20; const max = r.effMaxHp(p);
+    p.x = o.x; p.y = o.y; r.update(dt);
+    assert(p.hp > 20, 'bevendo si cura (' + p.hp + '/' + max + ')');
+    assert(Math.abs((p.hp - 20) - Math.round(max * C.FONTE_CURA)) <= 1, 'e cura la quota giusta');
+    assert(o.st === 1, 'e la fonte si prosciuga');
+    const dopo = p.hp; p.hp = 20;
+    for (let i = 0; i < C.TICK_RATE; i++) r.update(dt);
+    assert(p.hp === 20, 'e da secca non cura piu');
+    void dopo;
+  }
+
+  // --- 8) IL CRISTALLO: azzera le ricariche, ma solo a chi e vicino ------------------------
+  {
+    const s = stanza('cristallo'); assert(s, 'si trova una mappa col cristallo');
+    const { r, p, o } = s;
+    p.x = o.x + 40; p.y = o.y; p.cdAb = [7, 7, 7];
+    r.colpisciOggetti(o.x, o.y, 8, p);
+    assert(p.cdAb.every(v => v === 0), 'rompendolo le abilita tornano pronte');
+    assert(o.dead, 'e il cristallo si rompe: quello si');
+  }
+  {
+    const s = stanza('cristallo'); assert(s, 'ancora una mappa col cristallo');
+    const { r, p, o } = s;
+    p.x = o.x + (C.CRISTALLO_RAGGIO || 220) + 200; p.y = o.y; p.cdAb = [7, 7, 7];
+    r.colpisciOggetti(o.x, o.y, 8, null);
+    assert(p.cdAb.every(v => v === 7), 'ma da lontano non arriva niente: e un raggio, non un regalo a tutti');
+  }
+
+  // --- 9) LA CATENA: un barile che scoppia accende anche il braciere -----------------------
+  // Non e' una funzione scritta apposta: e' quello che succede perche' esplosioni e proiettili
+  // passano tutti dallo stesso imbuto (`colpisciOggetti`, v2.21). Vale la pena bloccarlo con un
+  // test proprio perche' nessuno lo ha scritto: e' la prova che l imbuto e ancora uno solo.
+  {
+    const s = stanza('braciere'); assert(s, 'una mappa col braciere');
+    const { r, p, o } = s;
+    r.monsters.length = 0;
+    assert(o.st === 0, 'il braciere e spento');
+    r._scoppioBarile({ x: o.x + 30, y: o.y }, p);
+    assert(o.st === 1, 'e lo scoppio di un barile vicino lo accende');
+  }
+
+  // --- 10) LE CASSE: piu grandi e piu luminose, ma si aprono come prima --------------------
+  // Il rischio dell'ingrandimento era questo: il raggio di raccolta si calcola sul CORPO, lato
+  // server. Se fosse cresciuto anche quello, le casse si sarebbero aperte passandoci accanto — e
+  // aprire una cassa per sbaglio, con dentro un mimic, e' un modo di morire senza aver scelto niente.
+  {
+    assert(C.CASSA_SCALA === 1.5, 'il disegno cresce di meta (' + C.CASSA_SCALA + ')');
+    assert(C.CASSA_LUCE >= 110, 'e la luce quasi raddoppia: era 60 (' + C.CASSA_LUCE + ')');
+    const srcR = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    assert(/CASSA_SCALA/.test(srcR) && /CASSA_LUCE/.test(srcR), 'e il renderer legge le due manopole');
+    const r = new Room('v228c'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame(3);
+    assert(r.crates.length > 0, 'ci sono casse in campo');
+    for (const c of r.crates) assert(c.r === 16, 'e il loro CORPO e rimasto 16: si aprono da dove si aprivano prima');
+  }
+  ok('sei oggetti nuovi in campo, e le casse si vedono');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
