@@ -8087,7 +8087,9 @@ function testV226() {
   // collegati. Un box che nessuno riempie resta vuoto senza lamentarsi.
   {
     const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
-    for (const id of ['striscia', 'recordBox', 'consiglioBox', 'riprendiCard', 'rpDet', 'scartaBtn', 'menuSotto', 'novitaCard', 'novitaLista'])
+    // v2.30 — `striscia` e `menuSotto` non ci sono piu': record e consiglio sono saliti nella colonna
+    // di destra (#colLato) e i comandi sono scesi sotto. I pezzi che contano sono gli stessi.
+    for (const id of ['menuDue', 'colEroe', 'colLato', 'recordBox', 'consiglioBox', 'riprendiCard', 'rpDet', 'scartaBtn', 'novitaCard', 'novitaLista'])
       assert(html.indexOf('id="' + id + '"') >= 0, 'la pagina ha il pezzo #' + id);
     assert(html.indexOf('/shared/consigli.js') >= 0, 'e carica i consigli');
     // il pulsante Riprendi sta DENTRO la scheda: se restasse fuori, la scheda direbbe a che punto sei
@@ -8098,7 +8100,7 @@ function testV226() {
     assert(/class="riga2"/.test(html), 'nome e stanza stanno su una riga sola');
 
     const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
-    assert(/#menuColonne\{display:flex;flex-direction:column/.test(css), 'il menu e una pila, non due colonne');
+    assert(/#menuColonne\{display:flex;flex-direction:column/.test(css), 'la schermata e una pila verticale: scheda, poi comandi');
     assert(/#infoCard \.tasti\{display:grid/.test(css), 'e i comandi sono una griglia: a tutta larghezza una lista sarebbe alta il doppio');
 
     const hud = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
@@ -8122,7 +8124,9 @@ function testV226() {
     assert(/catch \(_\)/.test(blocco), 'e tutto sta dentro try/catch: localStorage SOLLEVA in finestra anonima');
     const se = main.indexOf('function showEnd');
     const fine = main.slice(se, se + 1400);
-    assert(/if \(!G\.provaOnda\)/.test(fine), 'le partite di prova non scrivono il record');
+    // v2.30 — la modalita' di prova e' stata tolta, quindi `G.provaOnda` non si accende piu'. Il
+    // guardiano resta: il giorno che il pannello tornasse, tornerebbe gia' protetto.
+    assert(/if \(!G\.provaOnda\)/.test(fine), 'e il guardiano delle partite di prova e ancora al suo posto');
     assert(/Record\.forse\(/.test(fine), 'e una partita vera si');
     assert(/me\.lvl/.test(fine) && !/me\.level/.test(fine),
       'e il livello si legge da `lvl`: `lv` sono le VITE, e avrebbe scritto Lv.2 su un personaggio al quindicesimo');
@@ -8978,6 +8982,110 @@ function testV229() {
   ok('il tetto e a 16, e sopra l elite c e il campione col suo modificatore');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =====================================================================================================
+// TEST 90 — v2.30: la schermata a due meta', e la modalita' di prova che non c'e' piu'
+// Paolo: *«la schermata con l'eroe dividila in 2 colonne: nella meta' a sinistra quella per personaggio
+// (ricrealo x la lunghezza sfruttando il ratio dell'immagine), in quella a destra invece metti i box
+// dei record, quello dei consigli, le novita' e quello del salvataggio. Tutti e 4 impilati tanto sono
+// piccoli. Togli la modalita' di prova e sotto metti quello dei comandi»*.
+// Un impaginato non si prova con un test: si guarda. Quello che si difende qui e' che i pezzi stiano
+// DOVE devono stare (l'ordine nel documento e' l'ordine sullo schermo), che la modalita' di prova sia
+// sparita da tutte e tre le porte da cui si entrava, e che quello che la faceva funzionare sia ancora
+// intero — perche' e' anche quello che usano i test.
+// =====================================================================================================
+function testV230() {
+  console.log('\n[TEST 90] v2.30 — due colonne, e la modalita di prova chiusa');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+  const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+  const main = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+  const hud = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+
+  // --- 1) DUE COLONNE, E DENTRO LE COSE GIUSTE ----------------------------------------------
+  assert(/#menuDue\{display:grid;grid-template-columns:1fr 1fr/.test(css), 'la schermata dell eroe e divisa in due meta uguali');
+  const iDue = html.indexOf('id="menuDue"'), iEroe = html.indexOf('id="colEroe"'), iLato = html.indexOf('id="colLato"');
+  assert(iDue >= 0 && iEroe > iDue && iLato > iEroe, 'la colonna dell eroe viene prima di quella dei riquadri');
+  // la scheda dell eroe sta a SINISTRA e da sola: se finisse a destra insieme ai quattro riquadri il
+  // CSS non se ne accorgerebbe, disegnerebbe due colonne con dentro la roba sbagliata.
+  const dentroEroe = html.slice(iEroe, iLato);
+  assert(dentroEroe.indexOf('id="heroScelta"') >= 0 && dentroEroe.indexOf('id="heroPallini"') >= 0, 'a sinistra c e la scheda dell eroe');
+  assert(dentroEroe.indexOf('id="novitaCard"') < 0 && dentroEroe.indexOf('id="recordBox"') < 0, 'e a sinistra c e SOLO quella');
+
+  // --- 2) I QUATTRO RIQUADRI, NELL ORDINE CHE HA CHIESTO ------------------------------------
+  const fineLato = html.indexOf('id="connectBtn"');
+  const dentroLato = html.slice(iLato, fineLato);
+  const ordine = ['recordBox', 'consiglioBox', 'novitaCard', 'riprendiCard'];
+  let pos = -1;
+  for (const id of ordine) {
+    const q = dentroLato.indexOf('id="' + id + '"');
+    assert(q > pos, 'a destra, ' + id + ' sta al suo posto nella pila');
+    pos = q;
+  }
+  assert(dentroLato.indexOf('id="riprendiBtn"') > dentroLato.indexOf('id="riprendiCard"'), 'e Riprendi sta dentro la sua scheda');
+
+  // --- 3) I COMANDI SOTTO, LARGHI QUANTO LA SCHERMATA ---------------------------------------
+  // "sotto" nel documento e' "sotto" sullo schermo: #infoCard sta FUORI da .menu-card e dopo di essa.
+  const iCard = html.indexOf('<div class="menu-card">'), iInfo = html.indexOf('id="infoCard"');
+  assert(iInfo > fineLato, 'il box dei comandi viene dopo la scheda');
+  assert(html.slice(iCard, iInfo).split('</div>').length > 3, 'ed e fuori dalla scheda, non dentro');
+  assert(/#menu>#infoCard\{width:min\(1180px,96vw\)/.test(css), 'ed e largo quanto la schermata');
+  assert(/#infoCard \.tasti\{display:grid/.test(css), 'cosi la legenda e una griglia e non una lista alta undici righe');
+
+  // --- 4) L ARTWORK AL SUO RAPPORTO ---------------------------------------------------------
+  // I ritratti sono 174x452. La larghezza della casella si calcola DALL ALTEZZA con quel rapporto:
+  // e' l'unico modo in cui il personaggio si vede intero invece che tagliato a meta' da object-fit.
+  assert(/--hh:clamp\(/.test(css), 'l altezza della scheda sta in una variabile');
+  assert(/grid-template-columns:min\(48%,calc\(var\(--hh\) \* 174 \/ 452\)\)/.test(css),
+    'e la larghezza dell artwork viene da li col rapporto dell immagine (174x452)');
+  // e il rapporto dichiarato nel CSS e' quello VERO dei file, non un numero scritto a memoria
+  {
+    const dir = ROOT + 'public/assets/classi';
+    let visti = 0;
+    if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) {
+      if (!/\.png$/i.test(f)) continue;
+      const b = fs.readFileSync(path.join(dir, f));
+      const w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+      assert(Math.abs(w / h - 174 / 452) < 0.03, f + ' ha il rapporto che il CSS si aspetta (' + w + 'x' + h + ')');
+      visti++;
+    }
+    // se i ritratti non ci sono (succede in un ambiente senza gli asset) il controllo sopra non gira:
+    // meglio dirlo che lasciar credere che sia passato.
+    console.log('      (ritratti verificati: ' + visti + ')');
+  }
+  assert(!/object-position:50% 18%/.test(css), 'e non si ritaglia piu una fetta centrale dell immagine');
+
+  // --- 5) LA MODALITA' DI PROVA E' CHIUSA DA TUTTE E TRE LE PORTE ---------------------------
+  // Erano tre: la voce nel menu, il tasto T, e `?test` nell'indirizzo. Toglierne due su tre
+  // significa non averla tolta.
+  assert(html.indexOf('id="provaBox"') < 0, 'il pannello della prova non e piu nella pagina');
+  assert(html.indexOf('id="provaGrid"') < 0 && html.indexOf('id="provaAbil"') < 0, 'ne le sue due griglie');
+  assert(!/[?&#]test\\\\b/.test(main) && main.indexOf('location.search + location.hash') < 0, 'ne la scorciatoia ?test');
+  assert(main.indexOf("e.key !== 't'") < 0, 'ne il tasto T');
+  {
+    const i0 = html.indexOf('id="infoCard"');
+    const legenda = html.slice(i0, html.indexOf('</aside>', i0));
+    assert(!/Modalit/.test(legenda), 'e la legenda dei comandi non promette piu un tasto che non fa niente');
+  }
+  // --- 6) MA QUELLO CHE LA FACEVA FUNZIONARE E' ANCORA INTERO -------------------------------
+  // Spenta, non cancellata: stesso trattamento dei due mercanti. Ed e' anche l'unica strada con cui
+  // i test fanno partire una run da un'ondata alta — se sparisse, sparirebbe meta' di questo file.
+  // si pretende la DEFINIZIONE, non una qualunque comparsa del nome: cancellando la funzione e
+  // lasciando in giro una chiamata, un controllo sul solo nome passerebbe liscio. Provato.
+  assert(/\n    buildProva\(max, cb\) \{/.test(hud) && /\n    buildProvaAbil\(heroId\) \{/.test(hud),
+    'le due funzioni che costruivano il pannello ci sono ancora, per intero');
+  assert(/const box = \$\('provaAbil'\); if \(!box\) return;/.test(hud),
+    'e escono da sole se il loro pezzo di pagina non c e: e per questo che non serve toccarle');
+  {
+    // la prova vera: il server fa ancora partire una run da un ondata scelta
+    const r = new Room('v230'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger');
+    r.startGame(13, true);
+    assert(r.wave === 13, 'e il server fa ancora partire una run dall ondata che gli chiedi (' + r.wave + ')');
+    assert(p.level > 1, 'col personaggio che avresti a quel punto (lv ' + p.level + ')');
+  }
+  ok('due colonne, i quattro riquadri in pila, i comandi sotto e la prova chiusa');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

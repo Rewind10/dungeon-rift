@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.29.0',
+    VERSION: '2.30.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.29.0',
+      v: '2.30.0',
       righe: [
-        'Arrivano i <b>Campioni</b>: un grado sopra gli elite, uno dalla 5&ordf; ondata e due dall\'11&ordf;.',
-        'Ognuno porta un <b>modificatore</b> — corazzato, rigenerante, scortato, infuriato — e il <b>colore dice quale</b>.',
-        'Pi&ugrave; nemici: <b>16</b> in campo insieme (erano 14) e <b>24</b> per ondata (erano 20).',
+        'Schermata nuova: a sinistra l\'eroe (adesso si vede <b>tutto intero</b>), a destra record, consiglio, novit&agrave; e partita salvata.',
+        'Il box dei <b>comandi</b> sta sotto, largo quanto la schermata. La modalit&agrave; di prova non c\'&egrave; pi&ugrave;.',
+        'Dalla v2.29: i <b>Campioni</b> coi quattro modificatori, e pi&ugrave; nemici in campo.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)

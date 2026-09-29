@@ -82,14 +82,10 @@
   <div id="titolone">
     <h1>DUNGEON <span>RIFT</span></h1>
     <p class="tag">Roguelike co-op frenetico · fino a 6 giocatori <small id="verBadge" class="ver">v2.2.0</small></p>
-    <!-- v2.26 — LA STRISCIA. Due cose su una riga sola, sotto il titolo: a sinistra il RECORD (fino
-         alla v2.25 il gioco non si ricordava niente di te: morivi, leggevi il riepilogo, e spariva),
-         a destra un CONSIGLIO a caso. Il box dei comandi qui sotto dice quali tasti; il consiglio dice
-         come si gioca, che e' l'altra meta' e non stava da nessuna parte. -->
-    <div id="striscia">
-      <div id="recordBox" class="chip rec"></div>
-      <div id="consiglioBox" class="chip tip"></div>
-    </div>
+    <!-- v2.30 — LA STRISCIA NON STA PIU' QUI. Record e consiglio erano due pastiglie larghe sotto il
+         titolo: erano la prima cosa che si leggeva entrando, prima ancora del proprio eroe. Adesso
+         sono due schede nella colonna di destra, insieme alle novita' e al salvataggio — quattro
+         riquadri impilati accanto alla scheda dell'eroe. -->
     <!-- v2.8.2 — qui c'era IL RICHIAMO, tre frasi sotto il titolo che dicevano di cosa parla il gioco.
          v2.20.1 — TOLTO su richiesta di Paolo. Con la scheda della classe cresciuta (v2.19.9) e la guida
          dei comandi a destra, la schermata era diventata lunga: il richiamo era la parte che si poteva
@@ -98,38 +94,63 @@
   </div>
   <div id="menuColonne">
     <div class="menu-card">
-      <!-- v2.26 — LA PARTITA SALVATA, IN CIMA E COME SCHEDA. Era un pulsante in fondo alla colonna,
-           sotto la scelta dell'eroe: ma chi ha una partita in corso non e' li' per scegliere un eroe,
-           e' li' per tornarci dentro. Adesso e' la prima cosa, dice a che punto sei e ti lascia
-           andare. Compare solo se un salvataggio c'e' davvero. -->
-      <div id="riprendiCard" class="hidden">
-        <div class="rp-art"><img id="rpArt" src="" alt="" draggable="false"></div>
-        <div class="rp-txt">
-          <div class="rp-tit">Partita in corso</div>
-          <div class="rp-det" id="rpDet"></div>
-        </div>
-        <div class="rp-btn">
-          <button id="riprendiBtn" class="primary riprendi" type="button">▶ Riprendi</button>
-          <button id="scartaBtn" class="ghost" type="button" title="Cancella il salvataggio dal browser">Scarta</button>
-        </div>
-      </div>
-      <!-- v2.26 — nome e stanza AFFIANCATI: sono due campi corti, uno sotto l'altro sprecavano mezza
-           riga di larghezza in un box che adesso e' largo il doppio. -->
+      <!-- nome e stanza AFFIANCATI: sono due campi corti, uno sotto l'altro sprecavano mezza riga di
+           larghezza in un box largo quanto la schermata. -->
       <div class="riga2">
         <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
         <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
       </div>
       <h2>Scegli il tuo eroe</h2>
-      <!-- v2.18 — IL BOX QUADRATO al posto dei riquadri delle tre classi. Le classi sono sette: sette
-           riquadri in fila sarebbero sette francobolli, e la scelta si farebbe a caso. Qui se ne vede
-           UNA alla volta, grande: l'artwork a sinistra, e a destra nome, epiteto, i cinque punti
-           attributo e cosa fa. Si scorre con le frecce ai lati o con i tasti freccia. -->
-      <div id="heroRiga">
-        <button id="heroPrev" class="hero-arrow" type="button" aria-label="Classe precedente">&#10094;</button>
-        <div id="heroScelta"></div>
-        <button id="heroNext" class="hero-arrow" type="button" aria-label="Classe successiva">&#10095;</button>
+      <div id="menuDue">
+        <!-- COLONNA SINISTRA — la scelta. Una cosa sola, grande. -->
+        <div id="colEroe">
+          <!-- v2.18 — IL BOX al posto dei riquadri delle sette classi: sette riquadri in fila sarebbero
+               sette francobolli e la scelta si farebbe a caso. Qui se ne vede UNA alla volta, grande.
+               Si scorre con le frecce ai lati o con i tasti freccia.
+               v2.30 — e adesso l'artwork si vede INTERO. I ritratti sono 174x452 — alti due volte e
+               mezzo la loro larghezza — e finora stavano in una casella larga e bassa con
+               `object-fit:cover`: si vedeva una fetta centrale, e del personaggio mancavano le gambe.
+               In mezza colonna la scheda puo' essere ALTA, e allora la casella dell'artwork prende
+               esattamente il RAPPORTO dell'immagine: niente ritaglio, il personaggio c'e' tutto. -->
+          <div id="heroRiga">
+            <button id="heroPrev" class="hero-arrow" type="button" aria-label="Classe precedente">&#10094;</button>
+            <div id="heroScelta"></div>
+            <button id="heroNext" class="hero-arrow" type="button" aria-label="Classe successiva">&#10095;</button>
+          </div>
+          <div id="heroPallini"></div>
+        </div>
+        <!-- COLONNA DESTRA — quattro riquadri impilati, tutti aperti, niente da cliccare. -->
+        <div id="colLato">
+          <!-- il RECORD: fino alla v2.25 il gioco non si ricordava niente di te — morivi, leggevi il
+               riepilogo, tornavi al menu e il menu era identico a quello della prima volta. -->
+          <div id="recordBox" class="info-card mini rec"></div>
+          <!-- il CONSIGLIO a caso: il box dei comandi dice quali TASTI, questo dice come si GIOCA. -->
+          <div id="consiglioBox" class="info-card mini tip"></div>
+          <!-- v2.26 — LE NOVITA' DELLA VERSIONE. Il changelog e' un file .md che non apre nessuno: tre
+               righe qui dicono a chi torna dopo una settimana cosa e' cambiato. Il testo sta in
+               `constants.js` (C.NOVITA) col numero di versione, cosi' i due non si separano. -->
+          <aside class="info-card novita" id="novitaCard">
+            <h2 class="info-h">🆕 Novità <span id="novitaVer"></span></h2>
+            <ul class="nov-lista" id="novitaLista"></ul>
+            <p class="nov-pie">Il diario completo sta in <b>CHANGELOG.md</b>.</p>
+          </aside>
+          <!-- v2.26 — LA PARTITA SALVATA, IN CIMA E COME SCHEDA. Era un pulsante in fondo alla colonna,
+               sotto la scelta dell'eroe: ma chi ha una partita in corso non e' li' per scegliere un eroe,
+               e' li' per tornarci dentro. Adesso e' la prima cosa, dice a che punto sei e ti lascia
+               andare. Compare solo se un salvataggio c'e' davvero. -->
+          <div id="riprendiCard" class="hidden">
+            <div class="rp-art"><img id="rpArt" src="" alt="" draggable="false"></div>
+            <div class="rp-txt">
+              <div class="rp-tit">Partita in corso</div>
+              <div class="rp-det" id="rpDet"></div>
+            </div>
+            <div class="rp-btn">
+              <button id="riprendiBtn" class="primary riprendi" type="button">▶ Riprendi</button>
+              <button id="scartaBtn" class="ghost" type="button" title="Cancella il salvataggio dal browser">Scarta</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="heroPallini"></div>
       <button id="connectBtn" class="primary">▶  ENTRA IN PARTITA</button>
       <!-- v2.11 — RIPRENDI sta nella PRIMA schermata, non nella sala d'attesa: una partita salvata si
            riprende prima di scegliere eroe e stanza, non dopo. E compare SOLO se c'e' davvero un
@@ -137,62 +158,41 @@
            per dire una cosa che non serve a nessuno. Chi non ha mai salvato lo scoprira' dall'Ostessa.
            v2.26 — il pulsante e' salito in cima al box, dentro la scheda #riprendiCard. -->
       <div id="menuMsg"></div>
-      <!-- v2.17.1 — LA MODALITA' DI PROVA E' UNA VOCE DI MENU, non una scorciatoia da sapere.
-           Il commento della v1.99 diceva «torna visibile» ma la classe `hidden` era rimasta li': il
-           pannello c'era e non lo vedeva nessuno, e per aprirlo bisognava sapere di `?test` o del tasto
-           T. Adesso e' una voce chiusa che si apre con un clic, sotto la scelta dell'eroe — dove uno
-           che vuole provare una magia la cerca. Le due scorciatoie restano e ora si limitano ad aprirla. -->
-      <details class="help prova" id="provaBox">
-        <summary>🧪 Modalità di prova — scegli le magie e parti da un'ondata</summary>
-        <p class="tag" style="margin:8px 0 6px;font-size:13px">Entri da solo con il personaggio che avresti a
-          quel punto: livello, punti spesi, equipaggiamento e abilità — e con le <b>abilità attive che
-          scegli qui sotto</b>. Dall'ondata 1 si parte subito, senza prologo né villaggio.</p>
-        <!-- v2.17 — le abilita' attive con cui entrare in prova: due righe, una per tasto. -->
-        <div class="pa-tit">Abilità attive — si parte con queste</div>
-        <div id="provaAbil"></div>
-        <div class="pa-tit">Da quale ondata</div>
-        <div id="provaGrid"></div>
-      </details>
+      <!-- v2.30 — LA MODALITA' DI PROVA NON C'E' PIU'. Paolo: *«togli la modalita' di prova»*, e
+           «del tutto, anche il tasto T». Era un pannello da sviluppo finito in una schermata da
+           giocatore: venti pulsanti per partire dall'ondata che vuoi, piu' la scelta delle magie.
+           Serviva a me per misurare un'ondata alta senza rigiocare le quattordici prima, e a lui
+           per provare. Adesso non c'e' ne' la voce, ne' il tasto T, ne' `?test` nell'indirizzo.
+           Il codice che la costruisce (`HUD.buildProva`, `HUD.buildProvaAbil`) e quello che fa
+           partire una run da un'ondata scelta (`Net.start(onda, abil)`) restano interi, spenti,
+           come i due mercanti: sono le stesse funzioni che usano i test automatici, e riaccendere
+           il pannello vuol dire rimettere questo pezzo di HTML. -->
     </div>
 
-    <!-- La colonna delle info: UNA PAGINA SOLA, tutta aperta. Niente accordion — un accordion in una
-         schermata di avvio e' un modo elegante di non far leggere niente a nessuno.
-         v2.8.2 — qui c'era anche "Come funziona una run", cinque punti fitti di regole. E' diventato il
-         RICHIAMO sotto il titolo, vago di proposito: chi arriva nuovo non vuole un manuale, vuole sapere
-         se gli interessa. Qui restano i COMANDI, che servono davvero mentre si gioca. -->
-    <div id="menuSotto">
-    <aside class="info-card" id="infoCard">
-      <h2 class="info-h">⌨️ Comandi</h2>
-      <div class="tasti">
-        <div class="tasto"><span class="kb">W A S D</span><span class="kb alt">↑ ↓ ← →</span><b>Muoversi</b></div>
-        <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
-        <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
-        <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
-        <!-- v2.16 — i tasti hanno cambiato mestiere: le abilita' stanno sui NUMERI e le pozioni su Q ed E.
-             Questa legenda era rimasta alla versione prima e diceva il contrario, con i livelli 8 e 14
-             che non esistono piu'. v2.18 — gli slot delle abilita' sono tre e si aprono a 1, 7 e 13. -->
-        <div class="tasto"><span class="kb">1 2 3</span><b>Abilità attive</b><i>si sbloccano ai livelli 1, 7 e 13</i></div>
-        <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Pozioni</b><i>le due della cintura</i></div>
-        <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: è l'illuminazione giusta</i></div>
-        <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
-        <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
-        <div class="tasto"><span class="kb">T</span><b>Modalità di prova</b><i>da questa schermata</i></div>
-      </div>
-
-      <p class="info-nota">Nelle grotte vedi solo dove arriva la <b>torcia</b>: davanti lontano, alle spalle
-        quasi niente, e i muri fanno ombra. Quello che non vedi resta comunque sulla <b>minimappa</b>.</p>
-    </aside>
-
-    <!-- v2.26 — LE NOVITA' DELLA VERSIONE. Il changelog e' un file .md che non apre nessuno: tre
-         righe qui dicono a chi torna dopo una settimana cosa e' cambiato. Il testo sta in
-         `constants.js` (C.NOVITA) insieme al numero di versione, cosi' i due non possono separarsi. -->
-    <aside class="info-card novita" id="novitaCard">
-      <h2 class="info-h">🆕 Novità <span id="novitaVer"></span></h2>
-      <ul class="nov-lista" id="novitaLista"></ul>
-      <p class="nov-pie">Il diario completo sta in <b>CHANGELOG.md</b>.</p>
-    </aside>
-    </div>
   </div>
+  <!-- v2.30 — I COMANDI STANNO SOTTO, larghi quanto la schermata. Erano la colonna di destra, e
+       rubavano meta' larghezza a una legenda che si legge una volta sola. Adesso le due colonne di
+       sopra sono la schermata (scegli a sinistra, leggi a destra) e questa e' la didascalia. -->
+  <aside class="info-card comandi" id="infoCard">
+    <h2 class="info-h">⌨️ Comandi</h2>
+    <div class="tasti">
+      <div class="tasto"><span class="kb">W A S D</span><span class="kb alt">↑ ↓ ← →</span><b>Muoversi</b></div>
+      <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
+      <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
+      <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
+      <!-- v2.16 — i tasti hanno cambiato mestiere: le abilita' stanno sui NUMERI e le pozioni su Q ed E.
+           Questa legenda era rimasta alla versione prima e diceva il contrario, con i livelli 8 e 14
+           che non esistono piu'. v2.18 — gli slot delle abilita' sono tre e si aprono a 1, 7 e 13. -->
+      <div class="tasto"><span class="kb">1 2 3</span><b>Abilità attive</b><i>si sbloccano ai livelli 1, 7 e 13</i></div>
+      <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Pozioni</b><i>le due della cintura</i></div>
+      <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: è l'illuminazione giusta</i></div>
+      <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
+      <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
+    </div>
+
+    <p class="info-nota">Nelle grotte vedi solo dove arriva la <b>torcia</b>: davanti lontano, alle spalle
+      quasi niente, e i muri fanno ombra. Quello che non vedi resta comunque sulla <b>minimappa</b>.</p>
+  </aside>
   <div class="credits">Motore custom · netcode autoritativo · audio procedurale · nessuna dipendenza</div>
 </div>
 <div id="lobby" class="hidden">

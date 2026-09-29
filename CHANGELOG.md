@@ -2,6 +2,128 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.30.0] — 2026-09-29 · "A sinistra si sceglie, a destra si legge"
+
+Paolo, guardando la schermata di avvio: *«la schermata con l'eroe dividila in 2 colonne: nella meta' a
+sinistra quella per personaggio (ricrealo x la lunghezza sfruttando il ratio dell'immagine), in quella
+a destra invece metti i box dei record, quello dei consigli, le novita' e quello del salvataggio. Tutti
+e 4 impilati tanto sono piccoli. Togli la modalita' di prova e sotto metti quello dei comandi»*.
+
+---
+
+### 🧍 L'eroe adesso si vede TUTTO
+
+E' la parte a cui tengo di piu' di questa versione, e non me ne ero mai accorto.
+
+I ritratti delle classi sono **174×452** — alti due volte e mezzo la loro larghezza, figure intere.
+Finora stavano in una casella **larga e bassa** con `object-fit:cover`, cioe' il browser prendeva la
+fetta centrale e buttava via il resto: del barbaro si vedeva il torso, e l'ascia, le gambe e gli
+stivali non li aveva visti nessuno. Non era un bug — nessuno se n'era accorto perche' la fetta era
+comunque un bel ritratto.
+
+In mezza schermata la scheda puo' essere **alta**, e allora il conto si puo' fare al contrario: e'
+l'**altezza** a decidere la larghezza della casella, col rapporto dell'immagine.
+
+```css
+#heroScelta{--hh:clamp(430px,64vh,600px);height:var(--hh)}
+.hcard{grid-template-columns:min(48%,calc(var(--hh) * 174 / 452)) 1fr}
+```
+
+Cosi' su uno schermo alto il personaggio e' piu' largo e su uno basso piu' stretto, ma **non e' mai
+ritagliato e non e' mai deformato**. Misurato in pagina: rapporto **0,387** contro lo 0,385 dei file.
+
+*Il primo taglio non funzionava*: avevo messo `aspect-ratio:174/452` sulla casella e
+`grid-template-columns:auto`. Sembra la strada giusta e non lo e' — la colonna `auto` vuole misurarsi
+sul contenuto, il contenuto si misura sulla colonna, e il browser si arrende: misurato **0,185**, cioe'
+il personaggio tagliato ai lati invece che sopra e sotto. Calcolando la larghezza dall'altezza il conto
+e' diretto e non c'e' niente da indovinare.
+
+---
+
+### 🗂️ Due meta': a sinistra si sceglie, a destra si legge
+
+| | |
+|---|---|
+| **sinistra** | la scheda dell'eroe, con le frecce e i pallini. Una cosa sola, grande. |
+| **destra** | quattro riquadri impilati, tutti aperti: **record**, **consiglio**, **novita'**, **partita salvata**. |
+| **sotto** | i **comandi**, larghi quanto la schermata. |
+
+Record e consiglio erano due pastiglie larghe **sotto il titolo**: erano la prima cosa che si leggeva
+entrando, prima ancora del proprio eroe. Il salvataggio era in cima alla colonna. Adesso stanno tutti
+nella stessa pila, e la pila e' alta quanto la scheda accanto.
+
+Le due colonne **partono dallo stesso bordo in alto** e non si pareggiano in basso (`align-items:start`):
+la scheda e' alta perche' ha un ritratto intero dentro, la pila e' alta quanto sono i suoi quattro
+riquadri, e stirare l'una per pareggiare l'altra vorrebbe dire quattro scatole mezze vuote.
+
+I **comandi** erano la colonna di destra e rubavano meta' larghezza a una legenda che si legge una
+volta sola. A tutta larghezza la griglia `auto-fit` ci mette quattro colonne da sola e la legenda si
+legge in un colpo d'occhio.
+
+**Il pulsante ENTRA IN PARTITA resta sopra la piega**, che e' il metro di questa schermata dalla
+v2.26. Verificato in pagina a 1440×900 e a **1280×800** — la misura di portatile piu' diffusa che
+esista: il pulsante sta a 749 px e a 700 px, dentro la finestra in tutti e due i casi. Sotto i 1080 px
+di larghezza le due meta' vanno in pila e si scorre, come prima.
+
+---
+
+### 🧪 Via la modalita' di prova
+
+Era un pannello da sviluppo finito in una schermata da giocatore: venti pulsanti per partire
+dall'ondata che vuoi, piu' la scelta delle abilita' attive. Chiesto di toglierla **«del tutto, anche il
+tasto T»**, e le porte erano **tre**: la voce nel menu, il tasto **T**, e `?test` nell'indirizzo.
+Toglierne due su tre significa non averla tolta — ci sono tre controlli separati, uno per porta.
+
+**Spenta, non cancellata**, come i due mercanti: `HUD.buildProva`, `HUD.buildProvaAbil` e la partenza
+da un'ondata scelta lato server (`Net.start(onda, abil)`) restano intere. Non e' delicatezza: e' la
+stessa strada con cui i test automatici fanno partire una run dall'ondata 13 senza giocare le dodici
+prima. Riaccendere il pannello vuol dire rimettere un pezzo di HTML e venti righe in `main.js`.
+
+---
+
+### 🧪 Numeri
+
+**Test: 6.127 passati, 0 falliti.** TEST 90 nuovo; il TEST 85 (v2.26) aggiornato agli id nuovi.
+
+| cosa ho rotto apposta | il test se n'e' accorto |
+|---|---|
+| le due colonne tornano una sola | ✅ |
+| l'eroe a destra e i quattro riquadri a sinistra | ✅ 2 controlli rossi |
+| il record scende sotto le novita' | ✅ 2 controlli rossi |
+| i comandi tornano stretti | ✅ |
+| l'artwork torna a larghezza fissa / torna ritagliato | ✅ 1 controllo rosso ciascuno |
+| il pannello della prova torna nella pagina | ✅ 5 controlli rossi |
+| il tasto T torna nella legenda / nel codice | ✅ 1 controllo rosso ciascuno |
+| le funzioni della prova vengono cancellate | ✅ *(e alla prima stesura **no** — sotto)* |
+
+**Due controlli miei che passavano sotto il proprio sabotaggio**, la stessa famiglia di errore di
+sempre:
+
+- *«le funzioni della prova ci sono ancora»* cercava il **nome** `buildProvaAbil(`. Cancellando la
+  funzione e lasciando in giro una chiamata, il nome c'era lo stesso e il controllo restava verde.
+  Adesso pretende la **definizione** intera.
+- *«a sinistra c'e' solo l'eroe»* lo avevo provato spostando il tag della colonna di destra: ma quel
+  tag e' il confine con cui il controllo taglia il documento, quindi spostandolo si sposta anche il
+  metro e non cambia niente. Il sabotaggio giusto e' **scambiare le due colonne**, e li' diventa rosso.
+
+E il rapporto dell'artwork non e' un numero scritto a memoria nel test: il controllo **apre i PNG dei
+ritratti** e legge larghezza e altezza dall'intestazione del file. Se un domani qualcuno rifacesse gli
+artwork con un taglio diverso, il CSS e i file non potrebbero divergere in silenzio.
+
+| file | cosa |
+|---|---|
+| `public/index.html` | le due colonne (`#menuDue`, `#colEroe`, `#colLato`); i quattro riquadri in pila; i comandi fuori dalla scheda; via il pannello della prova e la voce T |
+| `public/style.css` | l'artwork al rapporto dell'immagine; le due meta'; record e consiglio da pastiglie a schede; i comandi a tutta larghezza |
+| `public/js/main.js` | via il cablaggio della prova (`?test`, tasto T, costruzione del pannello) |
+| `public/js/hud.js` | le classi dei due riquadri piccoli |
+| `shared/constants.js` | versione e novita' |
+| `test/simulate.js` | TEST 90; il TEST 85 aggiornato |
+
+**Ancora rosso, e non e' di questa versione**: `test/client.js` e' rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde.
+
+---
+
 ### [2.29.0] — 2026-09-29 · "Il colore dice come si combatte"
 
 Paolo, dopo aver provato la v2.28.1: *«il gioco mi sembra diventato troppo facile: sarebbe bello avere

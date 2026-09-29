@@ -75,13 +75,13 @@
       const r = $('recordBox');
       if (r) {
         if (rec && rec.ondata > 0) {
-          r.className = 'chip rec';
+          r.className = 'info-card mini rec';
           r.innerHTML = '\uD83C\uDFC6 Record: ondata <b>' + rec.ondata + '</b>'
             + (rec.classe ? ' \u00b7 ' + rec.classe : '')
             + (rec.livello ? ' Lv.' + rec.livello : '')
             + (rec.uccisi ? ' \u00b7 ' + rec.uccisi + ' nemici' : '');
         } else {
-          r.className = 'chip rec vuoto';
+          r.className = 'info-card mini rec vuoto';
           r.innerHTML = '\uD83C\uDFC6 Nessun record ancora \u2014 lo scrive la tua prima run';
         }
       }

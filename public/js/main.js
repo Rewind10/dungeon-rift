@@ -145,32 +145,14 @@
     // v2.26 — le tre aggiunte della schermata nuova
     HUD.strisciaMenu(Record.leggi());
     HUD.novitaMenu();
-    // v1.91 — MODALITA' DI PROVA: venti pulsanti, uno per ondata. Serve a guardare prestazioni e
-    // giocabilita' di un'ondata alta senza rigiocare le quattordici che vengono prima. Si entra in una
-    // stanza tutta propria (nome a caso) e la run parte da sola: niente sala d'attesa da attraversare.
-    HUD.buildProvaAbil(HUD.selectedHero);
-    HUD.buildProva((C.PROVA_MAX_ONDATA || 20), (n) => {
-      G.provaOnda = n;
-      // v2.17 — le attive scelte viaggiano con la partenza: il server le mette in mano al personaggio
-      // anche all'ondata 1, dove il personaggio di prova non viene nemmeno costruito.
-      G.provaAbil = (HUD.provaAbil || []).filter(Boolean);
-      entra('prova' + n + '-' + Math.floor(Math.random() * 9000 + 1000));
-    });
-    // v1.99 — la modalita' di prova e' di nuovo VISIBILE nel menu (in v1.96.1 era nascosta). Le due
-    // scorciatoie che la aprivano restano, e servono ancora se un giorno la si richiude:
-    //   · ?test (o #test) nell'indirizzo  —  http://localhost:8080/?test
-    //   · il tasto T mentre si e' fermi nel menu
-    const prova = $('provaBox');
-    // v2.17.1 — la voce c'e' sempre (vedi index.html): le due scorciatoie si limitano ad APRIRLA.
-    const mostraProva = () => { if (prova) { prova.classList.remove('hidden'); prova.open = true; } };
-    if (/[?&#]test\b/.test(location.search + location.hash)) mostraProva();
-    window.addEventListener('keydown', (e) => {
-      if (e.key !== 't' && e.key !== 'T') return;
-      if ($('menu').classList.contains('hidden')) return;    // solo nel menu: in partita la T non fa niente
-      const a = document.activeElement;
-      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;   // stai scrivendo il nome
-      mostraProva();
-    });
+    // v2.30 — LA MODALITA' DI PROVA E' STATA TOLTA, e con lei tutto il suo cablaggio: il pannello nel
+    // menu (venti pulsanti, uno per ondata, piu' la scelta delle abilita' attive), la scorciatoia
+    // `?test` nell'indirizzo e il tasto T. Paolo l'ha chiesta via *«del tutto»*.
+    // Restano intatte, spente, le due funzioni che lo costruivano (`HUD.buildProva`,
+    // `HUD.buildProvaAbil` — entrambe escono subito se il loro nodo non c'e', ed e' il motivo per cui
+    // non e' servito toccarle) e la partenza da un'ondata scelta lato server (`Net.start(onda, abil)`),
+    // che e' quella che usano i test automatici. Riaccendere il pannello vuol dire rimettere il pezzo
+    // di HTML in index.html e queste venti righe: non e' stato cancellato niente di funzionante.
   }
   function entra(room) {
     A.resume();

@@ -97,10 +97,41 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 #menuColonne{display:flex;flex-direction:column;gap:18px;align-items:stretch;flex:none;
   width:min(1180px,96vw);animation:cardIn .5s cubic-bezier(.16,.84,.44,1) both}
 #menu .menu-card{width:auto}
-/* la riga di sotto: i comandi larghi e le novita' strette accanto. Sotto i 1080 px vanno in pila. */
-#menuSotto{display:flex;gap:18px;align-items:flex-start}
-#menuSotto>#infoCard{flex:1 1 0;min-width:0}
-#menuSotto>#novitaCard{flex:0 0 clamp(240px,26%,320px);min-width:0}
+
+/* ===================================================================================================
+   v2.30 — LA SCHERMATA A DUE META'
+   Paolo: *«la schermata con l'eroe dividila in 2 colonne: nella meta' a sinistra quella per
+   personaggio (ricrealo x la lunghezza sfruttando il ratio dell'immagine), in quella a destra invece
+   metti i box dei record, quello dei consigli, le novita' e quello del salvataggio. Tutti e 4 impilati
+   tanto sono piccoli. Togli la modalita' di prova e sotto metti quello dei comandi»*.
+   A sinistra si SCEGLIE, a destra si LEGGE, sotto c'e' la didascalia. E le due colonne partono dallo
+   stesso bordo in alto (`align-items:start`): la scheda dell'eroe e' alta, la pila di destra e' quanto
+   sono i suoi quattro riquadri, e stirare l'una per pareggiare l'altra vorrebbe dire quattro scatole
+   mezze vuote.
+   =================================================================================================== */
+#menuDue{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-bottom:16px}
+#colEroe,#colLato{min-width:0;display:flex;flex-direction:column;gap:12px}
+
+/* i due riquadri piccoli: record e consiglio. Erano due "chip" larghe sotto il titolo, adesso sono
+   schede come le altre — piu' basse e senza intestazione, perche' dicono una riga sola. */
+.info-card.mini{padding:12px 15px;font-size:13.5px;line-height:1.45}
+.info-card.mini.rec{color:#d9c07a;border-color:rgba(255,207,74,.22)}
+.info-card.mini.rec b{color:#ffcf4a}
+.info-card.mini.rec.vuoto{color:#8d97ae;border-color:rgba(146,164,214,.16)}
+.info-card.mini.rec::before{background:linear-gradient(90deg,transparent,rgba(255,207,74,.5),transparent)}
+.info-card.mini.tip{color:#b9c3d8}
+.info-card.mini.tip b{color:#e7ecf5}
+.info-card.mini.tip::before{background:linear-gradient(90deg,transparent,rgba(120,180,255,.45),transparent)}
+
+/* v2.30 — la scheda del salvataggio in una colonna stretta: il ritratto e il testo su una riga, i due
+   pulsanti sotto affiancati. Nella colonna larga di prima stavano tutti e tre in fila, qui no. */
+#colLato #riprendiCard{display:grid;grid-template-columns:54px 1fr;gap:10px 12px;margin:0}
+#colLato #riprendiCard .rp-btn{grid-column:1 / -1;flex-direction:row;gap:8px}
+#colLato #riprendiCard .rp-btn .primary{flex:1 1 auto}
+
+/* v2.30 — i COMANDI sotto, larghi quanto la schermata: la griglia `auto-fit` di sotto ci mette tre
+   colonne da sola, che e' il motivo per cui questa legenda si legge in un colpo d'occhio. */
+#menu>#infoCard{width:min(1180px,96vw);flex:none;margin:0 auto}
 
 /* v2.26 — I COMANDI A GRIGLIA. `auto-fit` e non un numero fisso di colonne: la stessa regola regge
    tre colonne a 1180 px, due a 800 e una sul telefono, senza tre media query che dicono la stessa
@@ -200,12 +231,10 @@ h2.info-h:not(:first-child){margin-top:17px}
 /* sotto i 1080 px le due colonne non ci stanno affiancate: la guida scende sotto, e resta leggibile. */
 @media (max-width:1080px){
   #menuColonne{width:min(620px,94vw)}
-  /* i comandi e le novita' vanno in pila, e la striscia del titolo pure: due chip affiancate su uno
-     schermo stretto diventano due colonne di tre parole l'una. */
-  #menuSotto{flex-direction:column}
-  #menuSotto>#novitaCard{flex:none;width:auto}
-  #striscia{flex-direction:column;width:min(620px,94vw)}
-  #striscia .rec{white-space:normal}
+  #menu>#infoCard{width:min(620px,94vw)}
+  /* v2.30 — sotto i 1080 px le due meta' non ci stanno affiancate: la pila dei quattro riquadri
+     scende sotto la scheda dell'eroe. Meglio scorrere che leggere in due colonne da tre parole. */
+  #menuDue{grid-template-columns:1fr}
   #menu{padding-top:28px}
   #titolone h1{font-size:clamp(32px,9vw,52px)}
 }
@@ -231,11 +260,29 @@ h2.info-h:not(:first-child){margin-top:17px}
    quanto serve alle competenze (almeno 520px), e la colonna di sinistra del menu si e' allargata (vedi
    #menuColonne sotto). L'artwork resta a sinistra, piu' largo. */
 
-#heroScelta{position:relative;flex:1 1 0;min-width:0;min-height:520px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.hcard{position:absolute;inset:0;display:grid;grid-template-columns:36% 1fr}
-.hcard .art{position:relative;overflow:hidden;background:#05060a}
-.hcard .art img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
-.hcard .vign{position:absolute;inset:0;background:linear-gradient(90deg,transparent 55%,rgba(20,23,38,.85) 100%)}
+/* v2.30 — L'ARTWORK AL SUO RAPPORTO, e la scheda alta quanto serve.
+   Paolo: *«ricrealo x la lunghezza sfruttando il ratio dell'immagine»*. I ritratti delle classi sono
+   174x452 — alti due volte e mezzo la loro larghezza — e finora stavano in una casella larga e bassa
+   con `object-fit:cover`: si vedeva una fetta centrale, e del personaggio mancavano le gambe.
+   Il trucco e' fare il contrario di prima: l'ALTEZZA della scheda la decide la finestra, e la
+   LARGHEZZA della casella dell'artwork viene dal rapporto dell'immagine (`aspect-ratio:174/452` con
+   `height:100%`). Cosi' su uno schermo alto il personaggio e' piu' largo e su uno basso piu' stretto,
+   ma non e' mai ritagliato e non e' mai deformato. Il `max-width` e' l'unico freno: su una finestra
+   molto alta l'artwork si mangerebbe meta' scheda e le competenze non ci starebbero piu'. */
+/* l'altezza della scheda sta in una variabile perche' la LARGHEZZA dell'artwork si calcola da lei:
+   174/452 e' il rapporto dei ritratti. Provato prima con `grid-template-columns:auto` e
+   `aspect-ratio` sulla casella: non funziona — la colonna `auto` dovrebbe misurarsi sul contenuto e
+   il contenuto si misura sulla colonna, quindi il browser si arrende e la casella usciva larga la
+   meta' (misurato: rapporto 0,185 invece di 0,385, cioe' il personaggio di nuovo tagliato ai lati).
+   Calcolandola dall'altezza il conto e' diretto e non c'e' niente da indovinare. */
+#heroScelta{--hh:clamp(430px,64vh,600px);position:relative;flex:1 1 0;min-width:0;height:var(--hh);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.hcard{position:absolute;inset:0;display:grid;grid-template-columns:min(48%,calc(var(--hh) * 174 / 452)) 1fr}
+.hcard .art{position:relative;overflow:hidden;background:#05060a;height:100%}
+.hcard .art img{width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block}
+/* v2.30 — la sfumatura che innesta l'artwork nella parte scritta parte piu' tardi: nella casella
+   larga di prima il 55% era il bordo destro dell'immagine, in una casella stretta come questa
+   incupiva mezzo personaggio. */
+.hcard .vign{position:absolute;inset:0;background:linear-gradient(90deg,transparent 72%,rgba(20,23,38,.8) 100%)}
 .hcard .info{padding:16px 16px 14px;display:flex;flex-direction:column;justify-content:center;gap:9px;overflow:hidden}
 .hcard h3{margin:0;font-size:calc(21px + var(--fz));letter-spacing:.06em;color:var(--pick)}
 .hcard .epi{margin:2px 0 0;font-size:calc(11px + var(--fz));color:var(--muted);font-style:italic}
@@ -248,7 +295,10 @@ h2.info-h:not(:first-child){margin-top:17px}
 .hcard .dsc{margin:0;font-size:calc(11px + var(--fz));line-height:1.42;color:#c3cad9}
 /* v2.19.9 — le competenze: etichetta a sinistra, valore a destra, una riga per voce */
 .hcard .comp{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--line);padding-top:9px}
-.hcard .cp{display:grid;grid-template-columns:104px 1fr;gap:8px;font-size:calc(11px + var(--fz));line-height:1.35;align-items:baseline}
+/* v2.30 — l'etichetta si stringe da 104 a 92 px e lo stacco da 8 a 7: nella colonna di meta'
+   schermata la parte scritta e' larga ~290 px, e ogni pixel tolto all'etichetta e' un pixel in cui
+   «leggere da mischia · leggere da arciere» sta su una riga invece che su due. */
+.hcard .cp{display:grid;grid-template-columns:92px 1fr;gap:7px;font-size:calc(11px + var(--fz));line-height:1.35;align-items:baseline}
 .hcard .cp .ck{color:var(--muted);white-space:nowrap}
 .hcard .cp .cv{color:#d3d9e6}
 .hcard .cp .cv b{color:var(--pick)}
@@ -264,14 +314,12 @@ h2.info-h:not(:first-child){margin-top:17px}
    doppio: l'artwork si stringe in proporzione (26% invece del 36%) e la parte scritta si apre su DUE
    colonne — a sinistra chi sei e i cinque attributi, a destra cosa sai fare. Stessa roba, meta'
    altezza, e non serve piu' scorrere per vedere il pulsante di sotto. */
+/* v2.30 — QUI C'ERANO LE DUE COLONNE DENTRO LA SCHEDA (v2.26): nel box largo quanto la schermata la
+   parte scritta si apriva su due colonne per non far diventare la scheda alta 520 px. Adesso la scheda
+   OCCUPA META' SCHERMATA e l'altezza e' quello che le si vuole dare, quindi torna a una colonna sola:
+   nome, attributi, competenze, uno sotto l'altro, che e' anche l'ordine in cui si leggono. */
 @media (min-width:1081px){
-  #heroScelta{min-height:360px}
-  .hcard{grid-template-columns:26% 1fr}
-  .hcard .info{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;align-content:center;padding:18px 20px}
-  .hcard .info>:first-child{grid-column:1 / -1}   /* nome ed epiteto stanno larghi su tutte e due */
-  .hcard .stats{align-self:start}
-  .hcard .comp{border-top:none;padding-top:0;align-self:start}
-  .hcard .scuole{grid-column:2;border-top:1px solid var(--line)}
+  .hcard .info{padding:16px 18px 14px}
 }
 /* v2.26 — E SU UNO SCHERMO BASSO si stringe ancora. Il metro non e' la bellezza: e' che il pulsante
    ENTRA IN PARTITA stia sopra la piega. Su un portatile 1280x800 — la misura piu' diffusa che esista —
@@ -281,7 +329,11 @@ h2.info-h:not(:first-child){margin-top:17px}
   /* la scheda segue l'altezza della finestra invece di avere una misura fissa: 34vh e' quanto le si
      puo' dare senza spingere il pulsante sotto la piega, e su uno schermo alto il tetto di 360 la
      riporta alla misura buona. */
-  #heroScelta{min-height:clamp(230px,34vh,360px)}
+  /* il metro non e' la bellezza: e' che il pulsante ENTRA IN PARTITA stia SOPRA LA PIEGA. Su un
+     portatile 1280x800 — la misura piu' diffusa che esista — una scheda alta 600 px lo spinge sotto,
+     e un menu in cui bisogna scorrere per trovare il tasto che fa partire il gioco e' un menu rotto,
+     per quanto sia ordinato. */
+  #heroScelta{--hh:clamp(330px,48vh,520px)}
   #riprendiCard{padding:8px 10px;margin-bottom:12px}
   .rp-art{flex:0 0 44px;width:44px;height:44px}
   #titolone{margin-bottom:min(2vh,14px)}

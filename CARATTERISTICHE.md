@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.29.0`
+**Versione attuale:** `2.30.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -976,6 +976,69 @@ if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
 *che altro* dipingeva sopra la stessa mappa. Quando si rimuove una cosa si controlla anche **quello che non
 si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose: che la guardia ci sia, e che
 `_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
+
+
+
+## 🗂️ LA SCHERMATA DI AVVIO A DUE META' *(novita v2.30.0)*
+
+Paolo: *«la schermata con l'eroe dividila in 2 colonne: nella meta' a sinistra quella per personaggio
+(ricrealo x la lunghezza sfruttando il ratio dell'immagine), in quella a destra invece metti i box dei
+record, quello dei consigli, le novita' e quello del salvataggio. Tutti e 4 impilati tanto sono
+piccoli. Togli la modalita' di prova e sotto metti quello dei comandi»*.
+
+| | |
+|---|---|
+| **sinistra** (`#colEroe`) | la scheda dell'eroe, con le frecce e i pallini. Una cosa sola, grande. |
+| **destra** (`#colLato`) | quattro riquadri impilati, tutti aperti: record, consiglio, novita', partita salvata. |
+| **sotto** (`#infoCard`) | i comandi, larghi quanto la schermata. |
+
+Le due colonne partono dallo stesso bordo in alto (`align-items:start`) e **non si pareggiano in
+basso**: la scheda e' alta perche' ha un ritratto intero dentro, la pila e' alta quanto sono i suoi
+quattro riquadri, e stirare l'una per pareggiare l'altra vorrebbe dire quattro scatole mezze vuote.
+
+### L'artwork al rapporto dell'immagine
+
+I ritratti delle classi sono **174x452** — alti due volte e mezzo la loro larghezza, figure intere.
+Fino alla v2.29 stavano in una casella larga e bassa con `object-fit:cover`: il browser prendeva la
+**fetta centrale** e buttava via il resto, quindi del barbaro si vedeva il torso e le gambe non le
+aveva viste nessuno.
+
+In mezza schermata la scheda puo' essere alta, e allora il conto si fa al contrario — e' l'**altezza**
+a decidere la larghezza della casella:
+
+```css
+#heroScelta{--hh:clamp(430px,64vh,600px);height:var(--hh)}
+.hcard{grid-template-columns:min(48%,calc(var(--hh) * 174 / 452)) 1fr}
+```
+
+Su uno schermo alto il personaggio e' piu' largo, su uno basso piu' stretto, **mai ritagliato e mai
+deformato**. Misurato in pagina: rapporto **0,387** contro lo 0,385 dei file. Il `max-width` del 48% e'
+l'unico freno: su una finestra molto alta l'artwork si mangerebbe meta' scheda e le competenze non ci
+starebbero piu'.
+
+**Il primo taglio non funzionava.** `aspect-ratio:174/452` sulla casella con
+`grid-template-columns:auto` sembra la strada giusta e non lo e': la colonna `auto` vuole misurarsi sul
+contenuto e il contenuto si misura sulla colonna, quindi il browser si arrende. Misurato **0,185** —
+il personaggio tagliato ai lati invece che sopra e sotto.
+
+### Il metro della schermata resta lo stesso
+
+Dalla v2.26: **il pulsante ENTRA IN PARTITA deve stare sopra la piega**. Un menu in cui bisogna
+scorrere per trovare il tasto che fa partire il gioco e' un menu rotto, per quanto sia ordinato.
+Verificato in pagina a 1440x900 (pulsante a 749 px) e a **1280x800** (700 px), che e' la misura di
+portatile piu' diffusa che esista. Sotto i 1080 px di larghezza le due meta' vanno in pila.
+
+### La modalita' di prova non c'e' piu'
+
+Era un pannello da sviluppo finito in una schermata da giocatore: venti pulsanti per partire
+dall'ondata che vuoi, piu' la scelta delle abilita' attive. Le porte erano **tre** — la voce nel menu,
+il tasto **T**, e `?test` nell'indirizzo — e sono chiuse tutte e tre, con un controllo per ognuna:
+toglierne due su tre significa non averla tolta.
+
+**Spenta, non cancellata**, come i due mercanti: `HUD.buildProva`, `HUD.buildProvaAbil` (che escono da
+sole se il loro nodo non c'e': e' il motivo per cui non e' servito toccarle) e la partenza da
+un'ondata scelta lato server restano intere. E' anche la strada con cui i **test automatici** fanno
+partire una run dall'ondata 13 senza giocare le dodici prima.
 
 
 ## 👑 I CAMPIONI: un grado sopra l'elite *(novita v2.29.0)*
