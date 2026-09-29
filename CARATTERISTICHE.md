@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.28.1`
+**Versione attuale:** `2.29.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -155,9 +155,9 @@ mazzo ci sta) e solo dopo riempie a peso, poi mescola. Alla quindicesima entrano
 
 | costante | valore | cosa decide |
 |---|---|---|
-| `MAX_ALIVE` | 14 | in campo, in solitario |
+| `MAX_ALIVE` | 16 | in campo, in solitario *(era 14 fino alla v2.28.1)* |
 | `MAX_ALIVE_GIOC` | 2 | quanto sale il tetto per ogni giocatore in piu' |
-| `ONDATA_TOT` | 20 | totale dell'ondata, in solitario |
+| `ONDATA_TOT` | 24 | totale dell'ondata, in solitario *(era 20)* |
 | `ONDATA_TOT_GIOC` | 4 | quanto sale il totale per ogni giocatore in piu' |
 | `ONDATA_TOT_DA` | 7 | da quale ondata il totale e' fisso |
 | `RISERVE_SOGLIA_Q` | 0,5 | a che frazione del tetto si aprono le riserve |
@@ -976,6 +976,92 @@ if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
 *che altro* dipingeva sopra la stessa mappa. Quando si rimuove una cosa si controlla anche **quello che non
 si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose: che la guardia ci sia, e che
 `_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
+
+
+## 👑 I CAMPIONI: un grado sopra l'elite *(novita v2.29.0)*
+
+Paolo, dopo la v2.28.1: *«il gioco mi sembra diventato troppo facile: sarebbe bello avere delle
+versioni molto piu' forti dei nemici (magari di colore diverso). Ci sono gia' gli elite ma sarebbe
+carino ampliare»*.
+
+**Perche' non bastava alzare la quota di elite.** Misurato: portare `eliteChance` dal 26% al 35% da'
+**+8%** di pressione, al 45% **+14%**. E' la leva piu' debole che ci fosse, perche' aggiunge quantita'
+a una cosa che il giocatore ha gia' imparato a leggere — gli elite sono **un solo gradino e sempre lo
+stesso**. Due campioni sull'ondata 19 valgono **+27%** da soli, e a differenza degli elite chiedono di
+fare qualcosa di diverso.
+
+**Quanti e dove.** Uno dalla **5ª ondata**, due dall'**11ª**, nessuno nelle ondate boss. La promozione
+avviene **dopo** la mescolata della lista: scegliendo prima, il campione sarebbe sempre in una
+posizione fissa della coda e ogni ondata avrebbe lo stesso arco. Non possono diventare campioni i
+**boss**, gli **immobili** (un Fungo «infuriato» che raddoppia una velocita' pari a zero) e chi ha un
+tetto di due vivi in campo — cioe' il **Padrone**, che comanda gia' i vicini di suo.
+
+**Un campione E' anche un elite**: la chiave dell'ondata puo' stargli addosso, le taglie lo contano, le
+carte «contro gli elite» valgono. I suoi numeri moltiplicano **sopra** quelli dell'elite, che sono gia'
+tarati nemico per nemico con `def.eliteHp`.
+
+| | elite | campione |
+|---|---:|---:|
+| punti vita | `def.eliteHp` (2,4 di norma) | **×2,1 sopra l'elite** → ×5,04 sul nemico base |
+| danno | ×1,5 | **×1,9** |
+| raggio | ×1,28 | **×1,45** |
+| esperienza | ×2,5 | **×5** |
+| velocita' | ×1,12 · fattore taglia | ×1,12 · fattore taglia — quindi **piu' lento**, perche' e' piu' grosso |
+
+Il fattore taglia si calcola **dopo** il raggio. Se si calcolasse prima (com'era il primo taglio) un
+campione grosso correrebbe come un comune, e sarebbe solo «un elite piu' grande in tutto».
+
+### I quattro modificatori
+
+| | cosa fa | costante | la risposta giusta |
+|---|---|---|---|
+| 🛡️ **Corazzato** | incassa il **30%** dentro un cono di ±1,25 rad (~72°) davanti a se' | `CORAZZA_ARCO`, `CORAZZA_RID` | **girargli attorno**: di lato e' gia' fuori dal cono |
+| 🌿 **Rigenerante** | dopo **3 s** senza incassare recupera il **6%** dei PV massimi al secondo; ogni colpo azzera l'attesa | `RIGEN_ATTESA`, `RIGEN_QUOTA` | **finirlo**, o ricomincia da capo |
+| 🟡 **Scortato** | fino a **4** mostri gli restano attorno a 130 px; finche' ce n'e' uno vivo entro 300 px incassa **meta'** | `SCORTA_MAX`, `SCORTA_ANELLO`, `SCORTA_RAGGIO`, `SCORTA_RID` | **togliergli la scorta** — l'unico che chiede di non sparare al bersaglio grosso |
+| 🔥 **Infuriato** | sotto **meta' vita** la velocita' **raddoppia** e il danno sale del 25%, una volta sola | `INFURIA_SOGLIA`, `INFURIA_VEL`, `INFURIA_DMG` | **non lasciarlo a meta'** |
+
+**Il colore lo decide il modificatore, non il grado.** E' il cuore della richiesta: l'anello, l'alone e
+il **corpo** del mostro prendono azzurro acciaio / verde linfa / oro / brace, **uguali per tutte le
+specie**. Un rigenerante e' verde che sia uno scheletro o un mago — se il colore dicesse la specie non
+direbbe *come si combatte*. Il corazzato disegna sempre anche **l'arco della corazza** davanti a se'
+(e lampeggia quando respinge): l'informazione serve prima di sparare, non dopo aver sbagliato.
+
+Lo snapshot manda **`kp`** = indice del modificatore +1 (0 o assente = non e' un campione), e fa parte
+della porzione immutabile: il client lo sa dal primo fotogramma.
+
+### La velocita' dell'infuriato non tocca `mon.speed`
+
+Il raddoppio passa dal moltiplicatore `slow`, lo stesso posto dei rallentamenti. `mon.speed` la leggono
+le **animazioni** — il passo dei pupazzi si sincronizza su quella — e raddoppiarla farebbe pattinare i
+piedi.
+
+### Due difetti veri, trovati provando
+
+**Le scorte si scioglievano da sole.** L'incarico si rifaceva da zero ogni mezzo secondo con lo stesso
+raggio d'ingaggio; ma il campione e' il **piu' lento** del gruppo, le guardie gli correvano avanti,
+uscivano dai 300 px e venivano congedate. Il secondo tentativo — congedo al doppio del raggio — aveva
+lo stesso difetto ma **piu' raro**, quindi peggiore. Il congedo a distanza e' proprio l'idea sbagliata:
+chi si e' allontanato e' esattamente chi deve **tornare**, e l'IA lo riporta all'anello da sola.
+Adesso si congeda solo quando uno dei due muore.
+
+**Il recupero anti-stallo (v1.76.1) sfasciava il gruppo.** Teletrasporta chi non fa progressi verso il
+giocatore da cinque secondi ed e' lontano oltre 640 px. Una guardia che torna dal suo campione **si
+allontana dal giocatore per mestiere**: sembrava incastrata e veniva spedita dall'altra parte della
+mappa; e se a spostarsi era il capo, le guardie restavano indietro di 1.700 px. Misurato: **17 prove su
+150**. Adesso chi e' di scorta e' esente, e se si sposta il capo le scorte vanno con lui.
+
+### Cosa e' cambiato nei numeri dell'ondata
+
+| | v2.28.1 | v2.29.0 | prima della v2.24 |
+|---|---:|---:|---:|
+| PV dell'ondata 19 | 13.344 | **17.594** *(+32%)* | 26.688 |
+| PV di tutta la run | 124.027 | **163.549** *(+32%)* | 196.415 |
+| XP a terra / livello 15 | 0,77 | **1,04** | 1,08 |
+
+L'ultima riga non era cercata: la v2.24 aveva lasciato a terra **meno esperienza di quanta ne costa
+arrivare al livello 15**, cioe' un giocatore ordinato finiva la run sotto livello. Adesso il conto
+torna, senza aver toccato l'esperienza.
+
 
 ### 💡 E nelle grotte? Lo stesso difetto, scoperto tre anni dopo *(v2.28.1)*
 

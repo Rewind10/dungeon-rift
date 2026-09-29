@@ -137,21 +137,82 @@
     // mescolata: i "semi" sono in ordine di pool, e senza questa riga i primi che entrano in campo
     // sarebbero sempre gli stessi nello stesso ordine, ondata dopo ondata
     for (let z = list.length - 1; z > 0; z--) { const j = (Math.random() * (z + 1)) | 0; const t = list[z]; list[z] = list[j]; list[j] = t; }
+    // v2.29 — E ADESSO I CAMPIONI. Si promuove DOPO la mescolata, cosi' il campione non e' mai in
+    // una posizione fissa della coda: se lo si scegliesse prima, con i "semi" in testa, sarebbe
+    // sempre uno dei primi a entrare in campo e l'ondata avrebbe sempre lo stesso arco.
+    promuoviCampioni(list, w);
     return { list, scaling: s, mode };
+  }
+
+  // v2.29 — QUANTI CAMPIONI. Uno dalla quinta, due dall'undicesima. Non di piu': il campione e' un
+  // problema a se', e tre problemi a se' in venti nemici tornano a essere un mucchio indistinto.
+  // Le ondate boss non ne hanno: il boss e' gia' il problema dell'ondata.
+  function campioniPerOndata(w) {
+    if (isBossWave(w)) return 0;
+    if (w < (C.CAMPIONE_DA || 5)) return 0;
+    return w >= (C.CAMPIONE_DUE_DA || 11) ? 2 : 1;
+  }
+
+  // chi puo' diventare campione: non i boss (ne hanno gia' uno di grado), non gli IMMOBILI (un fungo
+  // "infuriato" che raddoppia una velocita' pari a zero e' una presa in giro, e uno "scortato" a cui
+  // gli altri fanno la guardia toglierebbe mostri dall'ondata per proteggere un cespuglio), e non
+  // chi ha un tetto di due vivi in campo — il Padrone comanda gia' i vicini, un Padrone campione
+  // sarebbe due capacita' dello stesso tipo sullo stesso corpo.
+  function puoEssereCampione(id) {
+    const d = MONSTERS[id];
+    return !!d && !d.boss && !d.immobile && !(d.maxAlive != null && d.maxAlive <= 2);
+  }
+
+  function promuoviCampioni(list, w) {
+    let n = campioniPerOndata(w); if (n <= 0) return;
+    const mods = C.CAMPIONE_MOD || ['corazzato', 'rigenerante', 'scortato', 'infuriato'];
+    const idx = []; for (let i = 0; i < list.length; i++) if (puoEssereCampione(list[i].type)) idx.push(i);
+    // due campioni sullo stesso tipo di nemico si leggono come "quel mostro li' e' forte" invece che
+    // come due problemi diversi: se si puo' evitare, si evita.
+    const usati = new Set(); const modUsati = new Set();
+    for (let k = 0; k < n && idx.length; k++) {
+      let scelto = -1;
+      for (let giro = 0; giro < 2 && scelto < 0; giro++)
+        for (let t = 0; t < 24 && scelto < 0; t++) {
+          const i = idx[(Math.random() * idx.length) | 0];
+          if (list[i].camp) continue;
+          if (giro === 0 && usati.has(list[i].type)) continue;
+          scelto = i;
+        }
+      if (scelto < 0) break;
+      let mod = mods[(Math.random() * mods.length) | 0];
+      for (let t = 0; t < 12 && modUsati.has(mod); t++) mod = mods[(Math.random() * mods.length) | 0];
+      usati.add(list[scelto].type); modUsati.add(mod);
+      list[scelto].elite = true;         // un campione E' anche un elite: la chiave, le taglie e le
+      list[scelto].camp = mod;           // carte "contro gli elite" devono continuare a vederlo
+    }
   }
   // v1.50 — moltiplicatore PV degli elite reso PER-NEMICO (def.eliteHp, default ELITE_HP). Il 2.4x fisso
   // era tarato sui nemici da ~80-100 PV: applicato ai tank produceva mostri fuori scala nelle prime ondate
   // (Troll elite ~845 PV all'ondata 4, contro l'arma iniziale).
   const ELITE_HP = 2.4;
-  function applyScaling(mon, s, elite) {
+  // v2.29 — il terzo argomento e' il MODIFICATORE del campione (una voce di C.CAMPIONE_MOD) oppure
+  // niente. Un campione e' sempre anche un elite: qui si moltiplica SOPRA i numeri dell'elite, non
+  // al posto loro, cosi' la taratura per-nemico di def.eliteHp continua a valere.
+  function applyScaling(mon, s, elite, camp) {
+    if (camp) elite = true;
     const eh = (mon.def.eliteHp != null) ? mon.def.eliteHp : ELITE_HP;
-    mon.maxHp = Math.round(mon.def.hp * s.hp * (elite ? eh : 1)); mon.hp = mon.maxHp;
-    mon.dmg = Math.round(mon.def.dmg * s.dmg * (elite ? 1.5 : 1));
-    mon.radius = mon.def.radius * (elite ? 1.28 : 1);
+    const mHp = elite ? eh * (camp ? (C.CAMPIONE_HP_Q || 2.1) : 1) : 1;
+    const mDmg = camp ? (C.CAMPIONE_DMG || 1.9) : (elite ? 1.5 : 1);
+    const mRag = camp ? (C.CAMPIONE_RAGGIO || 1.45) : (elite ? 1.28 : 1);
+    const mXp = camp ? (C.CAMPIONE_XP || 5) : (elite ? 2.5 : 1);
+    mon.maxHp = Math.round(mon.def.hp * s.hp * mHp); mon.hp = mon.maxHp;
+    mon.dmg = Math.round(mon.def.dmg * s.dmg * mDmg);
+    mon.radius = mon.def.radius * mRag;
+    // il fattore taglia si calcola DOPO il raggio, se no un campione corre come se fosse rimasto
+    // grosso quanto un comune: e' il raggio a decidere quanto e' goffo.
     const sizeFactor = MU.clamp(16 / mon.radius, 0.6, 1.45);
     mon.speed = mon.def.speed * s.speed * (elite ? 1.12 : 1) * sizeFactor;
-    mon.xp = Math.round(mon.def.xp * (elite ? 2.5 : 1)); mon.elite = !!elite;
-    if (elite && MU.chance(0.5)) mon.def = Object.assign({}, mon.def, { regen: (mon.def.regen || 0) + 8 });
+    mon.xp = Math.round(mon.def.xp * mXp); mon.elite = !!elite;
+    mon.campione = camp || null;
+    // la rigenerazione a sorte degli elite NON si applica ai campioni: uno di loro ce l'ha per
+    // mestiere (il rigenerante) e sarebbe il suo unico tratto distintivo dato per caso agli altri.
+    if (elite && !camp && MU.chance(0.5)) mon.def = Object.assign({}, mon.def, { regen: (mon.def.regen || 0) + 8 });
   }
-  return { BOSS_EVERY, BOSS_WAVES, FINAL_WAVE, MODES, modeForWave, poolForWave, scaling, isBossWave, bossForWave, buildWave, applyScaling };
+  return { BOSS_EVERY, BOSS_WAVES, FINAL_WAVE, MODES, modeForWave, poolForWave, scaling, isBossWave, bossForWave, buildWave, applyScaling, campioniPerOndata, puoEssereCampione };
 });

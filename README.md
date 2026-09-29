@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.28.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.29.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,6 +23,32 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 👑 v2.29.0 — i Campioni, e più nemici in campo
+
+Il gioco era diventato troppo facile, e il conto lo conferma: la v2.24 aveva tolto il **37%** dei punti
+vita di tutta la run. Due risposte.
+
+**Più nemici.** In campo insieme **16** (erano 14), per ondata **24** (erano 20). Le riserve entrano in
+8 quando in campo ne restano 8. Risultato misurato: **+32%** di punti vita da smaltire, sia sull'ondata
+19 sia su tutta la run — e l'esperienza a terra torna a bastare per il livello 15 (era allo **0,77**,
+adesso **1,04**).
+
+**I Campioni.** Un grado sopra gli elite: **uno dalla 5ª ondata, due dall'11ª**. PV **×5** sul nemico
+base, danno ×1,9, esperienza ×5 — e più **lento**, perché è più grosso. Ma il punto non sono i numeri:
+ognuno porta un **modificatore**, e il modificatore cambia la risposta giusta.
+
+| | cosa fa | come si risolve |
+|---|---|---|
+| 🛡️ **Corazzato** | incassa il 30% dentro un cono davanti a sé | **girargli attorno** |
+| 🌿 **Rigenerante** | dopo 3 secondi senza colpi torna su | **finirlo** |
+| 🟡 **Scortato** | finché ha una guardia viva incassa metà | **togliergli la scorta** |
+| 🔥 **Infuriato** | sotto metà vita raddoppia la velocità | **non lasciarlo a metà** |
+
+**Il colore lo decide il modificatore, non il grado**: azzurro acciaio, verde linfa, oro, brace —
+uguali per tutte le specie. Si capisce *come* si combatte prima di arrivare a tiro.
+
+---
 
 ## 🔧 v2.28.1 — le luci illuminano davvero
 

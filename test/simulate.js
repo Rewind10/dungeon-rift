@@ -2186,7 +2186,7 @@ function testV168() {
   // Si semina, come per le altre tre prove legate al caso della mappa, e si rimette a posto alla fine.
   const _rndVero38 = Math.random; Math.random = MU.seedRng(0x0D1C);
   // --- 1) il tetto e' 30 e l'ondata NON perde nessuno: gli altri restano in coda ---
-  assert(C.MAX_ALIVE === 14, 'il tetto dei nemici vivi in solitario e 14');
+  assert(C.MAX_ALIVE === 16, 'il tetto dei nemici vivi in solitario e 16');
   const room = new Room('v168'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 17; room.mode = Waves.modeForWave(17); room.phase = C.PHASE_COMBAT;
   const w = Waves.buildWave(20, 6, room.mode);      // ondata volutamente enorme: 80+ nemici
@@ -2377,10 +2377,10 @@ function testV170() {
   const room = new Room('v170'); const p = room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   // v2.24 — IL TETTO NON DIPENDE PIU' DALL'ONDATA, ma dai GIOCATORI. Era una curva (40 fino
   // all'ottava, 22 dopo); adesso e' 14 sempre, piu' 2 per ogni giocatore oltre il primo.
-  assert(C.MAX_ALIVE === 14, 'il tetto in solitario e 14');
+  assert(C.MAX_ALIVE === 16, 'il tetto in solitario e 16');
   assert(C.MAX_ALIVE_GIOC === 2, 'e cresce di 2 per ogni giocatore in piu');
   for (const w of [1, 2, 5, 8, 9, 15, 20, 30]) { room.wave = w;
-    assert(room.tettoVivi() === 14, 'ondata ' + w + ': in solitario il tetto resta 14 (letto ' + room.tettoVivi() + ')'); }
+    assert(room.tettoVivi() === 16, 'ondata ' + w + ': in solitario il tetto resta 16 (letto ' + room.tettoVivi() + ')'); }
   // il totale dell ondata: dalla settima in poi e FISSO, non cresce piu con l ondata
   assert(Waves.buildWave(7, 1).list.length === C.ONDATA_TOT, 'dalla settima il totale e ' + C.ONDATA_TOT);
   assert(Waves.buildWave(20, 1).list.length === C.ONDATA_TOT, 'e alla ventesima e sempre quello');
@@ -7682,20 +7682,20 @@ function testV224() {
   const dt = 1 / C.TICK_RATE;
 
   // --- 1) I NUMERI SONO QUELLI CHE HA DETTO PAOLO ------------------------------------------
-  assert(C.MAX_ALIVE === 14, 'in campo, da soli, mai piu di 14 (' + C.MAX_ALIVE + ')');
+  assert(C.MAX_ALIVE === 16, 'in campo, da soli, mai piu di 16 (' + C.MAX_ALIVE + ')');
   assert(C.MAX_ALIVE_GIOC === 2, 'e +2 per ogni giocatore in piu: 16 in due');
-  assert(C.ONDATA_TOT === 20, 'il totale dell ondata e 20 (' + C.ONDATA_TOT + ')');
+  assert(C.ONDATA_TOT === 24, 'il totale dell ondata e 24 (' + C.ONDATA_TOT + ')');
   assert(C.ONDATA_TOT_GIOC === 4, 'e +4 per giocatore: 24 in due');
   assert(C.ONDATA_TOT_DA === 7, 'e vale dalla settima ondata in poi');
   {
     const r1 = new Room('v224n1'); r1.addPlayer('a', { send() {} }, 'A', 'ranger'); r1.startGame();
-    assert(r1.tettoVivi() === 14, 'in solitario il tetto e 14 (' + r1.tettoVivi() + ')');
-    assert(r1.sogliaRiserve() === 7, 'e le riserve entrano quando ne restano 7 (' + r1.sogliaRiserve() + ')');
+    assert(r1.tettoVivi() === 16, 'in solitario il tetto e 16 (' + r1.tettoVivi() + ')');
+    assert(r1.sogliaRiserve() === 8, 'e le riserve entrano quando ne restano 8 (' + r1.sogliaRiserve() + ')');
     const r2 = new Room('v224n2');
     r2.addPlayer('a', { send() {} }, 'A', 'ranger'); r2.addPlayer('b', { send() {} }, 'B', 'mago');
     r2.startGame();
-    assert(r2.tettoVivi() === 16, 'in due il tetto e 16 (' + r2.tettoVivi() + ')');
-    assert(r2.sogliaRiserve() === 8, 'e la soglia si alza con lui (' + r2.sogliaRiserve() + ')');
+    assert(r2.tettoVivi() === 18, 'in due il tetto e 18 (' + r2.tettoVivi() + ')');
+    assert(r2.sogliaRiserve() === 9, 'e la soglia si alza con lui (' + r2.sogliaRiserve() + ')');
   }
 
   // --- 2) IL TOTALE E' FISSO DALLA SETTIMA IN POI ------------------------------------------
@@ -7950,16 +7950,28 @@ function testV225() {
     // ugualmente addosso (ci arriva da `wander`, dirottato), ma poi resta li' a girare senza mai
     // menare. Contando solo chi e' vicino il sabotaggio passava liscio; contando chi ha davvero
     // colpito, no.
-    const vivi = r.monsters.filter(x => !x.dead).length;
-    let attaccanti = 0;
-    { const chi = new Set();
-      for (let i = 0; i < C.TICK_RATE * 40; i++) {
-        p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
-        r.events.length = 0; r.update(dt);
-        for (const e of r.events) if (e.t === 'melee' && e.e) chi.add(e.e);
-      }
-      attaccanti = chi.size; }
-    assert(attaccanti >= vivi - 1, 'e non ne resta nessuno a girare all anello: hanno attaccato in ' + attaccanti + ' su ' + vivi);
+    // v2.29 — il conto va fatto sui VIVI A FINE PROVA, non su quelli di partenza. Col tetto a 16
+    // (era 14) e col masso della v2.28 in mappa capita che qualcuno muoia durante la finestra: se
+    // muore prima di aver colpito viene contato come «uno che non ha attaccato», e il controllo
+    // diventa rosso per un motivo che non c'entra niente con la braccata. Misurato su sessanta
+    // prove: fra i vivi a fine prova ne resta muto zero (peggior caso: uno).
+    const chi = new Set();
+    for (let i = 0; i < C.TICK_RATE * 40; i++) {
+      p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0, shoot: false, q: false, e: false, dash: false });
+      r.events.length = 0; r.update(dt);
+      for (const e of r.events) if (e.t === 'melee' && e.e) chi.add(e.e);
+    }
+    const vivi = r.monsters.filter(x => !x.dead);
+    const muti = vivi.filter(m => !chi.has(m.eid));
+    // la tolleranza e' due su sedici: fra le casse, il masso e i corpi degli altri qualcuno resta
+    // incastrato. Col tetto alla folla RIACCESO durante la braccata (il sabotaggio) ne restano muti
+    // una decina, quindi il controllo distingue eccome le due cose.
+    assert(muti.length <= 2, 'e non ne resta nessuno a girare all anello: muti ' + muti.length + ' su ' + vivi.length + ' vivi');
+    // e la controprova, che non sostituisce quella sopra ma la completa: durante la braccata NON
+    // c'e' nessuno a mezza strada. Misurato, il piu' lontano sta fra 76 e 109 px dal giocatore —
+    // l'anello d'attesa e' a 900.
+    { const piuLontano = Math.max(...vivi.map(m => MU.dist(m.x, m.y, p.x, p.y))) | 0;
+      assert(piuLontano < 300, 'e il piu lontano e comunque addosso al giocatore (' + piuLontano + ' px, anello a ' + C.ANELLO_ATTESA + ')'); }
   }
 
   // --- 7) A MAPPA RIPULITA NON SI CERCA PIU' NESSUNO ---------------------------------------
@@ -8646,6 +8658,326 @@ function testV2281() {
   ok('le sorgenti bucano il buio prima di accenderlo, e i banchi sono chiusi');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =====================================================================================================
+// TEST 89 — v2.29: il tetto sale a 16, e sopra l'elite c'e' il CAMPIONE
+// Paolo: *«il gioco mi sembra diventato troppo facile; sarebbe bello avere delle versioni molto piu'
+// forti dei nemici (magari di colore diverso), considererei di aumentare leggermente i nemici a
+// schermo»*. Qui si controlla che le due cose siano vere sul serio, non sulla carta: i numeri
+// dell'ondata, e che ciascuno dei quattro modificatori CAMBI DAVVERO il combattimento — misurato
+// contro lo stesso campione senza quel modificatore, non contro un'aspettativa.
+// =====================================================================================================
+function testV229() {
+  console.log('\n[TEST 89] v2.29 — il tetto a 16 e i campioni, un grado sopra l elite');
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) I NUMERI DELL'ONDATA ---------------------------------------------------------------
+  assert(C.MAX_ALIVE === 16 && C.ONDATA_TOT === 24, 'in campo 16, in totale 24 (' + C.MAX_ALIVE + '/' + C.ONDATA_TOT + ')');
+  {
+    const r = new Room('v229n'); r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame(8);
+    assert(r.tettoVivi() === 16, 'in solitario il tetto e 16 (' + r.tettoVivi() + ')');
+    assert(r.sogliaRiserve() === 8, 'e le riserve entrano quando ne restano 8 (' + r.sogliaRiserve() + ')');
+    // le riserve restano META' del totale: se il tetto sale e il totale no, la seconda ondata sparisce
+    const tot = Waves.buildWave(9, 1, Waves.modeForWave(9)).list.length;
+    assert(tot === 24, 'e l ondata ne porta 24 (' + tot + ')');
+    assert(tot - r.tettoVivi() === 8, 'quindi 8 restano in riserva (' + (tot - r.tettoVivi()) + ')');
+  }
+
+  // --- 2) QUANTI CAMPIONI, E DOVE ------------------------------------------------------------
+  assert(Waves.campioniPerOndata(4) === 0, 'prima della quinta non ce ne sono');
+  assert(Waves.campioniPerOndata(5) === 1 && Waves.campioniPerOndata(9) === 1, 'dalla quinta uno');
+  assert(Waves.campioniPerOndata(11) === 2 && Waves.campioniPerOndata(19) === 2, 'dall undicesima due');
+  assert(Waves.campioniPerOndata(10) === 0 && Waves.campioniPerOndata(20) === 0, 'e nelle ondate boss nessuno');
+  {
+    // sabotaggio provato: togliendo la chiamata a promuoviCampioni in buildWave, queste due righe
+    // diventano rosse. Non basta che la funzione esista: deve essere CHIAMATA dal costruttore.
+    let conta = 0, mods = new Set(), su = new Set();
+    for (let k = 0; k < 200; k++) {
+      const l = Waves.buildWave(13, 1, Waves.modeForWave(13)).list;
+      const c = l.filter(x => x.camp); conta += c.length;
+      for (const x of c) { mods.add(x.camp); su.add(x.type); assert(x.elite === true, 'un campione e sempre anche un elite'); }
+    }
+    assert(conta === 400, 'duecento ondate della 13 danno quattrocento campioni (' + conta + ')');
+    assert(mods.size === 4, 'e si vedono tutti e quattro i modificatori (' + [...mods].join(',') + ')');
+    assert(su.size >= 5, 'e non sempre sulla stessa specie (' + su.size + ' specie diverse)');
+    // i tipi ESCLUSI non devono comparire mai: un fungo immobile "infuriato" o un Padrone campione
+    // sarebbero due capacita' dello stesso tipo sullo stesso corpo.
+    assert(!su.has('spore_fungus') && !su.has('padrone'), 'e mai sugli immobili ne sul Padrone');
+  }
+
+  // laboratorio: due stanze IDENTICHE, stesso seme e stesso punto di partenza. L'unica differenza e'
+  // il modificatore. Misurare la stessa stanza due volte di fila non varrebbe: alla seconda misura il
+  // mostro ha gia' raggiunto il giocatore e sta fermo a picchiarlo.
+  // il punto va cercato LIBERO, non preso a offset fisso: a offset fisso il campione puo' nascere
+  // dentro un muro e il server lo sposta con _unstuck (giustamente), e il test diventa intermittente
+  // per colpa della mappa. E' lo stesso inciampo gia' preso nella v1.61.1 col Fungo.
+  const libero = (r, cx, cy, dist) => {
+    for (let a = 0; a < 64; a++) {
+      const an = a * 0.61, rr = dist * (0.75 + (a % 5) * 0.12);
+      const q = { x: cx + Math.cos(an) * rr, y: cy + Math.sin(an) * rr };
+      if (!r.isWallAt(q.x, q.y)) return q;
+    }
+    return { x: cx, y: cy };
+  };
+  const banco = (mod, w, dist) => {
+    const r = new Room('v229lab'); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger');
+    r.startGame(1, true); r.wave = w || 8; r.waveList = []; r.monsters.length = 0; r.pending = 0;
+    r.waveScaling = Waves.scaling(r.wave, 1);
+    const q = libero(r, p.x, p.y, dist || 420);
+    const m = r.spawnMonster('skeleton', q.x, q.y, { scaling: r.waveScaling, camp: mod, elite: !mod });
+    m.awake = true; return { r, p, m };
+  };
+
+  // --- 3) QUANTO VALE UN CAMPIONE, rispetto a un elite dello stesso nemico --------------------
+  {
+    const e = banco(null).m, c = banco('corazzato').m;
+    assert(c.maxHp > e.maxHp * 2 && c.maxHp < e.maxHp * 2.2, 'un campione ha il doppio dei PV di un elite (x' + (c.maxHp / e.maxHp).toFixed(2) + ')');
+    assert(c.dmg > e.dmg, 'e picchia piu forte (' + e.dmg + ' -> ' + c.dmg + ')');
+    assert(c.radius > e.radius, 'e si vede che e piu grosso (' + e.radius.toFixed(1) + ' -> ' + c.radius.toFixed(1) + ')');
+    assert(c.xp === Math.round(e.xp / 2.5 * C.CAMPIONE_XP), 'e vale il doppio di esperienza (' + e.xp + ' -> ' + c.xp + ')');
+    // e la velocita' NON cresce col raggio: un campione grosso deve essere piu' goffo, se no e' solo
+    // un elite piu' grande in tutto. Sabotaggio provato: calcolando sizeFactor PRIMA del raggio
+    // (com'era prima della v2.29) questa riga diventa rossa.
+    assert(c.speed < e.speed, 'ma e piu lento, perche e piu grosso (' + e.speed.toFixed(1) + ' -> ' + c.speed.toFixed(1) + ')');
+  }
+
+  // --- 4) CORAZZATO: davanti incassa poco, alle spalle no ------------------------------------
+  {
+    const { r, p, m } = banco('corazzato');
+    const pv = m.maxHp, COLPO = 200; m.facing = 0;   // 200, non 1000: al terzo colpo dev essere ancora vivo
+    m.hp = pv; r.damageMonster(m, COLPO, m.x + 100, m.y, 0, p); const davanti = pv - m.hp;
+    m.hp = pv; r.damageMonster(m, COLPO, m.x - 100, m.y, 0, p); const dietro = pv - m.hp;
+    m.hp = pv; r.damageMonster(m, COLPO, m.x, m.y + 100, 0, p); const lato = pv - m.hp;
+    assert(davanti < dietro * 0.5, 'il corazzato incassa meno della meta se lo colpisci di fronte (' + davanti + ' vs ' + dietro + ')');
+    assert(lato === dietro, 'e di lato e gia fuori dal cono: la risposta e girargli attorno (' + lato + ')');
+    // e sugli ALTRI la corazza non c'e': e' del modificatore, non un regalo a tutti i campioni
+    const alt = banco('infuriato'); alt.m.facing = 0; const pv2 = alt.m.maxHp;
+    alt.m.hp = pv2; alt.r.damageMonster(alt.m, 200, alt.m.x + 100, alt.m.y, 0, alt.p);
+    assert(pv2 - alt.m.hp === 200, 'e un campione senza corazza incassa tutto anche di fronte (' + (pv2 - alt.m.hp) + ')');
+  }
+
+  // --- 5) RIGENERANTE: se lo lasci sta torna su, se lo tocchi riparte da capo -----------------
+  {
+    const { r, p, m } = banco('rigenerante');
+    const meta = Math.round(m.maxHp * 0.4);
+    m.hp = meta;
+    for (let i = 0; i < C.TICK_RATE * 6; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    const solo = m.hp;
+    assert(solo > meta * 1.2, 'lasciato stare sei secondi torna su (' + meta + ' -> ' + Math.round(solo) + ')');
+    // adesso lo stesso, ma toccandolo una volta al secondo: l'attesa e' di 3s, quindi non deve MAI
+    // ripartire. E' qui che sta il modificatore: o lo finisci, o ricomincia da capo.
+    const b = banco('rigenerante'); b.m.hp = meta;
+    for (let i = 0; i < C.TICK_RATE * 6; i++) {
+      b.p.hp = 1e9;
+      if (i % C.TICK_RATE === 0) { b.r.damageMonster(b.m, 1, b.m.x, b.m.y, 0, b.p); b.m.hp = meta; }
+      b.r.setInput('a', { mx: 0, my: 0, aim: 0 }); b.r.update(dt);
+    }
+    assert(Math.round(b.m.hp) === meta, 'ma un colpo al secondo lo tiene fermo li (' + Math.round(b.m.hp) + ')');
+    // e un campione che NON e' rigenerante non torna su da solo
+    const c = banco('corazzato'); c.m.hp = meta;
+    for (let i = 0; i < C.TICK_RATE * 6; i++) { c.p.hp = 1e9; c.r.setInput('a', { mx: 0, my: 0, aim: 0 }); c.r.update(dt); }
+    assert(Math.round(c.m.hp) <= meta, 'e gli altri campioni non si curano (' + Math.round(c.m.hp) + ')');
+  }
+
+  // --- 6) SCORTATO: gli altri gli vanno attorno, e finche' ce n'e' uno incassa meta' ----------
+  {
+    const { r, p, m } = banco('scortato', 12);
+    // il campione va messo in uno SLARGO, non a un offset qualsiasi: con le scorte sparpagliate
+    // dietro agli angoli il raggio d'ingaggio non e' quello che si voleva provare, ed e' la mappa a
+    // decidere l'esito del test invece del modificatore.
+    // ...ma uno slargo VICINO (260-700 px). Senza il tetto massimo il campione finiva a 1200 px dal
+    // giocatore, e li' scatta il riavvicinamento dei mostri sperduti che il gioco ha da sempre: il
+    // campione veniva teletrasportato e le scorte restavano indietro di 1700 px. Non era un difetto
+    // del modificatore, era il test che lo piazzava dove nessun campione si troverebbe mai.
+    const slargo = r._postoLargo(170, 260, 700) || { x: m.x, y: m.y };
+    m.x = slargo.x; m.y = slargo.y;
+    for (let i = 0; i < 4; i++) {
+      const q = libero(r, m.x, m.y, 120 + i * 18);
+      const o = r.spawnMonster('skeleton', q.x, q.y, { scaling: r.waveScaling }); o.awake = true;
+    }
+    for (let i = 0; i < C.TICK_RATE * 6; i++) { p.hp = 1e9; r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    const scorte = r.monsters.filter(o => o.scortaDi === m.eid);
+    assert(scorte.length === 4, 'il campione si prende le scorte, e non le molla (' + scorte.length + ' su 4)');
+    // "restano attorno" si misura sul raggio d'ingaggio, che e' anche quello che fa da scudo: una
+    // scorta che si e' spinta piu' in la' non lo sta proteggendo, e il gioco infatti non gliela conta.
+    const attorno = scorte.filter(o => MU.dist(o.x, o.y, m.x, m.y) <= C.SCORTA_RAGGIO).length;
+    assert(attorno >= 2, 'e gli restano attorno (' + attorno + ' su ' + scorte.length + ')');
+    const pv = m.maxHp;
+    m.hp = pv; r.damageMonster(m, 200, m.x - 100, m.y, 0, p); const con = pv - m.hp;
+    // si uccidono le scorte e si rimisura NELLO STESSO istante: cosi' l'unica differenza e' loro.
+    for (const o of r.monsters) if (o !== m) o.dead = true;
+    r.monsters = r.monsters.filter(o => !o.dead);
+    m.hp = pv; r.damageMonster(m, 200, m.x - 100, m.y, 0, p); const senza = pv - m.hp;
+    assert(con < senza * 0.75, 'con la scorta in piedi incassa la meta (' + con + ' vs ' + senza + ')');
+    // E UNA SCORTA CHE SI E' ALLONTANATA TORNA INDIETRO. Senza questo controllo il registro delle
+    // scorte poteva restare pieno mentre in campo non tornava nessuno: provato col sabotaggio,
+    // spegnendo il dirottamento nell IA tutto il resto del blocco restava verde.
+    { const b = banco('scortato', 12);
+      const sl2 = b.r._postoLargo(170, 260, 620) || { x: b.m.x, y: b.m.y };
+      b.m.x = sl2.x; b.m.y = sl2.y;
+      // la guardia si arruola DA VICINO (il raggio d'ingaggio e' 300, oltre non la si nota nemmeno)
+      // e poi la si porta a meta' strada verso il giocatore: quello che si prova qui e' il RITORNO.
+      // Il campione si tiene fermo a mano per tutta la prova, e il motivo e' il sabotaggio: se il
+      // capo puo' muoversi va verso il giocatore anche lui, la scorta ci va per conto suo, e la
+      // distanza fra i due cala lo stesso — cioe' il controllo restava verde anche spegnendo del
+      // tutto il dirottamento nell'IA. Con il capo inchiodato, l'unico modo per avvicinarsi a lui
+      // e' tornarci apposta.
+      const vicino = libero(b.r, b.m.x, b.m.y, 120);
+      const g = b.r.spawnMonster('skeleton', vicino.x, vicino.y, { scaling: b.r.waveScaling }); g.awake = true;
+      b.r.update(dt);
+      assert(g.scortaDi === b.m.eid, 'la guardia si arruola');
+      const cx = b.m.x, cy = b.m.y;
+      // a meta' strada fra il capo e il giocatore, cosi' restare col giocatore e tornare dal capo
+      // sono due direzioni diverse
+      // a 480 px dal capo, nella direzione del giocatore. 480 e non 340 per un motivo preciso:
+      // a 340 px la guardia rientra sotto i 300 prima ancora del giro d appello successivo, e allora
+      // un congedo a distanza — la versione sbagliata provata due volte — passerebbe inosservato.: restare dov e' e tornare dal capo sono
+      // due direzioni opposte, ed e' l unico modo perche' il controllo distingua le due cose.
+      let via = null;
+      const verso = Math.atan2(b.p.y - cy, b.p.x - cx);
+      for (let t = 0; t < 48 && !via; t++) {
+        const an = verso + (t % 2 ? 1 : -1) * ((t / 2) | 0) * 0.16, rr2 = 480 - ((t / 12) | 0) * 35;
+        const nx = cx + Math.cos(an) * rr2, ny = cy + Math.sin(an) * rr2;
+        if (!b.r.isWallAt(nx, ny)) via = { x: nx, y: ny };
+      }
+      // e il controllo non puo' saltarsi da solo: se il punto non si trova, si sa.
+      assert(via != null, 'trovato il punto dove mandare la guardia lontano dal capo');
+      {
+        g.x = via.x; g.y = via.y;
+        const d0 = MU.dist(g.x, g.y, cx, cy);
+        for (let i = 0; i < C.TICK_RATE * 12; i++) {
+          b.p.hp = 1e9; b.m.x = cx; b.m.y = cy; b.m._fermoT = 0;   // il capo sta fermo dov e
+          b.r.setInput('a', { mx: 0, my: 0, aim: 0 }); b.r.update(dt);
+        }
+        b.m.x = cx; b.m.y = cy;
+        const d1 = MU.dist(g.x, g.y, cx, cy);
+        const dGioc = MU.dist(cx, cy, b.p.x, b.p.y);
+        assert(g.scortaDi === b.m.eid, 'la scorta lontana resta in servizio');
+        // NON si guarda «si e' avvicinata»: si guarda DOVE E' FINITA. Con un semplice «si e'
+        // avvicinata» il sabotaggio passava — la guardia andava dal giocatore, e siccome il
+        // giocatore sta anche lui da quella parte, la distanza dal capo calava lo stesso. Qui
+        // invece il capo e' inchiodato lontano dal giocatore, e si pretende che la guardia sia
+        // tornata AL SUO ANELLO: un posto dove andando dal giocatore non ci si finisce.
+        assert(dGioc > (C.SCORTA_ANELLO || 130) + 100, 'il capo e lontano dal giocatore, quindi i due posti sono distinguibili (' + (dGioc | 0) + ' px)');
+        assert(d1 <= (C.SCORTA_ANELLO || 130) + 70, 'e la guardia torna al suo anello attorno al capo (' + (d0 | 0) + ' px -> ' + (d1 | 0) + ' px)');
+      } }
+    // E IL GRUPPO NON SI SFALDA QUANDO IL CAPO VIENE SPOSTATO. Il recupero anti-stallo (v1.76.1)
+    // teletrasporta chi e' fermo da cinque secondi e lontano: e' un caso vero — misurato, capitava
+    // in 17 prove su 150 — e succedevano due cose insieme. Una scorta che torna dal suo campione si
+    // ALLONTANA dal giocatore, quindi al recupero sembrava un mostro incastrato in un angolo; e se a
+    // essere spostato era il capo, le guardie restavano dall'altra parte della mappa. Adesso chi e'
+    // di scorta e' esente, e se si sposta il capo le scorte vanno con lui.
+    { const b = banco('scortato', 12);
+      for (let i = 0; i < 3; i++) { const q = libero(b.r, b.m.x, b.m.y, 110 + i * 20);
+        const o = b.r.spawnMonster('skeleton', q.x, q.y, { scaling: b.r.waveScaling }); o.awake = true; }
+      b.r.update(dt);   // un tick perche' l incarico venga assegnato
+      const squadra = b.r.monsters.filter(o => o.scortaDi === b.m.eid);
+      assert(squadra.length >= 2, 'la squadra c e (' + squadra.length + ')');
+      const prima = squadra.map(o => MU.dist(o.x, o.y, b.m.x, b.m.y));
+      // si simula il recupero: si sposta il capo a mano, com fa il failsafe, e si guarda dove finiscono
+      const dove = b.r._postoLargo(40, 900) || { x: b.m.x + 900, y: b.m.y };
+      const dx = dove.x - b.m.x, dy = dove.y - b.m.y;
+      for (const o of squadra) { const nx = o.x + dx, ny = o.y + dy; if (!b.r.isWallAt(nx, ny)) { o.x = nx; o.y = ny; } else { o.x = dove.x; o.y = dove.y; } }
+      b.m.x = dove.x; b.m.y = dove.y;
+      const dopo = squadra.map(o => MU.dist(o.x, o.y, b.m.x, b.m.y));
+      assert(dopo.every((d, i) => d <= prima[i] + 1), 'e quando il capo viene spostato le scorte vanno con lui');
+      // e una scorta non viene MAI considerata bloccata dal recupero: ha una destinazione sua
+      const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server', 'Room.js'), 'utf8');
+      assert(/if \(m\.scortaDi != null\) \{ m\._fermoT = 0; m\._avvicinaMin = undefined; continue; \}/.test(src),
+        'e il recupero anti-stallo non tocca chi e di scorta');
+      assert(new RegExp("if \\(m\\.campione === 'scortato'\\) \\{[\\s\\S]{0,400}?const dx = dove\\.x - m\\.x").test(src),
+        'e se sposta il capo, sposta anche loro'); }
+    // e lo scudo cade nell ISTANTE in cui muore l ultima guardia, non mezzo secondo dopo: uno scudo
+    // che resta su dopo che hai ucciso l ultima scorta si legge come un errore, non come una regola.
+    assert(senza === 200, 'e appena cadono, incassa tutto (' + senza + ')');
+  }
+
+  // --- 7) INFURIATO: sotto meta vita raddoppia ------------------------------------------------
+  {
+    // stessa stanza, stesso seme, stesso punto: l'unica differenza e' che uno parte gia' ferito.
+    // si parte da LONTANO e si misura poco: un infuriato che arriva addosso al giocatore si ferma a
+    // picchiarlo, e da quel momento in poi la misura racconta la mischia invece della corsa — col
+    // che il doppio di velocita' si leggeva come un +40%. Preso proprio cosi', alla prima stesura.
+    const strada = (ferito) => {
+      let tot = 0, inf = 0;
+      // DIECI stanze, non una: la coppia sana/infuriata parte dallo stesso punto della stessa mappa,
+      // ma basta uno spigolo preso male perche' in QUELLA stanza il raddoppio si legga come un +50%
+      // — chi corre il doppio sbatte anche il doppio. Sommando dieci mappe diverse la misura dice la
+      // velocita' e non la geometria del corridoio. Con cinque il minimo su quaranta prove era 1,43 e
+      // il massimo col motore SABOTATO 1,31: troppo vicini. Con dieci sono 1,74 e 1,23.
+      for (const seme of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+        const r = new Room('v229fur' + seme); const p = r.addPlayer('a', { send() {} }, 'A', 'ranger');
+        r.startGame(1, true); r.wave = 8; r.waveList = []; r.monsters.length = 0; r.pending = 0;
+        r.waveScaling = Waves.scaling(8, 1);
+        const q = libero(r, p.x, p.y, 760);
+        const m = r.spawnMonster('skeleton', q.x, q.y, { scaling: r.waveScaling, camp: 'infuriato' });
+        m.awake = true; if (ferito) m.hp = Math.round(m.maxHp * 0.3);
+        for (let i = 0; i < C.TICK_RATE * 2.5; i++) {
+          const x0 = m.x, y0 = m.y; p.hp = 1e9;
+          r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt);
+          m.hp = ferito ? Math.round(m.maxHp * 0.3) : m.maxHp;   // la vita si tiene ferma: qui si misura la corsa
+          tot += MU.dist(m.x, m.y, x0, y0);
+        }
+        inf = m.infuria;
+      }
+      return { d: tot, inf };
+    };
+    const sano = strada(false), fur = strada(true);
+    assert(sano.inf === 0, 'a vita piena non e infuriato');
+    assert(fur.inf === 1, 'sotto meta vita si infuria');
+    // si misura la STRADA PERCORSA, non lo spostamento netto: un mostro che vaga raddoppia la
+    // velocita' e resta dov'e', e il numero direbbe il contrario di quello che e' successo.
+    // la soglia e' 1,5 e non 2, e i due numeri che la scelgono sono misurati, non stimati: su quaranta
+    // prove da dieci mappe ciascuna il rapporto vero sta fra 1,74 e 2,53 (mediana 2,05 — il
+    // moltiplicatore e' esattamente quello), e togliendo la riga del moltiplicatore sta fra 0,82 e
+    // 1,23. 1,5 e' in mezzo, e ci sta largo da tutte e due le parti.
+    assert(fur.d > sano.d * 1.5, 'e corre quasi il doppio (' + (fur.d | 0) + ' px contro ' + (sano.d | 0) + ')');
+    // e non e' un trucco della misura: il danno sale una volta sola, non a ogni tick
+    const { r, p, m } = banco('infuriato'); const d0 = m.dmg;
+    m.hp = Math.round(m.maxHp * 0.3);
+    for (let i = 0; i < C.TICK_RATE * 4; i++) { p.hp = 1e9; m.hp = Math.round(m.maxHp * 0.3); r.setInput('a', { mx: 0, my: 0, aim: 0 }); r.update(dt); }
+    assert(m.dmg === Math.round(d0 * C.INFURIA_DMG), 'e il danno sale UNA volta sola, non a ogni tick (' + d0 + ' -> ' + m.dmg + ')');
+  }
+
+  // --- 8) IL COLORE ARRIVA AL CLIENT, e lo decide il modificatore -----------------------------
+  {
+    assert(C.CAMPIONE_COL.length === C.CAMPIONE_MOD.length && C.CAMPIONE_FILTRO.length === C.CAMPIONE_MOD.length,
+      'c e un colore e un tint per ogni modificatore');
+    assert(new Set(C.CAMPIONE_COL).size === 4, 'e sono quattro colori diversi');
+    const { r, p, m } = banco('scortato');
+    r.update(dt);
+    const snap = r.buildSnapshot ? r.buildSnapshot() : null;
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server', 'Room.js'), 'utf8');
+    assert(/o\.kp = \(C\.CAMPIONE_MOD \|\| \[\]\)\.indexOf\(m\.campione\) \+ 1;/.test(src),
+      'lo snapshot manda l indice del modificatore, non un generico "e forte"');
+    const rnd = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+    assert(/else if \(m\.kp\) \{/.test(rnd), 'e il client disegna il campione col colore del modificatore');
+    assert(/CAMPIONE_FILTRO/.test(rnd), 'anche sul corpo, non solo nell anello');
+    assert(m.campione === 'scortato' && C.CAMPIONE_MOD.indexOf(m.campione) === 2, 'e l indice e quello giusto');
+  }
+
+  // --- 9) NON ROMPIAMO NIENTE DI QUELLO CHE C'ERA --------------------------------------------
+  {
+    // gli elite normali restano esattamente come prima della v2.29
+    const e = banco(null).m;
+    assert(e.elite === true && e.campione === null, 'un elite senza modificatore resta un elite e basta');
+    // la chiave dell ondata (v1.84) sta ancora addosso a un elite, e un campione va benissimo
+    // la CHIAVE dell'ondata (v1.84) sceglie il suo portatore fra gli elite: siccome un campione E'
+    // un elite, deve poter toccare a lui. Il recinto non compare a ogni ondata, quindi la chiave si
+    // fabbrica a mano — se no questo controllo sarebbe rosso o verde a sorte.
+    const r = new Room('v229k'); const pk = r.addPlayer('a', { send() {} }, 'A', 'ranger'); r.startGame(13);
+    r.monsters.length = 0; r.waveScaling = Waves.scaling(13, 1);
+    r.chiave = { x: 0, y: 0, presa: false, suEid: -1 };
+    const camp = r.spawnMonster('skeleton', pk.x + 300, pk.y, { scaling: r.waveScaling, camp: 'corazzato' });
+    assert(r.chiave.suEid === camp.eid, 'e la chiave dell ondata puo stare addosso a un campione');
+    // e un'ondata intera gira senza inciampi con i campioni dentro
+    const r2 = new Room('v229run'); const p2 = r2.addPlayer('a', { send() {} }, 'A', 'ranger'); r2.startGame(13);
+    for (let i = 0; i < C.TICK_RATE * 40; i++) { p2.hp = 1e9; r2.setInput('a', { mx: 0, my: 0, aim: 0 }); r2.update(dt); }
+    assert(r2.monsters.length <= r2.tettoVivi() + 2, 'e il tetto in campo regge anche coi campioni (' + r2.monsters.length + '/' + r2.tettoVivi() + ')');
+    assert(r2.monsters.every(m => !m.campione || C.CAMPIONE_MOD.indexOf(m.campione) >= 0), 'e ogni campione in campo ha un modificatore vero');
+  }
+  ok('il tetto e a 16, e sopra l elite c e il campione col suo modificatore');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

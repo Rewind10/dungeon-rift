@@ -733,7 +733,8 @@ class Room {
   spawnMonster(typeId, x, y, opts = {}) {
     const def = Mon.MONSTERS[typeId] || Mon.BOSSES[typeId] || Mon.MONSTERS.skeleton;
     const m = { eid: NEXT++, type: def.id, def: Object.assign({}, def), x, y, mx: 0, my: 0, facing: 0, hp: def.hp, maxHp: def.hp, dmg: def.dmg, speed: def.speed, radius: def.radius, xp: def.xp, atkT: MU.rand(0, def.atkCd), stun: 0, elite: false, hitFlash: 0, boss: !!def.boss, mega: !!def.mega, awake: def.ai !== 'ambush', slowT: 0, poison: 0, poisonT: 0 };
-    if (opts.scaling) Waves.applyScaling(m, opts.scaling, opts.elite);
+    m.campione = null; m.rigenT = 0; m.infuria = 0; m.scortaX = null; m.scortaY = null;
+    if (opts.scaling) Waves.applyScaling(m, opts.scaling, opts.elite, opts.camp);
     if (opts.hpMul) { m.maxHp = Math.round(m.maxHp * opts.hpMul); m.hp = m.maxHp; }
     if (opts.dmgMul) m.dmg = Math.round(m.dmg * opts.dmgMul);
     m.radius = m.radius * (C.COL_SCALE || 1); // v1.13 — collisione leggermente piu grande (velocita invariata)
@@ -2896,7 +2897,27 @@ class Room {
     // v1.89 — IL NUCLEO DEL COLOSSO: quando si sfalda e resta scoperto, incassa meta' danni in piu'.
     // E' la finestra su cui e' costruito tutto il combattimento.
     if (m.nucleo) d *= (m.def.nucleoDanno || 1.5);
+    // ==========================================================================================
+    // v2.29 — I MODIFICATORI DEL CAMPIONE che si sentono QUI, nel momento in cui incassa.
+    // ==========================================================================================
+    if (m.campione) {
+      // CORAZZATO: il cono e' davanti a lui, quindi la risposta e' girargli attorno. Sta dopo il
+      // "colpo alle spalle" del ladro di proposito: sono la stessa domanda vista dai due lati, e
+      // chi ha quella carta deve sentirsi premiato proprio contro questo.
+      if (m.campione === 'corazzato' && sx !== undefined) {
+        const ang = Math.atan2(sy - m.y, sx - m.x);
+        const diff = Math.abs(((ang - (m.facing || 0) + Math.PI) % (2 * Math.PI)) - Math.PI);
+        if (diff < (C.CORAZZA_ARCO || 1.25)) { d *= (1 - (C.CORAZZA_RID || 0.7)); m._corazzaT = 0.25; }
+      }
+      // SCORTATO: finche' gli resta anche UNA scorta in piedi, incassa meta'. Non e' un'aura che
+      // lui emette: e' che gli altri gli stanno davanti, ed e' il motivo per cui questo e' l'unico
+      // modificatore che chiede di NON sparare al bersaglio grosso.
+      if (m.campione === 'scortato' && this._haScorte(m)) d *= (C.SCORTA_RID || 0.5);
+    }
     d = Math.max(1, Math.round(d)); m.hp -= d; m.hitFlash = 0.1;
+    // RIGENERANTE: ogni colpo rimanda indietro il cronometro. Non "guarisce piano mentre lo picchi":
+    // o lo finisci, o ricomincia da capo — ed e' li' che sta il modificatore.
+    if (m.campione === 'rigenerante') m.rigenT = (C.RIGEN_ATTESA || 3);
     // v2.18 — LAME SPORCHE DI VERDE (assassino): ogni colpo avvelena, e il veleno si SOMMA su chi lo
     // prende piu' volte. Si appoggia al veleno che esiste gia' (`m.poison`), aggiungendo solo il conto
     // delle dosi: senza tetto, dieci colpi in tre secondi farebbero piu' danno dell'arma stessa.
@@ -3900,7 +3921,7 @@ class Room {
       this._braccAnnuncio = true;
       this.broadcast({ t: C.MSG.EVENT, ev: { t: 'braccata' } });
     }
-    if (inCombat && this.pending > 0 && this._puoSpawnare()) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite }); this.pending--; } } }
+    if (inCombat && this.pending > 0 && this._puoSpawnare()) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnTimer = (this.monsters.length < (this._peakAlive || 0)) ? MU.rand(0.10, 0.22) : MU.rand(0.25, 0.6); if (Waves.isBossWave(this.wave)) { const pos = this.randomSpawnPos(); this.spawnMonster('skeleton', pos.x, pos.y, { scaling: Waves.scaling(this.wave, this.alivePlayers.length || 1) }); this.pending--; } else if (this.waveList && this.waveList.length) { const it = this.waveList.shift(); const pos = this.randomSpawnPos(); this.spawnMonster(this._capType(it.type), pos.x, pos.y, { scaling: this.waveScaling, elite: it.elite, camp: it.camp }); this.pending--; } } }
     // durante SOPRAVVIVENZA rifornisci finché il timer non scade
     // v1.70 — il rifornimento della SOPRAVVIVENZA aveva un 14 scritto a mano che scavalcava il tetto:
     // all ondata 2 (tetto 10) si arrivava a 14 vivi. Ora passa dalla stessa porta di tutti gli altri.
@@ -3932,6 +3953,11 @@ class Room {
       const ap = this.alivePlayers;
       if (ap.length) for (const m of this.monsters) {
         if (m.dead || (m.def && m.def.immobile)) continue;
+        // v2.29 — CHI E' DI SCORTA NON E' BLOCCATO: ha una destinazione, e non e' il giocatore. Una
+        // scorta che torna dal suo campione si allontana da te per mestiere, quindi qui sembrava un
+        // mostro fermo in un angolo e finiva teletrasportata dall'altra parte della mappa — e la
+        // scorta del campione si sfaldava da sola dopo qualche secondo.
+        if (m.scortaDi != null) { m._fermoT = 0; m._avvicinaMin = undefined; continue; }
         if (m.impegnato === 0) { m._fermoT = 0; m._avvicinaMin = undefined; continue; }   // v1.80 — non e' bloccato: sta aspettando il turno
         let d = Infinity, vicino = null;
         for (const p of ap) { const dd = MU.dist(m.x, m.y, p.x, p.y); if (dd < d) { d = dd; vicino = p; } }
@@ -3966,7 +3992,22 @@ class Room {
           }
           if (dove) break;
         }
-        if (dove) { m.x = dove.x; m.y = dove.y; m._avvicinaMin = undefined; }
+        if (dove) {
+          // v2.29 — e se a spostarsi e' un campione SCORTATO, le sue scorte vanno con lui. Se no si
+          // sposta il capo e la guardia resta di la': il modificatore si scioglierebbe proprio nel
+          // caso in cui il gruppo era gia' in difficolta'.
+          if (m.campione === 'scortato') {
+            const dx = dove.x - m.x, dy = dove.y - m.y;
+            for (const o of this.monsters) {
+              if (o.dead || o.scortaDi !== m.eid) continue;
+              const nx = o.x + dx, ny = o.y + dy;
+              if (!this.isWallAt(nx, ny)) { o.x = nx; o.y = ny; }
+              else { o.x = dove.x; o.y = dove.y; }
+              o._avvicinaMin = undefined; o._fermoT = 0;
+            }
+          }
+          m.x = dove.x; m.y = dove.y; m._avvicinaMin = undefined;
+        }
         m._fermoT = 0;
       }
     }
@@ -4396,7 +4437,23 @@ class Room {
       // v1.79.2 — il veleno fa una QUOTA DEL COLPO che l'ha applicato (5% al secondo), non un numero
       // fisso: cosi' non diventa irrilevante all'ondata 15 ne' sproporzionato alla prima.
       if (m.poison > 0 && m.poisonT > 0) { m.poisonT -= dt; m.poisonTick = (m.poisonTick || 0) + dt; if (m.poisonTick > 0.5) { m.poisonTick = 0; this.damageMonster(m, Math.max(1, Math.round(m.poison * 0.5)), m.x, m.y - 1, 0, this.players.get(m.poisonSrc)); if (m.dead) continue; } }
+      // v2.29 — I DUE MODIFICATORI CHE VIVONO NEL TEMPO (gli altri due stanno in damageMonster e
+      // nell'assegnazione delle scorte, qui sotto).
+      if (m.campione === 'rigenerante') {
+        if (m.rigenT > 0) m.rigenT -= dt;
+        else if (m.hp < m.maxHp) { m.hp = Math.min(m.maxHp, m.hp + m.maxHp * (C.RIGEN_QUOTA || 0.06) * dt); m.rigen = 1; }
+        if (m.rigenT > 0) m.rigen = 0;
+      }
+      if (m.campione === 'infuriato' && !m.infuria && m.hp <= m.maxHp * (C.INFURIA_SOGLIA || 0.5)) {
+        m.infuria = 1; m.dmg = Math.round(m.dmg * (C.INFURIA_DMG || 1.25));
+        this.events.push({ t: 'infuria', x: m.x, y: m.y, e: m.eid });
+      }
+      if (m._corazzaT > 0) m._corazzaT -= dt;
       let slow = 1; if (m.slowT > 0) { m.slowT -= dt; slow = 1 - (m.slowQ || 0.25); }
+      // l'infuriato si muove QUI e non toccando m.speed: la velocita' di base la leggono le
+      // animazioni (il passo dei pupazzi si sincronizza su quella) e raddoppiarla farebbe pattinare
+      // i piedi. Questo moltiplicatore invece e' lo stesso posto dove passano i rallentamenti.
+      if (m.infuria) slow *= (C.INFURIA_VEL || 2);
       if (m.cmdV > 1) slow *= m.cmdV;        // v2.23 — il comando del Padrone
       // v2.20.0 — VELENO CORROSIVO (assassino): finche' dura, il nemico morde meno. Si tocca `m.dmg`
       // (e si tiene da parte il valore vero) perche' e' l'unico numero che TUTTI i suoi attacchi
@@ -4424,8 +4481,59 @@ class Room {
       if (wantMove) { const moved = MU.dist(m.x, m.y, px0, py0); const want = MU.len(m.mx, m.my) * ld * cu * slow; if (moved < want * 0.3) { m._stuckT = (m._stuckT || 0) + dt; if (m._stuckT > 0.35) { this._recoverStuck(m, Math.atan2(m.my, m.mx)); if (m._stuckT > 1.4) { m._stuckT = 0; } } } else m._stuckT = 0; } else m._stuckT = 0;
       }
       const t = this.tileAtWorld(m.x, m.y); if (t === C.T_HAZARD) { m.hazT = (m.hazT || 0) + dt; if (m.hazT > 0.3) { m.hp -= 8; m.hazT = 0; if (m.hp <= 0) this.killMonster(m, null); } } }
+    this._assegnaScorte(dt);
     this._separate(); this._pushOff();
     if (this.monsters.some(m => m.dead)) this.monsters = this.monsters.filter(m => !m.dead);
+  }
+  // v2.29 — LE SCORTE DEL CAMPIONE SCORTATO. Ogni mezzo secondo (non a ogni tick: e' una decisione,
+  // non una fisica, e rifarla trenta volte al secondo farebbe solo tremolare l'assegnazione) il
+  // campione si prende i piu' vicini che non stanno gia' facendo la guardia a qualcun altro.
+  // Alla scorta si scrive SOLO un punto da tenere (scortaX/scortaY/scortaR): l'IA non deve sapere
+  // niente dei campioni, deve solo sapere che c'e' un posto dove le tocca stare.
+  _assegnaScorte(dt) {
+    this._scortaT = (this._scortaT || 0) - dt; if (this._scortaT > 0) return;
+    this._scortaT = 0.5;
+    const capi = this.monsters.filter(m => !m.dead && m.campione === 'scortato');
+    const R = C.SCORTA_RAGGIO || 300, N = C.SCORTA_MAX || 4;
+    // UNA SCORTA SI CONGEDA SOLO QUANDO UNO DEI DUE MUORE. Ci sono voluti due tentativi.
+    // Il primo rifaceva l'incarico da zero ogni mezzo secondo con lo stesso raggio d'ingaggio: il
+    // campione e' il piu' LENTO del gruppo (e' anche il piu' grosso), le scorte gli correvano avanti
+    // verso il giocatore, uscivano dai 300 px e venivano congedate — dopo cinque secondi non lo
+    // scortava piu' nessuno. Il secondo allargava il congedo al doppio del raggio: stesso difetto,
+    // piu' raro e quindi peggiore, perche' capitava solo ogni tanto.
+    // Il congedo a distanza e' proprio l'idea sbagliata: chi si e' allontanato e' esattamente chi
+    // deve TORNARE, e l'IA lo riporta all'anello da sola. Qui si tiene solo il registro.
+    for (const o of this.monsters) {
+      if (o.scortaDi == null) continue;
+      const capo = capi.find(c => c.eid === o.scortaDi);
+      if (o.dead || !capo) { o.scortaDi = null; o.scortaX = null; o.scortaY = null; continue; }
+      o.scortaX = capo.x; o.scortaY = capo.y; o.scortaR = C.SCORTA_ANELLO || 130;
+    }
+    if (!capi.length) return;
+    for (const capo of capi) {
+      let inServizio = 0;
+      for (const o of this.monsters) if (!o.dead && o.scortaDi === capo.eid) inServizio++;
+      if (inServizio >= N) continue;
+      const vicini = this.monsters
+        .filter(o => !o.dead && o !== capo && o.scortaDi == null && !o.boss && !o.def.immobile && !o.campione)
+        .map(o => ({ o, d: MU.dist2(capo.x, capo.y, o.x, o.y) }))
+        .filter(q => q.d <= R * R).sort((a, b) => a.d - b.d);
+      for (let i = 0; i < Math.min(N - inServizio, vicini.length); i++) {
+        const o = vicini[i].o; o.scortaDi = capo.eid; o.scortaX = capo.x; o.scortaY = capo.y;
+        o.scortaR = C.SCORTA_ANELLO || 130;
+      }
+    }
+  }
+  // gli basta UNA scorta viva nel raggio. Si ricontrolla qui e non si tiene un contatore perche' la
+  // scorta puo' morire in mezzo a un tick, e uno scudo che resta su per mezzo secondo dopo che hai
+  // ucciso l'ultima guardia si legge come un bug, non come una regola.
+  _haScorte(capo) {
+    const R = C.SCORTA_RAGGIO || 300;
+    for (const o of this.monsters) {
+      if (o.dead || o === capo || o.scortaDi !== capo.eid) continue;
+      if (MU.dist2(capo.x, capo.y, o.x, o.y) <= R * R) return true;
+    }
+    return false;
   }
   _separate() { const a = this.monsters; for (let i = 0; i < a.length; i++) { const x = a[i]; if (x.def.phasing) continue; for (let j = i + 1; j < Math.min(a.length, i + 8); j++) { const y = a[j]; if (y.def.phasing) continue; const dx = y.x - x.x, dy = y.y - x.y, rr = x.radius + y.radius, d2 = dx * dx + dy * dy; if (d2 < rr * rr && d2 > 0.0001) { const d = Math.sqrt(d2), ov = (rr - d) * 0.5, nx = dx / d, ny = dy / d; if (!x.def.immobile && !this.isWallAt(x.x - nx * ov, x.y - ny * ov)) { x.x -= nx * ov; x.y -= ny * ov; } if (!y.def.immobile && !this.isWallAt(y.x + nx * ov, y.y + ny * ov)) { y.x += nx * ov; y.y += ny * ov; } } } } }
   // v1.61 — i nemici IMMOBILI (Fungo) non vengono spinti ne dai giocatori ne dagli altri mostri:
@@ -4654,10 +4762,16 @@ class Room {
       if (nuovo) {                                                        // parte immutabile: una volta sola
         o.t = m.type; o.mhp = m.maxHp;
         if (m.elite) o.el = 1; if (m.boss) o.b = 1; if (m.mega) o.mg = 1;
+        // v2.29 — il CAMPIONE: si manda l'indice del modificatore +1 (0/assente = non e' un campione),
+        // perche' e' il modificatore a decidere il colore e il client deve saperlo dal primo frame.
+        if (m.campione) o.kp = (C.CAMPIONE_MOD || []).indexOf(m.campione) + 1;
       }
       if (m.hitFlash > 0) o.fl = 1;
       if (m.assorbiti > 0) o.ab = m.assorbiti;          // v2.22 — quanti colpi ha ancora dentro il cubo
       if (m.cmdV > 1) o.cm = 1;                         // v2.23 — sotto il comando del Padrone
+      if (m.rigen) o.rg = 1;                            // v2.29 — sta tornando su
+      if (m.infuria) o.if = 1;                          // v2.29 — infuriato
+      if (m._corazzaT > 0) o.cz = 1;                    // v2.29 — la corazza ha appena respinto un colpo
       if (m.shielded > 0) o.sh = 1;
       if (m.poison > 0 && m.poisonT > 0) o.ps = 1;
       if (m.marchio > 0) o.mk = 1;                       // v1.85 — Marchio del ladro

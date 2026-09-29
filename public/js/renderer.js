@@ -4829,6 +4829,35 @@
       if (m.tr) { ctx.strokeStyle = 'rgba(255,210,80,' + (0.6 + 0.3 * Math.sin(this.time * 7)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8, 0, 7); ctx.stroke(); }
       else if (m.mg) { ctx.strokeStyle = 'rgba(255,45,85,' + (0.5 + 0.3 * Math.sin(this.time * 6)) + ')'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, rr + 12 + Math.sin(this.time * 4) * 3, 0, 7); ctx.stroke(); }
       else if (m.b) { ctx.strokeStyle = 'rgba(255,60,60,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rr + 8 + Math.sin(this.time * 4) * 2, 0, 7); ctx.stroke(); }
+      // v2.29 — IL CAMPIONE. Prende il posto dell'anello ambra dell'elite, e il colore lo decide il
+      // MODIFICATORE: il giocatore deve capire cosa ha davanti — e quindi come combatterlo — prima di
+      // arrivare a tiro, non scoprirlo incassando. Alone sotto + anello doppio: e' l'unica cosa in
+      // campo disegnata cosi', e serve che si distingua a colpo d'occhio da un elite.
+      else if (m.kp) {
+        const cc = (C.CAMPIONE_COL || [])[m.kp - 1] || '#ffb028';
+        const pul = 0.5 + 0.5 * Math.sin(this.time * (m.if ? 9 : 3.4));
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.16 + pul * 0.12;
+        const gg = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, rr * 2.1);
+        gg.addColorStop(0, cc); gg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, rr * 2.1, 0, 7); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = cc; ctx.globalAlpha = 0.55 + pul * 0.35; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, rr + 6, 0, 7); ctx.stroke();
+        ctx.globalAlpha = 0.30 + pul * 0.2; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, rr + 11, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+        // CORAZZATO: l'arco davanti si disegna sempre, non solo quando respinge. E' l'informazione
+        // che serve PRIMA di sparare — se comparisse solo al colpo assorbito sarebbe una spiegazione
+        // dopo l'errore. Quando respinge davvero lampeggia, e quello e' il riscontro.
+        if (m.kp === 1) {
+          const A = C.CORAZZA_ARCO || 1.25;
+          ctx.save(); ctx.rotate(m.f); ctx.strokeStyle = cc; ctx.lineCap = 'round';
+          ctx.globalAlpha = m.cz ? 0.95 : 0.4; ctx.lineWidth = m.cz ? 5 : 3.2;
+          ctx.beginPath(); ctx.arc(0, 0, rr + 3, -A, A); ctx.stroke(); ctx.restore(); ctx.globalAlpha = 1;
+        }
+        // RIGENERANTE che sta tornando su: le scintille salgono solo mentre guarisce davvero, cosi'
+        // smettere di picchiarlo si VEDE.
+        if (m.kp === 2 && m.rg && Math.random() < 0.5)
+          this.particles.push({ x: x + MU.rand(-rr, rr), y: y + rr * 0.4, vx: 0, vy: -46, life: 0.55, t: 0.55, color: cc, r: 2.2, over: true });
+      }
       else if (m.el) { ctx.strokeStyle = 'rgba(255,180,40,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, rr + 5, 0, 7); ctx.stroke(); }
       if (m.sh) { ctx.strokeStyle = 'rgba(120,255,234,.8)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, rr + 6, 0, 7); ctx.stroke(); }
       // v1.85 — MARCHIO: un sigillo che gira sopra la testa. Lo vede tutta la squadra, ed e' il punto:
@@ -4861,11 +4890,11 @@
       else if (def.beholder) { const pv = moveInfo(m.e); this._beholderPuppet(ctx, m, rr, def, atk, !!pv.on, pv.dir); } // v1.49 — BEHOLDER (raster puppet: corpo ritagliato + iris che segue + eyestalks che avvampano nel colore dello sguardo)
       else if (def.sheet) { const pv = moveInfo(m.e); const flip = Math.cos(m.f) < 0 ? -1 : 1; // v1.47 — SPRITE SHEET (troll animato)
         if (!this._drawSheet(def.sheet, ctx, m, rr, def, atk, !!pv.on, flip, m.fl > 0, pv)) { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk, m); } }
-      else if (def.front) { const flip = Math.cos(m.f) < 0 ? -1 : 1; const back = Math.sin(m.f) < -0.35; let moving = false; if (def.puppet) { moving = !!moveInfo(m.e).on; } this._front(ctx, def.shape, rr, bodyc, dk, def.eye || '#fff', this.time, atk, back, flip, moving, m.fl > 0, m.el); } // v1.30 billboard · v1.36 movimento · v1.38 hit · v1.39 elite (tint)
+      else if (def.front) { const flip = Math.cos(m.f) < 0 ? -1 : 1; const back = Math.sin(m.f) < -0.35; let moving = false; if (def.puppet) { moving = !!moveInfo(m.e).on; } this._front(ctx, def.shape, rr, bodyc, dk, def.eye || '#fff', this.time, atk, back, flip, moving, m.fl > 0, m.el, m.kp); } // v1.30 billboard · v1.36 movimento · v1.38 hit · v1.39 elite (tint)
       else { ctx.rotate(m.f); this._shape(ctx, def.shape || 'imp', rr, bodyc, dk, def.eye || '#fff', this.time, atk, m); }
       ctx.restore();
       if (m.tr) { ctx.fillStyle = '#ffd24a'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('👑', x, y - rr - 14); ctx.textAlign = 'left'; }
-      if (m.hp < m.mhp) { const bw = Math.max(24, rr * 2.2); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw / 2, y - rr - 12, bw, m.b ? 6 : 4); ctx.fillStyle = m.tr ? '#ffd24a' : (m.mg ? '#ff2d55' : (m.b ? '#ff3b5b' : (m.el ? '#ffb020' : '#ff6b6b'))); ctx.fillRect(x - bw / 2, y - rr - 12, bw * Math.max(0, m.hp / m.mhp), m.b ? 6 : 4); }
+      if (m.hp < m.mhp) { const bw = Math.max(24, rr * 2.2); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw / 2, y - rr - 12, bw, m.b ? 6 : 4); ctx.fillStyle = m.tr ? '#ffd24a' : (m.mg ? '#ff2d55' : (m.b ? '#ff3b5b' : (m.kp ? ((C.CAMPIONE_COL || [])[m.kp - 1] || '#ffb020') : (m.el ? '#ffb020' : '#ff6b6b')))); ctx.fillRect(x - bw / 2, y - rr - 12, bw * Math.max(0, m.hp / m.mhp), m.b ? 6 : 4); }
     },
     // v1.26 — segnala un attacco (swing) per il mostro eid
     hitAttack(eid, dur) { if (eid == null) return; this.mAtk[eid] = { t: 0, dur: dur || 0.34 }; },
@@ -4929,7 +4958,11 @@
     // ============================ v1.30 — SPRITE FRONTALI (billboard) ============================
     _shade(hex, amt) { const n = parseInt(hex.slice(1), 16); let R = (n >> 16) + amt, G = ((n >> 8) & 255) + amt, B = (n & 255) + amt; R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B)); return 'rgb(' + R + ',' + G + ',' + B + ')'; },
     _rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; },
-    _front(ctx, shape, r, col, dk, eye, t, atk, back, flip, moving, hit, elite) {
+    _front(ctx, shape, r, col, dk, eye, t, atk, back, flip, moving, hit, elite, camp) {
+      // v2.29 — se e' un campione il tint NON e' piu' quello del profilo (che dice "elite"): e' quello
+      // del modificatore, uguale per tutte le specie. Un rigenerante deve essere verde che sia uno
+      // scheletro o un mago, se no il colore torna a dire la specie invece di dire come si combatte.
+      if (camp) elite = { filtro: (C.CAMPIONE_FILTRO || [])[camp - 1] };
       ctx.save(); if (flip < 0) ctx.scale(-1, 1);
       if (shape === 'zombie') this._zombieF(ctx, r, col, dk, eye, t, atk, back);
       else if (shape === 'troll') this._trollF(ctx, r, col, dk, eye, t, atk, back);
@@ -4967,7 +5000,7 @@
       ctx.save();
       { const fy = (man.feetY - OY0) * s; if (hb) ctx.translate(-5, 0); if (sqx !== 1 || sqy !== 1) { ctx.translate(0, fy); ctx.scale(sqx, sqy); ctx.translate(0, -fy); } }
       // tint elite (facoltativo): applicato ai soli pezzi raster
-      const partFilter = elite ? prof.eliteFilter : (st.alpha != null ? '' : '');
+      const partFilter = elite ? ((elite.filtro != null) ? elite.filtro : prof.eliteFilter) : (st.alpha != null ? '' : '');
       const byName = {}; for (const p of man.parts) byName[p.name] = p;
       // v2.23 — LE ALI DEL PADRONE, disegnate qui e non nel raster. Nel disegno di partenza c'erano
       // ma erano ferme: un'ala ferma e' un mantello. Tolte dal ritaglio e rifatte in vettoriale,

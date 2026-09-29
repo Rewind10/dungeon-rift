@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.28.1',
+    VERSION: '2.29.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.28.1',
+      v: '2.29.0',
       righe: [
-        'Sei oggetti nuovi nelle grotte: <b>campana</b>, <b>braciere</b>, <b>masso</b>, <b>sarcofago</b>, <b>fonte</b>, <b>cristallo</b>.',
-        'Il <b>braciere</b> adesso illumina davvero: i fuochi bucano il buio invece di starci sotto.',
-        'E le <b>casse</b> si vedono da lontano. I due mercanti delle ondate sono chiusi.',
+        'Arrivano i <b>Campioni</b>: un grado sopra gli elite, uno dalla 5&ordf; ondata e due dall\'11&ordf;.',
+        'Ognuno porta un <b>modificatore</b> — corazzato, rigenerante, scortato, infuriato — e il <b>colore dice quale</b>.',
+        'Pi&ugrave; nemici: <b>16</b> in campo insieme (erano 14) e <b>24</b> per ondata (erano 20).',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
@@ -248,15 +248,71 @@
     // E' un cambio grosso e voluto: prima l'ondata 20 in solitario aveva 42 nemici totali e 22 in
     // campo, adesso ne ha 20 e 14. Si accorcia l'ondata e si abbassa la calca; in cambio ogni
     // nemico conta di piu', e la varieta' la garantisce il costruttore dell'ondata (sotto).
-    MAX_ALIVE: 14,                 // in campo, in solitario
-    MAX_ALIVE_GIOC: 2,             // +2 per ogni giocatore oltre il primo (16 in due)
-    ONDATA_TOT: 20,                // totale dall'ondata 7 in poi, in solitario
-    ONDATA_TOT_GIOC: 4,            // +4 per ogni giocatore oltre il primo (24 in due)
+    // v2.29 — E IL TETTO SALE A 16. Paolo, provando la v2.28: *«il gioco mi sembra diventato troppo
+    // facile, considererei di aumentare leggermente i nemici a schermo»*. Aveva ragione e il conto lo
+    // conferma: dalla v2.24 in poi l'intera run mette a terra 124.027 PV contro i 196.415 di prima
+    // (il 63%), e l'ondata 19 esattamente la meta'. Il tetto passa da 14 a 16 e il totale da 20 a 24:
+    // +22% di roba da smaltire per ondata, misurato, senza rimettere la calca di quaranta mostri.
+    MAX_ALIVE: 16,                 // in campo, in solitario   (era 14)
+    MAX_ALIVE_GIOC: 2,             // +2 per ogni giocatore oltre il primo (18 in due)
+    ONDATA_TOT: 24,                // totale dall'ondata 7 in poi, in solitario  (era 20)
+    ONDATA_TOT_GIOC: 4,            // +4 per ogni giocatore oltre il primo (28 in due)
     ONDATA_TOT_DA: 7,              // da che ondata vale il totale fisso
-    // le riserve entrano TUTTE INSIEME quando in campo ne restano meta' del tetto: 7 su 14 in
-    // solitario, 8 su 16 in due. Non e' il rifornimento a goccia di prima — e' una seconda ondata,
+    // le riserve entrano TUTTE INSIEME quando in campo ne restano meta' del tetto: 8 su 16 in
+    // solitario, 9 su 18 in due. Non e' il rifornimento a goccia di prima — e' una seconda ondata,
     // e la pausa in mezzo e' il momento in cui si respira e si raccolgono le monete.
     RISERVE_SOGLIA_Q: 0.5,
+
+    // ===== v2.29 — I CAMPIONI: un grado sopra l'elite ====================================
+    // Paolo: *«sarebbe bello avere delle versioni molto piu' forti dei nemici (magari di colore
+    // diverso); ci sono gia' gli elite ma sarebbe carino ampliare»*.
+    // Il problema degli elite e' che sono UN SOLO gradino e sempre lo stesso gradino: piu' PV, piu'
+    // danno, piu' grossi. Alzarne la quota era la leva piu' debole che avessi in mano (misurata:
+    // +8% di pressione portandoli dal 26% al 35%, +14% al 45%) perche' aggiunge quantita' a una cosa
+    // che il giocatore ha gia' imparato a leggere.
+    // Il CAMPIONE invece e' uno solo (due dall'undicesima) e non si combatte come gli altri: porta un
+    // MODIFICATORE, e il modificatore cambia la risposta giusta — lo si aggira, lo si finisce in
+    // fretta, gli si tolgono le scorte, o si sta larghi quando si infuria. Misurato: due campioni
+    // sull'ondata 19 valgono +27% di pressione da soli.
+    // IL COLORE LO DECIDE IL MODIFICATORE, non il grado: il giocatore deve capire COSA ha davanti
+    // prima di arrivare a tiro, non che e' "uno forte".
+    CAMPIONE_DA: 5,                // prima ondata in cui ne puo' comparire uno
+    CAMPIONE_DUE_DA: 11,           // da qui in poi ne compaiono due
+    CAMPIONE_MOD: ['corazzato', 'rigenerante', 'scortato', 'infuriato'],
+    // i PV si moltiplicano SOPRA quelli dell'elite, che sono gia' tarati nemico per nemico
+    // (def.eliteHp): cosi' un campione tank non diventa un muro fuori scala nelle ondate medie.
+    // Con l'elite standard (x2,4) fa x5,04 sul nemico base — il numero su cui e' stata fatta la misura.
+    CAMPIONE_HP_Q: 2.1,
+    CAMPIONE_DMG: 1.9,             // (l'elite e' a 1,5)
+    CAMPIONE_RAGGIO: 1.45,         // (l'elite e' a 1,28) — si vede da lontano che non e' un elite
+    CAMPIONE_XP: 5,                // (l'elite e' a 2,5)
+    // CORAZZATO — incassa poco DI FRONTE. Non e' invulnerabile: e' una questione di dove stai.
+    // Il cono e' quello del blockFront che il gioco ha gia' (Scudo d'Ossa), con gli stessi numeri
+    // ma piu' largo e piu' duro: qui la corazza E' il combattimento, li' era un dettaglio.
+    CORAZZA_ARCO: 1.25,            // semiampiezza del cono frontale, in radianti (~72 gradi per lato)
+    CORAZZA_RID: 0.70,             // quanto assorbe dentro al cono
+    // RIGENERANTE — se non lo finisci, torna su. Non e' un tank: e' un cronometro.
+    RIGEN_QUOTA: 0.06,             // quota dei PV massimi al secondo
+    RIGEN_ATTESA: 3.0,             // secondi senza incassare prima di ricominciare
+    // SCORTATO — gli altri gli restano attorno e finche' ce n'e' uno in piedi lui incassa meta'.
+    // E' l'unico modificatore che chiede di NON sparare al bersaglio grosso.
+    SCORTA_RAGGIO: 300,            // entro quanto si cercano le scorte
+    SCORTA_ANELLO: 130,            // a che distanza gli stanno attorno
+    SCORTA_MAX: 4,
+    SCORTA_RID: 0.5,
+    // INFURIATO — sotto meta' vita raddoppia la velocita'. Chi lo ammorbidisce e poi lo lascia li'
+    // se lo ritrova addosso.
+    INFURIA_SOGLIA: 0.5,
+    INFURIA_VEL: 2.0,
+    INFURIA_DMG: 1.25,
+    // il colore e' del MODIFICATORE. Stesso ordine di CAMPIONE_MOD.
+    CAMPIONE_COL: ['#9fc4e8', '#6fe08a', '#ffd257', '#ff5a3c'],
+    CAMPIONE_FILTRO: [
+      'saturate(0.45) brightness(1.22) contrast(1.15)',   // corazzato — metallo slavato
+      'hue-rotate(95deg) saturate(1.7) brightness(1.06)', // rigenerante — verde linfa
+      'hue-rotate(38deg) saturate(1.9) brightness(1.18)', // scortato — oro
+      'hue-rotate(-32deg) saturate(2.2) brightness(1.1)', // infuriato — brace
+    ],
     // v1.96 — DALL'ONDATA 9 IN POI SE NE VEDONO 22 ALLA VOLTA. Il tetto unico di quaranta era giusto
     // finche' le ondate erano piccole, ma dalla nona in avanti la mappa si riempiva: alla 19 erano
     // quaranta mostri in campo insieme, e non e' piu' un combattimento, e' una calca. Il TOTALE

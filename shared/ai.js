@@ -605,6 +605,19 @@
     // all'anello, «vengono a cercarti» varrebbe solo per i primi sei e gli altri continuerebbero a
     // girare a vuoto. Il tetto ai VIVI in campo (v2.24) resta intatto: quello lo fa la coda, non
     // questo, quindi la braccata non aggiunge un mostro che sia uno — li fa solo venire tutti.
+    // v2.29 — LA SCORTA del campione scortato. Vale SOLO se la scorta si e' allontanata oltre il suo
+    // anello: dentro l'anello combatte normalmente, se no avremmo quattro mostri che girano attorno a
+    // un quinto ignorando il giocatore, e il modificatore sarebbe un regalo invece che un problema.
+    // Sta DOPO la campana (una campana che non sposta le scorte non e' piu' una campana) e PRIMA del
+    // tetto alla folla, perche' una scorta parcheggiata all'anello d'attesa non scorta nessuno.
+    if (mon.scortaX != null && !azione && !mon.def.boss && !mon.def.immobile) {
+      const dx = mon.scortaX - mon.x, dy = mon.scortaY - mon.y, d = Math.hypot(dx, dy);
+      if (d > (mon.scortaR || 130)) {
+        const a = Math.atan2(dy, dx);
+        mon.mx = Math.cos(a) * mon.speed; mon.my = Math.sin(a) * mon.speed; mon.facing = a;
+        return;
+      }
+    }
     if (!ctx.braccata && mon.impegnato === 0 && !mon.def.immobile && !mon.def.boss && !azione && !vedeIl(mon, ctx)) { attesa(mon, ctx); return; }
     (behaviors[mon.def.ai] || behaviors.swarm)(mon, ctx);
   }

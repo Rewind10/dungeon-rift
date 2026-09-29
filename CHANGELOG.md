@@ -2,6 +2,163 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.29.0] — 2026-09-29 · "Il colore dice come si combatte"
+
+Paolo, dopo aver provato la v2.28.1: *«il gioco mi sembra diventato troppo facile: sarebbe bello avere
+delle versioni molto piu' forti dei nemici (magari di colore diverso). Ci sono gia' gli elite ma
+sarebbe carino ampliare. Considererei di aumentare leggermente i nemici a schermo»*.
+
+Due punti, e prima di scrivere una riga sono andato a misurare se avesse ragione. **Ce l'aveva**, e piu'
+di quanto pensasse: la v2.24 aveva tolto il **37%** dei punti vita di tutta la run, quasi tutti dopo la
+sesta ondata. L'ondata 19 era passata da 26.688 PV a 13.344 — **esattamente la meta'**.
+
+---
+
+### 📈 Punto 1 — 16 in campo, 24 per ondata
+
+`MAX_ALIVE` 14 → **16**, `ONDATA_TOT` 20 → **24**. Le riserve restano meta' del tetto: entrano in **8**
+quando in campo ne restano 8, ed e' ancora una seconda ondata con la sua pausa in mezzo, non un
+rifornimento a goccia.
+
+Non e' il ritorno ai quaranta mostri di prima della v2.24: quella decisione — ondate corte, calca
+bassa, ogni nemico che conta — resta in piedi. Si e' rialzata di due tacche la sola cosa che era stata
+tagliata troppo.
+
+| | prima (v2.28.1) | adesso | prima della v2.24 |
+|---|---:|---:|---:|
+| **PV dell'ondata 19** | 13.344 | **17.594** *(+32%)* | 26.688 |
+| **PV di tutta la run** | 124.027 | **163.549** *(+32%)* | 196.415 |
+| **quanto e' di allora** | 63% | **74%** | 100% |
+| **XP a terra / livello 15** | 0,77 | **1,04** | 1,08 |
+
+L'ultima riga e' quella che non mi aspettavo: la v2.24 aveva lasciato a terra **meno esperienza di
+quanta ne costa arrivare al livello 15** (0,77), cioe' un giocatore ordinato finiva la run sotto
+livello. Adesso il conto torna, e non perche' sia stata toccata l'esperienza: e' venuta dietro ai
+nemici in piu' e ai campioni.
+
+---
+
+### 👑 Punto 2 — i CAMPIONI, un grado sopra l'elite
+
+Il difetto degli elite e' che sono **un solo gradino, e sempre lo stesso**: piu' PV, piu' danno, piu'
+grossi. Alzarne la quota era la leva piu' debole che avessi in mano — misurata: **+8%** di pressione
+portandoli dal 26% al 35%, **+14%** al 45% — perche' aggiunge quantita' a una cosa che il giocatore ha
+gia' imparato a leggere. Un campione invece **si combatte in un modo diverso**.
+
+Ne compare **uno dalla 5ª ondata** e **due dall'11ª**, mai nelle ondate boss (il boss e' gia' il
+problema di quell'ondata). Non tocca mai chi e' immobile per mestiere ne' il Padrone — un Fungo
+«infuriato» che raddoppia una velocita' pari a zero e' una presa in giro, e un Padrone campione sarebbe
+due capacita' dello stesso tipo sullo stesso corpo.
+
+**Un campione E' anche un elite**, quindi la chiave dell'ondata puo' stargli addosso, le taglie lo
+contano e le carte «contro gli elite» valgono. Sopra ai numeri dell'elite moltiplica ancora: **PV ×2,1**
+(che sul nemico base fa **×5,04**), **danno ×1,9**, **raggio ×1,45**, **esperienza ×5**. Ed e' **piu'
+lento**, perche' e' piu' grosso: il fattore taglia si calcola dopo il raggio, se no sarebbe un elite
+piu' grande *in tutto*.
+
+#### I quattro modificatori
+
+| | cosa fa | come si risolve |
+|---|---|---|
+| 🛡️ **Corazzato** | incassa il **30%** dentro un cono di 72° davanti a se' | **girargli attorno** — di lato e' gia' fuori dal cono |
+| 🌿 **Rigenerante** | dopo **3 secondi** senza incassare torna su del 6% al secondo | **finirlo**, o ricomincia da capo |
+| 🟡 **Scortato** | fino a 4 mostri gli restano attorno; finche' ce n'e' uno vivo incassa **meta'** | **togliergli la scorta** — e' l'unico che chiede di non sparare al bersaglio grosso |
+| 🔥 **Infuriato** | sotto **meta' vita** raddoppia la velocita' e alza il danno del 25% | **non lasciarlo a meta'** |
+
+**E il colore lo decide il modificatore, non il grado.** E' il punto della richiesta di Paolo, ed e'
+anche la ragione per cui funziona: l'anello, l'alone e il corpo del mostro sono azzurro acciaio /
+verde linfa / oro / brace, uguali per tutte le specie. Un rigenerante e' verde che sia uno scheletro o
+un mago — se il colore dicesse la specie non direbbe come si combatte. Il corazzato disegna anche
+**l'arco della corazza** davanti a se', e lampeggia quando respinge davvero: l'informazione serve
+*prima* di sparare, non dopo aver sbagliato.
+
+Misurato: due campioni sull'ondata 19 valgono **+27%** di pressione da soli — piu' del doppio della
+leva «piu' elite», e a differenza di quella chiede al giocatore di fare qualcosa di diverso.
+
+---
+
+### 🐛 Due difetti veri, trovati provando (non dai test)
+
+**1. Le scorte si scioglievano da sole.** L'incarico si rifaceva da zero ogni mezzo secondo con lo
+stesso raggio d'ingaggio. Ma il campione e' il **piu' lento** del gruppo (e' anche il piu' grosso): le
+guardie gli correvano avanti verso il giocatore, uscivano dai 300 px e venivano congedate. Dopo cinque
+secondi il campione «scortato» non era scortato da nessuno. Il secondo tentativo — congedo al doppio
+del raggio — aveva lo stesso difetto, piu' raro e quindi **peggiore**, perche' capitava solo ogni tanto.
+Il congedo a distanza e' proprio l'idea sbagliata: chi si e' allontanato e' esattamente chi deve
+*tornare*. Adesso si congeda solo quando uno dei due muore.
+
+**2. Il recupero anti-stallo (v1.76.1) sfasciava il gruppo.** Quella regola teletrasporta chi non fa
+progressi verso il giocatore da cinque secondi ed e' lontano. Una guardia che torna dal suo campione
+**si allontana dal giocatore per mestiere**, quindi sembrava un mostro incastrato in un angolo e
+veniva spedita dall'altra parte della mappa; e quando a essere spostato era il capo, le guardie
+restavano indietro di 1.700 px. Misurato: capitava in **17 prove su 150**. Adesso chi e' di scorta e'
+esente, e se si sposta il capo le scorte vanno con lui.
+
+Nessuno dei due l'avrebbe preso un test scritto a tavolino: li ha trovati la misura ripetuta su
+centocinquanta partite, che e' la stessa lezione della v2.28.1.
+
+---
+
+### 🧪 Numeri
+
+**Test: 6.098 passati, 0 falliti.** TEST 89 nuovo (i vecchi che parlavano di 14/20 aggiornati a 16/24).
+
+| cosa ho rotto apposta | il test se n'e' accorto |
+|---|---|
+| il tetto torna a 14 | ✅ 19 controlli rossi |
+| il totale torna a 20 | ✅ 4 controlli rossi |
+| i campioni non vengono promossi | ✅ 3 controlli rossi |
+| un campione non e' piu' anche un elite | ✅ 401 controlli rossi |
+| campioni anche sugli immobili e sul Padrone | ✅ 1 controllo rosso |
+| la taglia si calcola prima del raggio | ✅ 1 controllo rosso |
+| la corazza sparisce / vale da tutte le direzioni | ✅ 1 controllo rosso ciascuno |
+| lo scudo della scorta sparisce / resta senza scorte | ✅ |
+| le scorte non vengono assegnate | ✅ 3 controlli rossi |
+| le scorte non tornano dal campione | ✅ *(e alla prima stesura **no** — sotto)* |
+| il recupero anti-stallo torna a spostare le scorte | ✅ |
+| il capo si sposta e lascia li' le guardie | ✅ |
+| il rigenerante non si cura / si cura anche se lo picchi | ✅ |
+| l'infuriato non accelera / alza il danno a ogni tick | ✅ |
+| il modificatore non arriva al client | ✅ 3 controlli rossi |
+| il client non colora i campioni / il corpo torna al tint elite | ✅ |
+
+**E tre test miei che passavano sotto il proprio sabotaggio**, la stessa famiglia di errore di sempre:
+
+- *«la scorta torna dal suo campione»* misurava un **avvicinamento**. Ma il capo andava verso il
+  giocatore anche lui, la guardia pure per conto suo, e la distanza fra i due calava lo stesso: spegnendo
+  del tutto il dirottamento nell'IA il controllo restava **verde**. Adesso il capo si tiene inchiodato
+  lontano dal giocatore e si pretende che la guardia sia tornata **al suo anello** — un posto dove,
+  andando dal giocatore, non ci si finisce.
+- *«il corazzato incassa meno di fronte»* tirava tre colpi da 1.000 su un campione da 865 PV: al
+  secondo era morto, e il terzo misurava zero. Zero danno da un morto si legge come «corazza perfetta».
+- *«l'infuriato corre il doppio»* misurava lo **spostamento netto** in una stanza sola: un mostro che
+  arriva addosso al giocatore si ferma a picchiarlo, e da quel momento la misura racconta la mischia
+  invece della corsa — il raddoppio si leggeva come +40%. Adesso si somma la **strada percorsa** su
+  dieci mappe. Le soglie non sono stimate: il rapporto vero sta fra **1,74 e 2,53** (mediana **2,05**,
+  che e' esattamente il moltiplicatore) e con la riga del moltiplicatore **tolta** sta fra 0,82 e 1,23.
+  La soglia e' 1,5, in mezzo ai due.
+
+**E un test della v2.25 tarato sui numeri vecchi.** Con sedici corpi attorno a un giocatore fermo il
+conto secco «hanno attaccato tutti e sedici» non regge sempre, e non perche' qualcuno sia parcheggiato:
+capita che uno muoia per il masso prima di aver colpito, o resti incastrato dietro agli altri. Adesso
+si contano i **vivi a fine prova** e si aggiunge la controprova che conta davvero: durante la braccata
+il mostro piu' lontano sta fra **76 e 109 px** dal giocatore, mentre l'anello d'attesa e' a **900**.
+
+| file | cosa |
+|---|---|
+| `shared/constants.js` | tetto e totale; i numeri dei campioni e dei quattro modificatori; versione e novita' |
+| `shared/waves.js` | `campioniPerOndata`, `puoEssereCampione`, `promuoviCampioni`; `applyScaling` con il modificatore |
+| `server/Room.js` | corazza e scudo della scorta in `damageMonster`; rigenerazione e furia nel tick; `_assegnaScorte` e `_haScorte`; il recupero anti-stallo che non tocca piu' le scorte; `kp` nello snapshot |
+| `shared/ai.js` | la scorta che torna al suo anello |
+| `public/js/renderer.js` | anello, alone, arco della corazza, scintille del rigenerante, tint per modificatore |
+| `test/simulate.js` | TEST 89; i controlli del tetto aggiornati; il controllo della braccata reso stabile |
+
+**Ancora rosso, e non e' di questa versione**: `test/client.js` e' rotto dalla v2.19.9 e non parte,
+quindi `npm test` resta rosso anche con `simulate.js` verde. E un test della v2.28 (il masso che
+schiaccia chi lo ha spinto) flakea **una volta su diciassette circa**: e' segnato, non e' di qui.
+
+---
+
 ### [2.28.1] — 2026-09-28 · "Nessun bagliore senza il suo buco"
 
 Paolo, provando la v2.28: *«verifica bene gli oggetti: le torce in realtà non illuminano. Il mercante
