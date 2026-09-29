@@ -6,13 +6,13 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.30.0',
+    VERSION: '2.30.1',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.30.0',
+      v: '2.30.1',
       righe: [
         'Schermata nuova: a sinistra l\'eroe (adesso si vede <b>tutto intero</b>), a destra record, consiglio, novit&agrave; e partita salvata.',
         'Il box dei <b>comandi</b> sta sotto, largo quanto la schermata. La modalit&agrave; di prova non c\'&egrave; pi&ugrave;.',

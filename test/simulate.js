@@ -9003,7 +9003,13 @@ function testV230() {
   const hud = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
 
   // --- 1) DUE COLONNE, E DENTRO LE COSE GIUSTE ----------------------------------------------
-  assert(/#menuDue\{display:grid;grid-template-columns:1fr 1fr/.test(css), 'la schermata dell eroe e divisa in due meta uguali');
+  // v2.30.1 — non due meta' esatte: la scheda dell'eroe e' piu' larga dei quattro riquadri, che sono
+  // piccoli per natura. Si pretende che la sinistra sia la piu' larga, non un numero preciso.
+  {
+    const m = css.match(/#menuDue\{display:grid;grid-template-columns:([\d.]+)fr ([\d.]+)fr/);
+    assert(m, 'la schermata dell eroe e divisa in due colonne');
+    assert(+m[1] > +m[2], 'e la scheda dell eroe e la piu larga delle due (' + m[1] + ' contro ' + m[2] + ')');
+  }
   const iDue = html.indexOf('id="menuDue"'), iEroe = html.indexOf('id="colEroe"'), iLato = html.indexOf('id="colLato"');
   assert(iDue >= 0 && iEroe > iDue && iLato > iEroe, 'la colonna dell eroe viene prima di quella dei riquadri');
   // la scheda dell eroe sta a SINISTRA e da sola: se finisse a destra insieme ai quattro riquadri il
@@ -9031,6 +9037,20 @@ function testV230() {
   assert(html.slice(iCard, iInfo).split('</div>').length > 3, 'ed e fuori dalla scheda, non dentro');
   assert(/#menu>#infoCard\{width:min\(1180px,96vw\)/.test(css), 'ed e largo quanto la schermata');
   assert(/#infoCard \.tasti\{display:grid/.test(css), 'cosi la legenda e una griglia e non una lista alta undici righe');
+  // v2.30.1 — il pulsante non e' piu' una fascia larga quanto la schermata
+  assert(/#menu #connectBtn\{width:min\(420px,70%\);margin:4px auto 0/.test(css), 'e il pulsante ENTRA e un pulsante, centrato e stretto');
+  // ...e le quattro colonne dei comandi sono QUATTRO FAMIGLIE, non undici voci tagliate a fette
+  {
+    const i0 = html.indexOf('class="tasti"'), i1 = html.indexOf('</aside>', i0);
+    const leg = html.slice(i0, i1);
+    const fam = leg.match(/class="ft">([^<]+)</g) || [];
+    assert(fam.length === 4, 'i comandi sono divisi in quattro famiglie (' + fam.length + ')');
+    // ogni famiglia deve avere dentro i suoi tasti: un titolo senza voci sotto sarebbe peggio di niente
+    const pezzi = leg.split('class="fam"').slice(1);
+    for (const p2 of pezzi) assert((p2.match(/class="tasto"/g) || []).length >= 1, 'e ogni famiglia ha le sue voci');
+    assert((leg.match(/class="tasto"/g) || []).length === 9, 'e non se n e persa nessuna per strada');
+    assert(/#infoCard \.fam \.ft\{/.test(css), 'e i titoli hanno il loro stile');
+  }
 
   // --- 4) L ARTWORK AL SUO RAPPORTO ---------------------------------------------------------
   // I ritratti sono 174x452. La larghezza della casella si calcola DALL ALTEZZA con quel rapporto:

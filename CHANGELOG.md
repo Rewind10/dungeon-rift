@@ -2,6 +2,32 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.30.1] — 2026-09-29 · "Un pulsante, non una fascia"
+
+Paolo, provando la v2.30.0: *«il box del personaggio dovrebbe essere un filo piu' largo e invece e'
+piu' stretto. Anche i comandi messi cosi' non mi piacciono e pure il bottone entra in partita a tutta
+width»*. Tre ritocchi, visti in anteprima prima di applicarli.
+
+**Le due meta' non sono piu' meta': sono 57/43.** Dividere a meta' e' stata una scelta pigra — i quattro
+riquadri di destra sono piccoli per natura (record e consiglio sono una riga, le novita' tre) mentre la
+scheda dell'eroe deve reggere un ritratto intero *e* le competenze accanto. Misurato: la scheda passa
+da **458 a 535 px** e l'artwork da **166 a 231**, sempre al rapporto dell'immagine.
+
+**Il pulsante torna a essere un pulsante.** A 1134 px non sembrava piu' un pulsante, sembrava una
+fascia. Adesso e' **420 px, centrato** sotto le due colonne.
+
+**I comandi in quattro famiglie** — Muoversi · Combattere · Oggetti · Il resto — una per colonna, col
+titolo sopra. Le quattro colonne c'erano gia' (la griglia `auto-fit` le faceva da sola), ma tagliavano
+undici voci a fette: un gruppo cominciava a meta' della colonna precedente. Adesso le colonne sono
+quattro perche' i *gruppi* sono quattro, e chi cerca come si beve una pozione sa dove guardare.
+
+**Test: 6.135 passati, 0 falliti.** Il controllo sulle due colonne non pretende piu' un numero fisso ma
+che la sinistra sia la piu' larga; quello sui comandi conta le famiglie, pretende che ognuna abbia
+almeno una voce (un titolo senza niente sotto sarebbe peggio di prima) e che le nove voci ci siano
+ancora tutte — riordinare a mano una legenda e' il modo piu' facile per perderne una per strada.
+
+---
+
 ### [2.30.0] — 2026-09-29 · "A sinistra si sceglie, a destra si legge"
 
 Paolo, guardando la schermata di avvio: *«la schermata con l'eroe dividila in 2 colonne: nella meta' a

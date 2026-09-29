@@ -175,19 +175,34 @@
        sopra sono la schermata (scegli a sinistra, leggi a destra) e questa e' la didascalia. -->
   <aside class="info-card comandi" id="infoCard">
     <h2 class="info-h">⌨️ Comandi</h2>
+    <!-- v2.30.1 — I COMANDI IN QUATTRO FAMIGLIE. A tutta larghezza le quattro colonne c'erano gia',
+         ma erano undici voci tagliate a fette: la terza colonna cominciava a meta' di un gruppo. Con
+         un titolo sopra ognuna le colonne vogliono dire qualcosa, e chi cerca "come si beve una
+         pozione" sa dove guardare invece di leggere tutta la legenda. -->
     <div class="tasti">
-      <div class="tasto"><span class="kb">W A S D</span><span class="kb alt">↑ ↓ ← →</span><b>Muoversi</b></div>
-      <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
-      <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
-      <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
-      <!-- v2.16 — i tasti hanno cambiato mestiere: le abilita' stanno sui NUMERI e le pozioni su Q ed E.
-           Questa legenda era rimasta alla versione prima e diceva il contrario, con i livelli 8 e 14
-           che non esistono piu'. v2.18 — gli slot delle abilita' sono tre e si aprono a 1, 7 e 13. -->
-      <div class="tasto"><span class="kb">1 2 3</span><b>Abilità attive</b><i>si sbloccano ai livelli 1, 7 e 13</i></div>
-      <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Pozioni</b><i>le due della cintura</i></div>
-      <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: è l'illuminazione giusta</i></div>
-      <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
-      <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
+      <div class="fam">
+        <div class="ft">Muoversi</div>
+        <div class="tasto"><span class="kb">W A S D</span><span class="kb alt">&#8593; &#8595; &#8592; &#8594;</span><b>Muoversi</b></div>
+        <div class="tasto"><span class="kb">Click dx</span><span class="kb alt">Shift</span><b>Scatto</b><i>attraversa i nemici, ha una ricarica</i></div>
+      </div>
+      <div class="fam">
+        <div class="ft">Combattere</div>
+        <div class="tasto"><span class="kb">Mouse</span><b>Mirare</b></div>
+        <div class="tasto"><span class="kb">Click sx</span><span class="kb alt">Spazio</span><b>Sparare</b></div>
+        <!-- v2.16 — i tasti hanno cambiato mestiere: le abilita' stanno sui NUMERI e le pozioni su Q ed E.
+             v2.18 — gli slot delle abilita' sono tre e si aprono a 1, 7 e 13. -->
+        <div class="tasto"><span class="kb">1 2 3</span><b>Abilit&agrave; attive</b><i>si sbloccano ai livelli 1, 7 e 13</i></div>
+      </div>
+      <div class="fam">
+        <div class="ft">Oggetti</div>
+        <div class="tasto"><span class="kb">Q</span><span class="kb">E</span><b>Pozioni</b><i>le due della cintura</i></div>
+      </div>
+      <div class="fam">
+        <div class="ft">Il resto</div>
+        <div class="tasto"><span class="kb">L</span><b>Luce</b><i>accende e spegne la torcia. Parte accesa: &egrave; l'illuminazione giusta</i></div>
+        <div class="tasto"><span class="kb">M</span><b>Musica</b></div>
+        <div class="tasto"><span class="kb">Invio</span><b>Chat</b><i>Esc per chiuderla</i></div>
+      </div>
     </div>
 
     <p class="info-nota">Nelle grotte vedi solo dove arriva la <b>torcia</b>: davanti lontano, alle spalle

@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.30.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.30.1 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -26,9 +26,10 @@ Test: `npm test`
 
 ## 🗂️ v2.30.0 — la schermata di avvio a due metà
 
-**A sinistra si sceglie, a destra si legge, sotto c'è la didascalia.** La scheda dell'eroe prende metà
-schermata; l'altra metà sono quattro riquadri impilati — record, consiglio, novità, partita salvata — e
-i comandi scendono sotto, larghi quanto la pagina.
+**A sinistra si sceglie, a destra si legge, sotto c'è la didascalia.** La scheda dell'eroe prende il 57%
+della schermata; il resto sono quattro riquadri impilati — record, consiglio, novità, partita salvata —
+e i comandi scendono sotto, larghi quanto la pagina, divisi in quattro famiglie (Muoversi · Combattere ·
+Oggetti · Il resto). Il pulsante ENTRA IN PARTITA è centrato e stretto, non una fascia.
 
 **E l'eroe adesso si vede tutto intero.** I ritratti sono 174×452 — figure in piedi — e finora stavano
 in una casella larga e bassa: si vedeva la fetta centrale, e le gambe non le aveva viste nessuno. Ora

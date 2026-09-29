@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.30.0`
+**Versione attuale:** `2.30.1`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -990,7 +990,14 @@ piccoli. Togli la modalita' di prova e sotto metti quello dei comandi»*.
 |---|---|
 | **sinistra** (`#colEroe`) | la scheda dell'eroe, con le frecce e i pallini. Una cosa sola, grande. |
 | **destra** (`#colLato`) | quattro riquadri impilati, tutti aperti: record, consiglio, novita', partita salvata. |
-| **sotto** (`#infoCard`) | i comandi, larghi quanto la schermata. |
+| **sotto** (`#infoCard`) | i comandi, larghi quanto la schermata, in quattro famiglie. |
+
+**v2.30.1 — le due meta' sono 57/43, non 50/50.** Dividere a meta' era una scelta pigra: i quattro
+riquadri sono piccoli per natura, la scheda dell'eroe deve reggere un ritratto intero *e* le competenze
+accanto. Misurato: la scheda 458 &rarr; **535 px**, l'artwork 166 &rarr; **231**. Il pulsante ENTRA e'
+tornato **420 px centrato** (a 1134 non sembrava un pulsante, sembrava una fascia) e i comandi sono
+divisi in **quattro famiglie col titolo** — Muoversi, Combattere, Oggetti, Il resto: le quattro colonne
+c'erano gia', ma tagliavano undici voci a fette invece di raggrupparle.
 
 Le due colonne partono dallo stesso bordo in alto (`align-items:start`) e **non si pareggiano in
 basso**: la scheda e' alta perche' ha un ritratto intero dentro, la pila e' alta quanto sono i suoi
