@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.30.1',
+    VERSION: '2.31.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.30.1',
+      v: '2.31.0',
       righe: [
-        'Schermata nuova: a sinistra l\'eroe (adesso si vede <b>tutto intero</b>), a destra record, consiglio, novit&agrave; e partita salvata.',
-        'Il box dei <b>comandi</b> sta sotto, largo quanto la schermata. La modalit&agrave; di prova non c\'&egrave; pi&ugrave;.',
-        'Dalla v2.29: i <b>Campioni</b> coi quattro modificatori, e pi&ugrave; nemici in campo.',
+        'Il <b>Banditore</b> ha undici taglie nuove: bracieri da accendere, sarcofagi da aprire, campane da suonare.',
+        'E due <b>scommesse</b>: paga e triplica, oppure lascia crescere il montante finch&eacute; ti regge il fegato.',
+        'Tasto <b>F</b>: contatore dei fotogrammi al secondo, acceso e spento quando vuoi.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
@@ -262,6 +262,9 @@
     // solitario, 9 su 18 in due. Non e' il rifornimento a goccia di prima — e' una seconda ondata,
     // e la pausa in mezzo e' il momento in cui si respira e si raccolgono le monete.
     RISERVE_SOGLIA_Q: 0.5,
+    // v2.31 — la taglia DECAPITAZIONE: quanti secondi hai da quando l'elite ENTRA IN CAMPO (non
+    // dall'inizio dell'ondata: uno che entra con le riserve deve avere gli stessi secondi del primo).
+    DECAP_SEC: 30,
 
     // ===== v2.29 — I CAMPIONI: un grado sopra l'elite ====================================
     // Paolo: *«sarebbe bello avere delle versioni molto piu' forti dei nemici (magari di colore
@@ -414,6 +417,7 @@
       PICK_RANK: 'pick_rank', OFFER_RANK: 'offer_rank',   // v1.69 — carte di rango e bivio finale
       PICK_POTION: 'pick_potion', BUY_POTION: 'buy_potion', OFFER_POTION: 'offer_potion',  // v1.71 — cintura
       TAKE_BOUNTY: 'take_bounty', SELL_GEAR: 'sell_gear', OFFER_BANDIT: 'offer_bandit',      // v1.72 — Banditore
+      CASH_BOUNTY: 'cash_bounty',                                                              // v2.31 — riscuoti l'Interesse composto
       HIRE_MERC: 'hire_merc',                                                                  // v1.82 — reclutamento
       TOGGLE_CARD: 'toggle_card', OFFER_SEER: 'offer_seer',                                  // v1.73 — Cartomante
       REST: 'rest', OFFER_INN: 'offer_inn',                                                    // v1.74 — Ostessa

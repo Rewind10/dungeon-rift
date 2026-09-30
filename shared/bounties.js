@@ -27,27 +27,75 @@
   const OFFERTE = 3;   // quante ne mostra il banco
   const ATTIVE = 1;    // quante se ne possono tenere
 
+  // v2.31 — i numeri delle due scommesse. Il costo del Doppio o niente lo ha scelto Paolo (120 → 360).
+  // L'Interesse composto lo aveva lasciato in bianco: parte da 60 e raddoppia a ogni ondata chiusa in
+  // piedi, ma con un TETTO a quattro raddoppi (60·16 = 960). Senza tetto, alla decima ondata sarebbero
+  // trentamila monete e non sarebbe piu' una scommessa: sarebbe l'unica cosa da fare nel gioco.
+  const COSTO_DOPPIO = 120;
+  const INT_BASE = 60, INT_CAP = 4;
+
   // I bersagli crescono con l'ondata, ma piano: una taglia deve essere un obiettivo raggiungibile
   // giocando come giochi, non una seconda partita dentro la partita.
+  // v2.31 — IL CATALOGO RIFATTO, scelto da Paolo riga per riga. Il metro che ha dato e' uno solo:
+  // *«devono essere cose semplici per racimolare monete extra, specialmente nei primi livelli»*.
+  // Quindi niente incarichi che chiedono di giocare un'altra partita: si completano facendo quello
+  // che gia' si fa, o toccando una cosa che gia' c'e' sulla mappa.
+  //
+  // Sono spariti CACCIA GROSSA (uccidi N nemici: si completava da sola, non era una scelta),
+  // TESTE GROSSE (uccidi N elite: la sostituisce Decapitazione, stessa preda ma chiede di essere
+  // svelti invece di contare) e NESSUN CADUTO (il suo posto lo prendono le due scommesse in fondo).
+  //
+  // Tre famiglie, e si leggono dall'ordine: quelle che si chiudono giocando, quelle che chiedono di
+  // usare la mappa, e le due scommesse.
   const KINDS = [
-    { id: 'caccia', icon: '💀', color: '#c9d2e6', nome: 'Caccia grossa',
-      testo: (n) => 'Uccidi ' + n + ' nemici',
-      n: (w) => 20 + w * 3, pay: (w) => 60 + w * 8 },
+    // ---- SI CHIUDONO GIOCANDO COME GIOCHI -------------------------------------------------
     { id: 'specie', icon: '🎯', color: '#ff8a5b', nome: 'Contratto mirato',
       testo: (n, extra) => 'Uccidi ' + n + ' × ' + (extra || 'un tipo di nemico'),
       n: (w) => 6 + Math.round(w * 0.8), pay: (w) => 70 + w * 9, mirata: 1 },
-    { id: 'elite', icon: '👑', color: '#b061ff', nome: 'Teste grosse',
-      testo: (n) => 'Uccidi ' + n + ' nemici élite',
-      n: (w) => 2 + Math.floor(w / 4), pay: (w) => 90 + w * 11 },
     { id: 'casse', icon: '📦', color: '#ffcf4a', nome: 'Saccheggio',
       testo: (n) => 'Apri ' + n + ' casse',
       n: () => 4, pay: (w) => 55 + w * 6 },
+    // la combo NON cresce piu' con l'ondata (era 12 + 2·ondata, cioe' 50 alla diciannovesima): dieci
+    // e' un numero che si fa anche alla seconda ondata, ed e' il punto — questa deve pagare presto.
     { id: 'combo', icon: '🔥', color: '#ff5a2b', nome: 'Catena di sangue',
       testo: (n) => 'Raggiungi una combo di ' + n,
-      n: (w) => 12 + w * 2, pay: (w) => 75 + w * 9 },
-    { id: 'illeso', icon: '🛡️', color: '#7dffea', nome: 'Nessun caduto',
-      testo: () => 'Supera un\'ondata senza perdere una vita',
-      n: () => 1, pay: (w) => 100 + w * 12 },
+      n: () => 10, pay: (w) => 175 + w * 9 },
+    { id: 'intempo', icon: '⚡', color: '#7dffea', nome: 'A tamburo battente',
+      testo: () => 'Chiudi l\'ondata dentro il tempo obiettivo',
+      n: () => 1, pay: (w) => 130 + w * 13, ondata: 1 },
+    // PIEDI PER TERRA e' l'unica che chiede di RINUNCIARE a qualcosa, ed e' voluto: lo scatto e' la
+    // cosa che si preme senza pensarci, quindi accorgersi di averlo premuto e' meta' dell'incarico.
+    { id: 'nodash', icon: '👟', color: '#c9d2e6', nome: 'Piedi per terra',
+      testo: () => 'Supera l\'ondata senza mai scattare',
+      n: () => 1, pay: (w) => 120 + w * 12, ondata: 1 },
+
+    // ---- CHIEDONO DI USARE LA MAPPA -------------------------------------------------------
+    // Queste tre vivono sugli oggetti della v2.28, che non stanno su tutte le mappe (due o tre tipi
+    // per mappa su otto). Perche' non restino appese per ondate intere, quando una di queste e'
+    // accettata la generazione della mappa successiva ci mette dentro l'oggetto che serve: vedi
+    // `oggettiRichiesti` in Room.js. Senza quella riga sarebbero incarichi che dipendono dalla sorte.
+    { id: 'decap', icon: '👑', color: '#b061ff', nome: 'Decapitazione',
+      testo: () => 'Uccidi un élite entro 30 secondi da quando entra in campo',
+      n: () => 1, pay: (w) => 140 + w * 15 },
+    { id: 'campana', icon: '🔔', color: '#ffd257', nome: 'Campanaro',
+      testo: (n) => 'Suona la campana e uccidine ' + n + ' mentre accorrono',
+      n: () => 5, pay: (w) => 170 + w * 17, oggetto: 'campana' },
+    { id: 'bracieri', icon: '🔥', color: '#ff9a3b', nome: 'Lampionaio',
+      testo: () => 'Accendi tutti i bracieri di una mappa',
+      n: () => 1, pay: (w) => 120 + w * 10, oggetto: 'braciere' },
+    { id: 'sarcofagi', icon: '⚰️', color: '#9fb0cd', nome: 'Tombarolo',
+      testo: (n) => 'Apri ' + n + ' sarcofagi — sapendo cosa rischi',
+      n: () => 3, pay: (w) => 150 + w * 15, oggetto: 'sarcofago' },
+
+    // ---- LE DUE SCOMMESSE -----------------------------------------------------------------
+    // Non contano niente: si vincono o si perdono. Sono le uniche che possono COSTARE, ed e' per
+    // questo che stanno insieme e che il banco non ne offre mai due nello stesso giro (sotto).
+    { id: 'doppio', icon: '🎰', color: '#ff5a9e', nome: 'Doppio o niente',
+      testo: () => 'Paghi ' + COSTO_DOPPIO + ' monete. Chiudi l\'ondata senza cadere e ne prendi ' + (COSTO_DOPPIO * 3),
+      n: () => 1, pay: () => COSTO_DOPPIO * 3, costo: () => COSTO_DOPPIO, ondata: 1, scommessa: 1 },
+    { id: 'interesse', icon: '📈', color: '#7dffb0', nome: 'Interesse composto',
+      testo: () => 'Ogni ondata chiusa raddoppia la paga (da ' + INT_BASE + ', fino a ' + (INT_BASE * Math.pow(2, INT_CAP)) + '). Se cadi perdi tutto. Si riscuote quando vuoi',
+      n: () => 999, pay: () => INT_BASE, ondata: 1, scommessa: 1, riscuoti: 1 },
   ];
   const BY_ID = {}; for (const k of KINDS) BY_ID[k.id] = k;
 
@@ -66,8 +114,13 @@
     const r = rnd || Math.random;
     const resto = KINDS.slice();
     const out = [];
+    let scommesse = 0;
     while (out.length < OFFERTE && resto.length) {
       const i = Math.floor(r() * resto.length); const k = resto.splice(i, 1)[0];
+      // v2.31 — MAI DUE SCOMMESSE NELLO STESSO GIRO. Sono le uniche due che non si completano
+      // giocando: offrirle insieme vorrebbe dire un banco su cui, quel giro, non c'e' niente da
+      // fare — solo due modi di puntare. Una per volta, e le altre due sono sempre incarichi.
+      if (k.scommessa) { if (scommesse) continue; scommesse = 1; }
       if (k.mirata) {
         if (!pool || !pool.length) continue;             // senza un bestiario non ha senso
         const m = pool[Math.floor(r() * pool.length)];
@@ -76,8 +129,14 @@
     }
     return out;
   }
+  // quanto costa ACCETTARLA (solo il Doppio o niente costa qualcosa): serve al banco per dire di no
+  // a chi non ha le monete, e a Room per scalarle.
+  function costo(b) { const k = b && BY_ID[b.k]; return (k && k.costo) ? k.costo(b.w) : 0; }
+  // l'oggetto della mappa senza il quale l'incarico non si puo' nemmeno cominciare
+  function oggettoRichiesto(b) { const k = b && BY_ID[b.k]; return (k && k.oggetto) || null; }
 
   function completa(b) { return !!b && b.have >= b.n; }
 
-  return { OFFERTE, ATTIVE, KINDS, BY_ID, istanza, offerte, completa };
+  return { OFFERTE, ATTIVE, KINDS, BY_ID, istanza, offerte, completa, costo, oggettoRichiesto,
+           COSTO_DOPPIO, INT_BASE, INT_CAP };
 });

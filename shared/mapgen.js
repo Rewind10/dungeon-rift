@@ -560,7 +560,11 @@
   // `forzaCim` accende il cimitero comunque, e serve a UNA cosa sola: dalla v2.9.1 la pianta e' in
   // stand-by (`CIMITERO_FINO_A: 0`) e senza questo appiglio nessun test la genererebbe piu'. Una pianta
   // che non viene piu' generata da nessuno marcisce in silenzio, e quando la si riaccende non funziona.
-  function generate(seed, level, forzaCim) {
+  // v2.31 — `oggForzati` e' un elenco di tipi che DEVONO esserci. Serve alle taglie del Banditore
+  // (Campanaro, Lampionaio, Tombarolo): senza, un incarico che chiede di suonare la campana aspetta
+  // che la sorte metta una campana sulla mappa — due o tre tipi su otto, cioe' una mappa su tre — e
+  // resta appeso per ondate intere. Non e' un incarico difficile, e' un incarico che non comincia.
+  function generate(seed, level, forzaCim, oggForzati) {
     const rng = MU.seedRng(seed >>> 0); const rint = (a, b) => Math.floor(a + rng() * (b - a + 1));
     let theme = THEMES[Math.floor(rng() * THEMES.length)];
     const TILE = C.TILE, cxm = W >> 1, cym = H >> 1;
@@ -993,7 +997,13 @@
         const TIPI = ['campana', 'braciere', 'masso', 'sarcofago', 'fonte', 'cristallo'];
         for (let z = TIPI.length - 1; z > 0; z--) { const j = (rng() * (z + 1)) | 0; const t = TIPI[z]; TIPI[z] = TIPI[j]; TIPI[j] = t; }
         const QUANTI = (C.OGG_NUOVI_PER_MAPPA || [2, 3]);
-        const scelti = TIPI.slice(0, QUANTI[0] + rint(0, Math.max(0, QUANTI[1] - QUANTI[0])));
+        let scelti = TIPI.slice(0, QUANTI[0] + rint(0, Math.max(0, QUANTI[1] - QUANTI[0])));
+        // i tipi pretesi passano davanti a tutti, senza far crescere il totale: la mappa continua ad
+        // avere due o tre tipi, ma uno di quelli e' quello che serve.
+        for (const f of (oggForzati || [])) {
+          if (TIPI.indexOf(f) < 0 || scelti.indexOf(f) >= 0) continue;
+          scelti = [f].concat(scelti.slice(0, Math.max(1, scelti.length - 1)));
+        }
         // quanti pezzi per tipo: di campane ne basta UNA (due vorrebbero dire due richiami in
         // concorrenza, e il richiamo e' una decisione, non un rumore di fondo), di bracieri anche tre
         // perche' sono il modo in cui la mappa si illumina a pezzi.

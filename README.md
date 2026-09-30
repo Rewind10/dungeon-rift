@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.30.1 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.31.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -22,7 +22,27 @@ Test: `npm test`
 | **Pozioni della cintura** | **Q / E** — il tipo di ogni slot lo scegli dall'Erborista |
 | Negozio: pronto | Spazio |
 | Musica | M |
+| **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🪧 v2.31.0 — undici taglie nuove, e il tasto F
+
+**Il Banditore ha un catalogo rifatto.** Undici incarichi, tutti pensati per racimolare monete extra
+senza dover giocare diversamente: apri 3 sarcofagi, accendi tutti i bracieri di una mappa, suona la
+campana e uccidine 5 mentre accorrono, chiudi l'ondata senza mai scattare, decapita un élite entro 30
+secondi da quando entra in campo.
+
+**E due scommesse.** *Doppio o niente*: paghi 120, chiudi l'ondata in piedi e ne prendi 360.
+*Interesse composto*: il montante raddoppia a ogni ondata che chiudi, si perde tutto se cadi, e lo
+riscuoti quando ti pare — fino a un tetto di 960.
+
+**Le tre taglie che vivono sugli oggetti della mappa non aspettano più la sorte**: se ne hai una in
+corso, la mappa successiva ha di sicuro l'oggetto che ti serve.
+
+**Tasto F: contatore dei fotogrammi** (fps, millisecondi, 95° percentile). Nasce spento e si ricorda
+come l'hai lasciato.
+
+---
 
 ## 🗂️ v2.30.0 — la schermata di avvio a due metà
 

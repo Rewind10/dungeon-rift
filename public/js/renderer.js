@@ -348,6 +348,12 @@
   const R = {
     canvas: null, ctx: null, w: 0, h: 0, dpr: 1, cam: { x: 0, y: 0 }, shake: 0,
     particles: [], floaters: [], flashes: [], chains: [], swings: [], pare: [], atk: {}, levelUps: [], map: null, mapCanvas: null, minimapCanvas: null, mm: null, torches: [], campfires: [], theme: null, time: 0,
+    // v2.31 — IL CONTATORE DI FOTOGRAMMI (tasto F). Sta spento e si ricorda come l'hai lasciato.
+    // Non e' un vezzo: misurato in questo motore, il 75% di un fotogramma se ne va in `_drawLighting`,
+    // e la' dentro il 95% sono CINQUE COPIE DI CANVAS A TUTTO SCHERMO (7,6 Mpixel). E' costo di
+    // riempimento pixel, cioe' roba che una scheda video fa quasi gratis e una integrata no: l'unico
+    // modo di sapere come va su una macchina vera e' guardarlo su quella macchina.
+    fpsOn: false, _fpsT: [], _fpsUltimo: 0, _fpsMed: 0, _fpsP95: 0, _fpsAgg: 0,
     torch: true, darkCv: null, darkCtx: null, darkScale: 0.5, darkness: 0.86, haloR: 260, dust: [], fog: [], critters: [],  // v1.17/1.23 — torcia + nebbia + animaletti (rune rimosse)
     mAtk: {}, deaths: [],  // v1.26 — animazioni di attacco (per eid) e di morte (sprite effimeri)
     init(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); for (const k in PUPPETS) PUPPETS[k].load(); for (const k in SHEETS) SHEETS[k].load(); this.resize(); window.addEventListener('resize', () => this.resize()); try { this.torch = localStorage.getItem('dr_torcia') !== '0'; } catch (_) {} window.addEventListener('keydown', (e) => { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.code === 'KeyL') { this.torch = !this.torch; try { localStorage.setItem('dr_torcia', this.torch ? '1' : '0'); } catch (_) {} } }); },
@@ -914,6 +920,52 @@
       }
       this.minimapCanvas = cv;
     },
+    // v2.31 — IL CONTATORE. Si misura il tempo fra un fotogramma e il successivo (non quello passato
+    // dentro render(): quello che conta e' quanto ci mette lo schermo ad aggiornarsi, e ci sta dentro
+    // anche il lavoro che il browser fa dopo di noi). Si tiene una finestra di 120 fotogrammi e si
+    // mostra la MEDIANA piu' il 95esimo percentile: la media nasconde gli scatti, ed e' proprio lo
+    // scatto che si sente giocando. Il numero si aggiorna quattro volte al secondo, se no balla e non
+    // si riesce a leggerlo.
+    _drawFps(ctx) {
+      const t = performance.now();
+      if (this._fpsUltimo) {
+        this._fpsT.push(t - this._fpsUltimo);
+        if (this._fpsT.length > 120) this._fpsT.shift();
+      }
+      this._fpsUltimo = t;
+      if (t - this._fpsAgg > 250 && this._fpsT.length > 8) {
+        this._fpsAgg = t;
+        const o = this._fpsT.slice().sort((a, b) => a - b);
+        this._fpsMed = o[o.length >> 1];
+        this._fpsP95 = o[Math.min(o.length - 1, Math.floor(o.length * 0.95))];
+      }
+      const ms = this._fpsMed || 0, fps = ms > 0 ? 1000 / ms : 0;
+      // il colore dice com'e' messa senza dover interpretare il numero
+      const col = fps >= 55 ? '#7dffb0' : (fps >= 40 ? '#ffd257' : '#ff6b6b');
+      ctx.save(); ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      const W = 132, H = 42, X = this.w - W - 12, Y = 12;
+      ctx.globalAlpha = 0.82; ctx.fillStyle = '#080b16';
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(X, Y, W, H, 8) : ctx.rect(X, Y, W, H); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(146,164,214,.22)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(X + .5, Y + .5, W - 1, H - 1, 8) : ctx.rect(X + .5, Y + .5, W - 1, H - 1); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = col; ctx.font = 'bold 19px Segoe UI, sans-serif';
+      ctx.fillText(fps.toFixed(0), X + 10, Y + 25);
+      ctx.fillStyle = '#8b93a7'; ctx.font = '11px Segoe UI, sans-serif';
+      ctx.fillText('fps', X + 10 + ctx.measureText(fps.toFixed(0)).width + 20, Y + 25);
+      ctx.fillStyle = '#c4cee1'; ctx.font = '11px Segoe UI, sans-serif';
+      ctx.fillText(ms.toFixed(1) + ' ms  ·  95% ' + (this._fpsP95 || 0).toFixed(1), X + 10, Y + 36);
+      ctx.restore();
+    },
+    // acceso e spento dal tasto F. Si ricorda fra una partita e l'altra, e se il browser non lascia
+    // scrivere (finestra anonima) si continua lo stesso: e' una comodita', non un pezzo di gioco.
+    toggleFps() {
+      this.fpsOn = !this.fpsOn;
+      this._fpsT.length = 0; this._fpsUltimo = 0; this._fpsMed = 0; this._fpsP95 = 0;
+      try { localStorage.setItem('dr_fps', this.fpsOn ? '1' : '0'); } catch (_) {}
+      return this.fpsOn;
+    },
+    _leggiFps() { try { this.fpsOn = localStorage.getItem('dr_fps') === '1'; } catch (_) { this.fpsOn = false; } },
     _drawMinimap(ctx, world) {
       if (!this.minimapCanvas || !this.mm || !world) return; const px = this.mm.px, T = this.map.tile;
       const mw = this.minimapCanvas.width, mh = this.minimapCanvas.height;
@@ -2128,6 +2180,7 @@
       // esiste, e su una mappa illuminata si vedeva eccome (prima la copriva il buio).
       if (!this.map.lit) this._drawEdgeVignette(ctx, world);   // v1.63 — la faglia si chiude dai bordi dello schermo
       this._drawMinimap(ctx, world);
+      if (this.fpsOn) this._drawFps(ctx);
       this._drawMirino(ctx, world);
     },
     // v2.10 — IL MIRINO. Prima non c'era: il mirino era il cursore del sistema (`cursor:crosshair` nel

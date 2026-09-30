@@ -220,7 +220,7 @@
   G.merchWares = null; G.darkWares = null;
   Net.onOfferMerchant = (m) => { if (m.dark) { G.darkWares = m.wares || G.darkWares; if (m.near) HUD.showMerchant(G.darkWares, (id) => Net.buyMerchant(id, 1), m.coins, true); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, true); } else { G.merchWares = m.wares || G.merchWares; if (m.near) HUD.showMerchant(G.merchWares, (id) => Net.buyMerchant(id), m.coins, false); else if (m.coins != null) HUD.updateMerchantCoins(m.coins, false); } };
   const potCb = { pick: (slot, id) => Net.pickPotion(slot, id), buy: (slot) => Net.buyPotion(slot) };
-  const bndCb = { take: (i) => Net.takeBounty(i), hire: () => Net.hireMerc() };
+  const bndCb = { take: (i) => Net.takeBounty(i), hire: () => Net.hireMerc(), cash: () => Net.cashBounty() };   // v2.31 — `cash`: l'Interesse composto
   Net.onChat = (m) => { const log = $('chatLog'); const el = document.createElement('div'); el.className = 'cm'; el.innerHTML = `<b>${esc(m.from)}:</b> ${esc(m.text)}`; log.appendChild(el); setTimeout(() => el.remove(), 8000); while (log.children.length > 6) log.removeChild(log.firstChild); };
   Net.onSnapshot = (snap) => { if (!G.started && snap.phase !== C.PHASE_LOBBY) enterGame(); A.setBoss(snap.phase === C.PHASE_BOSS);
     // v1.90 — la musica segue la SCHERMATA: il brano nelle ondate, il sintetizzatore al mercato e nel
@@ -434,6 +434,19 @@
         if (ev.who === Net.id) R.floater(ev.x, ev.y - 32, '+' + ev.pay + ' \uD83E\uDE99', '#ffcf4a');
         HUD.killfeed((ev.icon || '\uD83E\uDEA7') + ' <b>' + esc(ev.name || '') + '</b> ha chiuso la taglia <b style="color:' + (ev.color || '#ffcf4a') + '">' + esc(ev.nome) + '</b> \u2014 <b style="color:#ffcf4a">' + ev.pay + '</b> \uD83E\uDE99');
         break;
+      // v2.31 — le due scommesse hanno anche i loro momenti brutti, e devono sentirsi: una taglia che
+      // sparisce in silenzio si legge come un errore del gioco invece che come una scommessa persa.
+      case 'bounty_fail':
+        if (ev.who === Net.id) R.floater(ev.x, ev.y - 32, ev.perso ? ('\u2212' + ev.perso + ' \uD83E\uDE99') : 'persa', '#ff6b6b');
+        HUD.killfeed((ev.icon || '\uD83C\uDFB0') + ' <b>' + esc(ev.name || '') + '</b> ha perso <b style="color:' + (ev.color || '#ff6b6b') + '">' + esc(ev.nome) + '</b>' + (ev.perso ? ' \u2014 <b style="color:#ff6b6b">' + ev.perso + '</b> \uD83E\uDE99' : ''));
+        break;
+      case 'bounty_cresce':
+        if (ev.who === Net.id) {
+          R.floater(ev.x, ev.y - 32, '\uD83D\uDCC8 ' + ev.pay + ' \uD83E\uDE99', ev.color || '#7dffb0');
+          HUD.killfeed('\uD83D\uDCC8 <b style="color:' + (ev.color || '#7dffb0') + '">' + esc(ev.nome) + '</b> vale adesso <b style="color:#ffcf4a">' + ev.pay + '</b> \uD83E\uDE99' + (ev.colmo ? ' \u2014 <i>al massimo: da qui non cresce piu\u2019</i>' : ''));
+        }
+        break;
+      case 'nomoney': HUD.killfeed('\uD83E\uDE99 non ti bastano le monete \u2014 ne servono <b>' + ev.need + '</b>'); break;
       case 'gear_sold': A.item && A.item(false); HUD.killfeed('\uD83E\uDEA7 venduto <b style="color:' + (ev.color || '#c9d2e6') + '">' + esc(ev.name) + '</b> \u2014 <b style="color:#ffcf4a">' + ev.pay + '</b> \uD83E\uDE99'); break;
       // v1.71 — bevuta: fiala che si svuota, alone del colore della pozione e il gorgoglio. La cura
       // dice anche quanti PV ha reso, perche' quel numero dipende dalla Costituzione e va visto.
@@ -674,12 +687,16 @@
     else if (e.code === 'Escape') { const ci = $('chatInput'); if (!ci.classList.contains('hidden')) { ci.value = ''; ci.classList.add('hidden'); } }
     else if (e.code === 'Space' && !$('upgradeScreen').classList.contains('hidden')) { const b = $('nextWaveBtn'); if (b && !b.disabled) { Net.shopReady(); HUD.prontoPerOndata(); } }
     else if (e.code === 'KeyM') A.toggleMusic();
+    // v2.31 — F: il contatore di fotogrammi. Vale anche nel menu e fra le ondate (sta fuori dal
+    // controllo `inPartita`), perche' un calo si vede anche mentre si guarda la mappa ferma.
+    else if (e.code === 'KeyF') R.toggleFps();
   });
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   window.addEventListener('load', () => {
     const v = (C && C.VERSION) ? C.VERSION : '';
     if (v) { document.title = 'DUNGEON RIFT v' + v + ' — Roguelike Co-op'; const vb = $('verBadge'); if (vb) vb.textContent = 'v' + v; }
     R.init($('game')); Input.init($('game'));
+    R._leggiFps();   // v2.31 — il contatore si ricorda come l'hai lasciato
     // v2.10 — il pointer lock si chiede al CLIC, perche' il browser lo concede solo su un gesto
     // dell'utente: chiederlo al caricamento verrebbe rifiutato e basta. Il clic che aggancia e' anche il
     // clic che spara — sono due cose diverse e non si disturbano.

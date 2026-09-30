@@ -2609,7 +2609,9 @@ function testV172() {
   assert(p.bounty.k === tenuta, 'una taglia alla volta: la seconda non entra');
 
   // --- 4) ogni tipo di taglia si completa DAVVERO e paga il dichiarato ---
-  for (const kind of Bnt.KINDS.map(k => k.id)) {
+  // v2.31 — l'INTERESSE COMPOSTO e' fuori da questo giro e non e' una svista: e' l'unica che non ha
+  // un traguardo da raggiungere contando (n = 999). Si chiude riscuotendola, e ha il suo controllo.
+  for (const kind of Bnt.KINDS.map(k => k.id).filter(k => k !== 'interesse')) {
     const rr = new Room('v172_' + kind); const q = rr.addPlayer('b', conn, 'B', 'paladino'); rr.startGame(); rr.phase = C.PHASE_COMBAT;
     q.bounty = Bnt.istanza(kind, 4, 'skeleton', 'Zombie Putrido');
     const bers = q.bounty.n, paga = q.bounty.pay, c0 = q.coins;
@@ -2633,39 +2635,45 @@ function testV172() {
 
   // --- 5) gli agganci veri: uccidere e aprire casse fanno salire il contatore da soli ---
   const rk = new Room('v172k'); const k = rk.addPlayer('d', conn, 'D', 'paladino'); rk.startGame(); rk.phase = C.PHASE_COMBAT;
-  k.bounty = Bnt.istanza('caccia', 3);
-  const m1 = rk.spawnMonster('skeleton', k.x + 60, k.y); rk.killMonster(m1, k);
-  assert(k.bounty.have === 1, 'uccidere un nemico fa salire la caccia grossa');
   k.bounty = Bnt.istanza('specie', 3, 'slime', 'Melma');
   const m2 = rk.spawnMonster('skeleton', k.x + 60, k.y); rk.killMonster(m2, k);
   assert(k.bounty.have === 0, 'ma non il contratto su un altro tipo');
   const m3 = rk.spawnMonster('slime', k.x + 60, k.y); rk.killMonster(m3, k);
   assert(k.bounty.have === 1, 'quello giusto si');
-  k.bounty = Bnt.istanza('elite', 3);
+  // v2.31 — DECAPITAZIONE al posto di "Teste grosse": non basta che sia un elite, deve essere svelto
+  k.bounty = Bnt.istanza('decap', 3);
   const m4 = rk.spawnMonster('skeleton', k.x + 60, k.y); m4.elite = true; rk.killMonster(m4, k);
-  assert(k.bounty.have === 1, 'un elite conta per le teste grosse');
+  assert(k.bounty === null, 'un elite ucciso appena entrato chiude la decapitazione');
+  k.bounty = Bnt.istanza('decap', 3);
+  const m4b = rk.spawnMonster('skeleton', k.x + 60, k.y); m4b.elite = true;
+  m4b.tEntrata = rk.time - (C.DECAP_SEC + 5);          // entrato da troppo
+  rk.killMonster(m4b, k);
+  assert(k.bounty && k.bounty.have === 0, 'ma lo stesso elite ucciso in ritardo no');
   k.bounty = Bnt.istanza('casse', 3);
   rk.crates.length = 0; rk.crates.push({ eid: 1, x: k.x, y: k.y, r: 16, mimic: false, opened: false });
   rk.updatePickups(1 / C.TICK_RATE);
   assert(k.bounty.have === 1, 'aprire una cassa conta per il saccheggio');
 
-  // --- 6) "nessun caduto": si azzera se cade qualcuno, si chiude se l'ondata finisce pulita ---
+  // --- 6) v2.31 — "DOPPIO O NIENTE" al posto di "Nessun caduto": stesso metro, ma ci hai scommesso
   const rn = new Room('v172n'); const w = rn.addPlayer('e', conn, 'E', 'paladino'); rn.startGame(); rn.phase = C.PHASE_COMBAT;
-  w.bounty = Bnt.istanza('illeso', 3);
+  w.bounty = Bnt.istanza('doppio', 3);
   assert(w.noLifeLost === true, "a inizio ondata la lavagna e pulita");
   w.down = true; w.downT = -1; w.lives = 2; rn.updatePlayers(1 / C.TICK_RATE);
   assert(w.noLifeLost === false, 'perdere una vita la sporca');
   rn.monsters.length = 0; rn.pending = 0; chiudiOndata(rn);
-  assert(w.bounty && w.bounty.have === 0, "e l'ondata finita non chiude la taglia");
+  assert(w.bounty === null, "e chi cade PERDE la scommessa, non la tiene aperta");
   // ondata nuova, questa volta pulita
   const rn2 = new Room('v172n2'); const w2 = rn2.addPlayer('f', conn, 'F', 'paladino'); rn2.startGame(); rn2.phase = C.PHASE_COMBAT;
-  w2.bounty = Bnt.istanza('illeso', 3); const c5 = w2.coins;
-  rn2.monsters.length = 0; rn2.pending = 0; chiudiOndata(rn2);
-  assert(w2.bounty === null && w2.coins > c5, "un'ondata senza cadute la chiude e la paga");
+  w2.bounty = Bnt.istanza('doppio', 3); const c5 = w2.coins;
+  // il premio di VELOCITA' (v1.77) si paga nello stesso istante e nella stessa moneta: lasciandolo
+  // acceso, questo controllo misurerebbe la somma di due cose e direbbe 375 invece di 360 — cioe'
+  // passerebbe anche con la scommessa pagata male. Qui si spegne, e si misura solo la scommessa.
+  rn2.monsters.length = 0; rn2.pending = 0; rn2.parT = 0; chiudiOndata(rn2);
+  assert(w2.bounty === null && w2.coins - c5 === 360, "un'ondata in piedi la paga il triplo (" + (w2.coins - c5) + ")");
 
   // --- 7) la taglia arriva al client, e si vede in partita ---
   const rc = new Room('v172c'); const y = rc.addPlayer('g', conn, 'G', 'arciere'); rc.startGame();
-  y.bounty = Bnt.istanza('caccia', 5); y.bounty.have = 7;
+  y.bounty = Bnt.istanza('specie', 5, 'skeleton', 'Scheletro'); y.bounty.have = 7;
   const me = rc.snapshot().players.find(x => x.i === 'g');
   assert(me.bo && me.bo.h === 7 && me.bo.n === y.bounty.n, 'lo snapshot porta avanzamento e bersaglio');
   assert(me.bo.t && me.bo.i, 'con la frase e l icona, per la riga in alto a sinistra');
@@ -9048,7 +9056,7 @@ function testV230() {
     // ogni famiglia deve avere dentro i suoi tasti: un titolo senza voci sotto sarebbe peggio di niente
     const pezzi = leg.split('class="fam"').slice(1);
     for (const p2 of pezzi) assert((p2.match(/class="tasto"/g) || []).length >= 1, 'e ogni famiglia ha le sue voci');
-    assert((leg.match(/class="tasto"/g) || []).length === 9, 'e non se n e persa nessuna per strada');
+    assert((leg.match(/class="tasto"/g) || []).length === 10, 'e non se n e persa nessuna per strada');
     assert(/#infoCard \.fam \.ft\{/.test(css), 'e i titoli hanno il loro stile');
   }
 
@@ -9106,6 +9114,238 @@ function testV230() {
   ok('due colonne, i quattro riquadri in pila, i comandi sotto e la prova chiusa');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =====================================================================================================
+// TEST 91 — v2.31: le undici taglie scelte da Paolo, e il contatore di fotogrammi
+// Paolo: *«ne ho rimosse la maggior parte. Apprezzo il tuo sforzo per crearne di variegate ma devono
+// essere cose semplici per racimolare monete extra specialmente nei primi livelli di gioco»*.
+// Quindi qui non si prova che il catalogo sia bello: si prova che ognuna delle undici sia DAVVERO
+// agganciata a qualcosa che succede giocando, e che quelle che possono far PERDERE monete perdano
+// quando devono. Una taglia che nessuno incrementa resta a zero per sempre e nessuno se ne accorge.
+// =====================================================================================================
+function testV231() {
+  console.log('\n[TEST 91] v2.31 — le undici taglie, e il contatore di fotogrammi');
+  const fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..') + path.sep;
+  const conn = { send() {} };
+  const dt = 1 / C.TICK_RATE;
+
+  // --- 1) IL CATALOGO E' QUELLO CHE HA SCELTO LUI, riga per riga -----------------------------
+  const ATTESI = ['specie', 'casse', 'combo', 'intempo', 'nodash', 'decap', 'campana', 'bracieri', 'sarcofagi', 'doppio', 'interesse'];
+  assert(Bnt.KINDS.length === ATTESI.length, 'le taglie sono ' + ATTESI.length + ' (' + Bnt.KINDS.length + ')');
+  for (const id of ATTESI) assert(Bnt.BY_ID[id], 'c e ' + id);
+  for (const k of ['caccia', 'elite', 'illeso'])
+    assert(!Bnt.BY_ID[k], 'e le tre vecchie non ci sono piu: ' + k);
+  // le paghe sono quelle che ha scritto lui. Si controllano su due ondate, se no una paga fissa
+  // passerebbe per una che cresce.
+  const paga = (id, w) => Bnt.istanza(id, w, 'skeleton', 'Scheletro').pay;
+  const TARIFFE = { specie: [70, 9], casse: [55, 6], combo: [175, 9], intempo: [130, 13], nodash: [120, 12],
+                    decap: [140, 15], campana: [170, 17], bracieri: [120, 10], sarcofagi: [150, 15] };
+  for (const id in TARIFFE) {
+    const [base, per] = TARIFFE[id];
+    assert(paga(id, 1) === base + per, id + ': base ' + base + ' + ' + per + '/ondata (letto ' + paga(id, 1) + ')');
+    assert(paga(id, 10) === base + per * 10, id + ': e cresce come deve (' + paga(id, 10) + ')');
+  }
+  // la combo NON cresce piu' col numero di ondate: dieci e' dieci anche alla diciannovesima, ed e'
+  // il punto — questa deve pagare presto.
+  assert(Bnt.istanza('combo', 1).n === 10 && Bnt.istanza('combo', 19).n === 10, 'la combo resta a 10 sempre');
+
+  // --- 2) OGNI TIPO E' AGGANCIATO A QUALCOSA CHE SUCCEDE ------------------------------------
+  // Controllo di impianto: il nome del tipo deve comparire in Room.js. Non basta (un nome puo'
+  // stare in un commento) ma senza non puo' funzionare, e sotto ognuna si prova sul campo.
+  const src = fs.readFileSync(ROOT + 'server/Room.js', 'utf8');
+  for (const k of Bnt.KINDS) assert(src.includes("'" + k.id + "'"), 'il tipo ' + k.id + ' compare in Room.js');
+
+  const banco = (id, w) => {
+    const r = new Room('v231' + id); const p = r.addPlayer('a', conn, 'A', 'paladino');
+    r.startGame(w || 4, true); r.phase = C.PHASE_COMBAT;
+    p.bounty = Bnt.istanza(id, w || 4, 'skeleton', 'Scheletro');
+    if (id === 'interesse') { p.bounty.giri = 0; p.bounty.pay = Bnt.INT_BASE; }
+    return { r, p };
+  };
+
+  // --- 3) PIEDI PER TERRA: uno scatto solo e salta ------------------------------------------
+  {
+    const a = banco('nodash'); a.r.monsters.length = 0; a.r.pending = 0;
+    const c0 = a.p.coins; a.r.parT = 0; chiudiOndata(a.r);
+    assert(a.p.bounty === null && a.p.coins > c0, 'un ondata senza scatti la chiude');
+    const b = banco('nodash'); b.p.cdDash = 0; b.r.useDash(b.p);
+    assert(b.p.scattiOndata === 1, 'lo scatto viene contato (' + b.p.scattiOndata + ')');
+    b.r.monsters.length = 0; b.r.pending = 0; b.r.parT = 0; const c1 = b.p.coins; chiudiOndata(b.r);
+    assert(b.p.bounty && b.p.coins === c1, 'e uno solo basta a non chiuderla');
+  }
+
+  // --- 4) A TAMBURO BATTENTE: lo stesso metro del premio di velocita ------------------------
+  {
+    const a = banco('intempo'); a.r.monsters.length = 0; a.r.pending = 0;
+    a.r.parT = 600; a.r.waveT0 = a.r.time;             // dentro il tempo, larghissimo
+    const c0 = a.p.coins; chiudiOndata(a.r);
+    assert(a.p.bounty === null && a.p.coins > c0, 'chiusa dentro il tempo, paga');
+    const b = banco('intempo'); b.r.monsters.length = 0; b.r.pending = 0;
+    b.r.parT = 1; b.r.waveT0 = b.r.time - 500;         // fuori tempo di un pezzo
+    chiudiOndata(b.r);
+    assert(b.p.bounty, 'fuori dal tempo, no');
+  }
+
+  // --- 5) CAMPANARO: conta solo MENTRE suona -----------------------------------------------
+  {
+    const a = banco('campana');
+    a.r.richiamo = null;
+    for (let i = 0; i < 3; i++) { const m = a.r.spawnMonster('skeleton', a.p.x + 60, a.p.y); a.r.killMonster(m, a.p); }
+    assert(a.p.bounty.have === 0, 'senza campana, le uccisioni non contano');
+    a.r.richiamo = { x: a.p.x, y: a.p.y, t: 8 };
+    for (let i = 0; i < 3; i++) { const m = a.r.spawnMonster('skeleton', a.p.x + 60, a.p.y); a.r.killMonster(m, a.p); }
+    assert(a.p.bounty.have === 3, 'mentre suona, si (' + a.p.bounty.have + ')');
+  }
+
+  // --- 6) LAMPIONAIO: TUTTI i bracieri, non uno --------------------------------------------
+  {
+    const a = banco('bracieri');
+    a.r.oggetti.length = 0;
+    for (let i = 0; i < 3; i++) a.r.oggetti.push({ eid: 900 + i, tipo: 'braciere', x: a.p.x + 40 * i, y: a.p.y, r: 14, dead: false, st: 0, cd: 0 });
+    a.r._accendiBraciere(a.r.oggetti[0], a.p);
+    assert(a.p.bounty && a.p.bounty.have === 0, 'uno acceso su tre non basta');
+    a.r._accendiBraciere(a.r.oggetti[1], a.p);
+    assert(a.p.bounty, 'due nemmeno');
+    const c0 = a.p.coins;
+    a.r._accendiBraciere(a.r.oggetti[2], a.p);
+    assert(a.p.bounty === null && a.p.coins > c0, 'il terzo chiude la taglia e la paga');
+    // e un braciere gia' acceso non conta due volte
+    const b = banco('bracieri'); b.r.oggetti.length = 0;
+    b.r.oggetti.push({ eid: 1, tipo: 'braciere', x: b.p.x, y: b.p.y, r: 14, dead: false, st: 1, cd: 0 });
+    b.r._accendiBraciere(b.r.oggetti[0], b.p);
+    assert(b.p.bounty, 'riaccendere uno gia acceso non chiude niente');
+  }
+
+  // --- 7) TOMBAROLO e DECAPITAZIONE --------------------------------------------------------
+  {
+    const a = banco('sarcofagi');
+    for (let i = 0; i < 2; i++) a.r._apriSarcofago({ x: a.p.x, y: a.p.y, tipo: 'sarcofago' }, a.p);
+    assert(a.p.bounty && a.p.bounty.have === 2, 'due sarcofagi su tre (' + (a.p.bounty || {}).have + ')');
+    a.r._apriSarcofago({ x: a.p.x, y: a.p.y, tipo: 'sarcofago' }, a.p);
+    assert(a.p.bounty === null, 'il terzo la chiude');
+    // il cronometro della decapitazione parte da quando l ELITE ENTRA, non dall inizio dell ondata
+    const b = banco('decap');
+    const m = b.r.spawnMonster('skeleton', b.p.x + 60, b.p.y); m.elite = true;
+    assert(m.tEntrata != null, 'ogni mostro si segna l ora in cui e entrato');
+    b.r.time += C.DECAP_SEC - 2; b.r.killMonster(m, b.p);
+    assert(b.p.bounty === null, 'ucciso a 28 secondi: chiusa');
+    const c = banco('decap');
+    const m2 = c.r.spawnMonster('skeleton', c.p.x + 60, c.p.y); m2.elite = true;
+    c.r.time += C.DECAP_SEC + 2; c.r.killMonster(m2, c.p);
+    assert(c.p.bounty && c.p.bounty.have === 0, 'ucciso a 32: no');
+    // e un nemico normale non conta mai, per quanto svelto
+    const d = banco('decap');
+    const m3 = d.r.spawnMonster('skeleton', d.p.x + 60, d.p.y); d.r.killMonster(m3, d.p);
+    assert(d.p.bounty && d.p.bounty.have === 0, 'e un nemico comune non vale, per quanto svelto');
+  }
+
+  // --- 8) LE DUE SCOMMESSE: si pagano, si vincono e SI PERDONO ------------------------------
+  {
+    // accettare il Doppio o niente costa, e senza monete il banco dice di no
+    const r = new Room('v231c'); const p = r.addPlayer('a', conn, 'A', 'paladino'); r.startGame();
+    r.enterMarket(); p.x = r.bandit.x; p.y = r.bandit.y;
+    p.bountyOffer = [Bnt.istanza('doppio', 4)];
+    p.coins = Bnt.COSTO_DOPPIO - 1;
+    r.takeBounty('a', 0);
+    assert(p.bounty === null, 'senza le monete il banco non la da (' + p.coins + ')');
+    p.coins = Bnt.COSTO_DOPPIO + 40;
+    p.bountyOffer = [Bnt.istanza('doppio', 4)];
+    r.takeBounty('a', 0);
+    assert(p.bounty && p.bounty.k === 'doppio', 'con le monete si');
+    assert(p.coins === 40, 'e le monete se ne vanno subito (' + p.coins + ')');
+  }
+  {
+    // l Interesse composto: raddoppia, si ferma al tetto, e si azzera se cadi
+    const a = banco('interesse');
+    const attesi = [];
+    for (let g = 1; g <= Bnt.INT_CAP + 3; g++) attesi.push(Math.round(Bnt.INT_BASE * Math.pow(2, Math.min(Bnt.INT_CAP, g - 1))));
+    for (let g = 1; g <= Bnt.INT_CAP + 3; g++) {
+      a.r.monsters.length = 0; a.r.pending = 0; a.r.parT = 0; a.p.noLifeLost = true;
+      chiudiOndata(a.r);
+      assert(a.p.bounty && a.p.bounty.pay === attesi[g - 1], 'ondata ' + g + ': vale ' + attesi[g - 1] + ' (letto ' + (a.p.bounty || {}).pay + ')');
+      a.r.phase = C.PHASE_COMBAT;
+    }
+    // il tetto si controlla anche con un numero ASSOLUTO, non solo con la costante: misurando
+    // contro `INT_CAP` il controllo si sposta insieme al difetto — alzando il tetto a 99 resta verde
+    // mentre in gioco alla decima ondata la scommessa varrebbe trentamila monete. Provato: verde.
+    assert(Bnt.INT_CAP <= 6, 'il tetto dei raddoppi esiste ed e basso (' + Bnt.INT_CAP + ')');
+    assert(a.p.bounty.pay <= 1000, 'e dopo sette ondate la scommessa non vale piu di mille monete (' + a.p.bounty.pay + ')');
+    assert(a.p.bounty.pay === Bnt.INT_BASE * Math.pow(2, Bnt.INT_CAP), 'e oltre il tetto non cresce piu');
+    // riscuotere: solo al banco, e solo se qualcosa hai accumulato
+    a.r.enterMarket(); a.p.x = a.r.bandit.x; a.p.y = a.r.bandit.y;
+    const c0 = a.p.coins, val = a.p.bounty.pay;
+    a.r.riscuotiBounty('a');
+    assert(a.p.bounty === null && a.p.coins - c0 === val, 'riscossa: ' + val + ' monete (' + (a.p.coins - c0) + ')');
+    // e chi cade perde tutto
+    const b = banco('interesse');
+    b.r.monsters.length = 0; b.r.pending = 0; b.r.parT = 0; b.p.noLifeLost = true; chiudiOndata(b.r);
+    assert(b.p.bounty && b.p.bounty.giri === 1, 'un ondata in piedi conta');
+    b.r.phase = C.PHASE_COMBAT;
+    b.r.monsters.length = 0; b.r.pending = 0; b.r.parT = 0; b.p.noLifeLost = false;
+    const c1 = b.p.coins; chiudiOndata(b.r);
+    assert(b.p.bounty === null && b.p.coins === c1, 'e un ondata in cui cadi porta via tutto');
+    // non si riscuote niente prima di aver chiuso un ondata
+    const d = banco('interesse'); d.r.enterMarket(); d.p.x = d.r.bandit.x; d.p.y = d.r.bandit.y;
+    const c2 = d.p.coins; d.r.riscuotiBounty('a');
+    assert(d.p.bounty && d.p.coins === c2, 'e a zero ondate non c e niente da riscuotere');
+  }
+  // il banco non appende MAI due scommesse insieme: sarebbe un giro in cui non c e un incarico
+  {
+    let insieme = 0;
+    const pool = [{ id: 'skeleton', nome: 'Scheletro' }];
+    for (let k = 0; k < 400; k++) {
+      const o = Bnt.offerte(6, pool);
+      if (o.filter(x => Bnt.BY_ID[x.k].scommessa).length > 1) insieme++;
+    }
+    assert(insieme === 0, 'mai due scommesse nello stesso giro (' + insieme + '/400)');
+  }
+
+  // --- 9) LE TRE CHE VIVONO SUGLI OGGETTI NON ASPETTANO LA SORTE ---------------------------
+  // Campanaro, Lampionaio e Tombarolo hanno bisogno di un oggetto che sta su due o tre mappe su
+  // otto. Senza il forzaggio sarebbero incarichi che aspettano il sorteggio invece del giocatore.
+  {
+    for (const [id, tipo] of [['campana', 'campana'], ['bracieri', 'braciere'], ['sarcofagi', 'sarcofago']]) {
+      const r = new Room('v231o' + id); const p = r.addPlayer('a', conn, 'A', 'paladino'); r.startGame(5, true);
+      p.bounty = Bnt.istanza(id, 5);
+      assert(r._oggettiRichiesti().indexOf(tipo) >= 0, id + ' pretende il suo oggetto (' + tipo + ')');
+      let trovate = 0;
+      for (let k = 0; k < 12; k++) {
+        r.newMap((Math.random() * 1e9) | 0, 5);
+        if (r.oggetti.some(o => o.tipo === tipo)) trovate++;
+      }
+      assert(trovate === 12, 'e allora l oggetto c e su tutte le mappe (' + trovate + '/12 per ' + tipo + ')');
+    }
+    // e senza taglie in corso la mappa torna a sorteggiare come sempre: il forzaggio non deve
+    // diventare "c e sempre tutto", se no gli oggetti smettono di essere una scoperta.
+    const r2 = new Room('v231libero'); r2.addPlayer('a', conn, 'A', 'paladino'); r2.startGame(5, true);
+    assert(r2._oggettiRichiesti().length === 0, 'senza taglie non si pretende niente');
+    let tipiVisti = new Set();
+    for (let k = 0; k < 20; k++) { r2.newMap((Math.random() * 1e9) | 0, 5); for (const o of r2.oggetti) tipiVisti.add(o.tipo); }
+    assert(tipiVisti.size >= 4, 'e le mappe continuano a variare (' + tipiVisti.size + ' tipi in 20 mappe)');
+  }
+
+  // --- 10) IL CONTATORE DI FOTOGRAMMI ------------------------------------------------------
+  {
+    const rnd = fs.readFileSync(ROOT + 'public/js/renderer.js', 'utf8');
+    const main = fs.readFileSync(ROOT + 'public/js/main.js', 'utf8');
+    const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    assert(/fpsOn: false/.test(rnd), 'nasce spento: e uno strumento, non un pezzo di interfaccia');
+    assert(/toggleFps\(\) \{/.test(rnd) && /_drawFps\(ctx\) \{/.test(rnd), 'si accende e si disegna');
+    assert(/if \(this\.fpsOn\) this\._drawFps\(ctx\);/.test(rnd), 'e si disegna SOLO se e acceso');
+    assert(/localStorage\.setItem\('dr_fps'/.test(rnd) && /localStorage\.getItem\('dr_fps'/.test(rnd), 'e si ricorda come l hai lasciato');
+    // tutto dentro try/catch: in finestra anonima localStorage SOLLEVA, e un contatore non puo'
+    // impedire di giocare. E' lo stesso inciampo gia' preso col record nella v2.26.
+    const i0 = rnd.indexOf('toggleFps() {');
+    assert(/try \{/.test(rnd.slice(i0, i0 + 400)), 'e la scrittura sta dentro try/catch');
+    assert(/e\.code === 'KeyF'/.test(main), 'il tasto e F');
+    assert(/R\._leggiFps\(\)/.test(main), 'e al caricamento si rilegge la scelta di prima');
+    const i1 = html.indexOf('id="infoCard"');
+    const legenda = html.slice(i1, html.indexOf('</aside>', i1));
+    assert(/class="kb">F</.test(legenda), 'e la legenda dei comandi lo dice');
+  }
+  ok('le undici taglie sono agganciate, le scommesse si perdono davvero, e il contatore c e');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

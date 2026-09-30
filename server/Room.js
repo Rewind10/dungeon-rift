@@ -204,11 +204,24 @@ class Room {
   broadcast(o) { const s = JSON.stringify(o); for (const p of this.players.values()) if (p.conn) try { p.conn.send(s); } catch (_) {} }
   sendTo(pid, o) { const p = this.players.get(pid); if (p && p.conn) try { p.conn.send(JSON.stringify(o)); } catch (_) {} }
 
+  // v2.31 — di quali OGGETTI ha bisogno la prossima mappa, perche' qualcuno ha in mano una taglia che
+  // li richiede. Tre delle undici (Campanaro, Lampionaio, Tombarolo) vivono sugli oggetti della v2.28,
+  // e quelli stanno su due o tre mappe su otto: senza questa riga sarebbero incarichi che aspettano
+  // la sorte invece di aspettare te.
+  _oggettiRichiesti() {
+    const out = [];
+    for (const p of this.players.values()) {
+      if (!p.connected || !p.bounty) continue;
+      const o = Bnt.oggettoRichiesto(p.bounty);
+      if (o && out.indexOf(o) < 0) out.push(o);
+    }
+    return out;
+  }
   newMap(seed, level, market, prologo) {
     // v1.56 — il MERCATO ha un generatore suo: villaggio costruito a mano, meta' mappa, senza muri interni.
     // v2.7 — e il PROLOGO pure: una sala sola, la faglia in mezzo, niente altro.
     this.map = prologo ? MapGen.generatePrologo(seed >>> 0)
-             : market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level); this.flow = null;
+             : market ? MapGen.generateMarket(seed >>> 0) : MapGen.generate(seed >>> 0, level, false, this._oggettiRichiesti()); this.flow = null;
     // v1.81 — zone e ragnatele sono POSTI sulla mappa vecchia: sulla nuova non vogliono dire niente.
     this.zones.length = 0; this.ragnatele.length = 0; this.muri.length = 0; this.trappole.length = 0; this.nebbie.length = 0; this.recinto = null; this.chiave = null; this.faglia = null;
     // v1.75.2 — i corpi solidi del villaggio (mobili e persone). Fuori dal villaggio resta null, e la
@@ -312,7 +325,7 @@ class Room {
     // `o.dead = true` non sta piu' in cima ma dentro ogni ramo che lo merita. La catena dei barili
     // continua a non poter tornare indietro perche' il barile la sua riga ce l'ha per primo.
     if (o.tipo === 'campana') return this._suonaCampana(o);
-    if (o.tipo === 'braciere') return this._accendiBraciere(o);
+    if (o.tipo === 'braciere') return this._accendiBraciere(o, src);
     if (o.tipo === 'masso') return this._spingiMasso(o, dir, src);
     if (o.tipo === 'cristallo') return this._rompiCristallo(o, src);
     o.dead = true; this.oggVer++;                          // PRIMA di tutto: e' cosi' che la catena
@@ -349,10 +362,16 @@ class Room {
   // IL BRACIERE. Si accende una volta e resta acceso: e' tutto qui, e in un gioco in cui vedi solo
   // dove arriva la torcia e' parecchio. La luce la disegna il client dallo stato — mandarla in rete
   // sessanta volte al secondo per una cosa che non cambia piu' sarebbe peso inutile.
-  _accendiBraciere(o) {
+  _accendiBraciere(o, src) {
     if (o.st) return;
     o.st = 1; this.oggVer++;
     this.events.push({ t: 'braciere', x: o.x, y: o.y, r: C.BRACIERE_LUCE || 250 });
+    // v2.31 — LAMPIONAIO: «accendi TUTTI i bracieri di una mappa». Si guarda qui e non a fine ondata
+    // perche' la mappa cambia ogni due ondate: il conto vale su questa, adesso. Se su questa mappa non
+    // ci sono bracieri non succede niente e l'incarico aspetta la prossima — ma dalla v2.31 la mappa
+    // successiva ne avra' di sicuro (vedi `_oggettiRichiesti`).
+    const b = this.oggetti.filter(q => q.tipo === 'braciere' && !q.dead);
+    if (b.length && b.every(q => q.st)) this.bountyTick(src, 'bracieri', 1);
   }
 
   // IL MASSO. Gli spari e parte nella direzione del colpo. Da qui in poi e' una cosa che si muove, e
@@ -411,6 +430,7 @@ class Room {
   // una cassa qualunque — mentre una bara si vede che e' una bara: il rischio e' dichiarato dalla
   // forma dell'oggetto, e aprirla resta una scelta tua.
   _apriSarcofago(o, p) {
+    this.bountyTick(p, 'sarcofagi', 1);   // v2.31 — TOMBAROLO: conta l'apertura, non cosa ne esce
     if (Math.random() < (C.SARCOFAGO_PROB_MOSTRO == null ? 0.45 : C.SARCOFAGO_PROB_MOSTRO)) {
       // l'inquilino e' uno dei mostri di QUESTA ondata, non uno a caso: un nemico che non hai ancora
       // mai visto, sbucato da una bara, si leggerebbe come un premio sbagliato invece che come un
@@ -695,7 +715,7 @@ class Room {
     // per tutte, senza eccezioni da spiegare.
     this.parT = Math.round(C.PAR_BASE + C.PAR_PER_MOSTRO * this.waveMostri / Math.max(1, this.alivePlayers.length || 1));
     this.parPreso = 0; this.waveDur = null; this.parBonus = null;
-    for (const p of this.players.values()) { p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; }
+    for (const p of this.players.values()) { p.ondata = { uccisi: 0, xp: 0, monete: 0, livelli: 0 }; p.exitOk = false; p.scattiOndata = 0; }
     this.spawnTimer = 0; this._peakAlive = 0; this.broadcast({ t: C.MSG.EVENT, ev: { t: 'wave', wave: this.wave, boss: Waves.isBossWave(this.wave), final: this.wave >= Waves.FINAL_WAVE } });
   }
   // v1.78 — QUI C'ERA spawnTreasure(). Generava una cassa-mima gonfiata che scappava dai giocatori
@@ -734,6 +754,7 @@ class Room {
     const def = Mon.MONSTERS[typeId] || Mon.BOSSES[typeId] || Mon.MONSTERS.skeleton;
     const m = { eid: NEXT++, type: def.id, def: Object.assign({}, def), x, y, mx: 0, my: 0, facing: 0, hp: def.hp, maxHp: def.hp, dmg: def.dmg, speed: def.speed, radius: def.radius, xp: def.xp, atkT: MU.rand(0, def.atkCd), stun: 0, elite: false, hitFlash: 0, boss: !!def.boss, mega: !!def.mega, awake: def.ai !== 'ambush', slowT: 0, poison: 0, poisonT: 0 };
     m.campione = null; m.rigenT = 0; m.infuria = 0; m.scortaX = null; m.scortaY = null;
+    m.tEntrata = this.time;   // v2.31 — l'ora in cui e' entrato: la taglia "Decapitazione" conta da qui
     if (opts.scaling) Waves.applyScaling(m, opts.scaling, opts.elite, opts.camp);
     if (opts.hpMul) { m.maxHp = Math.round(m.maxHp * opts.hpMul); m.hp = m.maxHp; }
     if (opts.dmgMul) m.dmg = Math.round(m.dmg * opts.dmgMul);
@@ -1809,6 +1830,7 @@ class Room {
   }
   useDash(p) {
     if (p.cdDash > 0 || p.buffs.dash > 0) return;
+    p.scattiOndata = (p.scattiOndata || 0) + 1;   // v2.31 — "Piedi per terra" guarda questo, a fine ondata
     // v2.20.0 — PIEDE LEGGERO (arciere): lo scatto torna prima. GUIZZO (arciere): i fotogrammi in cui
     // non ti toccano durano un filo di piu'. TERREMOTO (barbaro): passando addosso ai nemici li sbalza.
     p.cdDash = C.DASH_CD * p.stats.cdrMult * (1 - (p.boon.dashCd || 0));
@@ -1907,8 +1929,9 @@ class Room {
   offerBandit(p, near) {
     const b = p.bounty;
     this.sendTo(p.id, { t: C.MSG.OFFER_BANDIT, coins: p.coins, near: near ? 1 : 0,
-      bounty: b ? { k: b.k, n: b.n, have: b.have, pay: b.pay, nome: b.nome, icon: b.icon, color: b.color, testo: b.testo } : null,
-      offers: b ? [] : this._offerteTaglie(p).map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo })),
+      bounty: b ? { k: b.k, n: b.n, have: b.have, pay: b.pay, nome: b.nome, icon: b.icon, color: b.color, testo: b.testo,
+                    giri: b.giri || 0, risc: (b.k === 'interesse' && b.giri > 0) ? 1 : 0 } : null,
+      offers: b ? [] : this._offerteTaglie(p).map(o => ({ k: o.k, n: o.n, pay: o.pay, nome: o.nome, icon: o.icon, color: o.color, testo: o.testo, costo: Bnt.costo(o) })),
       // v1.82 — al posto del magazzino (la rivendita delle armi e' stata tolta) c'e' il banco dei
       // mercenari: un candidato per volta, del tuo stesso livello, prendere o lasciare.
       merc: this._bancoMerc(p) });
@@ -2070,10 +2093,31 @@ class Room {
     const p = this.players.get(pid); if (!p || p.dead) return;
     if (!this._alBanditore(p) || p.bounty) return;
     const off = this._offerteTaglie(p); const scelta = off && off[i | 0]; if (!scelta) return;
+    // v2.31 — il Doppio o niente si PAGA per accettarlo. Se le monete non bastano il banco dice di no
+    // e basta: non si accetta a credito, se no la scommessa non sarebbe una scommessa.
+    const costo = Bnt.costo(scelta);
+    if (costo > 0) {
+      if ((p.coins || 0) < costo) { this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'nomoney', need: costo } }); return; }
+      p.coins -= costo; scelta.costo = costo;
+    }
+    if (scelta.k === 'interesse') { scelta.giri = 0; scelta.pay = Bnt.INT_BASE; }
     p.bounty = scelta; p.bountyOffer = null;
     this.offerBandit(p, 1);
     this.sendTo(pid, { t: C.MSG.EVENT, ev: { t: 'bounty_take', x: p.x, y: p.y, nome: scelta.nome, testo: scelta.testo, color: scelta.color, icon: scelta.icon } });
   }
+  // v2.31 — RISCUOTERE. La usa solo l'Interesse composto: e' l'unica taglia che non si chiude da
+  // sola, perche' il momento di fermarsi e' la scelta che la rende una scommessa. Si riscuote al
+  // banco, come si accetta — e se non hai ancora chiuso nemmeno un'ondata non c'e' niente da
+  // riscuotere: il montante si guadagna sopravvivendo, non accettando.
+  riscuotiBounty(pid) {
+    const p = this.players.get(pid); if (!p || p.dead) return;
+    if (!this._alBanditore(p)) return;
+    const b = p.bounty; if (!b || b.k !== 'interesse' || !(b.giri > 0)) return;
+    p.coins += b.pay; p.bounty = null; p.bountyOffer = null;
+    this.events.push({ t: 'bounty_done', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, testo: 'Riscosso dopo ' + b.giri + ' ondate', pay: b.pay, color: b.color, icon: b.icon });
+    this.offerBandit(p, 1);
+  }
+
   // v1.82 — LA RIVENDITA DELLE ARMI E' STATA TOLTA (c'era `sellGear` + `_magazzino`). Al banco del
   // Banditore quello spazio adesso e' il reclutamento: un banco che fa due mestieri diversi non e' un
   // banco, e' un menu. Cio' che possiedi resta tuo e lo rimetti addosso gratis dal Fabbro, come prima.
@@ -3132,10 +3176,16 @@ class Room {
       src.combo = (src.combo || 0) + 1; src.comboT = C.COMBO_TIME; if (src.combo > (src.comboBest || 0)) src.comboBest = src.combo;
       // v1.72 — le taglie contano qui, dove le uccisioni gia' accadono: caccia grossa, contratto mirato
       // (solo se e' la specie giusta) e teste grosse (solo elite, boss esclusi: hanno gia' la loro ricompensa).
-      this.bountyTick(src, 'caccia', 1);
       this.bountyTick(src, 'specie', 1, m.type);
-      if (m.elite && !m.boss) this.bountyTick(src, 'elite', 1);
       this.bountyTick(src, 'combo', src.combo);
+      // v2.31 — DECAPITAZIONE: un elite, entro trenta secondi da quando e' entrato in campo. Il
+      // cronometro parte alla comparsa e non all'inizio dell'ondata: un elite che entra con le
+      // riserve, a meta' ondata, deve avere gli stessi trenta secondi del primo.
+      if (m.elite && !m.boss && m.tEntrata != null && (this.time - m.tEntrata) <= (C.DECAP_SEC || 30))
+        this.bountyTick(src, 'decap', 1);
+      // CAMPANARO: vale solo mentre il richiamo suona, cioe' mentre stanno accorrendo. Finita la
+      // campana i morti sono morti normali — se no bastava suonarla una volta e continuare a giocare.
+      if (this.richiamo) this.bountyTick(src, 'campana', 1);
       if (src.combo >= C.COMBO_MIN && src.combo % 5 === 0) this.events.push({ t: 'combo', x: m.x, y: m.y, n: src.combo, mult: +this.comboMult(src).toFixed(2), who: src.id });
       this._comboReward(src, m);
       // v2.20.0 — CARICA CONTINUA (barbaro) e USCITA RAPIDA (assassino): uccidere rimette pronto lo
@@ -4118,8 +4168,42 @@ class Room {
   }
   _waveDone() {
     this._ritiraMercenario();                                     // v1.82 — non ti segue al villaggio
-    // v1.72 — l'ondata e' finita: chi non ha perso vite chiude la taglia "Nessun caduto".
-    for (const p of this.players.values()) { if (p.connected && p.noLifeLost && !p.dead) this.bountyTick(p, 'illeso', 1); }
+    // v2.31 — L'ONDATA E' FINITA: qui si chiudono le taglie che si giudicano sull'ondata intera.
+    // Sono l'unico posto in cui una taglia puo' anche FALLIRE (le scommesse), e per questo il conto
+    // si fa prima del premio di velocita': se no una scommessa persa e un bonus vinto arriverebbero
+    // nello stesso istante e non si capirebbe piu' quale numero e' quale.
+    {
+      const durata = this.waveDur != null ? this.waveDur : this.time - this.waveT0;
+      const inTempo = this.parT > 0 && durata <= this.parT;
+      for (const p of this.players.values()) {
+        if (!p.connected || p.dead || !p.bounty) continue;
+        const b = p.bounty;
+        // A TAMBURO BATTENTE — lo stesso metro del premio di velocita' gia' in campo
+        if (b.k === 'intempo' && inTempo) { this.bountyTick(p, 'intempo', 1); continue; }
+        // PIEDI PER TERRA — nemmeno uno scatto, per tutta l'ondata
+        if (b.k === 'nodash' && !(p.scattiOndata > 0)) { this.bountyTick(p, 'nodash', 1); continue; }
+        // DOPPIO O NIENTE — le monete le hai gia' pagate accettandola: qui o le triplichi o le perdi
+        if (b.k === 'doppio') {
+          if (p.noLifeLost) this.bountyTick(p, 'doppio', 1);
+          else { p.bounty = null; p.bountyOffer = null;
+            this.events.push({ t: 'bounty_fail', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, color: b.color, icon: b.icon, perso: b.costo || 0 }); }
+          continue;
+        }
+        // INTERESSE COMPOSTO — non si chiude mai da sola: raddoppia finche' resti in piedi, e la
+        // riscuoti tu quando ti pare. Se cadi, il montante va a zero e la taglia sparisce.
+        if (b.k === 'interesse') {
+          if (p.noLifeLost) {
+            b.giri = (b.giri || 0) + 1;
+            b.have = b.giri;
+            b.pay = Math.round(Bnt.INT_BASE * Math.pow(2, Math.min(Bnt.INT_CAP, b.giri - 1)));
+            this.events.push({ t: 'bounty_cresce', x: p.x, y: p.y, who: p.id, nome: b.nome, pay: b.pay, color: b.color, icon: b.icon, colmo: b.giri - 1 >= Bnt.INT_CAP ? 1 : 0 });
+          } else {
+            p.bounty = null; p.bountyOffer = null;
+            this.events.push({ t: 'bounty_fail', x: p.x, y: p.y, who: p.id, name: p.name, nome: b.nome, color: b.color, icon: b.icon, perso: b.pay || 0 });
+          }
+        }
+      }
+    }
     // v1.77 — IL PREMIO DI VELOCITA'. Le ondate a sopravvivenza sono escluse per costruzione: durano
     // un tempo fisso, non si possono chiudere prima, e un premio che tocca sempre non e' un premio.
     const durata = this.waveDur != null ? this.waveDur : this.time - this.waveT0;

@@ -46,6 +46,7 @@ attach(server, (conn) => {
       case C.MSG.PICK_POTION: if (room) room.pickPotion(pid, m.slot, m.id); break;
       case C.MSG.BUY_POTION: if (room) room.buyPotion(pid, m.slot); break;
       case C.MSG.TAKE_BOUNTY: if (room) room.takeBounty(pid, m.i); break;
+      case C.MSG.CASH_BOUNTY: if (room) room.riscuotiBounty(pid); break;
       case C.MSG.HIRE_MERC: if (room) room.assumiMercenario(pid); break;   // v1.82 — reclutamento al Banditore
       case C.MSG.TOGGLE_CARD: if (room) room.toggleCard(pid, m.id); break;
       case C.MSG.REST: if (room) room.restAtInn(pid); break;

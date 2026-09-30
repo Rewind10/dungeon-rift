@@ -20,6 +20,7 @@
     pickPotion(slot, id) { this.send({ t: C.MSG.PICK_POTION, slot, id }); },
     buyPotion(slot) { this.send({ t: C.MSG.BUY_POTION, slot }); },
     takeBounty(i) { this.send({ t: C.MSG.TAKE_BOUNTY, i }); },
+    cashBounty() { this.send({ t: C.MSG.CASH_BOUNTY }); },   // v2.31 — riscuoti l'Interesse composto
     hireMerc() { this.send({ t: C.MSG.HIRE_MERC }); },
     toggleCard(id) { this.send({ t: C.MSG.TOGGLE_CARD, id }); },
     rest() { this.send({ t: C.MSG.REST }); },

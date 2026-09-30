@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.30.1`
+**Versione attuale:** `2.31.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -977,6 +977,78 @@ if (!this.map.lit) this._drawFog(ctx, camX, camY, dt);
 si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose: che la guardia ci sia, e che
 `_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
 
+
+
+
+## 🪧 LE TAGLIE DEL BANDITORE, RIFATTE *(novita v2.31.0)*
+
+Paolo, dopo aver potato un elenco di una ventina che gli avevo proposto: *«ne ho rimosse la maggior
+parte. Apprezzo il tuo sforzo per crearne di variegate ma devono essere cose semplici per racimolare
+monete extra specialmente nei primi livelli di gioco»*.
+
+**Tre regole invariate dalla v1.72**: tre offerte e se ne accetta UNA; nessuna scadenza; paga in
+monete, mai in oggetti — *«dare oggetti potrebbe squilibrare le carte»*.
+
+**Sono uscite tre delle sei di prima.** *Caccia grossa* (uccidi N nemici) si completava da sola
+giocando, quindi non era una scelta; *Teste grosse* la sostituisce **Decapitazione** (stessa preda, ma
+chiede di essere svelti invece di contare); *Nessun caduto* lascia il posto alle due scommesse.
+
+| | cosa chiede | paga | dove e' agganciata |
+|---|---|---|---|
+| 🎯 Contratto mirato | uccidi N di un tipo | 70 + 9/ondata | `killMonster` |
+| 📦 Saccheggio | apri 4 casse | 55 + 6/ondata | `updatePickups` |
+| 🔥 Catena di sangue | combo di **10** (fissa) | 175 + 9/ondata | `killMonster` |
+| ⚡ A tamburo battente | chiudi dentro il tempo obiettivo | 130 + 13/ondata | `_waveDone` |
+| 👟 Piedi per terra | nessuno scatto per tutta l'ondata | 120 + 12/ondata | `useDash` + `_waveDone` |
+| 👑 Decapitazione | un élite entro `DECAP_SEC` (30 s) dal suo ingresso | 140 + 15/ondata | `killMonster` |
+| 🔔 Campanaro | 5 uccisioni **mentre** il richiamo suona | 170 + 17/ondata | `killMonster` |
+| 🔥 Lampionaio | tutti i bracieri di una mappa | 120 + 10/ondata | `_accendiBraciere` |
+| ⚰️ Tombarolo | 3 sarcofagi aperti | 150 + 15/ondata | `_apriSarcofago` |
+| 🎰 Doppio o niente | paghi 120 → 360 se chiudi in piedi | — | `takeBounty` + `_waveDone` |
+| 📈 Interesse composto | raddoppia a ogni ondata, si perde se cadi | 60 → 960 | `_waveDone` + `riscuotiBounty` |
+
+**La combo non cresce piu' con l'ondata.** Era `12 + 2·ondata` — cinquanta alla diciannovesima. Dieci
+si fa anche alla seconda ondata, ed e' il punto: questa deve pagare **presto**.
+
+**Il cronometro della Decapitazione parte quando l'élite ENTRA IN CAMPO** (`m.tEntrata`), non
+all'inizio dell'ondata: uno che arriva con le riserve deve avere gli stessi trenta secondi del primo.
+
+### Le due scommesse
+
+Sono le uniche che possono far **perdere** monete, e il banco non ne appende **mai due nello stesso
+giro**: sarebbero tre offerte senza un incarico dentro, solo due modi di puntare.
+
+- **Doppio o niente** costa `COSTO_DOPPIO` (120) per essere accettata, e rende il triplo. Senza le
+  monete la scheda si spegne e lo dice: un pulsante che rifiuta al clic senza spiegare sembra rotto.
+- **Interesse composto** parte da `INT_BASE` (60) e raddoppia a ogni ondata chiusa in piedi, con un
+  tetto di `INT_CAP` (4) raddoppi → **960**. Senza tetto, alla decima ondata varrebbe trentamila
+  monete: non sarebbe piu' una scommessa, sarebbe l'unica cosa da fare nel gioco. Si riscuote quando
+  si vuole, al banco (`riscuotiBounty`): il momento di fermarsi e' la sola decisione che chiede.
+
+### Le tre che vivono sulla mappa non aspettano la sorte
+
+Campanaro, Lampionaio e Tombarolo hanno bisogno di un oggetto della v2.28, e quelli stanno su **due o
+tre mappe su otto**. `MapGen.generate` accetta ora un quarto argomento — i **tipi pretesi** — e
+`Room._oggettiRichiesti()` glielo passa leggendo le taglie in corso. Il totale non cambia (la mappa ha
+sempre due o tre tipi), ma uno di quelli e' quello che serve. Misurato: **12 mappe su 12** invece di 1
+su 12 per la campana. Senza taglie in corso non si pretende niente e la mappa torna a sorteggiare —
+verificato con un controllo apposta, se no gli oggetti smetterebbero di essere una scoperta.
+
+## 📊 IL CONTATORE DI FOTOGRAMMI *(novita v2.31.0)*
+
+Tasto **F**, nasce spento, si ricorda in `localStorage` (dentro try/catch: in finestra anonima
+`localStorage` SOLLEVA, ed e' lo stesso inciampo gia' preso col record nella v2.26). Mostra fps,
+millisecondi e **95° percentile** — la mediana e non la media, perche' la media nasconde gli scatti ed
+e' proprio lo scatto che si sente giocando.
+
+**Perche' esiste.** Il profilo del client dice che il **75%** di un fotogramma se ne va in
+`_drawLighting`, e li' dentro sfumature e riempimenti sono il 5%: il resto sono **cinque copie di
+canvas a tutto schermo, 7,6 Mpixel**. E' costo di riempimento pixel — quello che una scheda video fa
+quasi gratis. I due buffer (velo del buio e maschera della torcia) sono **gia' a mezza risoluzione**,
+quindi l'ottimizzazione ovvia e' fatta, e il numero vero puo' darlo solo una macchina vera.
+
+**Il server invece e' misurato**: 95° percentile del tick fra **0,28 e 1,07 ms** contro un budget di
+**33,3** (30 tick al secondo), cioe' fra l'1% e il 3%. Rete: 29 KB/s in solitario, 92 KB/s in sei.
 
 
 ## 🗂️ LA SCHERMATA DI AVVIO A DUE META' *(novita v2.30.0)*

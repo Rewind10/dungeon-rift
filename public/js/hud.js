@@ -1312,21 +1312,44 @@
       const sub = $('banditSub'), tg = $('banditBounty');
       tg.innerHTML = '';
       if (d.bounty) {
-        const b = d.bounty; const f = Math.max(0, Math.min(1, b.have / b.n));
-        if (sub) sub.textContent = 'Nessuna scadenza — il conto continua ondata dopo ondata.';
+        const b = d.bounty;
+        // v2.31 — L'INTERESSE COMPOSTO non ha un traguardo: ha un montante che cresce. Disegnargli
+        // una barra di avanzamento vorrebbe dire mostrare una corsa verso un punto che non esiste,
+        // quindi al suo posto va il numero che conta — quanto vale adesso — e il pulsante per
+        // fermarsi, che e' la sola decisione che quella taglia chiede.
+        const cresce = b.k === 'interesse';
+        const f = cresce ? 1 : Math.max(0, Math.min(1, b.have / b.n));
+        if (sub) sub.textContent = cresce
+          ? 'Raddoppia a ogni ondata che chiudi in piedi. Se cadi perdi tutto: riscuoti quando ti basta.'
+          : 'Nessuna scadenza — il conto continua ondata dopo ondata.';
         const el = document.createElement('div'); el.className = 'att'; el.style.setProperty('--c', b.color);
         el.innerHTML = '<div class="ic">' + b.icon + '</div><div class="mid"><div class="nm">' + esc(b.nome) + '</div>' +
-          '<div class="ds">' + esc(b.testo) + '</div><div class="bar"><i style="width:' + Math.round(f * 100) + '%"></i></div></div>' +
-          '<div class="cnt">' + b.have + ' / ' + b.n + '<b>\uD83E\uDE99 ' + b.pay + '</b></div>';
+          '<div class="ds">' + esc(b.testo) + '</div>' +
+          (cresce ? '' : '<div class="bar"><i style="width:' + Math.round(f * 100) + '%"></i></div>') + '</div>' +
+          '<div class="cnt">' + (cresce ? (b.giri || 0) + (b.giri === 1 ? ' ondata' : ' ondate') : b.have + ' / ' + b.n) +
+          '<b>\uD83E\uDE99 ' + b.pay + '</b></div>';
         tg.appendChild(el);
+        if (b.risc) {
+          const r = document.createElement('button'); r.className = 'primary'; r.type = 'button';
+          r.style.cssText = 'margin:10px 0 0;width:100%';
+          r.innerHTML = '\uD83E\uDE99 Riscuoti ' + b.pay + ' e chiudi la scommessa';
+          r.onclick = () => { if (cb.cash) cb.cash(); };
+          tg.appendChild(r);
+        }
       } else {
         if (sub) sub.textContent = 'Clicca quella che vuoi accettare. Vale finché non la completi, senza scadenza.';
         const row = document.createElement('div'); row.className = 'tg';
         (d.offers || []).forEach((o, i) => {
           const el = document.createElement('div'); el.className = 'tc'; el.style.borderColor = o.color + '55';
+          // v2.31 — una sola delle undici COSTA per essere accettata (Doppio o niente). Va detto qui,
+          // non scoperto dopo: e se le monete non bastano la scheda si spegne invece di rifiutare al
+          // clic, perche' un pulsante che non funziona e non spiega perche' sembra rotto.
+          const caro = (o.costo || 0) > 0, povero = caro && (d.coins || 0) < o.costo;
           el.innerHTML = '<div class="ic">' + o.icon + '</div><div class="nm" style="color:' + o.color + '">' + esc(o.nome) + '</div>' +
-            '<div class="ds">' + esc(o.testo) + '</div><div class="pay">\uD83E\uDE99 ' + o.pay + '<span>alla consegna</span></div>';
-          el.onclick = () => { if (cb.take) cb.take(i); };
+            '<div class="ds">' + esc(o.testo) + '</div><div class="pay">\uD83E\uDE99 ' + o.pay +
+            '<span>' + (caro ? ('costa ' + o.costo + (povero ? ' — non ti bastano' : '')) : 'alla consegna') + '</span></div>';
+          if (povero) { el.style.opacity = '.45'; el.style.cursor = 'not-allowed'; }
+          else el.onclick = () => { if (cb.take) cb.take(i); };
           row.appendChild(el);
         });
         tg.appendChild(row);

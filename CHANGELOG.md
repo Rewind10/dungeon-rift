@@ -2,6 +2,136 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.31.0] — 2026-09-30 · "Undici incarichi e un cronometro"
+
+Due cose in una versione: le **taglie del Banditore** rifatte da capo con l'elenco che ha scelto Paolo
+riga per riga, e un **contatore di fotogrammi** (tasto **F**) che serve a lui, non al gioco.
+
+---
+
+### 🪧 Il catalogo delle taglie, scelto da lui
+
+Gliene avevo proposte una ventina. Ne ha tenute undici, e la regola con cui ha potato e' una sola:
+*«devono essere cose semplici per racimolare monete extra, specialmente nei primi livelli di gioco»*.
+Niente incarichi che chiedono di giocare un'altra partita dentro la partita.
+
+**Sono sparite tre delle sei che c'erano.** CACCIA GROSSA (uccidi N nemici) si completava da sola
+giocando, quindi non era una scelta. TESTE GROSSE (uccidi N élite) la sostituisce **Decapitazione**:
+stessa preda, ma chiede di essere svelti invece di contare. NESSUN CADUTO lascia il posto alle due
+scommesse, che chiedono la stessa cosa mettendoci sopra un rischio.
+
+| | | paga |
+|---|---|---|
+| 🎯 **Contratto mirato** | uccidi N di un tipo | 70 + 9/ondata |
+| 📦 **Saccheggio** | apri 4 casse | 55 + 6/ondata |
+| 🔥 **Catena di sangue** | combo di 10 | 175 + 9/ondata |
+| ⚡ **A tamburo battente** | chiudi l'ondata dentro il tempo obiettivo | 130 + 13/ondata |
+| 👟 **Piedi per terra** | supera l'ondata senza mai scattare | 120 + 12/ondata |
+| 👑 **Decapitazione** | uccidi un élite entro 30 s da quando entra in campo | 140 + 15/ondata |
+| 🔔 **Campanaro** | suona la campana e uccidine 5 mentre accorrono | 170 + 17/ondata |
+| 🔥 **Lampionaio** | accendi tutti i bracieri di una mappa | 120 + 10/ondata |
+| ⚰️ **Tombarolo** | apri 3 sarcofagi | 150 + 15/ondata |
+| 🎰 **Doppio o niente** | paghi 120, chiudi l'ondata in piedi e ne prendi 360 | — |
+| 📈 **Interesse composto** | raddoppia a ogni ondata chiusa, si perde se cadi | — |
+
+**La combo non cresce piu' con l'ondata.** Era `12 + 2·ondata`, cioe' cinquanta alla diciannovesima.
+Adesso e' **dieci, sempre**: si fa anche alla seconda ondata, ed e' il punto — questa deve pagare
+presto.
+
+**Il cronometro della Decapitazione parte quando l'élite ENTRA IN CAMPO**, non all'inizio dell'ondata.
+Uno che arriva con le riserve, a meta' ondata, deve avere gli stessi trenta secondi del primo.
+
+---
+
+### 🎲 Le due scommesse
+
+Sono le uniche che possono **far perdere** monete, ed e' per questo che il banco non ne appende mai due
+nello stesso giro: sarebbero tre offerte in cui non c'e' un incarico, solo due modi di puntare.
+
+**Doppio o niente** costa 120 monete per essere accettata. Se non le hai, la scheda si spegne e lo
+dice — un pulsante che rifiuta al clic senza spiegare perche' sembra rotto.
+
+**Interesse composto** Paolo lo aveva lasciato in bianco sui numeri, e i numeri sono la cosa che lo fa
+funzionare o esplodere. Parte da **60** e raddoppia a ogni ondata chiusa in piedi, con un **tetto a
+quattro raddoppi (960)**. Senza tetto, alla decima ondata varrebbe trentamila monete: non sarebbe piu'
+una scommessa, sarebbe l'unica cosa da fare nel gioco. Si riscuote **quando vuoi**, al banco: il
+momento di fermarsi e' la sola decisione che quella taglia chiede.
+
+---
+
+### 🗺️ E le tre che vivono sulla mappa non aspettano piu' la sorte
+
+Campanaro, Lampionaio e Tombarolo hanno bisogno di un oggetto della v2.28 — e quelli stanno su **due o
+tre mappe su otto**. Accettata una di queste, sarebbe rimasta appesa per ondate intere aspettando che
+il sorteggio mettesse una campana da qualche parte. Non e' un incarico difficile: e' un incarico che
+non comincia.
+
+Adesso la generazione della mappa accetta un elenco di **tipi pretesi** (`oggForzati`) e chi ha una di
+quelle taglie se li vede comparire. Il totale non cambia — la mappa ha sempre due o tre tipi — ma uno
+di quelli e' quello che serve. Misurato: **12 mappe su 12** invece di 1 su 12 (campana) e 5 su 12
+(braciere). E senza taglie in corso la mappa torna a sorteggiare come sempre: **verificato**, se no gli
+oggetti smetterebbero di essere una scoperta.
+
+---
+
+### 📊 Il contatore di fotogrammi (tasto F)
+
+Nasce **spento**, si ricorda come lo hai lasciato, e mostra **fps, millisecondi e il 95° percentile**.
+La mediana e non la media, perche' la media nasconde gli scatti ed e' proprio lo scatto che si sente
+giocando.
+
+Non e' un vezzo: e' che **non posso misurare da qui come va sulla macchina di Paolo**. Il profilo
+dice che il **75%** di un fotogramma se ne va in `_drawLighting`, e la' dentro il 95% sono **cinque
+copie di canvas a tutto schermo — 7,6 Mpixel**. E' costo di riempimento pixel: roba che una scheda
+video fa quasi gratis e che qui, in un contenitore che disegna via software, costa tutto. I due buffer
+(velo del buio e maschera della torcia) sono **gia' a mezza risoluzione** dalla v1.16, quindi
+l'ottimizzazione ovvia e' gia' fatta e il numero vero puo' darlo solo lui.
+
+**Il server, invece, e' misurato e non e' un problema**: il 95° percentile del tick sta fra **0,28 e
+1,07 ms** contro un budget di 33,3 — fra l'**1% e il 3%**. La rete: 29 KB/s in solitario, 92 in sei.
+
+---
+
+### 🧪 Numeri
+
+**Test: 6.243 passati, 0 falliti.** TEST 91 nuovo; il TEST 42 (v1.72) aggiornato al catalogo nuovo.
+
+Venti sabotaggi, tutti visti. I piu' utili:
+
+| cosa ho rotto apposta | il test se n'e' accorto |
+|---|---|
+| Piedi per terra paga anche se hai scattato | ✅ |
+| A tamburo battente paga anche fuori tempo | ✅ |
+| Campanaro conta anche senza campana | ✅ |
+| Decapitazione senza cronometro / anche sui nemici comuni | ✅ 2 controlli rossi ciascuno |
+| Lampionaio si accontenta di UN braciere | ✅ 3 controlli rossi |
+| Doppio o niente si accetta gratis / paga anche se cadi | ✅ |
+| Interesse composto: cadere non azzera / si riscuote a zero ondate | ✅ |
+| il banco appende due scommesse insieme | ✅ |
+| gli oggetti pretesi non arrivano alla mappa | ✅ 3 controlli rossi |
+| il contatore nasce acceso / si disegna sempre / il tasto F sparisce | ✅ |
+
+**E un controllo mio che passava sotto il proprio sabotaggio**, la stessa famiglia di errore di sempre:
+il tetto dell'Interesse composto lo misuravo **contro la costante del tetto**. Alzando `INT_CAP` da 4 a
+99 il controllo si spostava insieme al difetto e restava **verde**, mentre in gioco alla decima ondata
+la scommessa sarebbe valsa **3,8 miliardi** di monete. Adesso c'e' anche un numero assoluto: dopo sette
+ondate non puo' valere piu' di mille.
+
+| file | cosa |
+|---|---|
+| `shared/bounties.js` | il catalogo nuovo; costo, oggetto richiesto, mai due scommesse insieme |
+| `shared/mapgen.js` | `oggForzati`: i tipi di oggetto che una taglia pretende |
+| `server/Room.js` | gli agganci delle sette taglie nuove; le scommesse a fine ondata; `riscuotiBounty`; `_oggettiRichiesti` |
+| `shared/constants.js` | `DECAP_SEC`, il messaggio `CASH_BOUNTY`; versione e novita' |
+| `public/js/renderer.js` | il contatore di fotogrammi |
+| `public/js/hud.js` | il montante e il pulsante Riscuoti; l'offerta che costa lo dice |
+| `public/js/main.js`, `net.js`, `server/index.js`, `public/index.html` | il tasto F, la riscossione, la legenda |
+| `test/simulate.js` | TEST 91; il TEST 42 aggiornato |
+
+**Ancora rosso, e non e' di questa versione**: `test/client.js` e' rotto dalla v2.19.9 e non parte.
+
+---
+
 ### [2.30.1] — 2026-09-29 · "Un pulsante, non una fascia"
 
 Paolo, provando la v2.30.0: *«il box del personaggio dovrebbe essere un filo piu' largo e invece e'
