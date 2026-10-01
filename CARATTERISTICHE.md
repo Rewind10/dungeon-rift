@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.31.0`
+**Versione attuale:** `2.32.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -978,6 +978,86 @@ si e' toccato**, se no si consegna meta' del difetto. Il test pretende due cose:
 `_drawFog` si chiami **da un posto solo** — con due punti di chiamata la guardia servirebbe a poco.
 
 
+
+
+
+## 💍 I MONILI DELL'ORAFO *(novita v2.32.0)*
+
+Paolo: *«vorrei aggiungere collana (max 1) e anelli (max 2)... piu' alto e' il costo maggiori saranno i
+bonus, farei anche qui una divisione in 4 classi come per le armi... a differenza delle armi questi
+oggetti sono comuni per tutte le classi»*. E a catalogo letto: *«i bonus devono essere una lieve
+aggiunta, non sbilanciare troppo altrimenti si rompe il tutto»*.
+
+**QUATTRO REGOLE.**
+
+1. **Si portano tutti, sempre.** Nessuna tabella dei permessi, nessuna classe. E' la differenza con le
+   armi, ed e' voluta: il catalogo delle armi esiste per dare un'identita' alla CLASSE, questo per
+   darla alla RUN.
+2. **Ogni monile da' e toglie.** Due voci in piu' e una in meno, e col grado cresce anche il malus.
+   Senza, «piu' costa piu' rende» diventa «il grado 5 e' la risposta giusta a tutto». Il grado 2 e'
+   l'eccezione dichiarata: e' il fondo del listino.
+3. **Nessuno rimette punti vita.** `lifesteal` e `regen` sono stati tolti nella v1.93 e il TEST 58 ne
+   vieta il rientro: un anello che rigenera sarebbe la finestra da cui tornano.
+4. **Undici leve, non cinque.** Vita, difesa, danno, critico, cadenza, passo, ricariche, rinculo,
+   monete, esperienza, raccolta.
+
+**Prezzi 120 / 280 / 500 / 880**, un filo sotto le armi perche' se ne portano TRE insieme (2.640 monete
+per un corredo divino, cioe' una run intera di taglie).
+
+| famiglia | grado 2 | 3 | 4 | 5 |
+|---|---|---|---|---|
+| 💍 Forza | +3% danno | +5% danno, +8% rinculo, −3% cadenza | +8%, +12%, −5% | +11%, +16%, −7% |
+| 💍 Passo | +2% passo | +3,5% passo, +3% cadenza, −5 PV | +5%, +5%, −9 PV | +6,5%, +7%, −14 PV |
+| 💍 Fortuna | +8% monete | +14% monete, +15% raccolta, −1,5% difesa | +22%, +25%, −2,5% | +30%, +40%, −3,5% |
+| 📿 Difesa | +1% difesa | +2% difesa, +8 PV, −2% passo | +3%, +16 PV, −3,5% | +4%, +26 PV, −5% |
+| 📿 Arcano | +4% ricariche | +8% ricariche, +5% XP, −3% danno | +12%, +8%, −4,5% | +16%, +12%, −6% |
+| 📿 Critico | +1,5% critico | +3% critico, +3% cadenza, −6 PV | +4,5%, +5%, −11 PV | +6%, +7%, −18 PV |
+
+### Il metro della taratura
+
+> **Tre monili divini insieme non valgono piu' di UN SALTO DI GRADO dell'equipaggiamento.**
+
+Il salto 4→5 dell'armatura del guerriero vale +45 PV e +4% di riduzione. Il corredo completo di monili,
+nella combinazione piu' generosa, da' **+26 PV e +4%**. Sul danno il tetto e' **+26%** sommando
+moltiplicatore, critico e cadenza. E nessun singolo monile ha una leva di combattimento sopra il
+**20%**. Sono tre controlli, e sono il motivo per cui la collana della difesa e' scesa da +6% a +4%
+mentre la scrivevo: il metro l'avevo scritto io, il numero lo sfondava, e si abbassa il monile.
+
+*La prima stesura aveva +15% di critico su una base del 3% — sei volte il valore di partenza. L'ha
+fermata Paolo, non un test: adesso il test c'e'.*
+
+### Come e' cablato
+
+- **`gear.js`** — i monili sono pezzi normali con `hero: 'monile'`, quindi passano dal catalogo, dal
+  negozio, dall'inventario e dal ricalcolo senza nessuna strada speciale. `puoAvere` li concede a
+  tutti in cima alla funzione, prima ancora di `avvio` e `solo`, che parlano di classi.
+- **Due anelli, una collana.** `anello1` e `anello2` sono due CASELLE dello stesso slot di catalogo
+  (`anello`), come le due mani per le armi: un anello va nell'una o nell'altra, e lo stesso anello
+  messo nell'altra casella si SPOSTA (v2.19.6, stessa regola).
+- **L'Orafo** e' un banco come gli altri tre (`shop: 1`, `cat: 'monile'`), nella bottega che era
+  `casa_g`: le tre botteghe di classe stanno sulle vie laterali, questa affaccia sulla piazza perche'
+  e' l'unica che vende a chiunque.
+- **Le sette leve nuove** sono cablate una per una dove quella cosa si calcola. Il rinculo fa
+  eccezione e si somma dentro `p.stats.knockMult` in `_recomputeGear`: lo leggono dodici punti gia'
+  scritti, e ritoccarli uno a uno vuol dire dimenticarne uno.
+
+## 🗄️ SETTE CASELLE ATTORNO AL PERSONAGGIO *(v2.32.0)*
+
+A sinistra **mano destra, i due anelli, l'armatura**; a destra **mano sinistra, la collana, le
+calzature**. Gli anelli stanno dalla stessa parte perche' sono due caselle dello stesso oggetto.
+
+Il riquadro si e' accorciato da **330 a 300 px** e le caselle da 52 a **44** di minimo: con quattro in
+colonna a 52 si sfondava il riquadro. Misurato a 1600x950: sinistra a y 52/129/205/306, destra a
+52/166/308, nessuna sovrapposizione.
+
+Le **abilita'** sono scese sotto il ritratto e l'inventario si e' preso la loro altezza. Attenzione:
+le loro righe erano vestite da `.col-dx .ab-sc`, cioe' **dalla colonna**; spostandole si sarebbero
+sformate in silenzio. Adesso la regola e' `.ab-sc` e vale dovunque le si metta.
+
+**E c'e' una tabella in `hud.js` che accoppia ogni casella al suo posto nel CSS.** E' il pezzo fragile:
+se un nome manca da li', quella casella ricade sulla prima posizione e due riquadri finiscono uno sopra
+l'altro — l'HTML e' giusto, il CSS e' giusto, e quello che li tiene insieme no. Trovato col
+sabotaggio, adesso c'e' un controllo apposta.
 
 
 ## 🪧 LE TAGLIE DEL BANDITORE, RIFATTE *(novita v2.31.0)*

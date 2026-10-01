@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.31.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.32.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,6 +24,27 @@ Test: `npm test`
 | Musica | M |
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 💍 v2.32.0 — l'Orafo: due anelli e una collana
+
+Al villaggio apre una bottega nuova, l'unica che vende a **chiunque**: **24 monili** in quattro gradi
+(120 / 280 / 500 / 880 monete), sei famiglie — Forza, Passo, Fortuna, Difesa, Arcano, Critico.
+
+**Ogni monile dà due cose e ne toglie una**, e più sale il grado più pesa la rinuncia: l'anello che
+picchia più forte rallenta la cadenza, la collana che protegge rallenta il passo. Senza questa regola
+il grado più alto sarebbe la risposta giusta a tutto e la scelta sparirebbe.
+
+Undici leve diverse — vita, difesa, danno, critico, cadenza, passo, ricariche, rinculo, monete,
+esperienza, raccolta. **Nessuna cura**: rimettere punti vita resta il mestiere dell'Ostessa.
+
+Il metro della taratura, e adesso è anche un test: *tre monili divini insieme non valgono più di un
+salto di grado dell'equipaggiamento*.
+
+**Le caselle attorno al personaggio sono sette** (mano destra, due anelli, armatura · mano sinistra,
+collana, calzature) e le **abilità sono scese sotto il ritratto**, così l'inventario si prende
+l'altezza che gli serve.
+
+---
 
 ## 🪧 v2.31.0 — undici taglie nuove, e il tasto F
 

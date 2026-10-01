@@ -2280,6 +2280,9 @@
       innkeeper: { cloth: '#b8863c', clothDk: '#6b4a1c', skin: '#f0c795', wood: '#8a6534', trim: '#ffd97a' },
       herbalist: { body: '#3f6b34', bodyDk: '#1f3a1b', accent: '#9fe06a', orlo: 'rgba(159,224,106,.8)', skin: '#e3c396', trim: '#9fe06a' },
       anziano:  { body: '#3f6b60', bodyDk: '#1c332e', accent: '#7fd6c0', orlo: 'rgba(127,214,192,.8)', skin: '#d6b48f', trim: '#7fd6c0' },
+      // v2.32 — L'ORAFO. Grembiule scuro e oro: lavora metalli piccoli, non spade. E' l'unico banco
+      // che vende a chiunque, quindi e' anche l'unico vestito di un colore che non dice una classe.
+      goldsmith: { cloth: '#3f3a46', clothDk: '#211e28', steelDk: '#4a4038', pelo: '#3a3038', skin: '#e0bd98', trim: '#ffcf4a' },
       patron:    { cloth: '#a08a68', clothDk: '#6b5940', body: '#a08a68', bodyDk: '#6b5940', pelo: '#63513a', skin: '#e6c79c', wood: '#7a5a34', trim: '#e8d9b0' },
     },
     _vendorTool(ctx, kind, r) {
@@ -2322,6 +2325,12 @@
         ctx.fillStyle = '#e8dcc0'; ctx.strokeStyle = '#6b5024'; ctx.lineWidth = 1.4; this._rr(ctx, -4, -7, 12, 14, 1.5); ctx.fill(); ctx.stroke();
         ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
         for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-2, -4 + k * 4); ctx.lineTo(6, -4 + k * 4); ctx.stroke(); }
+      } else if (kind === 'goldsmith') {            // v2.32 — la lente e l'anello che sta montando
+        ctx.strokeStyle = '#ffcf4a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(1, 1, 4.2, 0, 7); ctx.stroke();            // l'anello
+        ctx.strokeStyle = '#cfd7ea'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(7, -5, 3, 0, 7); ctx.stroke();             // la lente
+        ctx.beginPath(); ctx.moveTo(9, -3); ctx.lineTo(12, 1); ctx.stroke();  // il manico
       } else {                                      // boccale
         ctx.fillStyle = '#8a6a30'; ctx.strokeStyle = '#4a3512'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(2, 2, 3.6, 0, 7); ctx.fill(); ctx.stroke();
       }

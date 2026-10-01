@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.31.0',
+    VERSION: '2.32.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.31.0',
+      v: '2.32.0',
       righe: [
-        'Il <b>Banditore</b> ha undici taglie nuove: bracieri da accendere, sarcofagi da aprire, campane da suonare.',
-        'E due <b>scommesse</b>: paga e triplica, oppure lascia crescere il montante finch&eacute; ti regge il fegato.',
-        'Tasto <b>F</b>: contatore dei fotogrammi al secondo, acceso e spento quando vuoi.',
+        'Apre l\'<b>Orafo</b>: due anelli e una collana, ventiquattro monili in quattro gradi.',
+        'Ognuno d&agrave; due cose e ne toglie una &mdash; pi&ugrave; sale il grado, pi&ugrave; pesa la rinuncia.',
+        'Le caselle attorno al personaggio adesso sono <b>sette</b>, e le abilit&agrave; sono scese sotto il ritratto.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)

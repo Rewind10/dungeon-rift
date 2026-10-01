@@ -1138,7 +1138,11 @@
       // ---- LE TRE CASE DELLO SPIAZZO: due a mezzogiorno e una a settentrione ----
       { id: 'casa_e',  kind: 'casa',    x0: 21, y0: 38, x1: 27, y1: 42, porta: [24, 37, 'n'], pav: 'legno', col: '#554129' },
       { id: 'casa_f',  kind: 'casa',    x0: 31, y0: 38, x1: 38, y1: 42, porta: [34, 37, 'n'], pav: 'legno', col: '#554129' },
-      { id: 'casa_g',  kind: 'casa',    x0: 25, y0: 3,  x1: 33, y1: 6,  porta: [29, 7,  's'], pav: 'legno', col: '#554129' },
+      // v2.32 — ERA `casa_g`. Al suo posto la BOTTEGA DELL'ORAFO. Sta a settentrione, affacciata sulla
+      // piazza: le tre botteghe dell'equipaggiamento sono di classe e stanno sulle due vie laterali,
+      // questa e' l'unica che vende a chiunque e quindi sta in mezzo, dove si passa comunque. Lastre
+      // chiare e un oro spento: e' una bottega di metalli piccoli, non una fucina.
+      { id: 'orafo',   kind: 'bottega', x0: 25, y0: 3,  x1: 33, y1: 6,  porta: [29, 7,  's'], pav: 'lastre', col: '#5a4a28' },
     ],
     // LE STRADE. Le due vie lunghe corrono davanti alle porte delle due file; la via alta e la via bassa
     // le chiudono; lo spiazzo in mezzo e' tutt'uno con loro — non c'e' niente da attraversare.
@@ -1176,6 +1180,11 @@
         col: '#7fd6c0', room: 'antro' },
       { x: 53.4, y: 26,   kind: 'crier',     name: 'Capitano',   bnd: 1, sub: 'taglie e usato',
         col: '#ff9a8a', room: 'retro' },
+      // v2.32 — L'ORAFO. `shop: 1` con `cat: 'monile'`: passa dalla stessa porta delle altre tre
+      // botteghe (offerGear/buyGear), e l'unica differenza e' il catalogo — che non e' di nessuna
+      // classe, quindi chiunque entri trova la stessa vetrina.
+      { x: 29,   y: 5,    kind: 'goldsmith', name: 'Orafo',      shop: 1, cat: 'monile', sub: 'anelli e collane',
+        col: '#ffcf4a', room: 'orafo' },
     ],
   };
   // v2.6 — IL VILLAGGIO E' SCAVATO NELLA STESSA ROCCIA DELLE GROTTE. Prima aveva una tavolozza sua,

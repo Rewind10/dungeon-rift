@@ -105,11 +105,19 @@
   // incrociate con mischia/arco/magia, piu' doppia arma e scudo) sostituira' questa tabella: e' un
   // lavoro a se', e questa riga esiste perche' le sette classi funzionino da subito con i 117 pezzi che
   // ci sono gia'.
+  // v2.32 — I MONILI SI PORTANO TUTTI, SEMPRE. Due anelli e una collana, per ogni corpo e ogni classe:
+  // e' la differenza con le armi, ed e' voluta. Il catalogo delle armi esiste per dare un'identita' alla
+  // CLASSE (il guerriero vede solo roba da guerriero); questo esiste per dare un'identita' alla RUN, e
+  // quindi non si filtra per nessuno.
   const SLOTS = {
-    guerriero: ['weapon', 'armor', 'shield'],
-    mago: ['weapon', 'armor', 'boots'],
-    ladro: ['weapon', 'armor', 'boots'],
+    guerriero: ['weapon', 'armor', 'shield', 'anello1', 'anello2', 'collana'],
+    mago: ['weapon', 'armor', 'boots', 'anello1', 'anello2', 'collana'],
+    ladro: ['weapon', 'armor', 'boots', 'anello1', 'anello2', 'collana'],
   };
+  // i due anelli sono due CASELLE dello stesso slot di catalogo ('anello'): un anello comprato puo'
+  // andare nell'una o nell'altra, come le due mani per le armi. La collana ha una casella sola.
+  const CASELLE_DI = { anello: ['anello1', 'anello2'], collana: ['collana'] };
+  function caselleDi(slotCat) { return CASELLE_DI[slotCat] || [slotCat]; }
   // Traduce l'id di una classe nel suo corpo. Non usa `require` di heroes.js (gear.js e' caricato anche
   // dal browser, dove i moduli sono globali e l'ordine non e' garantito): la mappa e' piccola, esplicita,
   // e se domani nasce una classe nuova il fallback la tratta come il corpo di cui porta il nome.
@@ -120,8 +128,10 @@
     guerriero: 'guerriero', ladro: 'ladro',
   };
   function _corpo(heroId) { return CORPO_DI[heroId] || heroId; }
-  const SLOT_NAME = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', boots: 'Calzature' };
-  const SLOT_ICON = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢' };
+  const SLOT_NAME = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', boots: 'Calzature',
+                      anello: 'Anelli', anello1: 'Anello', anello2: 'Anello', collana: 'Collana' };
+  const SLOT_ICON = { weapon: '⚔️', armor: '🛡️', shield: '🛡️', boots: '👢',
+                      anello: '💍', anello1: '💍', anello2: '💍', collana: '📿' };
 
   // ============================================================================================
   // v2.19 — LE TRE BOTTEGHE, E L'EQUIPAGGIAMENTO MISTO
@@ -211,6 +221,9 @@
   // c'e' e la risposta e' sensata.
   function puoAvere(heroId, it) {
     if (!it) return false;
+    // v2.32 — i MONILI non passano dalla tabella dei permessi: non ce l'hanno. Sta qui in cima e non
+    // in fondo perche' deve scavalcare anche `avvio` e `solo`, che parlano di classi.
+    if (it.hero === 'monile') return true;
     // v2.19.1 — un pezzo di AVVIO appartiene a una classe sola, e non si presta: e' il fondo del
     // listino di quella classe, non una riga del listino di tutti.
     if (it.avvio) return it.avvio === heroId;
@@ -230,7 +243,7 @@
   // Gli slot che questa classe usa DAVVERO, cioe' quelli in cui ha almeno un pezzo ammesso. Non e'
   // `slotsFor`, che ragiona per impalcatura: il barbaro ha un'impalcatura senza calzature ma la tabella
   // gliene concede un paio leggero dal venditore d'archi, e l'inventario deve avere dove metterlo.
-  const SLOT_ORD = ['weapon', 'armor', 'shield', 'boots'];
+  const SLOT_ORD = ['weapon', 'armor', 'shield', 'boots', 'anello', 'collana'];
   function slotsClasse(heroId) {
     const P = PERMESSI[heroId];
     if (!P) return slotsFor(heroId);
@@ -277,6 +290,12 @@
     armor:  [0, 150, 340, 600, 1050],
     shield: [0, 160, 360, 620, 1100],
     boots:  [0, 140, 320, 580, 1000],
+    // v2.32 — i MONILI stanno un filo sotto le armi, e il motivo e' che se ne portano TRE insieme
+    // (due anelli e una collana): tre divini sono 2.640 monete, cioe' una run intera di taglie. La
+    // prima casella resta 0 come per gli altri slot, ma per i monili non esiste un grado "scarso":
+    // non si parte con niente al dito, e il listino comincia dal secondo.
+    anello:  [0, 120, 280, 500, 880],
+    collana: [0, 120, 280, 500, 880],
   };
 
   // v2.19.11 — LA SCARICA. Il tiro arcano non e' piu' una bolla che varia di bastone in bastone: e' un
@@ -758,6 +777,109 @@
     { id: 'mag_b_soffio_arcano', hero: 'mago', slot: 'boots', rank: 5, carattere: 'leggera',
       name: 'Soffio Arcano', color: '#ffe9a8', desc: '+30% passo · +11% cadenza',
       bonus: { speedMult: 0.3, fireRateMult: 0.11 }, tinta: { steelDk: '#6459a0' } },
+
+    // ====================================================================================================
+    // v2.32 — I MONILI DELL'ORAFO
+    // ====================================================================================================
+    // Paolo: *«un venditore di anelli/collane, insomma i classici oggetti indossabili che aumentano le
+    // stat. Collana (max 1) e anelli (max 2), le stat devono essere bilanciate. Piu' alto e' il costo
+    // maggiori saranno i bonus, farei anche qui una divisione in 4 classi come per le armi. Cerca di non
+    // creare vantaggi solo alle stat ma anche a difesa, attacco... insomma tutte le stat. A differenza
+    // delle armi questi oggetti sono comuni per tutte le classi»*.
+    //
+    // QUATTRO REGOLE, e le prime due sono quelle che tengono in piedi il resto.
+    //
+    // 1. SI PORTANO TUTTI, SEMPRE. Non c'e' tabella dei permessi, non c'e' classe: un anello sta bene a
+    //    chiunque. E' la differenza con le armi, ed e' voluta — il catalogo delle armi esiste per dare
+    //    un'identita' alla classe, questo esiste per dare un'identita' alla RUN.
+    //
+    // 2. OGNI MONILE DA' E TOGLIE. Due voci in piu' e una in meno, sempre. Non e' decorazione: e' l'unico
+    //    modo per cui "piu' costa, piu' rende" non diventi "il grado 4 e' la risposta giusta a tutto". Col
+    //    grado cresce quanto dai E quanto togli, quindi un divino e' una scelta piu' pesante, non piu'
+    //    comoda. (I pezzi di grado 1 fanno eccezione: niente malus, sono il fondo del listino.)
+    //
+    // 3. NESSUNO RIMETTE PUNTI VITA. Nella v1.93 `lifesteal` e `regen` sono stati TOLTI da tutto il gioco
+    //    e il TEST 58 ne vieta il rientro: curare e' il mestiere dell'Ostessa e delle pozioni. Un anello
+    //    che rigenera sarebbe la strada piu' ovvia per farli rientrare dalla finestra.
+    //
+    // 4. UNDICI LEVE, NON CINQUE. Vita massima, difesa, danno, critico, cadenza, passo, ricariche, rinculo,
+    //    monete, esperienza e raggio di raccolta. Due monili che spingono la stessa leva sono due varianti
+    //    dello stesso monile.
+    //
+    // I PREZZI seguono la scala delle armi (170/380/650/1100) tenuti un filo piu' bassi, perche' se ne
+    // portano TRE: 120 / 280 / 500 / 880. Tre divini sono 2640 monete, cioe' una run intera di taglie.
+    { id: 'mon_anello_forza_2', hero: 'monile', slot: 'anello', rank: 2, carattere: 'equilibrata', famiglia: 'forza',
+      name: 'Anello del Fabbro', color: '#c96a4a', desc: '+3% danno',
+      bonus: { dmgMult: 0.03 } },
+    { id: 'mon_anello_forza_3', hero: 'monile', slot: 'anello', rank: 3, carattere: 'equilibrata', famiglia: 'forza',
+      name: 'Anello di Ferrobruno', color: '#d4703f', desc: '+5% danno · +8% rinculo · -3% cadenza',
+      bonus: { dmgMult: 0.05, knockMult: 0.08, fireRateMult: -0.03 } },
+    { id: 'mon_anello_forza_4', hero: 'monile', slot: 'anello', rank: 4, carattere: 'equilibrata', famiglia: 'forza',
+      name: 'Anello del Giuramento', color: '#ff8a3b', desc: '+8% danno · +12% rinculo · -5% cadenza',
+      bonus: { dmgMult: 0.08, knockMult: 0.12, fireRateMult: -0.05 } },
+    { id: 'mon_anello_forza_5', hero: 'monile', slot: 'anello', rank: 5, carattere: 'equilibrata', famiglia: 'forza',
+      name: 'Anello del Primo Colpo', color: '#ff6a2b', desc: '+11% danno · +16% rinculo · -7% cadenza',
+      bonus: { dmgMult: 0.11, knockMult: 0.16, fireRateMult: -0.07 } },
+    { id: 'mon_anello_destrezza_2', hero: 'monile', slot: 'anello', rank: 2, carattere: 'equilibrata', famiglia: 'destrezza',
+      name: 'Anello del Passo', color: '#7fd6c0', desc: '+2% passo',
+      bonus: { speedMult: 0.02 } },
+    { id: 'mon_anello_destrezza_3', hero: 'monile', slot: 'anello', rank: 3, carattere: 'equilibrata', famiglia: 'destrezza',
+      name: 'Anello del Vento Corto', color: '#6fe0b0', desc: '+3.5% passo · +3% cadenza · -5 PV',
+      bonus: { speedMult: 0.035, fireRateMult: 0.03, maxHpFlat: -5 } },
+    { id: 'mon_anello_destrezza_4', hero: 'monile', slot: 'anello', rank: 4, carattere: 'equilibrata', famiglia: 'destrezza',
+      name: 'Anello della Rondine', color: '#4fe0a0', desc: '+5% passo · +5% cadenza · -9 PV',
+      bonus: { speedMult: 0.05, fireRateMult: 0.05, maxHpFlat: -9 } },
+    { id: 'mon_anello_destrezza_5', hero: 'monile', slot: 'anello', rank: 5, carattere: 'equilibrata', famiglia: 'destrezza',
+      name: 'Anello del Lampo', color: '#2fe0b8', desc: '+6.5% passo · +7% cadenza · -14 PV',
+      bonus: { speedMult: 0.065, fireRateMult: 0.07, maxHpFlat: -14 } },
+    { id: 'mon_anello_fortuna_2', hero: 'monile', slot: 'anello', rank: 2, carattere: 'equilibrata', famiglia: 'fortuna',
+      name: 'Anello del Mendicante', color: '#d9c07a', desc: '+8% monete',
+      bonus: { monete: 0.08 } },
+    { id: 'mon_anello_fortuna_3', hero: 'monile', slot: 'anello', rank: 3, carattere: 'equilibrata', famiglia: 'fortuna',
+      name: 'Anello del Dado', color: '#e8c76a', desc: '+14% monete · +15% raccolta · -1.5% difesa',
+      bonus: { monete: 0.14, raccolta: 0.15, dmgReduce: -0.015 } },
+    { id: 'mon_anello_fortuna_4', hero: 'monile', slot: 'anello', rank: 4, carattere: 'equilibrata', famiglia: 'fortuna',
+      name: 'Anello del Cambiavalute', color: '#ffcf4a', desc: '+22% monete · +25% raccolta · -2.5% difesa',
+      bonus: { monete: 0.22, raccolta: 0.25, dmgReduce: -0.025 } },
+    { id: 'mon_anello_fortuna_5', hero: 'monile', slot: 'anello', rank: 5, carattere: 'equilibrata', famiglia: 'fortuna',
+      name: 'Anello del Re Avaro', color: '#ffd257', desc: '+30% monete · +40% raccolta · -3.5% difesa',
+      bonus: { monete: 0.3, raccolta: 0.4, dmgReduce: -0.035 } },
+    { id: 'mon_collana_difesa_2', hero: 'monile', slot: 'collana', rank: 2, carattere: 'equilibrata', famiglia: 'difesa',
+      name: 'Collare di Cuoio', color: '#8a8f9a', desc: '+1% difesa',
+      bonus: { dmgReduce: 0.01 } },
+    { id: 'mon_collana_difesa_3', hero: 'monile', slot: 'collana', rank: 3, carattere: 'equilibrata', famiglia: 'difesa',
+      name: 'Pettorina a Maglie', color: '#7f93a8', desc: '+2% difesa · +8 PV · -2% passo',
+      bonus: { dmgReduce: 0.02, maxHpFlat: 8, speedMult: -0.02 } },
+    { id: 'mon_collana_difesa_4', hero: 'monile', slot: 'collana', rank: 4, carattere: 'equilibrata', famiglia: 'difesa',
+      name: 'Gorgiera del Baluardo', color: '#6f9fd8', desc: '+3% difesa · +16 PV · -3.5% passo',
+      bonus: { dmgReduce: 0.03, maxHpFlat: 16, speedMult: -0.035 } },
+    { id: 'mon_collana_difesa_5', hero: 'monile', slot: 'collana', rank: 5, carattere: 'equilibrata', famiglia: 'difesa',
+      name: 'Egida dei Caduti', color: '#9fd6ff', desc: '+4% difesa · +26 PV · -5% passo',
+      bonus: { dmgReduce: 0.04, maxHpFlat: 26, speedMult: -0.05 } },
+    { id: 'mon_collana_arcano_2', hero: 'monile', slot: 'collana', rank: 2, carattere: 'equilibrata', famiglia: 'arcano',
+      name: 'Amuleto Opaco', color: '#9f8fd0', desc: '+4% ricariche',
+      bonus: { cdrMult: 0.04 } },
+    { id: 'mon_collana_arcano_3', hero: 'monile', slot: 'collana', rank: 3, carattere: 'equilibrata', famiglia: 'arcano',
+      name: 'Amuleto di Quarzo', color: '#a98cff', desc: '+8% ricariche · +5% esperienza · -3% danno',
+      bonus: { cdrMult: 0.08, xpMult: 0.05, dmgMult: -0.03 } },
+    { id: 'mon_collana_arcano_4', hero: 'monile', slot: 'collana', rank: 4, carattere: 'equilibrata', famiglia: 'arcano',
+      name: 'Pendaglio del Rapido', color: '#b06bff', desc: '+12% ricariche · +8% esperienza · -4.5% danno',
+      bonus: { cdrMult: 0.12, xpMult: 0.08, dmgMult: -0.045 } },
+    { id: 'mon_collana_arcano_5', hero: 'monile', slot: 'collana', rank: 5, carattere: 'equilibrata', famiglia: 'arcano',
+      name: 'Sigillo del Tempo Corto', color: '#c77dff', desc: '+16% ricariche · +12% esperienza · -6% danno',
+      bonus: { cdrMult: 0.16, xpMult: 0.12, dmgMult: -0.06 } },
+    { id: 'mon_collana_critico_2', hero: 'monile', slot: 'collana', rank: 2, carattere: 'equilibrata', famiglia: 'critico',
+      name: 'Zanna Forata', color: '#c98a6a', desc: '+1.5% critico',
+      bonus: { critChance: 0.015 } },
+    { id: 'mon_collana_critico_3', hero: 'monile', slot: 'collana', rank: 3, carattere: 'equilibrata', famiglia: 'critico',
+      name: 'Collana di Zanne', color: '#e09060', desc: '+3% critico · +3% cadenza · -6 PV',
+      bonus: { critChance: 0.03, fireRateMult: 0.03, maxHpFlat: -6 } },
+    { id: 'mon_collana_critico_4', hero: 'monile', slot: 'collana', rank: 4, carattere: 'equilibrata', famiglia: 'critico',
+      name: 'Monile del Cacciatore', color: '#ff7a4a', desc: '+4.5% critico · +5% cadenza · -11 PV',
+      bonus: { critChance: 0.045, fireRateMult: 0.05, maxHpFlat: -11 } },
+    { id: 'mon_collana_critico_5', hero: 'monile', slot: 'collana', rank: 5, carattere: 'equilibrata', famiglia: 'critico',
+      name: 'Collare della Belva', color: '#ff5a3c', desc: '+6% critico · +7% cadenza · -18 PV',
+      bonus: { critChance: 0.06, fireRateMult: 0.07, maxHpFlat: -18 } },
   ];
 
   // Il prezzo lo stampa il listino, non il pezzo. Un pezzo senza uno slot nel listino costerebbe
@@ -859,6 +981,20 @@
     if (!puoAvere(heroId, it)) return { gear: null, motivo: 'classe' };
     const g = Object.assign({}, gear || {});
     if (it.slot === 'armor' || it.slot === 'boots') { g[it.slot] = it.id; return { gear: g, motivo: null }; }
+    // v2.32 — I MONILI. La collana ha una casella sola. Gli ANELLI ne hanno due e si comportano come le
+    // due mani: `mano` qui vale 'anello1' o 'anello2'. Senza indicazione va nella prima libera — e se
+    // sono tutte e due piene si sostituisce la prima, che e' cio' che si aspetta chi clicca.
+    // Lo STESSO anello non si porta a due dita: metterlo nell'altra casella lo SPOSTA, esattamente come
+    // la stessa arma fra le due mani (v2.19.6). Due anelli diversi della stessa famiglia invece si
+    // possono portare insieme — sono due oggetti, e il prezzo l'hai pagato due volte.
+    if (it.slot === 'collana') { g.collana = it.id; return { gear: g, motivo: null }; }
+    if (it.slot === 'anello') {
+      let dito = (mano === 'anello1' || mano === 'anello2') ? mano
+               : (!g.anello1 ? 'anello1' : (!g.anello2 ? 'anello2' : 'anello1'));
+      const altroDito = dito === 'anello1' ? 'anello2' : 'anello1';
+      if (g[altroDito] === it.id) g[altroDito] = null;
+      g[dito] = it.id; return { gear: g, motivo: null };
+    }
     if (MANI_SLOT.indexOf(mano) < 0) mano = 'manoDx';
     const altra = mano === 'manoDx' ? 'manoSx' : 'manoDx';
     const mani = _mani(heroId);

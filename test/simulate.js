@@ -1060,8 +1060,9 @@ function testV157() {
   // arcana. Il conto qui non e' un dettaglio di contabilita' — e' cio' che impedisce che un domani
   // qualcuno trasformi in negozio anche le ultime case senza accorgersene.
   const botteghe = V.rooms.filter(r => r.kind === 'bottega'), case_ = V.rooms.filter(r => r.kind === 'casa');
-  assert(botteghe.length === 7, 'sette botteghe, una per mestiere (' + botteghe.length + ')');
-  assert(case_.length >= 5, 'e le case degli abitanti (' + case_.length + ')');
+  // v2.32 — otto: si e' aggiunto l'ORAFO, che ha preso il posto di casa_g a settentrione.
+  assert(botteghe.length === 8, 'otto botteghe, una per mestiere (' + botteghe.length + ')');
+  assert(case_.length >= 4, 'e le case degli abitanti (' + case_.length + ')');
   assert(!!V.rooms.find(r => r.id === 'archeria') && !!V.rooms.find(r => r.id === 'arcano'),
     'le due botteghe nuove hanno la loro stanza');
   // v2.6 — e una terza specie: la CASA DEL PORTALE, che non e' ne' una bottega ne' un'abitazione
@@ -1169,14 +1170,20 @@ function testV157() {
 
   // --- sette mercanti, ognuno nella SUA stanza, dietro il suo banco ---
   assert(m.props.filter(p => p.type === 'stall').length === 0, 'i banchetti sono spariti in v1.75: restano le persone');
-  assert(m.village.npcs.length === 7, 'ci sono 7 mercanti');
+  assert(m.village.npcs.length === 8, 'ci sono 8 mercanti (con l Orafo)');
   // v2.19 — TRE vendono equipaggiamento, e ognuno il SUO catalogo. Il conto e' la meta' della regola;
   // l'altra meta' e' che i tre cataloghi siano diversi, se no sono tre porte sullo stesso negozio.
   const venditori = m.village.npcs.filter(n => n.shop);
-  assert(venditori.length === 3, 'tre vendono equipaggiamento: fabbro, arciera, arcanista');
-  assert(new Set(venditori.map(n => n.cat)).size === 3, 'e i tre cataloghi sono diversi');
-  assert(venditori.every(n => ['guerriero', 'ladro', 'mago'].indexOf(n.cat) >= 0), 'e sono i tre di gear.js');
-  assert((m.village.botteghe || []).length === 3, 'e il villaggio le espone tutte e tre al server');
+  // v2.32 — QUATTRO banchi con `shop`, ma solo tre vendono equipaggiamento di CLASSE: il quarto e'
+  // l'Orafo, il cui catalogo non appartiene a nessuno. Si separano, se no un domani basterebbe
+  // aggiungere un banco qualunque per far passare un controllo che parla dei tre cataloghi di gear.js.
+  const diClasse = venditori.filter(n => n.cat !== 'monile');
+  assert(venditori.length === 4, 'quattro banchi vendono: fabbro, arciera, arcanista e orafo');
+  assert(diClasse.length === 3, 'e tre di questi hanno un catalogo di classe');
+  assert(new Set(venditori.map(n => n.cat)).size === 4, 'e i quattro cataloghi sono diversi');
+  assert(diClasse.every(n => ['guerriero', 'ladro', 'mago'].indexOf(n.cat) >= 0), 'e sono i tre di gear.js');
+  assert(venditori.some(n => n.cat === 'monile'), 'e il quarto e l Orafo');
+  assert((m.village.botteghe || []).length === 4, 'e il villaggio le espone tutte e quattro al server');
   assert(m.village.npcs.filter(n => n.soon).length === 0, 'il villaggio e completo: nessuna bottega chiusa');
   // v2.6 — LA CARTOMANTE E' DIVENTATA L’ORACOLO. Le sue carte erano gia' spente
   // (CARTOMANTE_ATTIVA), quindi non si e' perso niente: e' cambiato chi abita l'antro.
@@ -1192,7 +1199,7 @@ function testV157() {
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   assert(m.village.npcs.every(n => n.col), 'ogni mercante ha il suo colore: e cosi che lo riconosci da lontano');
-  assert(new Set(m.village.npcs.map(n => n.col)).size === 7, 'i sette colori sono tutti diversi');
+  assert(new Set(m.village.npcs.map(n => n.col)).size === 8, 'gli otto colori sono tutti diversi');
   let fuori = 0;
   for (let i2 = 0; i2 < V.stalls.length; i2++) {
     const s2 = V.stalls[i2], r = V.rooms.find(x => x.id === s2.room);
@@ -1218,14 +1225,14 @@ function testV157() {
   // che dichiara `lit`, e il velo scuro li' non si stende.
   assert(m.lit === 1, 'il villaggio e illuminato: e la sosta, non un\'ondata');
   for (const lv of [1, 5, 10, 20]) assert(!MapGen.generate(77, lv).lit, 'ma l ondata ' + lv + ' resta buia');
-  assert(m.props.filter(p => p.type === 'glowspot').length === 7, "un alone di luce per mercante");
+  assert(m.props.filter(p => p.type === 'glowspot').length === 8, "un alone di luce per mercante");
   assert(m.market === 1, 'la mappa si dichiara mercato');
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
   const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
-  assert(room.map.village && room.map.village.npcs.length === 7, 'la stanza mercato usa il villaggio');
+  assert(room.map.village && room.map.village.npcs.length === 8, 'la stanza mercato usa il villaggio');
   assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro');
   let inside = false;
@@ -2020,9 +2027,15 @@ function testV167() {
   const Gear = require('../shared/gear.js');
   // --- 1) il catalogo e' ben formato e ogni classe ha i suoi slot ---
   assert(Object.keys(Gear.SLOTS).join(',') === 'guerriero,mago,ladro', 'gli slot sono definiti per tutte e tre le classi');
-  assert(Gear.slotsFor('paladino').join(',') === 'weapon,armor,shield', 'il guerriero ha arma, armatura e scudo');
-  assert(Gear.slotsFor('mago').join(',') === 'weapon,armor,boots', 'il mago ha arma, armatura e calzature');
-  assert(Gear.slotsFor('arciere').join(',') === 'weapon,armor,boots', 'il ladro ha arma, armatura e calzature');
+  // v2.32 — agli slot di ogni corpo si sono aggiunti i tre dei MONILI, uguali per tutti: due anelli
+  // e una collana. Qui si controlla la parte che cambia da classe a classe, che e' quella che conta.
+  const SOLO_ARMI = (h) => Gear.slotsFor(h).filter(s => ['weapon', 'armor', 'shield', 'boots'].indexOf(s) >= 0);
+  const MONILI_SLOT = ['anello1', 'anello2', 'collana'];
+  assert(SOLO_ARMI('paladino').join(',') === 'weapon,armor,shield', 'il guerriero ha arma, armatura e scudo');
+  assert(SOLO_ARMI('mago').join(',') === 'weapon,armor,boots', 'il mago ha arma, armatura e calzature');
+  assert(SOLO_ARMI('arciere').join(',') === 'weapon,armor,boots', 'il ladro ha arma, armatura e calzature');
+  for (const h of ['paladino', 'mago', 'arciere', 'barbaro', 'assassino', 'warlock', 'maestro'])
+    assert(MONILI_SLOT.every(sl => Gear.slotsFor(h).indexOf(sl) >= 0), h + ': e due anelli e una collana, come tutti');
   assert(new Set(Gear.ITEMS.map(i => i.id)).size === Gear.ITEMS.length, 'nessun id di oggetto duplicato');
   // v2.15.3 — 117 e non piu' 104: il mago ha avuto le sue calzature. Il conto e' 13 per slot e TRE
   // slot per ognuna delle tre classi; finche' il mago ne aveva due, comprava una scala in meno degli
@@ -2034,7 +2047,9 @@ function testV167() {
   // dentro il listino, qui si vede.
   // v2.19.6 — e i pezzi di una classe SOLA (`solo`: i pugnali dell'assassino) stanno fuori anche loro:
   // sono in vendita, ma non fanno parte della forma comune del listino.
-  const listino = Gear.ITEMS.filter(i => !i.avvio && !i.solo), avvii = Gear.ITEMS.filter(i => i.avvio);
+  // v2.32 — i MONILI stanno fuori dal conto del listino comune: non appartengono a una classe, non
+  // hanno carattere che conti e non hanno la forma "13 per slot". Hanno il loro controllo nel TEST 92.
+  const listino = Gear.ITEMS.filter(i => !i.avvio && !i.solo && i.hero !== 'monile'), avvii = Gear.ITEMS.filter(i => i.avvio);
   const soloUno = Gear.ITEMS.filter(i => i.solo);
   assert(listino.length === 117, 'il listino comune ha 117 pezzi (13 per slot: 1 scarso + 3 per ognuno degli altri 4 gradi)');
   assert(avvii.length === 3 && avvii.every(i => i.avvio === 'assassino'),
@@ -2054,8 +2069,9 @@ function testV167() {
     for (const b of Gear.BOTTEGHE) for (const sl of ['weapon', 'armor', 'shield', 'boots'])
       assert(!Gear.itemsBottega(it.avvio, b, sl).some(x => x.id === it.id), it.id + ': e non sta su nessun banco');
   }
-  for (const h of ['paladino', 'mago', 'arciere']) assert(Gear.slotsFor(h).length === 3, h + ': tre slot, come gli altri due');
+  for (const h of ['paladino', 'mago', 'arciere']) assert(SOLO_ARMI(h).length === 3, h + ': tre slot di equipaggiamento, come gli altri due');
   for (const it of Gear.ITEMS) {
+    if (it.hero === 'monile') continue;   // v2.32 — i monili hanno il loro controllo, nel TEST 92
     assert(Gear.slotsFor(it.hero).includes(it.slot), it.id + ' sta in uno slot che la sua classe possiede');
     assert(it.name && it.desc && typeof it.cost === 'number' && it.rank >= 1, it.id + ' ha nome, descrizione, prezzo e grado');
     assert(!!Gear.CARATTERI[it.carattere], it.id + ' ha un carattere fra i tre');
@@ -2074,7 +2090,10 @@ function testV167() {
   //   DENTRO UN GRADO  non si sale: i tre pezzi costano uguale e rendono uguale, e cambiano in COME si gioca.
   const dpsOf = w => w.dmg * w.fireRate;
   const valOf = b => (b.maxHpFlat || 0) / 10 + (b.dmgReduce || 0) * 100 + (b.frontale || 0) * 20 + Math.abs(b.speedMult || 0) * 60;
-  for (const hero of Object.keys(Gear.SLOTS)) for (const slot of Gear.slotsFor(hero)) {
+  // v2.32 — questo giro parla del catalogo di CLASSE: tre caratteri per grado, un pezzo scarso di
+  // partenza, la scala dei prezzi. I monili non hanno niente di tutto questo (non si parte con un
+  // anello al dito e non hanno caratteri), quindi restano fuori: il loro controllo e' il TEST 92.
+  for (const hero of Object.keys(Gear.SLOTS)) for (const slot of SOLO_ARMI(hero)) {
     const gradi = [];
     for (let r = 1; r <= Gear.maxRank(); r++) gradi.push(Gear.itemsOfRank(hero, slot, r));
     assert(gradi[0].length === 1, hero + '/' + slot + ': il grado scarso ha un pezzo solo, quello con cui parti');
@@ -4847,8 +4866,12 @@ function testV188() {
   assert(Gear.RANK_RARITY.join(',') === NOMI.join(','), 'i gradi sono scarso, comune, raro, leggendario, divino');
   assert(Gear.maxRank() === 5, 'i gradi sono cinque');
 
+  // v2.32 — anche qui: la forma "13 pezzi, tre caratteri per grado" e' del catalogo di CLASSE. I tre
+  // slot dei monili (due anelli e una collana) hanno una forma loro — quattro gradi, una famiglia per
+  // grado, nessun pezzo di partenza — e si controllano nel TEST 92.
+  const ARMI_SLOT = ['weapon', 'armor', 'shield', 'boots'];
   for (const h of Heroes.ORDER) {
-    for (const slot of Gear.slotsFor(h)) {
+    for (const slot of Gear.slotsFor(h).filter(sl => ARMI_SLOT.indexOf(sl) >= 0)) {
       const l = Gear.itemsFor(h, slot);
       assert(l.length === 13, h + '/' + slot + ': tredici pezzi, 1 + 3x4 (' + l.length + ')');
       assert(l.map(i => i.rank).join(',') === '1,2,2,2,3,3,3,4,4,4,5,5,5', h + '/' + slot + ': i gradi vanno da 1 a 5, tre pezzi per grado');
@@ -4892,7 +4915,9 @@ function testV188() {
     // personaggio vestito di stracci.
     const divini = {};
     // v2.18.1 — si compra E si impugna: comprare non equipaggia piu', e arma e scudo vanno in una mano.
-    for (const slot of Gear.slotsFor('paladino')) {
+    // v2.32 — solo gli slot dell'equipaggiamento: i monili non hanno un «equilibrata» per grado e
+    // qui si sta provando il set divino di CLASSE. Che un monile si compri e si indossi lo prova il 92.
+    for (const slot of Gear.slotsFor('paladino').filter(sl => ['weapon', 'armor', 'shield', 'boots'].indexOf(sl) >= 0)) {
       const it = Gear.itemsOfRank('paladino', slot, Gear.maxRank()).find(i => i.carattere === 'equilibrata');
       divini[slot] = it; r.buyGear('a', it.id);
       r.equipaggia('a', it.id, slot === 'shield' ? 'manoSx' : 'manoDx');
@@ -5325,8 +5350,8 @@ function testV200() {
   assert(m.w === 60 && m.h === 46, 'il villaggio e 60x46 (' + m.w + 'x' + m.h + ')');
   // v2.19 — sette botteghe e cinque case: l'archeria e la bottega arcana hanno preso il posto di due
   // abitazioni (casa_a a ponente, casa_c a levante).
-  assert(V.rooms.filter(r => r.kind === 'bottega').length === 7, 'sette botteghe');
-  assert(V.rooms.filter(r => r.kind === 'casa').length >= 5, 'e almeno cinque case abitate');
+  assert(V.rooms.filter(r => r.kind === 'bottega').length === 8, 'otto botteghe');
+  assert(V.rooms.filter(r => r.kind === 'casa').length >= 4, 'e almeno quattro case abitate');
   const grandi = ['taverna', 'erbe', 'fucina'];
   for (const id of grandi) { const r = V.rooms.find(q => q.id === id);
     assert((r.x1 - r.x0) >= 10 && (r.y1 - r.y0) >= 7, 'la bottega ' + id + ' e grande (' + (r.x1 - r.x0 + 1) + 'x' + (r.y1 - r.y0 + 1) + ')'); }
@@ -6057,13 +6082,22 @@ function testSchermataUnica() {
   // le derivate devono essere quelle VERE, non una ricostruzione: si confrontano col motore
   assert(d.danno === Math.round(room.effDamage(p)), 'il danno e quello che usa il motore');
   assert(Math.abs(d.cadenza - 1 / room.effFireDelay(p)) < 0.02, 'e la cadenza pure');
-  // v2.18.1 — le caselle sono QUATTRO e si chiamano come stanno attorno al personaggio: due mani,
-  // armatura, calzature. Non tutte sono piene (il guerriero non ha calzature), quindi si controlla che
-  // quelle piene portino l'ID — che e' cio' che serve al ritratto per non disegnare un nudo.
-  assert(m.inv.gear.length === 4 && m.inv.gear.map(g => g.slot).join(',') === 'manoDx,manoSx,armor,boots',
-    'le caselle sono le quattro attorno al personaggio');
+  // v2.18.1 — le caselle si chiamano come stanno attorno al personaggio, e l'ORDINE e' quello in cui
+  // il pannello le disegna: prima la colonna di sinistra (mano destra, i due anelli, l'armatura), poi
+  // quella di destra (mano sinistra, collana, calzature). Non tutte sono piene — il guerriero non ha
+  // calzature — quindi si controlla che quelle piene portino l'ID, che e' cio' che serve al ritratto
+  // per non disegnare un nudo.
+  // v2.32 — da quattro a SETTE: due anelli e una collana, uguali per ogni classe.
+  assert(m.inv.gear.length === 7 && m.inv.gear.map(g => g.slot).join(',') === 'manoDx,anello1,anello2,armor,manoSx,collana,boots',
+    'le caselle sono le sette attorno al personaggio');
   assert(m.inv.gear.filter(g => g.nome !== '—').every(g => g.id), 'ogni casella piena porta l ID del pezzo');
-  assert(Array.isArray(m.inv.inventario) && m.inv.inventario.length === 3, 'l inventario arriva diviso per slot');
+  // v2.32 — gli slot non sono piu' tre: ci sono anche anelli e collana, uguali per ogni classe. Si
+  // chiede che l'inventario sia diviso ESATTAMENTE per gli slot che quella classe possiede, invece di
+  // un numero scritto a mano che va riaggiornato ogni volta che il catalogo cresce.
+  assert(Array.isArray(m.inv.inventario) && m.inv.inventario.length === Gear.slotsClasse(p.heroId).length,
+    'l inventario arriva diviso per slot (' + m.inv.inventario.length + ' su ' + Gear.slotsClasse(p.heroId).length + ')');
+  assert(m.inv.inventario.some(g => g.slot === 'anello') && m.inv.inventario.some(g => g.slot === 'collana'),
+    'e fra gli slot ci sono anelli e collana');
   const tuttiAddosso = m.inv.inventario.every(sl => sl.pezzi.every(x => x.addosso));
   assert(tuttiAddosso, 'appena nati nell inventario c e solo cio che si ha addosso');
 
@@ -6202,8 +6236,8 @@ function testV219() {
   // --- 1) LE TRE BOTTEGHE ESISTONO, e il server le aggancia tutte ---
   const room = new Room('v219'); const p = room.addPlayer('b', { send() {} }, 'B', 'warlock'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');
-  assert((room.gearMerchants || []).length === 3, 'il server aggancia tre banchi (' + (room.gearMerchants || []).length + ')');
-  assert(new Set(room.gearMerchants.map(b => b.cat)).size === 3, 'e i tre cataloghi sono distinti');
+  assert((room.gearMerchants || []).length === 4, 'il server aggancia quattro banchi (' + (room.gearMerchants || []).length + ')');
+  assert(new Set(room.gearMerchants.map(b => b.cat)).size === 4, 'e i quattro cataloghi sono distinti');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.gearMerchants[0].x, room.gearMerchants[0].y) < 1,
     'il vecchio `gearMerchant` resta il fabbro: chi lo legge non si accorge di niente');
   // due banchi non si sovrappongono mai: «quello piu' vicino» non e' mai una scelta ambigua
@@ -8097,7 +8131,7 @@ function testV226() {
     const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
     // v2.30 — `striscia` e `menuSotto` non ci sono piu': record e consiglio sono saliti nella colonna
     // di destra (#colLato) e i comandi sono scesi sotto. I pezzi che contano sono gli stessi.
-    for (const id of ['menuDue', 'colEroe', 'colLato', 'recordBox', 'consiglioBox', 'riprendiCard', 'rpDet', 'scartaBtn', 'novitaCard', 'novitaLista'])
+    for (const id of ['menuDue', 'colEroe', 'colLato', 'nameInput', 'roomInput', 'consiglioBox', 'riprendiCard', 'rpDet', 'scartaBtn', 'novitaCard', 'novitaLista'])
       assert(html.indexOf('id="' + id + '"') >= 0, 'la pagina ha il pezzo #' + id);
     assert(html.indexOf('/shared/consigli.js') >= 0, 'e carica i consigli');
     // il pulsante Riprendi sta DENTRO la scheda: se restasse fuori, la scheda direbbe a che punto sei
@@ -8942,7 +8976,10 @@ function testV229() {
     // prove da dieci mappe ciascuna il rapporto vero sta fra 1,74 e 2,53 (mediana 2,05 — il
     // moltiplicatore e' esattamente quello), e togliendo la riga del moltiplicatore sta fra 0,82 e
     // 1,23. 1,5 e' in mezzo, e ci sta largo da tutte e due le parti.
-    assert(fur.d > sano.d * 1.5, 'e corre quasi il doppio (' + (fur.d | 0) + ' px contro ' + (sano.d | 0) + ')');
+    // v2.32 — la soglia scende da 1,5 a 1,4. Non e' una resa: su un giro di prove e' uscito 1,4998,
+    // cioe' il controllo si decideva sulla terza cifra. I due mucchi restano lontanissimi — col
+    // moltiplicatore il minimo visto e' 1,74, senza il massimo e' 1,23 — e 1,4 sta comodo in mezzo.
+    assert(fur.d > sano.d * 1.4, 'e corre quasi il doppio (' + (fur.d | 0) + ' px contro ' + (sano.d | 0) + ')');
     // e non e' un trucco della misura: il danno sale una volta sola, non a ogni tick
     const { r, p, m } = banco('infuriato'); const d0 = m.dmg;
     m.hp = Math.round(m.maxHp * 0.3);
@@ -9029,7 +9066,9 @@ function testV230() {
   // --- 2) I QUATTRO RIQUADRI, NELL ORDINE CHE HA CHIESTO ------------------------------------
   const fineLato = html.indexOf('id="connectBtn"');
   const dentroLato = html.slice(iLato, fineLato);
-  const ordine = ['recordBox', 'consiglioBox', 'novitaCard', 'riprendiCard'];
+  // v2.32 — il box del RECORD e' sparito (Paolo: *«non mi piace»*) e al suo posto, in cima, sono
+  // saliti nome e stanza. La pila resta di quattro.
+  const ordine = ['nameInput', 'consiglioBox', 'novitaCard', 'riprendiCard'];
   let pos = -1;
   for (const id of ordine) {
     const q = dentroLato.indexOf('id="' + id + '"');
@@ -9346,6 +9385,183 @@ function testV231() {
   ok('le undici taglie sono agganciate, le scommesse si perdono davvero, e il contatore c e');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+// =====================================================================================================
+// TEST 92 — v2.32: i MONILI dell'Orafo, e le caselle nuove
+// Paolo: *«vorrei aggiungere collana (max 1) e anelli (max 2), le stat devono essere bilanciate. Piu'
+// alto e' il costo maggiori saranno i bonus, farei anche qui una divisione in 4 classi come per le
+// armi. A differenza delle armi questi oggetti sono comuni per tutte le classi»*. E dopo aver letto il
+// catalogo: *«i bonus devono essere una lieve aggiunta, non sbilanciare troppo altrimenti si rompe»*.
+// Quell'ultima frase e' la ragione per cui questo test esiste: la parte che si rompe in silenzio non e'
+// "il monile non si indossa" — quella si vede subito — ma "il monile vale troppo", che non si vede mai.
+// =====================================================================================================
+function testV232() {
+  console.log('\n[TEST 92] v2.32 — i monili dell Orafo');
+  const Gear = require('../shared/gear.js');
+  const conn = { send() {} };
+  const MON = Gear.ITEMS.filter(i => i.hero === 'monile');
+
+  // --- 1) LA FORMA DEL CATALOGO -------------------------------------------------------------
+  assert(MON.length === 24, 'ventiquattro monili: sei famiglie per quattro gradi (' + MON.length + ')');
+  const anelli = MON.filter(i => i.slot === 'anello'), collane = MON.filter(i => i.slot === 'collana');
+  assert(anelli.length === 12 && collane.length === 12, 'dodici anelli e dodici collane');
+  for (const fam of [...new Set(MON.map(i => i.famiglia))]) {
+    const f = MON.filter(i => i.famiglia === fam).sort((a, b) => a.rank - b.rank);
+    assert(f.length === 4, fam + ': quattro gradi');
+    assert(f.map(i => i.rank).join(',') === '2,3,4,5', fam + ': i gradi vanno dal 2 al 5 (non c e un monile "scarso": non si parte con un anello al dito)');
+    for (let k = 1; k < f.length; k++) assert(f[k].cost > f[k - 1].cost, fam + ': piu alto e il grado, piu alto e il costo');
+    // «piu' costa, piu' rende» va provato sul VALORE, non sul prezzo: un pezzo caro che rende quanto
+    // quello prima sarebbe una truffa che nessun controllo sul prezzo prenderebbe.
+    const val = (it) => Object.keys(it.bonus).reduce((a, k) => a + Math.abs(it.bonus[k]), 0);
+    for (let k = 1; k < f.length; k++) assert(val(f[k]) > val(f[k - 1]), fam + ': e piu rende');
+  }
+  assert(MON.every(i => i.id.endsWith('_' + i.rank)), 'e l id di ogni monile dice il suo grado vero');
+
+  // --- 2) OGNI MONILE DA' E TOGLIE ----------------------------------------------------------
+  // E' la regola che impedisce al grado 4 di essere la risposta giusta a tutto. Il grado piu' basso e'
+  // l'eccezione dichiarata: e' il fondo del listino e non toglie niente.
+  for (const it of MON) {
+    const neg = Object.keys(it.bonus).filter(k => it.bonus[k] < 0);
+    const pos = Object.keys(it.bonus).filter(k => it.bonus[k] > 0);
+    assert(pos.length >= 1, it.id + ': da qualcosa');
+    if (it.rank === 2) assert(neg.length === 0, it.id + ': il grado piu basso non toglie niente');
+    else assert(neg.length === 1 && pos.length === 2, it.id + ': due voci in piu e una in meno (' + pos.length + '/' + neg.length + ')');
+  }
+
+  // --- 3) «UNA LIEVE AGGIUNTA»: il metro, e il numero che lo misura -------------------------
+  // Il metro dichiarato: TRE MONILI DIVINI insieme non devono valere piu' di UN SALTO DI GRADO
+  // dell'equipaggiamento. Il salto 4->5 dell'armatura del guerriero vale +45 PV e +5% di riduzione:
+  // se l'intero corredo di monili desse piu' di quello, le armature smetterebbero di contare.
+  {
+    const a4 = Gear.ITEMS.find(i => i.slot === 'armor' && i.hero === 'guerriero' && i.rank === 4 && i.carattere === 'equilibrata');
+    const a5 = Gear.ITEMS.find(i => i.slot === 'armor' && i.hero === 'guerriero' && i.rank === 5 && i.carattere === 'equilibrata');
+    const saltoPv = a5.bonus.maxHpFlat - a4.bonus.maxHpFlat;
+    const saltoDif = a5.bonus.dmgReduce - a4.bonus.dmgReduce;
+    const an5 = MON.filter(i => i.slot === 'anello' && i.rank === 5), co5 = MON.filter(i => i.slot === 'collana' && i.rank === 5);
+    let maxPv = -1e9, maxDif = -1e9, maxDanno = -1e9;
+    for (let i = 0; i < an5.length; i++) for (let j = i + 1; j < an5.length; j++) for (const c of co5) {
+      const b = Gear.bonusOf({ anello1: an5[i].id, anello2: an5[j].id, collana: c.id });
+      maxPv = Math.max(maxPv, b.maxHpFlat || 0);
+      maxDif = Math.max(maxDif, b.dmgReduce || 0);
+      // il «danno vero»: il moltiplicatore piu' il critico (che vale il doppio, quindi +1% di
+      // critico e' +1% di danno medio) piu' la cadenza, che moltiplica i colpi al secondo.
+      maxDanno = Math.max(maxDanno, (b.dmgMult || 0) + (b.critChance || 0) + (b.fireRateMult || 0));
+    }
+    assert(maxPv <= saltoPv, 'tre monili divini danno meno PV di un salto di grado dell armatura (' + maxPv + ' contro ' + saltoPv + ')');
+    assert(maxDif <= saltoDif + 0.015, 'e piu o meno la stessa difesa (' + (maxDif * 100).toFixed(1) + '% contro ' + (saltoDif * 100).toFixed(1) + '%)');
+    assert(maxDanno <= 0.26, 'e il danno complessivo resta sotto il +26% (' + (maxDanno * 100).toFixed(1) + '%)');
+    // e nessun singolo monile puo' essere una scorciatoia: il piu' generoso di tutti sta sotto il 20%
+    for (const it of MON) for (const k in it.bonus)
+      if (k !== 'maxHpFlat' && k !== 'monete' && k !== 'raccolta' && k !== 'xpMult')
+        assert(Math.abs(it.bonus[k]) <= 0.20, it.id + ': nessuna leva di combattimento oltre il 20% (' + k + ' ' + it.bonus[k] + ')');
+  }
+  // NESSUN MONILE RIMETTE PUNTI VITA. Nella v1.93 `lifesteal` e `regen` sono stati tolti da tutto il
+  // gioco e il TEST 58 ne vieta il rientro: un anello che rigenera sarebbe la strada piu' comoda per
+  // farli tornare dalla finestra, e nessuno se ne accorgerebbe guardando il catalogo delle armi.
+  for (const it of MON) for (const k in it.bonus)
+    assert(['lifesteal', 'regen', 'cura', 'heal'].indexOf(k) < 0, it.id + ': nessun monile cura');
+
+  // --- 4) SI PORTANO TUTTI, SEMPRE ---------------------------------------------------------
+  for (const h of Heroes.ORDER) {
+    for (const it of MON) assert(Gear.puoAvere(h, it), h + ' puo portare ' + it.id);
+    for (const sl of ['anello1', 'anello2', 'collana']) assert(Gear.slotsFor(h).indexOf(sl) >= 0, h + ' ha la casella ' + sl);
+    assert(Gear.itemsBottega(h, 'monile', 'anello').length === 12, h + ': vede tutti e dodici gli anelli');
+  }
+
+  // --- 5) DUE ANELLI E UNA COLLANA, NON DI PIU' --------------------------------------------
+  {
+    let g = {};
+    g = Gear.impugna('mago', g, 'mon_anello_forza_4').gear;
+    assert(g.anello1 === 'mon_anello_forza_4', 'il primo anello va al primo dito');
+    g = Gear.impugna('mago', g, 'mon_anello_destrezza_3').gear;
+    assert(g.anello2 === 'mon_anello_destrezza_3', 'il secondo al secondo');
+    g = Gear.impugna('mago', g, 'mon_anello_fortuna_5').gear;
+    assert(g.anello1 === 'mon_anello_fortuna_5' && g.anello2 === 'mon_anello_destrezza_3',
+      'il terzo sostituisce il primo: le dita restano due');
+    g = Gear.impugna('mago', g, 'mon_collana_difesa_4').gear;
+    g = Gear.impugna('mago', g, 'mon_collana_arcano_5').gear;
+    assert(g.collana === 'mon_collana_arcano_5' && Object.keys(g).filter(k => k === 'collana').length === 1,
+      'e la collana resta una sola');
+    // lo stesso anello non si porta a due dita: si SPOSTA, come la stessa arma fra le due mani
+    const r = Gear.impugna('mago', g, 'mon_anello_fortuna_5', 'anello2');
+    assert(r.gear.anello2 === 'mon_anello_fortuna_5' && !r.gear.anello1, 'lo stesso anello spostato lascia libero il dito da cui viene');
+  }
+
+  // --- 6) L'ORAFO: la bottega, e che ci si compri davvero ----------------------------------
+  {
+    const r = new Room('v232o'); const p = r.addPlayer('a', conn, 'A', 'barbaro'); r.startGame();
+    r.enterMarket();
+    const orafo = (r.gearMerchants || []).find(b => b.cat === 'monile');
+    assert(orafo, 'l Orafo ha un banco al villaggio');
+    assert(orafo.kind === 'goldsmith' && orafo.name === 'Orafo', 'e si chiama cosi (' + orafo.kind + ')');
+    p.x = orafo.x; p.y = orafo.y; p.coins = 5000;
+    const it = Gear.BY_ID['mon_anello_forza_4'];
+    const c0 = p.coins;
+    r.buyGear('a', it.id);
+    assert(p.owned[it.id], 'ci si compra un anello');
+    assert(c0 - p.coins === it.cost, 'e costa quello che dice (' + (c0 - p.coins) + ' contro ' + it.cost + ')');
+    r.equipaggia('a', it.id, 'anello1');
+    assert(p.gear.anello1 === it.id, 'e si infila al dito');
+    assert(Math.abs(r.gb(p, 'dmgMult') - it.bonus.dmgMult) < 1e-9, 'e il bonus arriva al personaggio');
+    // il danno sale DAVVERO: non basta che il numero stia nel sacchetto, deve passare da effDamage
+    const senza = (() => { const g2 = Object.assign({}, p.gear); delete g2.anello1; const q = Object.assign(Object.create(Object.getPrototypeOf(p)), p); q.gear = g2; q.gearBonus = Gear.bonusOf(g2); return r.effDamage(q); })();
+    assert(r.effDamage(p) > senza, 'e il danno in uscita sale (' + senza.toFixed(1) + ' -> ' + r.effDamage(p).toFixed(1) + ')');
+    // e dall'ORAFO non si comprano spade: ogni banco il suo catalogo
+    const spada = Gear.ITEMS.find(i => i.slot === 'weapon' && i.hero === 'guerriero' && i.rank === 3);
+    r.buyGear('a', spada.id);
+    assert(!p.owned[spada.id], 'ma dall Orafo non si comprano armi');
+  }
+
+  // --- 7) LE SETTE CASELLE E LE ABILITA' SPOSTATE -----------------------------------------
+  {
+    const fs = require('fs'), path = require('path');
+    const ROOT = path.join(__dirname, '..') + path.sep;
+    const html = fs.readFileSync(ROOT + 'public/index.html', 'utf8');
+    const css = fs.readFileSync(ROOT + 'public/style.css', 'utf8');
+    for (const sl of ['manoDx', 'anello1', 'anello2', 'armor', 'manoSx', 'collana', 'boots'])
+      assert(html.indexOf('data-slot="' + sl + '"') >= 0, 'la pagina ha la casella ' + sl);
+    assert((html.match(/class="eq-slot/g) || []).length === 7, 'e sono sette in tutto');
+    for (const c of ['l1', 'l2', 'l3', 'l4', 'r1', 'r2', 'r3'])
+      assert(new RegExp('\\.eq-slot\\.' + c + '\\{').test(css), 'e il CSS sa dove mettere la casella ' + c);
+    // E L'HUD DEVE SAPERE ACCOPPIARLE. Fra l'HTML e il CSS c'e' una tabella in hud.js che dice quale
+    // casella va in quale posto: se un nome manca da li', quella casella ricade sulla prima posizione
+    // e due riquadri finiscono uno sopra l'altro. Non crasha niente e nessun controllo sul CSS o
+    // sull'HTML se ne accorge — provato col sabotaggio, ed era l'unico che passava liscio.
+    {
+      const hud = fs.readFileSync(ROOT + 'public/js/hud.js', 'utf8');
+      const i0 = hud.indexOf("el.className = 'eq-slot '");
+      const tab = hud.slice(i0, i0 + 320);
+      for (const [sl, pos] of [['manoDx', 'l1'], ['anello1', 'l2'], ['anello2', 'l3'], ['armor', 'l4'],
+                               ['manoSx', 'r1'], ['collana', 'r2'], ['boots', 'r3']])
+        assert(new RegExp(sl + ":\\s*'" + pos + "'").test(tab), "l HUD mette " + sl + ' in ' + pos);
+    }
+    // LE ABILITA' SONO SCESE sotto il personaggio: si guarda che stiano nella colonna centrale e non
+    // piu' in quella dell'inventario, perche' e' tutto il senso dello spostamento.
+    const iCx = html.indexOf('class="col-cx"'), iDx = html.indexOf('class="col-dx"'), iAb = html.indexOf('id="abilElenco"');
+    assert(iCx >= 0 && iDx > iCx, 'le colonne stanno nell ordine di sempre');
+    assert(iAb > iCx && iAb < iDx, 'e le abilita sono nella colonna centrale, sotto il personaggio');
+    assert((html.match(/id="abilElenco"/g) || []).length === 1, 'una volta sola: non e rimasta anche di la');
+    // e le righe delle abilita' non sono piu' vestite dalla COLONNA: se lo fossero, spostandole si
+    // sarebbero sformate in silenzio. Provato col sabotaggio.
+    assert(!/\.col-dx \.ab-sc\{/.test(css), 'e il loro stile non dipende piu dalla colonna in cui stanno');
+    assert(/\n\.ab-sc\{/.test(css), 'ma vale dovunque le si metta');
+  }
+
+  // --- 8) LA SCHERMATA INIZIALE -----------------------------------------------------------
+  {
+    const fs = require('fs'), path = require('path');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+    assert(html.indexOf('id="recordBox"') < 0, 'il box del record non c e piu');
+    // ...ma il record si continua a SCRIVERE: toglierlo dal menu non vuol dire smettere di contarlo.
+    const main = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'main.js'), 'utf8');
+    assert(/Record\.forse\(/.test(main) && /const Record = \{/.test(main), 'ma il record si scrive ancora');
+    const iLato = html.indexOf('id="colLato"'), iNome = html.indexOf('id="nameInput"'), iCons = html.indexOf('id="consiglioBox"');
+    assert(iNome > iLato && iNome < iCons, 'nome e stanza aprono la colonna di destra, sopra il consiglio');
+    assert(/<aside class="info-card comandi hidden" id="infoCard">/.test(html), 'il box dei comandi e nascosto');
+    assert(html.indexOf('W A S D') >= 0 && html.indexOf('>F<') >= 0, 'ma il suo contenuto e ancora li, pronto per la sezione dedicata');
+  }
+  ok('ventiquattro monili, l Orafo che li vende, sette caselle e la schermata nuova');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

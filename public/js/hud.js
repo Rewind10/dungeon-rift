@@ -918,7 +918,11 @@
         const el = document.querySelector('.eq-slot[data-slot="' + g.slot + '"]');
         if (!el) continue;
         const pieno = !!g.id;
-        el.className = 'eq-slot ' + ({ manoDx: 'tl', manoSx: 'tr', armor: 'bl', boots: 'br' }[g.slot] || 'tl') + (pieno ? '' : ' vuota');
+        // v2.32 — sette caselle: quattro a sinistra (mano destra, i due anelli, l'armatura) e tre a
+        // destra (mano sinistra, collana, calzature). La posizione la decide questa tabella e il
+        // CSS la disegna: aggiungerne una vuol dire una riga qui e una riga la'.
+        el.className = 'eq-slot ' + ({ manoDx: 'l1', anello1: 'l2', anello2: 'l3', armor: 'l4',
+                                       manoSx: 'r1', collana: 'r2', boots: 'r3' }[g.slot] || 'l1') + (pieno ? '' : ' vuota');
         el.style.setProperty('--c', g.colore || '#6f7890');
         el.title = pieno ? (g.nome + (g.desc ? ' — ' + g.desc : ''))
           : (g.nonPrevisto ? 'Questa classe non ha questa casella' : g.occupata ? 'Occupata dall arma a due mani' : 'Vuota');
@@ -1004,6 +1008,7 @@
           // che davvero accettano quel pezzo (`it.dx` / `it.sx`, calcolati dal server con la stessa
           // funzione che poi decide): un pulsante che si clicca e non fa niente e' peggio di uno spento.
           const doveMani = mani.length >= 2 ? 'due mani' : mani[0] === 'manoSx' ? 'sinistra' : mani[0] === 'manoDx' ? 'destra' : '';
+          const dita = (inv.gear || []).filter(g => g.id === it.id && (g.slot === 'anello1' || g.slot === 'anello2')).map(g => g.slot);
           el.title = it.nome + ' — ' + rar.name + ' ' + (it.carattere || '') + '\n' + (it.desc || '')
                    + (it.addosso ? '\n\nIN USO' + (doveMani ? ' — ' + doveMani : '') : (it.mani ? '\n\nScegli la mano' : '\n\nClic per indossarlo'));
           el.innerHTML = '<span class="car">' + (this._carIcon[it.carattere] || '') + '</span>'
@@ -1016,12 +1021,19 @@
             + (it.mani ? '<span class="mani">'
                 + '<button class="mn' + (mani.includes('manoDx') ? ' qui' : (it.dx ? '' : ' no')) + '" data-m="manoDx" title="' + (mani.includes('manoDx') ? 'È già nella mano destra' : 'Mano destra') + '">DX</button>'
                 + '<button class="mn' + (mani.includes('manoSx') ? ' qui' : (it.sx ? '' : ' no')) + '" data-m="manoSx" title="' + (mani.includes('manoSx') ? 'È già nella mano sinistra' : 'Mano sinistra') + '">SX</button>'
+                + '</span>' : '')
+            // v2.32 — un ANELLO sceglie il DITO, come un'arma sceglie la mano: due caselle, due
+            // pulsanti, e verde dove sta gia'. Si riusa la stessa fila di pulsanti perche' e' lo
+            // stesso gesto — imparato una volta, vale per tutti e due.
+            + (it.dita ? '<span class="mani">'
+                + '<button class="mn' + (dita.includes('anello1') ? ' qui' : '') + '" data-m="anello1" title="Primo dito">I</button>'
+                + '<button class="mn' + (dita.includes('anello2') ? ' qui' : '') + '" data-m="anello2" title="Secondo dito">II</button>'
                 + '</span>' : '');
-          if (it.mani) {
+          if (it.mani || it.dita) {
             el.querySelectorAll('.mn').forEach(b => {
               b.onclick = (e) => {
                 e.stopPropagation();
-                if (b.classList.contains('qui')) { this.avvisoInventario('<b>' + esc(it.nome) + '</b> è già in quella mano', 'ok'); return; }
+                if (b.classList.contains('qui')) { this.avvisoInventario('<b>' + esc(it.nome) + '</b> è già ' + (it.dita ? 'a quel dito' : 'in quella mano'), 'ok'); return; }
                 // v2.19.3 — un pulsante spento cliccato DICE perche' e' spento, invece di non fare niente.
                 // Il motivo vero lo sa il server: glielo si chiede lo stesso, e la risposta (`equip_no`)
                 // arriva qui sopra in rosso. Non costa niente — non cambia niente — e toglie il dubbio.

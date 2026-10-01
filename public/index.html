@@ -94,12 +94,6 @@
   </div>
   <div id="menuColonne">
     <div class="menu-card">
-      <!-- nome e stanza AFFIANCATI: sono due campi corti, uno sotto l'altro sprecavano mezza riga di
-           larghezza in un box largo quanto la schermata. -->
-      <div class="riga2">
-        <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
-        <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
-      </div>
       <h2>Scegli il tuo eroe</h2>
       <div id="menuDue">
         <!-- COLONNA SINISTRA — la scelta. Una cosa sola, grande. -->
@@ -121,9 +115,17 @@
         </div>
         <!-- COLONNA DESTRA — quattro riquadri impilati, tutti aperti, niente da cliccare. -->
         <div id="colLato">
-          <!-- il RECORD: fino alla v2.25 il gioco non si ricordava niente di te — morivi, leggevi il
-               riepilogo, tornavi al menu e il menu era identico a quello della prima volta. -->
-          <div id="recordBox" class="info-card mini rec"></div>
+          <!-- v2.32 — NOME E STANZA stanno QUI, in cima alla colonna di destra. Prima erano una riga
+               a tutta larghezza sopra le due colonne, e il primo campo da compilare era anche
+               l'ultima cosa che si guardava: adesso aprono la colonna che si legge.
+               E il BOX DEL RECORD non c'e' piu' — Paolo: *«togli il box record, non mi piace»*. Il
+               record si continua a scrivere e si legge a fine partita: e' solo sparito dal menu. -->
+          <div class="info-card mini campi">
+            <div class="riga2">
+              <div class="field"><label>Nome</label><input id="nameInput" maxlength="16" value=""></div>
+              <div class="field"><label>Stanza <small>(vuoto = matchmaking)</small></label><input id="roomInput" maxlength="24" placeholder="es. amici123"></div>
+            </div>
+          </div>
           <!-- il CONSIGLIO a caso: il box dei comandi dice quali TASTI, questo dice come si GIOCA. -->
           <div id="consiglioBox" class="info-card mini tip"></div>
           <!-- v2.26 — LE NOVITA' DELLA VERSIONE. Il changelog e' un file .md che non apre nessuno: tre
@@ -170,10 +172,16 @@
     </div>
 
   </div>
+  <!-- v2.32 — IL BOX DEI COMANDI E' NASCOSTO. Paolo: *«nascondi i comandi per il momento, vorrei fare
+       una sezione dedicata»*. Nascosto, non cancellato: resta tutto qui sotto dietro a `hidden`, e
+       riaccenderlo e' togliere una parola. Quando la sezione dedicata ci sara', questo e' il contenuto
+       da portarci dentro gia' scritto.
+       NB: il tasto F del contatore di fotogrammi continua a funzionare — e' il motivo per cui questa
+       legenda va rimessa da qualche parte e non buttata. -->
   <!-- v2.30 — I COMANDI STANNO SOTTO, larghi quanto la schermata. Erano la colonna di destra, e
        rubavano meta' larghezza a una legenda che si legge una volta sola. Adesso le due colonne di
        sopra sono la schermata (scegli a sinistra, leggi a destra) e questa e' la didascalia. -->
-  <aside class="info-card comandi" id="infoCard">
+  <aside class="info-card comandi hidden" id="infoCard">
     <h2 class="info-h">⌨️ Comandi</h2>
     <!-- v2.30.1 — I COMANDI IN QUATTRO FAMIGLIE. A tutta larghezza le quattro colonne c'erano gia',
          ma erano undici voci tagliate a fette: la terza colonna cominciava a meta' di un gruppo. Con
@@ -286,12 +294,25 @@
                personaggio ridisegnato dal motore di gioco: dopo le sagome nuove della v2.18 usciva
                tagliato sul bordo, e comunque una figura di 16 pixel ingrandita non dice chi sei. -->
           <img id="ritratto" class="ritr-art" alt="" draggable="false">
-          <div class="eq-slot tl" data-slot="manoDx"></div>
-          <div class="eq-slot tr" data-slot="manoSx"></div>
-          <div class="eq-slot bl" data-slot="armor"></div>
-          <div class="eq-slot br" data-slot="boots"></div>
+          <!-- v2.32 — SETTE CASELLE, tre per lato piu' il ritratto in mezzo. A sinistra la mano
+               destra, i DUE ANELLI e l'armatura; a destra la mano sinistra, la COLLANA e le
+               calzature. Gli anelli stanno dalla stessa parte perche' sono due caselle dello stesso
+               oggetto: separarle vorrebbe dire far cercare il secondo anello dall'altro lato. -->
+          <div class="eq-slot l1" data-slot="manoDx"></div>
+          <div class="eq-slot l2" data-slot="anello1"></div>
+          <div class="eq-slot l3" data-slot="anello2"></div>
+          <div class="eq-slot l4" data-slot="armor"></div>
+          <div class="eq-slot r1" data-slot="manoSx"></div>
+          <div class="eq-slot r2" data-slot="collana"></div>
+          <div class="eq-slot r3" data-slot="boots"></div>
         </div>
         <div id="beltAddosso"></div>
+        <!-- v2.32 — LE ABILITA' SONO SCESE QUI. Paolo: *«dato che c'e' un buco sposta le abilita'
+             sotto il personaggio e allunga l'inventario»*. Stavano in fondo alla colonna di destra,
+             sotto l'inventario, e gli rubavano l'altezza: il baule e' l'unica cosa di quella colonna
+             che si scorre, quindi e' l'unica che dall'altezza ci guadagna. E sotto il ritratto ci
+             stanno bene — sono l'altra meta' di «chi sei». -->
+        <div id="abilElenco"></div>
       </div>
 
       <!-- ---- DESTRA: cosa hai. Il baule si clicca, i poteri si guardano ---- -->
@@ -303,10 +324,6 @@
              cliccavi, non succedeva niente, e non si capiva perche'. -->
         <div id="bauleAvviso" class="hidden"></div>
         <div id="baule"></div>
-        <!-- v2.13.5 — niente titolo sopra la scaletta dei poteri: le righe dicono gia' «Liv. 3 / non
-             comune», e un titolo sopra una lista che si spiega da sola e' una riga di testo in piu' in
-             una colonna che ne ha gia' abbastanza. Lo stacco lo fa lo spazio, non una scritta. -->
-        <div id="abilElenco"></div>
       </div>
 
     </div>

@@ -1606,9 +1606,19 @@ class Room {
     return (it && it.carattere) || null;
   }
   // Ricalcola da zero i bonus degli oggetti indossati e riporta i PV dentro il nuovo massimo.
+  // v2.32 — una SCORCIATOIA SOLA per leggere un bonus dell'equipaggiamento. I monili hanno portato
+  // sette leve nuove (danno, critico, ricariche, rinculo, monete, esperienza, raccolta) e ognuna va
+  // letta dove quella cosa si calcola: con `p.gearBonus.x` sparso in dieci punti, il giorno che
+  // `gearBonus` non c'e' ancora (un giocatore appena entrato) sarebbe un errore in dieci punti.
+  gb(p, k) { return (p && p.gearBonus && p.gearBonus[k]) || 0; }
   _recomputeGear(p) {
     p.gearBonus = Gear.bonusOf(p.gear);
     p.stats.pierce = this.effWeapon(p).pierce || 0;
+    // il RINCULO si somma qui dentro `p.stats.knockMult` e non nei dodici punti che lo leggono: quei
+    // punti sono gia' scritti e funzionano, e ritoccarli uno per uno vuol dire dimenticarne uno.
+    // `_recomputeBoons` rifa' `p.stats` da zero e gira SEMPRE prima di questa (vedi `equipaggia`),
+    // quindi il valore non si accumula a ogni cambio di anello.
+    p.stats.knockMult = (p.stats.knockMult || 1) + (p.gearBonus.knockMult || 0);
     p.hp = Math.min(p.hp, this.effMaxHp(p));
   }
   effMaxHp(p) { return Math.round((p.maxHp + p.stats.maxHpFlat + (p.gearBonus ? p.gearBonus.maxHpFlat : 0)) * (p.stats.maxHpMult || 1)); }
@@ -1627,7 +1637,7 @@ class Room {
     if (p.boon.ritmo > 0 && p.ritmoStack > 0) rate *= (1 + Math.min(8, p.ritmoStack) * p.boon.ritmo);
     if (p.buffs.danza > 0) rate *= (p.danzaRate || 1.6);   // v2.18 — Danza delle Lame (maestro d'armi)
     return 1 / rate; }
-  effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p);
+  effDamage(p) { let d = (this.effWeapon(p).dmg + p.stats.dmgFlat) * p.stats.dmgMult * this.schoolDmg(p) * (1 + this.gb(p, 'dmgMult'));
     // v2.20.0 — SANGUE CALDO (barbaro): la meta' bassa della vita e' dove il barbaro picchia piu' forte.
     if (p.boon.sangueCaldo > 0 && p.hp < this.effMaxHp(p) * 0.5) d *= (1 + p.boon.sangueCaldo);
     // v2.20.0 — CATENA DI COLPI (maestro d'armi): tre nemici DIVERSI di fila, e il ritmo paga.
@@ -1697,7 +1707,7 @@ class Room {
     let dmg = this.effDamage(p);
     // v2.20.0 — MANO FREDDA (assassino): ogni colpo che NON e' critico avvicina il critico, e il critico
     // azzera il conto. E' l'unica carta del gioco che premia la sfortuna, ed e' il suo carattere.
-    let crit = MU.chance(p.stats.critChance + (p.freddaAcc || 0));
+    let crit = MU.chance(p.stats.critChance + (p.freddaAcc || 0) + this.gb(p, 'critChance'));
     if (p.boon.manoFredda > 0) { if (crit) p.freddaAcc = 0; else p.freddaAcc = Math.min(0.6, (p.freddaAcc || 0) + p.boon.manoFredda); }
     if (crit) dmg *= p.stats.critMult; dmg = Math.round(dmg);
     // v1.85 — VELO D'OMBRA: il primo colpo dopo essere sparito e' critico. Va qui e non piu' in basso
@@ -1833,7 +1843,7 @@ class Room {
     p.scattiOndata = (p.scattiOndata || 0) + 1;   // v2.31 — "Piedi per terra" guarda questo, a fine ondata
     // v2.20.0 — PIEDE LEGGERO (arciere): lo scatto torna prima. GUIZZO (arciere): i fotogrammi in cui
     // non ti toccano durano un filo di piu'. TERREMOTO (barbaro): passando addosso ai nemici li sbalza.
-    p.cdDash = C.DASH_CD * p.stats.cdrMult * (1 - (p.boon.dashCd || 0));
+    p.cdDash = C.DASH_CD * p.stats.cdrMult * (1 - (p.boon.dashCd || 0)) * (1 - Math.min(0.5, this.gb(p, 'cdrMult')));
     p.buffs.dash = C.DASH_TIME * (1 + (p.perk.dashLong || 0));   // Passo Felpato
     p.buffs.iframe = C.DASH_IFRAME + (p.boon.guizzo || 0);
     if (p.boon.terremoto > 0) p._terremotoVisti = {};
@@ -2350,7 +2360,7 @@ class Room {
     }
     // v2.20.0 — la carica gratis della Doppia Incantazione: l'abilita' e' partita, ma la ricarica no.
     if (p._pallaGratis) { p._pallaGratis = 0; this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color }); return true; }
-    const t = Math.max(1, (a.cd || Ab.cdDiSlot(slot)) * (p.stats.cdrMult || 1));
+    const t = Math.max(1, (a.cd || Ab.cdDiSlot(slot)) * (p.stats.cdrMult || 1) * (1 - Math.min(0.5, this.gb(p, 'cdrMult'))));
     p.cdAb[slot - 1] = t; p.cdAbMax[slot - 1] = t;
     this.events.push({ t: 'abil', k: a.id, x: p.x, y: p.y, a: p.aim, who: p.id, c: a.color });
     return true;
@@ -3239,7 +3249,7 @@ class Room {
       }
       if (src.boon.killNova > 0 && MU.chance(0.25 * src.boon.killNova)) { for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; this.bullets.push({ eid: NEXT++, hostile: false, owner: src.id, x: m.x, y: m.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, r: 6, dmg: Math.round(this.effDamage(src) * 0.7), color: '#ffd24a', life: 0.45, pierce: 2, knock: 30 }); } this.events.push({ t: 'nova', x: m.x, y: m.y }); }
     }
-    const comboMul = src ? this.comboMult(src) : 1; const xpMul = src ? (src.stats.xpMult || 1) : 1;
+    const comboMul = src ? this.comboMult(src) : 1; const xpMul = src ? ((src.stats.xpMult || 1) + this.gb(src, 'xpMult')) : 1;
     const xpVal = Math.round(m.xp * comboMul * xpMul); const orbs = m.boss ? 8 : (m.elite ? 3 : 1);
     for (let i = 0; i < orbs; i++) { const a = Math.random() * Math.PI * 2, r = m.boss ? MU.rand(10, 60) : MU.rand(4, 18); this.groundXp.push({ eid: NEXT++, x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r, v: Math.max(1, Math.round(xpVal / orbs)), t: 30 }); }
     // MONETE (v1.8): valore in base al tipo di nemico, distribuito in tagli diversi.
@@ -3468,10 +3478,16 @@ class Room {
       // alto a sinistra, mano sinistra in alto a destra (chi guarda il ritratto lo vede di fronte),
       // armatura e calzature in basso. `vuoto` dice perche' una casella e' vuota, e non e' un dettaglio:
       // un riquadro vuoto senza spiegazione si legge come un guasto.
+      // v2.32 — SETTE CASELLE. L'ordine e' quello in cui stanno attorno al personaggio: a sinistra
+      // mano destra, i due anelli, l'armatura; a destra mano sinistra, la collana, le calzature.
+      // Gli anelli e la collana le portano TUTTE le classi: non esiste il caso "non previsto".
       gear: [
         { slot: 'manoDx', slotName: 'Mano destra', icona: '🗡️' },
-        { slot: 'manoSx', slotName: 'Mano sinistra', icona: '🛡️' },
+        { slot: 'anello1', slotName: 'Anello', icona: '💍' },
+        { slot: 'anello2', slotName: 'Anello', icona: '💍' },
         { slot: 'armor', slotName: 'Armatura', icona: '🥼' },
+        { slot: 'manoSx', slotName: 'Mano sinistra', icona: '🛡️' },
+        { slot: 'collana', slotName: 'Collana', icona: '📿' },
         { slot: 'boots', slotName: 'Calzature', icona: '👢' },
       ].map(c => {
         const it = Gear.BY_ID[p.gear && p.gear[c.slot]];
@@ -3541,6 +3557,9 @@ class Room {
                         // lasciar cliccare e non far succedere niente.
                         dx: Gear.puoImpugnare(p.heroId, p.gear, it.id, 'manoDx') ? 1 : 0,
                         sx: Gear.puoImpugnare(p.heroId, p.gear, it.id, 'manoSx') ? 1 : 0,
+                        // v2.32 — un ANELLO sceglie il dito come un'arma sceglie la mano: due caselle,
+                        // due pulsanti. La collana no, ne ha una sola e si indossa con un clic.
+                        dita: it.slot === 'anello' ? 1 : 0,
                         mani: (it.slot === 'weapon' || it.slot === 'shield') ? 1 : 0 })),
       })),
     };
@@ -4285,10 +4304,10 @@ class Room {
     // ATTENZIONE: si ferma solo la SCADENZA, non il resto. Azzerare dt qui spegnerebbe anche la calamita
     // che tira le sfere verso il giocatore, cioe proprio il gesto che questa regola vuole permettere.
     const scade = this.phase === C.PHASE_CLEARED ? 0 : dt;
-    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.raccoglitori) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.xpCondivisa(o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
+    for (const o of this.groundXp) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.XP_MAGNET; for (const p of this.raccoglitori) { const mr = C.XP_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0) + this.gb(p, 'raccolta')); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { this.xpCondivisa(o.v); o.dead = true; this.events.push({ t: 'xp', x: target.x, y: target.y, v: o.v }); } } }
     if (this.groundXp.some(o => o.dead)) this.groundXp = this.groundXp.filter(o => !o.dead);
     // Raccolta MONETE (calamita come l'XP)
-    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.raccoglitori) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0)); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { target.coins += o.v; if (target.ondata) target.ondata.monete += o.v; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
+    for (const o of this.groundCoins) { if (o.dead) continue; o.t -= scade; if (o.t <= 0) { o.dead = true; continue; } let target = null, bd = Infinity, tr = C.COIN_MAGNET; for (const p of this.raccoglitori) { const mr = C.COIN_MAGNET * (1 + 0.9 * ((p.boon && p.boon.magnet) || 0) + this.gb(p, 'raccolta')); const d = MU.dist2(o.x, o.y, p.x, p.y); if (d < mr * mr && d < bd) { bd = d; target = p; tr = mr; } } if (target) { const n = MU.norm(target.x - o.x, target.y - o.y); const pull = 90 + (1 - Math.sqrt(bd) / tr) * 260; o.x += n.x * pull * dt; o.y += n.y * pull * dt; if (MU.dist(o.x, o.y, target.x, target.y) < target.radius + 6) { const vv = Math.max(1, Math.round(o.v * (1 + this.gb(target, 'monete')))); target.coins += vv; if (target.ondata) target.ondata.monete += vv; o.v = vv; o.dead = true; this.events.push({ t: 'coin', x: target.x, y: target.y, v: o.v, cid: o.cid, who: target.id }); } } }
     if (this.groundCoins.some(o => o.dead)) this.groundCoins = this.groundCoins.filter(o => !o.dead);
     for (const it of this.items) { if (it.dead) continue; it.t -= scade; if (it.t <= 0) { it.dead = true; continue; } for (const p of this.raccoglitori) { if (MU.dist(it.x, it.y, p.x, p.y) < p.radius + it.r + 6) { const def = Loot.ITEMS.find(x => x.id === it.id); if (def) this.applyItem(p, def); it.dead = true; break; } } }
     if (this.items.some(o => o.dead)) this.items = this.items.filter(o => !o.dead);

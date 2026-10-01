@@ -2,6 +2,157 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.32.0] — 2026-10-01 · "Due anelli e una collana"
+
+Paolo: *«vorrei aggiungere collana (max 1) e anelli (max 2), le stat devono essere bilanciate. Piu' alto
+e' il costo maggiori saranno i bonus, farei anche qui una divisione in 4 classi come per le armi. A
+differenza delle armi questi oggetti sono comuni per tutte le classi»*. E dopo aver letto il catalogo:
+*«i bonus devono essere una lieve aggiunta, non sbilanciare troppo altrimenti si rompe il tutto»*.
+
+Quell'ultima frase e' la piu' importante della versione, e la racconto per ultima.
+
+---
+
+### 💍 L'ORAFO, e ventiquattro monili
+
+Ha preso **casa_g**, la casetta a settentrione che affaccia sulla piazza: le tre botteghe
+dell'equipaggiamento sono di classe e stanno sulle vie laterali, questa e' l'unica che vende a chiunque
+e quindi sta in mezzo, dove si passa comunque. Passa dalla **stessa porta** delle altre tre
+(`offerGear`/`buyGear`, catalogo `monile`): non c'e' un pannello nuovo da imparare ne' uno nuovo da
+mantenere.
+
+**Sei famiglie, quattro gradi, 120 / 280 / 500 / 880 monete.** Un filo sotto le armi, perche' se ne
+portano **tre** insieme: tre divini sono 2.640 monete, cioe' una run intera di taglie.
+
+| | ② | ③ | ④ | ⑤ |
+|---|---|---|---|---|
+| 💍 **Forza** | +3% danno | +5% danno, +8% rinculo, −3% cadenza | +8%, +12%, −5% | +11%, +16%, −7% |
+| 💍 **Passo** | +2% passo | +3,5% passo, +3% cadenza, −5 PV | +5%, +5%, −9 PV | +6,5%, +7%, −14 PV |
+| 💍 **Fortuna** | +8% monete | +14% monete, +15% raccolta, −1,5% difesa | +22%, +25%, −2,5% | +30%, +40%, −3,5% |
+| 📿 **Difesa** | +1% difesa | +2% difesa, +8 PV, −2% passo | +3%, +16 PV, −3,5% | +4%, +26 PV, −5% |
+| 📿 **Arcano** | +4% ricariche | +8% ricariche, +5% XP, −3% danno | +12%, +8%, −4,5% | +16%, +12%, −6% |
+| 📿 **Critico** | +1,5% critico | +3% critico, +3% cadenza, −6 PV | +4,5%, +5%, −11 PV | +6%, +7%, −18 PV |
+
+**Ogni monile da' due cose e ne toglie una**, e col grado cresce anche la rinuncia. Senza questa regola
+«piu' costa, piu' rende» diventerebbe «il grado 5 e' la risposta giusta a tutto» e la scelta sparirebbe
+— lo stesso motivo per cui nel catalogo delle armi, dentro un grado, non si sale ma si sceglie. Il
+grado ② fa eccezione: e' il fondo del listino e non toglie niente.
+
+**Undici leve diverse** — vita, difesa, danno, critico, cadenza, passo, ricariche, rinculo, monete,
+esperienza, raggio di raccolta — cosi' due monili non sono mai due varianti della stessa cosa. Sette di
+queste leve non esistevano: `dmgMult`, `critChance`, `cdrMult`, `knockMult`, `monete`, `xpMult`,
+`raccolta` sono state cablate una per una nel punto dove quella cosa si calcola davvero.
+
+**Nessun monile cura, e non e' una dimenticanza.** Nella v1.93 `lifesteal` e `regen` sono stati tolti
+da tutto il gioco e il TEST 58 ne vieta il rientro: rimettere punti vita e' il mestiere dell'Ostessa e
+delle pozioni. Un anello che rigenera sarebbe la strada piu' comoda per farli rientrare dalla finestra,
+e nessuno se ne accorgerebbe guardando il catalogo delle armi — quindi c'e' un controllo che lo vieta
+anche qui.
+
+---
+
+### ⚖️ «Una lieve aggiunta» — il metro, e il numero che lo misura
+
+Il catalogo che gli avevo mandato aveva un difetto serio e lui lo ha fermato in tempo: **+15% di
+critico su una base del 3%** era sei volte il valore di partenza. Ho rifatto i numeri con un metro
+dichiarato, che adesso e' anche un test:
+
+> **Tre monili divini insieme non devono valere piu' di UN SALTO DI GRADO dell'equipaggiamento.**
+
+Il salto 4→5 dell'armatura del guerriero vale **+45 PV e +4% di riduzione**. Il corredo completo di
+monili, nella combinazione piu' generosa, da' **+26 PV e +4%** — cioe' meno. Sul danno il tetto e' il
+**+26%** sommando moltiplicatore, critico e cadenza, e si paga con 2.640 monete e tre caselle.
+
+E nessun singolo monile puo' essere una scorciatoia: nessuna leva di combattimento oltre il **20%**.
+Il controllo che lo pretende e' il motivo per cui, mentre scrivevo, la collana della difesa e' scesa da
++6% a +4%: il metro l'avevo scritto io, il numero lo sfondava, e si abbassa il monile — non il metro.
+
+---
+
+### 🗄️ Sette caselle, e le abilita' sotto il personaggio
+
+Paolo: *«ricava gli slot tra mano destra e armatura e mano sinistra e calzature (i 2 anelli da un lato
+e la collana dall'altro). Dato che c'e' un buco sposta le abilita' sotto il personaggio e allunga
+l'inventario. Cerca di farci stare tutto, in caso accorcia leggermente il box del personaggio»*.
+
+A sinistra **mano destra, i due anelli, l'armatura**; a destra **mano sinistra, la collana, le
+calzature**. Gli anelli stanno dalla stessa parte perche' sono due caselle dello stesso oggetto:
+separarle vorrebbe dire far cercare il secondo anello dall'altro lato.
+
+Il riquadro del personaggio si e' accorciato da **330 a 300 px** e le caselle da 52 a 44 di minimo: con
+quattro in colonna a 52 si sfondava il riquadro di una ventina di pixel. Misurato in pagina a
+1600×950: le quattro di sinistra a y 52 / 129 / 205 / 306, le tre di destra a 52 / 166 / 308,
+**nessuna sovrapposizione**.
+
+Le **abilita'** sono scese sotto il ritratto e l'inventario si e' preso la loro altezza — e' l'unica
+cosa di quella colonna che si scorre, quindi e' l'unica che dall'altezza ci guadagna. Una trappola
+evitata per un soffio: le righe delle abilita' erano vestite da `.col-dx .ab-sc`, cioe' **dalla colonna
+in cui stavano**. Spostandole si sarebbero sformate in silenzio — niente crasha, si sformano e basta.
+
+E un anello sceglie il **dito** come un'arma sceglie la mano: due pulsanti, verde dove sta gia'. Stesso
+gesto, imparato una volta.
+
+---
+
+### 🏠 La schermata iniziale
+
+*«Nascondi i comandi per il momento, vorrei fare una sezione dedicata. Sposta nome e stanza sopra a
+record (togli il box record, non mi piace)»*.
+
+Nome e stanza aprono adesso la colonna di destra, al posto del record. Prima erano una riga a tutta
+larghezza sopra le due colonne: il primo campo da compilare era anche l'ultima cosa che si guardava.
+
+**Il record si continua a scrivere** — e' sparito dal menu, non dal gioco, e lo si legge a fine
+partita. **I comandi sono nascosti, non cancellati**: il contenuto resta li' dietro a `hidden`, pronto
+per la sezione dedicata. E' anche necessario: il tasto **F** del contatore di fotogrammi esiste e da
+qualche parte va scritto.
+
+---
+
+### 🧪 Numeri
+
+**Test: 6.694 passati, 0 falliti.** TEST 92 nuovo; i controlli del catalogo e del villaggio aggiornati.
+
+Quattordici sabotaggi, tutti visti:
+
+| cosa ho rotto apposta | il test se n'e' accorto |
+|---|---|
+| un monile diventa di una classe sola | ✅ |
+| un anello regala senza togliere niente | ✅ 2 controlli rossi |
+| la collana della difesa torna a +6% | ✅ *(il metro dei tre divini)* |
+| un anello che rigenera | ✅ 2 controlli rossi |
+| un anello sbilanciato: +40% danno | ✅ 2 controlli rossi |
+| si portano tre anelli | ✅ 2 controlli rossi |
+| il bonus del monile non arriva al danno | ✅ |
+| l'Orafo sparisce dal villaggio | ✅ |
+| una casella sparisce dal pannello | ✅ 2 controlli rossi |
+| le abilita' tornano nella colonna di destra | ✅ 2 controlli rossi |
+| il loro stile torna legato alla colonna | ✅ |
+| il box dei comandi torna visibile | ✅ |
+| nome e stanza escono dalla colonna | ✅ 2 controlli rossi |
+| la tabella delle posizioni perde i monili | ✅ *(e alla prima stesura **no** — sotto)* |
+
+**E un buco vero, trovato col sabotaggio.** Fra l'HTML (che dichiara le sette caselle) e il CSS (che
+sa dove metterle) c'e' una **tabella in hud.js** che le accoppia. Togliendo i monili da quella tabella
+le tre caselle nuove ricadevano tutte sulla prima posizione, cioe' tre riquadri uno sopra l'altro — e
+**nessun controllo se ne accorgeva**: l'HTML era giusto, il CSS era giusto, e quello che li tiene
+insieme no. Adesso c'e' un controllo sulla tabella.
+
+| file | cosa |
+|---|---|
+| `shared/gear.js` | i 24 monili; i tre slot nuovi; `puoAvere` per i pezzi senza classe; `impugna` per i due anelli e la collana; il listino dei prezzi |
+| `shared/mapgen.js` | casa_g diventa la bottega dell'Orafo, e l'Orafo ci sta dentro |
+| `server/Room.js` | le sette leve nuove cablate; `gb()`; le sette caselle nel pannello; il flag «scegli il dito» |
+| `public/js/hud.js` | le sette caselle attorno al personaggio; i pulsanti del dito |
+| `public/js/renderer.js` | l'Orafo vestito, con la lente e l'anello che sta montando |
+| `public/index.html`, `public/style.css` | sette caselle, abilita' spostate, riquadro accorciato; nome e stanza a destra, comandi nascosti |
+| `shared/constants.js` | versione e novita' |
+| `test/simulate.js` | TEST 92; i controlli del catalogo, del villaggio e del pannello aggiornati |
+
+**Ancora rosso, e non e' di questa versione**: `test/client.js` e' rotto dalla v2.19.9.
+
+---
+
 ### [2.31.0] — 2026-09-30 · "Undici incarichi e un cronometro"
 
 Due cose in una versione: le **taglie del Banditore** rifatte da capo con l'elenco che ha scelto Paolo
