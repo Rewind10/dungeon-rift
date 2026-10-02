@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.33.0',
+    VERSION: '2.34.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.33.0',
+      v: '2.34.0',
       righe: [
-        'In mezzo alla piazza apre la <b>Locanda</b>: nove posti letto e una cucina chiusa col suo <b>Cuoco</b>.',
-        'Il fal&ograve; non c\'&egrave; pi&ugrave;: l\'altra met&agrave; resta di terra battuta, col pozzo e le bancarelle su <b>due file</b>.',
-        'E la bottega dell\'<b>Orafo</b> non &egrave; pi&ugrave; vuota: bacheche, banco da lavoro e lanterne.',
+        'Le case del villaggio hanno <b>pi&ugrave; posti letto</b>: due nelle piccole, tre nelle grandi.',
+        'E al posto del focolare in mezzo alla stanza, un <b>piccolo camino</b> addossato in un angolo.',
+        'La parete lunga si libera: &egrave; l&igrave; che i letti ci stanno in fila.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)

@@ -3024,6 +3024,7 @@ function testV1752() {
                   // INGOMBRI di mapgen: il tipo esiste ancora, semplicemente nessuno ne piazza uno.
                   'candelabra', 'signpost', 'mortaio', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
                   'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
+                  'camino',                       // v2.34 — il camino di casa: addossato al muro, ma un corpo ce l'ha
                   'bancarella',                   // v2.5 — e il banco delle botteghe di contorno
                   'bersaglio'];                   // v2.19 — la balla di paglia dell'archeria
   // v2.27 — l'ARCO della soglia dell'Anziano sta fra i passanti, e deve restarci: e' l'unica cosa
@@ -5412,11 +5413,34 @@ function testV200() {
   const dentro = (o, r) => { const x = o.x / T - 0.5, y = o.y / T - 0.5; return x >= r.x0 - 0.6 && x <= r.x1 + 0.6 && y >= r.y0 - 0.6 && y <= r.y1 + 0.6; };
   for (const r of V.rooms.filter(q => q.kind === 'casa')) {
     const roba = m.props.filter(p => dentro(p, r));
-    const foc = roba.filter(p => p.type === 'focolare');
-    assert(foc.length === 1, r.id + ': un focolare, uno solo');
+    // v2.34 — ERA IL FOCOLARE IN MEZZO. Paolo: *«al posto del falo' al centro della stanza crea un
+    // piccolo camino in un angolo della casa»*. Quello che il test deve pretendere si ribalta: non
+    // piu' «sta in mezzo» ma «sta in un ANGOLO» — cioe' a meno di una tessera e mezza da due pareti
+    // che si incontrano. E' una misura, non un'impressione: un camino a meta' di una parete la
+    // passerebbe su un lato solo.
+    const foc = roba.filter(p => p.type === 'camino');
+    assert(foc.length === 1, r.id + ': un camino, uno solo');
     const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
-    assert(Math.abs(foc[0].x / T - 0.5 - cx) < 0.6 && Math.abs(foc[0].y / T - 0.5 - cy) < 0.6, r.id + ': e sta in mezzo alla stanza');
-    assert(roba.some(p => p.type === 'letto'), r.id + ': ci si dorme');
+    const fx = foc[0].x / T - 0.5, fy = foc[0].y / T - 0.5;
+    assert(Math.min(fx - r.x0, r.x1 - fx) < 1.5 && Math.min(fy - r.y0, r.y1 - fy) < 1.5,
+      r.id + ': e sta in un angolo, non in mezzo (' + fx.toFixed(1) + ',' + fy.toFixed(1) + ')');
+    assert(!roba.some(p => p.type === 'focolare'), r.id + ': e il focolare di mezzo non c e piu');
+    // e si apre VERSO LA STANZA: senza `ang` un camino visto dall'alto non ha un davanti
+    assert(typeof foc[0].ang === 'number', r.id + ': il camino dichiara da che parte si apre');
+    { const dx = Math.cos(foc[0].ang), dy = Math.sin(foc[0].ang);
+      assert(dx * (cx - fx) + dy * (cy - fy) > 0, r.id + ': e si apre verso il centro, non verso il muro'); }
+    // v2.34 — QUANTI LETTI. Paolo: *«nelle case piu' piccole almeno 2, in quelle piu' grandi 3»*.
+    // «Piccola» e «grande» non sono un'impressione: sono le tessere della stanza, e la soglia sta
+    // a 44 — le due case lunghe delle file laterali ne hanno 48, quelle dello spiazzo 35 e 40.
+    const letti = roba.filter(p => p.type === 'letto');
+    const grande = (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) >= 44;
+    assert(letti.length >= (grande ? 3 : 2), r.id + ': ' + (grande ? 'tre' : 'due') + ' posti letto almeno (' + letti.length + ')');
+    // e stanno TUTTI contro una parete, in fila, a filo di muro: in mezzo alla stanza sarebbero un
+    // dormitorio, e dietro a un letto staccato resta una striscia in cui non si entra.
+    for (const b of letti) { const bx = b.x / T - 0.5, by = b.y / T - 0.5;
+      assert(Math.min(bx - r.x0, r.x1 - bx) < 1.2 || Math.min(by - r.y0, r.y1 - by) < 1.2,
+        r.id + ': ogni letto e a filo di muro (' + bx.toFixed(1) + ',' + by.toFixed(1) + ')'); }
+    assert(new Set(letti.map(b => Math.round((b.y / T - 0.5) * 10))).size === 1, r.id + ': e sono in fila, sulla stessa parete');
     assert(roba.some(p => p.type === 'tavolo'), r.id + ': e ci si mangia');
     assert(m.village.extras.some(e => dentro(e, r)), r.id + ': e ci abita qualcuno');
   }

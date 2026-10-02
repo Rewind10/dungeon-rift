@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.33.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.34.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,6 +24,21 @@ Test: `npm test`
 | Musica | M |
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🔥 v2.34.0 — il camino nell'angolo, e piu' posti letto
+
+Le case del villaggio avevano **il focolare in mezzo**, e il focolare in mezzo decideva tutto il resto:
+la stanza era un anello attorno al fuoco e contro le pareti non restava spazio. Adesso c'è un **piccolo
+camino addossato in un angolo** — cappa a conci, bocca nera con le braci, e la fiamma che guarda verso
+la stanza.
+
+Liberata la parete lunga, i **letti ci stanno in fila**: **tre** nelle case grandi, **due** in quelle
+piccole, tutti contro il muro più lontano dalla porta.
+
+I focolari restano dove un fuoco in mezzo ha senso: l'antro dell'Anziano, il dormitorio della locanda,
+la cucina.
+
+---
 
 ## 🏚️ v2.33.0 — la Locanda in mezzo alla piazza
 

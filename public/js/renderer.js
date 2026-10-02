@@ -866,6 +866,13 @@
         // v2.0 — il focolare di casa: la pietra e le braci si cuociono, la fiamma no. E' viva, e con lei
         // la luce che esce dalla porta aperta: e' l'unica cosa che dice da fuori che la casa e' abitata.
         if (p.type === 'focolare') { this._bakeProp(g, p); this.campfires.push({ x: p.x, y: p.y - 3, fs: 0.85 }); continue; }
+        // v2.34 — IL CAMINO di casa. Come il focolare: la pietra si cuoce, la fiamma no. La fiamma
+        // pero' non sta in mezzo al mobile — sta nella bocca, cioe' spostata verso il centro della
+        // stanza — e la bocca la sa solo il prop, con il suo `ang`. Ed e' piu' piccola: e' un
+        // camino, non un falo'.
+        if (p.type === 'camino') { this._bakeProp(g, p);
+          const a = p.ang || 0;
+          this.campfires.push({ x: p.x + Math.cos(a) * 5, y: p.y + Math.sin(a) * 5 - 2, fs: 0.62 }); continue; }
         if (p.type === 'brazier') { this._bakeProp(g, p); this.torches.push({ x: p.x, y: p.y - 6 }); continue; }
         if (p.type === 'candelabra') { this._bakeProp(g, p); const V = window.GAME.Constants.VIS_SCALE || 1; for (const ox of [-10, 0, 10]) this.torches.push({ x: p.x + ox * V, y: p.y - 22 * V }); continue; }
         // v1.75 — prop INVISIBILE: porta solo una luce. Serve a staccare il mercante dalla roccia col
@@ -1162,6 +1169,28 @@
             g.beginPath(); g.arc(Math.cos(a) * dd, Math.sin(a) * dd * 0.8, 1.9, 0, 7); g.fill(); }
           g.strokeStyle = '#3a2a18'; g.lineWidth = 2.6; g.lineCap = 'round';                  // due ciocchi incrociati
           g.beginPath(); g.moveTo(-7, 3); g.lineTo(6, -3); g.moveTo(-5, -4); g.lineTo(7, 2); g.stroke(); g.lineCap = 'butt'; break; }
+        case 'camino': {   // v2.34 — IL CAMINO DI CASA: la cappa contro il muro, la bocca sulla stanza
+          // Non e' un focolare rimpicciolito. Il focolare sta in mezzo al pavimento e si guarda da
+          // tutti i lati: e' simmetrico perche' deve esserlo. Questo e' addossato, quindi ha un
+          // DIETRO (la muratura) e un DAVANTI (la bocca nera col fuoco), e il verso glielo dice
+          // `ang`, che punta al centro della stanza. Senza quel dato, visto dall'alto, sarebbe una
+          // macchia grigia.
+          g.rotate(p.ang || 0);                       // dopo questa, +x e' verso la stanza
+          g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(1, 4, 15, 12, 0, 0, 7); g.fill();
+          const cg3 = g.createLinearGradient(-15, 0, 6, 0); cg3.addColorStop(0, '#666a74'); cg3.addColorStop(1, '#383c45');
+          g.fillStyle = cg3; g.strokeStyle = '#14171c'; g.lineWidth = 2;
+          this._rr(g, -15, -13, 21, 26, 3); g.fill(); g.stroke();                 // la cappa
+          g.strokeStyle = 'rgba(0,0,0,.30)'; g.lineWidth = 1.2;                   // i conci: e' muratura, non una cassa
+          for (const yy of [-4.5, 4.5]) { g.beginPath(); g.moveTo(-15, yy); g.lineTo(6, yy); g.stroke(); }
+          for (const q of [[-8, -13, -4.5], [-2, -4.5, 4.5], [-8, 4.5, 13]]) { g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0], q[2]); g.stroke(); }
+          g.fillStyle = '#0b0c10'; g.beginPath();                                 // la bocca, aperta sulla stanza
+          g.moveTo(6, 9); g.lineTo(-4, 9); g.quadraticCurveTo(-9, 0, -4, -9); g.lineTo(6, -9); g.closePath(); g.fill();
+          for (let i = 0; i < 6; i++) { const a2 = i * 1.9, dd = 1.5 + (i % 3) * 2.2;
+            g.fillStyle = i % 2 ? 'rgba(255,150,50,.8)' : 'rgba(255,90,30,.6)';
+            g.beginPath(); g.arc(Math.cos(a2) * dd * 0.7, Math.sin(a2) * dd, 1.7, 0, 7); g.fill(); }
+          g.strokeStyle = '#3a2a18'; g.lineWidth = 2.4; g.lineCap = 'round';      // i due ciocchi
+          g.beginPath(); g.moveTo(-2, 4); g.lineTo(4, -2); g.moveTo(-2, -3); g.lineTo(4, 3); g.stroke(); g.lineCap = 'butt';
+          g.fillStyle = 'rgba(255,255,255,.12)'; this._rr(g, -15, -13, 21, 3, 1.5); g.fill(); break; }
         case 'letto': {    // IL LETTO: telaio di legno, pagliericcio, coperta e cuscino. Dice "qui si dorme"
           g.rotate(rot > 0.5 ? Math.PI / 2 : 0);
           g.fillStyle = 'rgba(0,0,0,.45)'; this._rr(g, -29, -13, 60, 30, 3); g.fill();
@@ -2045,7 +2074,11 @@
       // particelle nuove per fotogramma buttate via. La luce (_drawLighting) si ritagliava gia' cosi'.
       const _vis = (x, y, m) => x > camX - m && y > camY - m && x < camX + this.w + m && y < camY + this.h + m;
       for (const tc of this.torches) if (_vis(tc.x, tc.y, 40)) this._flame(ctx, tc.x, tc.y, 0.8);
-      for (const cf of this.campfires) { const fx = cf.fx || cf.x, fy = cf.fy || cf.y; if (_vis(fx, fy, 70)) this._flame(ctx, fx, fy, 1.5); }
+      for (const cf of this.campfires) { const fx = cf.fx || cf.x, fy = cf.fy || cf.y; if (_vis(fx, fy, 70)) this._flame(ctx, fx, fy, 1.5 * (cf.fs || 1)); }
+      // v2.34 — `fs` esisteva dalla v2.0 (il focolare lo dichiarava a 0,85) e NESSUNO lo leggeva: la
+      // fiamma era 1,5 per tutti. Col camino la differenza conta — un camino di casa che brucia come
+      // un falo' non e' un camino — quindi adesso il campo fa quello che il suo nome dice. Effetto
+      // collaterale voluto: anche i focolari bruciano del 15% piu' piccoli, come dichiaravano.
       // v2.0 — nel VILLAGGIO questo cerchio verde non si disegna piu': al centro della piazza c'e' la
       // faglia vera (world.fg), disegnata da _drawFaglia come a fine ondata. Due portali sovrapposti
       // sarebbero stati due modi diversi di dire la stessa cosa nello stesso punto.
@@ -3929,7 +3962,7 @@
         const VS = this._villSrc || (this._villSrc = []); VS.length = 0;
         const HR = C.VILL_EROE || 130;
         if (this.bigLight) VS.push([this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff8a2b', 0.58, 0.94]);
-        for (const cf of this.campfires) VS.push([cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55, 1]);
+        for (const cf of this.campfires) VS.push([cf.fx || cf.x, cf.fy || cf.y, 200 * (cf.fs || 1), '#ff8a2b', 0.55, 1]);
         for (const tc of this.torches) VS.push([tc.x, tc.y, 120, '#ff9a3b', 0.5, 0.96]);
         for (const gl of (this.glows || [])) VS.push([gl.x, gl.y, gl.rad || 100, gl.col, gl.a, 0.92]);
         { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) VS.push([gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46, 0.88]); }
@@ -3962,7 +3995,7 @@
       // lista lunga qui sotto e' quella delle grotte, dove il velo e' il campo visivo e il ritaglio tiene
       // ogni bagliore dentro la visuale; li' non c'e' niente da tenere in riga.
       if (_lit) { for (const s of this._villSrc) light(s[0], s[1], s[2], s[3], s[4]); } else {
-      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200, '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); /* v2.28.1 — il colore delle sorgenti fisse viene dalla STESSA lista che ha bucato il velo: nessun bagliore senza il suo buco, nessun buco senza il suo bagliore. Le casse e i barili sono qui dentro, non piu' in due righe per conto loro. */ { const SF = _sorg || this._sorgentiFisse(world); for (const q of SF) light(q[0], q[1], q[2], q[3], q[4]); } for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
+      if (_fov) { /* v2.1.2 — LA LUCE DEL FASCIO. Togliere il velo non basta: senza velo il pavimento di una grotta e' comunque scuro, e il fascio si leggeva come 'meno buio' invece che come luce. Queste tre lampade calde in fila lungo la direzione in cui guardi sono cio' che lo rende una TORCIA. Sono dentro il ritaglio come tutte le altre, quindi un muro le ferma. */ const RC = C.FOV_CONO || 1150; for (const f of _fov) { const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a); light(f.x + cx2 * RC * 0.14, f.y + cy2 * RC * 0.14, 250, '#ffb066', 0.30); light(f.x + cx2 * RC * 0.36, f.y + cy2 * RC * 0.36, 300, '#ffa557', 0.21); light(f.x + cx2 * RC * 0.60, f.y + cy2 * RC * 0.60, 350, '#ff9c4e', 0.13); } }; /* v2.3 — la lanterna di chi cammina: le posizioni le ha segnate la passata dei girovaghi, qui diventano luce */ { const gl2 = this._giroLuci; if (gl2) for (let i = 0; i < gl2.length; i += 2) light(gl2[i], gl2[i + 1] - 6, 104, '#ffc071', 0.46); } for (const cf of this.campfires) light(cf.fx || cf.x, cf.fy || cf.y, 200 * (cf.fs || 1), '#ff8a2b', 0.55); if (this.bigLight) light(this.bigLight.x, this.bigLight.y, this.bigLight.r, '#ff9a3b', 0.42); for (const hz of (this.hazards || [])) light(hz.x, hz.y, hz.r || 42, hz.col, 0.2); for (const gl of (this.glows || [])) light(gl.x, gl.y, gl.rad, gl.col, gl.a); /* v2.28.1 — il colore delle sorgenti fisse viene dalla STESSA lista che ha bucato il velo: nessun bagliore senza il suo buco, nessun buco senza il suo bagliore. Le casse e i barili sono qui dentro, non piu' in due righe per conto loro. */ { const SF = _sorg || this._sorgentiFisse(world); for (const q of SF) light(q[0], q[1], q[2], q[3], q[4]); } for (const l of ((this.map || {}).leve || [])) light(l.x, l.y - 10, 44, this.grateAperte.has(l.gid) ? '#7de08a' : '#e0b23a', 0.32); if (world.fg) light(world.fg.x, world.fg.y, 220, '#9a5cff', 0.55); if (world.rec && !world.rec.lib) { light(world.rec.x - world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); light(world.rec.x + world.rec.r * 0.92, world.rec.y, 150, '#ff9a3b', 0.55); } for (const o of (world.coins || [])) light(o.x, o.y, 22, '#ffcf4a', 0.28); if (world.merch) light(world.merch.x, world.merch.y - 6, 150, '#ffcf7a', 0.5); if (world.merchD) { light(world.merchD.x, world.merchD.y - 6, 120, '#9b2cff', 0.45); light(world.merchD.x, world.merchD.y - 6, 60, '#ff2d6b', 0.35); } for (const o of (world.orbs || [])) { if (o.k === 'turret') light(o.x, o.y, 90, '#9fe0ff', 0.3); } for (const it of (world.items || [])) { const d = ITEM_BY_ID[it.id] || {}; light(it.x, it.y, 55, d.color || '#ffd24a', 0.3); } for (const p of world.players) if (!p.d) { const h = HERO[p.h] || HERO.barbaro; light(p.x, p.y, 190, h.accent || '#8bd6ff', 0.30); } for (const b of world.bul) light(b.x, b.y, 26, b.c || '#fff', 0.5); for (const m of world.mon) { if (m.tr) light(m.x, m.y, 90, '#ffd24a', 0.4); else if (m.b) light(m.x, m.y, m.mg ? 170 : 120, m.mg ? '#ff2d55' : '#ff6a3b', 0.2); }
       }
       if (_fov) g.restore();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; ctx.restore();
@@ -3982,7 +4015,7 @@
       for (const p of world.players) { if (p.d) continue; halo(p.x, p.y, this.haloR, 0.98); }
       // sorgenti che restano visibili nel buio
       for (const tc of this.torches) halo(tc.x, tc.y, 82, 0.9);
-      for (const cf of this.campfires) halo(cf.fx || cf.x, cf.fy || cf.y, 135, 0.92);
+      for (const cf of this.campfires) halo(cf.fx || cf.x, cf.fy || cf.y, 135 * (cf.fs || 1), 0.92);
       // v1.57 — il FALO' della sala mercato: un unico grande alone circolare che scopre i mercanti
       // e si spegne contro le pareti nere. E' l'unica sorgente della stanza.
       if (this.bigLight) halo(this.bigLight.x, this.bigLight.y, this.bigLight.r, 0.99);

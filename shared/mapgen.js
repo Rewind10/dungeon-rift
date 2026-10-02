@@ -1244,6 +1244,10 @@
     // v2.0 — i tre mobili del villaggio. Il pozzo e il focolare sono tondi e ci si gira attorno; il letto
     // e' un rettangolo lungo appoggiato al muro. La panca resta attraversabile: e' bassa.
     pozzo: { c: 25 }, focolare: { c: 20 }, letto: { r: [31, 16] },
+    // v2.34 — il CAMINO di casa: addossato al muro, quindi piu' piccolo del focolare (che sta in
+    // mezzo e si gira attorno). Tondo perche' lo si rasenta da un lato solo: un rettangolo girato
+    // col muro sarebbe tre righe di codice in piu' per un corpo che nessuno aggira.
+    camino: { c: 15 },
     bancone: { r: [32, 11] }, credenza: { r: [27, 12] }, scaffale: { r: [25, 13] },
     rastrelliera: { r: [23, 8] }, aiuola: { r: [23, 19] }, cratebox: { r: [12, 12] },
     // v2.5 — la bancarella e' un banco: ci sbatti contro come contro tutti gli altri
@@ -1685,44 +1689,67 @@
       const M = (t, x, y, s, e) => { if (sgombro(x, y) && dentroStanza(x, y)) P(t, x, y, s, e); };
       const bassa = (r.y1 - r.y0) < 5 || (r.x1 - r.x0) < 6;   // le case piccole si arredano con meno roba
 
-      // il FOCOLARE: sta in mezzo, e' il motivo per cui la stanza e' una casa.
-      // v2.19.2 — MA NON SULL'USCIO. Era l'unico mobile piazzato con `P` invece che con `M`, cioe'
-      // l'unico che saltava il controllo della soglia scritto due righe piu' sopra — e nella casa di
-      // settentrione, che e' bassa quattro tessere, «in mezzo» cadeva dentro la fascia della porta.
-      // Se il centro non e' libero, il focolare si sposta LUNGO LA PARETE, dalla parte opposta alla
-      // porta: resta il fuoco di mezzo della stanza, senza stare davanti a chi entra.
-      { let fx = cx, fy = cy;
-        if (!sgombro(fx, fy)) {
-          if (oriz) fx = lato === 'e' ? r.x0 + 1.8 : r.x1 - 1.8;
-          else fy = lato === 'n' ? r.y1 - 1.2 : r.y0 + 1.2;
-        }
-        // e se nemmeno cosi' ci sta (stanza minuscola), si scosta di lato invece che in profondita'
-        if (!sgombro(fx, fy)) { if (oriz) fy = cy + (cy - py > 0 ? 1.6 : -1.6); else fx = cx + (cx - px > 0 ? 1.8 : -1.8); }
-        P('focolare', fx, fy, 1.15);
-        abitanti._fuoco = { x: fx, y: fy };
-      }
-      // SETTE CASE UGUALI SAREBBERO SETTE VOLTE LA STESSA CASA. La variazione non e' casuale: e' l'indice
-      // della casa a decidere, cosi' la pianta resta la stessa a ogni partita (nel villaggio il seme non
-      // cambia niente) ma da una porta all'altra si vede gente diversa che vive diversamente.
-      const spec = k % 2 ? -1 : 1;
-      // il LETTO va contro la parete piu' lontana dalla porta, il TAVOLO dall'altra parte
-      let bx, by, tx, ty, mx, my;
+      // ==========================================================================================
+      // v2.34 — LA PIANTA DELLA CASA: i letti contro una parete, il camino in un angolo
+      // ==========================================================================================
+      // Paolo: *«nelle case piu' piccole del villaggio aggiungi almeno 2 letti, in quelle piu'
+      // grandi 3. Al posto del falo' al centro della stanza crea un piccolo camino in un angolo
+      // della casa»*.
+      //
+      // Fino alla v2.33 la casa aveva UN letto e il focolare IN MEZZO, e il focolare in mezzo
+      // decideva tutto il resto: la stanza era un anello attorno al fuoco, e di spazio contro le
+      // pareti non ne restava. Spostarlo in un angolo libera la parete lunga, ed e' li' che i letti
+      // ci stanno in fila.
+      //
+      // GRANDE O PICCOLA si misura in tessere, non a occhio: le due case lunghe delle file laterali
+      // sono 12x4 (48 tessere), quelle dello spiazzo 7x5 (35) e 8x5 (40). La soglia a 44 le separa.
+      const nLetti = (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) >= 44 ? 3 : 2;
+      const spec = k % 2 ? -1 : 1;   // la variazione da casa a casa: l'indice, non il caso
+      // LA PARETE DEI LETTI e' sempre quella LONTANA DALLA PORTA — due letti in mezzo alla stanza
+      // sono un dormitorio, due contro il muro sono una casa — e i letti stanno A FILO di muro: con
+      // mezza tessera di scarto dietro la testiera resta una striscia troppo stretta per starci
+      // dentro e abbastanza larga da esistere (e' il guasto che la v2.33 aveva trovato in locanda).
+      let lettoY, lettoX0, angolo, altroLato;
       if (oriz) {
-        const dentro = lato === 'e' ? -1 : 1;              // da che parte si va entrando
-        bx = lato === 'e' ? r.x0 + 1.6 : r.x1 - 1.6;
-        by = cy + spec * Math.max(1.1, (r.y1 - r.y0) / 2 - 0.8);
-        tx = bx; ty = cy - spec * Math.max(1.1, (r.y1 - r.y0) / 2 - 0.8);
-        mx = cx + dentro * -1.0; my = cy + spec * ((r.y1 - r.y0) / 2 - 0.2);
+        // porta su una parete verticale: i letti corrono lungo la parete di SETTENTRIONE a partire
+        // dal fondo, e il camino va nell'angolo di mezzogiorno dalla stessa parte — il piu' lontano
+        // dall'uscio che la stanza abbia.
+        lettoY = r.y0 + 0.1;
+        lettoX0 = lato === 'e' ? r.x0 + 1.0 : r.x1 - 1.0 - 2.0 * (nLetti - 1);
+        angolo = { x: lato === 'e' ? r.x0 + 0.5 : r.x1 - 0.5, y: r.y1 - 0.1 };
+        altroLato = lato === 'e' ? 1 : -1;        // verso cui si allontana dall'angolo
       } else {
-        const dentro = lato === 'n' ? 1 : -1;
-        by = lato === 'n' ? r.y1 - 0.8 : r.y0 + 0.8;
-        bx = cx + spec * Math.max(1.4, (r.x1 - r.x0) / 2 - 1.4);
-        ty = by; tx = cx - spec * Math.max(1.4, (r.x1 - r.x0) / 2 - 1.4);
-        mx = cx + spec * ((r.x1 - r.x0) / 2 - 0.2); my = cy + dentro * -1.0;
+        // porta a settentrione o a mezzogiorno: i letti corrono lungo la parete opposta, da ponente,
+        // e il camino chiude la fila nell'angolo di levante.
+        lettoY = lato === 'n' ? r.y1 - 0.1 : r.y0 + 0.1;
+        lettoX0 = r.x0 + 0.5;
+        angolo = { x: r.x1 - 0.5, y: lettoY };
+        altroLato = -1;
       }
-      M('letto', bx, by, 1, { r: oriz ? 1 : 0 });
+      for (let i = 0; i < nLetti; i++) M('letto', lettoX0 + 2.0 * i, lettoY, 1, { r: 0 });
+
+      // IL CAMINO. Non e' il focolare rimpicciolito: il focolare e' un fuoco in mezzo al pavimento,
+      // con le pietre tutt'attorno, e si guarda da ogni lato. Questo e' addossato al muro — cappa,
+      // spalle, focolare rialzato — e ha un VERSO: `ang` e' la direzione in cui si apre, cioe'
+      // quella del centro della stanza. Senza quel dato un camino visto dall'alto e' una macchia.
+      {
+        const ang = Math.atan2(cy - angolo.y, cx - angolo.x);
+        P('camino', angolo.x, angolo.y, 1, { ang });
+        abitanti._fuoco = { x: angolo.x, y: angolo.y };
+      }
+
+      // il resto dell'arredo si dispone attorno: tavolo e panca sulla parete del camino (ma non
+      // addosso), la madia sulla parete dei letti dalla parte della porta.
+      let tx, ty, mx, my;
+      if (oriz) {
+        tx = angolo.x + altroLato * 2.6; ty = r.y1 - 0.3;
+        mx = lato === 'e' ? r.x1 - 4.5 : r.x0 + 4.5; my = r.y0 + 0.1;
+      } else {
+        tx = (r.x0 + r.x1) / 2 - 0.4; ty = cy + (lato === 'n' ? 0.3 : -0.3);
+        mx = r.x0 + 0.1; my = cy;
+      }
       M('tavolo', tx, ty, 0.9);
-      M('panca', tx + (oriz ? 1.2 : 0), ty + (oriz ? 0 : 1.1), 0.9);
+      M('panca', tx + 1.3, ty, 0.9); M('panca', tx - 1.3, ty, 0.9);
       M('credenza', mx, my, 0.95, { r: oriz ? 0 : 1 });
       const roba = [['sack', 0.85], ['barrel', 0.9], ['cratebox', 0.85]][k % 3];
       if (!bassa) {
@@ -1730,7 +1757,7 @@
         if (k % 4 === 1) M('rastrelliera', cx + spec * 1.8, cy + (oriz ? 1.8 : -1.8), 0.8, { r: oriz ? 1 : 0 });
         if (k % 4 === 2) M('scaffale', cx - spec * 1.8, cy + (oriz ? 1.8 : -1.8), 0.8, { r: oriz ? 1 : 0 });
       } else {
-        M(roba[0], oriz ? r.x1 - 0.8 : cx + spec * 2.6, oriz ? cy + spec * 1.3 : (lato === 'n' ? r.y0 + 0.8 : r.y1 - 0.8), roba[1]);
+        M(roba[0], oriz ? tx + altroLato * 2.4 : r.x1 - 0.6, oriz ? r.y1 - 0.3 : (lato === 'n' ? r.y0 + 0.6 : r.y1 - 0.6), roba[1]);
       }
       if (k % 5 === 3) P('tappeto', cx + spec * 1.4, cy - 1.3, 1, { col: '#6b4630' });
       // e la gente attorno al fuoco: uno sempre, un secondo nelle case piu' larghe
@@ -1741,9 +1768,20 @@
       const ALLAVORO = ['bottegaio', 'paesano', 'paesana', 'bimbo', 'minatore', 'bottegaio', 'paesana'];
       // v2.19.2 — chi si scalda sta accanto al FUOCO, non al centro geometrico: da quando il focolare
       // puo' scostarsi dalla soglia, i due punti non coincidono piu' sempre.
+      // v2.34 — e adesso il fuoco e' in un ANGOLO, quindi «accanto» non puo' piu' essere uno scarto
+      // fisso a destra o a sinistra: da una parte ci sarebbe il muro. Chi si scalda si mette fra il
+      // camino e il centro della stanza, girato verso il fuoco. E' la stessa direzione che il camino
+      // usa per sapere da che parte si apre, quindi i due non possono mai essere in disaccordo.
       const F = abitanti._fuoco || { x: cx, y: cy };
-      abitanti.push({ x: F.x + spec * 1.5, y: F.y + 0.15, kind: ALFUOCO[k % ALFUOCO.length], face: spec > 0 ? Math.PI : 0, act: 'fuoco' });
-      if ((r.x1 - r.x0) >= 7) abitanti.push({ x: cx - spec * 1.5, y: cy + (k % 2 ? 0.9 : -0.9), kind: ALLAVORO[k % ALLAVORO.length], face: spec > 0 ? 0 : Math.PI, act: k % 3 === 0 ? 'martella' : 'rimesta' });
+      { const a = Math.atan2(cy - F.y, cx - F.x);
+        abitanti.push({ x: F.x + Math.cos(a) * 1.5, y: F.y + Math.sin(a) * 1.5,
+                        kind: ALFUOCO[k % ALFUOCO.length], face: a + Math.PI, act: 'fuoco' }); }
+      // v2.34 — IL SECONDO ABITANTE non sta piu' «a sinistra del centro». Con i letti in fila contro
+      // la parete, fra un letto e l'altro resta una nicchia di sei pixel, e la prima stesura ci ha
+      // messo dentro una persona: la nicchia si e' chiusa e sopra ci sono rimaste due posizioni
+      // libere in cui non si arriva. Adesso sta in mezzo alla stanza, dalla parte della porta — che
+      // e' anche dove uno che lavora si mette davvero, con la luce dell'uscio addosso.
+      if ((r.x1 - r.x0) >= 7) abitanti.push({ x: cx + altroLato * 2.5, y: cy + 0.1, kind: ALLAVORO[k % ALLAVORO.length], face: altroLato > 0 ? 0 : Math.PI, act: k % 3 === 0 ? 'martella' : 'rimesta' });
     };
     { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
 

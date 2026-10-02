@@ -2,6 +2,88 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.34.0] — 2026-10-02 · "Il camino nell'angolo"
+
+Paolo: *«nelle case piu' piccole del villaggio aggiungi almeno 2 letti, in quelle piu' grandi 3. Al
+posto del falo' al centro della stanza crea un piccolo camino in un angolo della casa»*.
+
+Due richieste, e la seconda e' quella che rende possibile la prima.
+
+---
+
+### 🔥 IL CAMINO, in un angolo
+
+Fino alla v2.33 ogni casa aveva il **focolare in mezzo**, e il focolare in mezzo decideva tutta la
+stanza: l'abitabile era un **anello attorno al fuoco**, e contro le pareti non restava niente. Spostarlo
+in un angolo libera la parete lunga — ed e' li' che i letti ci stanno in fila.
+
+Il camino **non e' il focolare rimpicciolito**. Il focolare sta sul pavimento, lo si guarda da ogni
+lato, ed e' simmetrico perche' deve esserlo. Questo e' **addossato al muro**: ha un dietro (la cappa, a
+conci) e un davanti (la bocca nera con le braci e i due ciocchi), e quindi ha bisogno di sapere **da che
+parte si apre**. Glielo dice il campo `ang`, che punta al centro della stanza. Senza quel dato, visto
+dall'alto, sarebbe una macchia grigia.
+
+| | focolare | camino |
+|---|---|---|
+| dove | in mezzo alla stanza | in un angolo, contro il muro |
+| corpo | 20 px di raggio | **15** |
+| fiamma | 1,28 | **0,93** |
+| luce | 170 px | **124** |
+| verso | nessuno (simmetrico) | `ang`, verso il centro |
+
+I focolari **restano** dove un fuoco in mezzo ha senso: l'antro dell'Anziano, il dormitorio della
+locanda, la cucina.
+
+**`fs` adesso fa quello che il suo nome dice.** Il campo esisteva dalla v2.0 — il focolare lo dichiarava
+a 0,85 — e **nessuno lo leggeva**: la fiamma era 1,5 per tutti, la luce 200 per tutti. Col camino la
+differenza conta (un camino di casa che brucia come un falo' non e' un camino), quindi la fiamma, il
+bagliore e il buco nel velo adesso lo moltiplicano. Effetto collaterale voluto: anche i focolari
+bruciano del 15% piu' piccoli, **come dichiaravano gia'**.
+
+---
+
+### 🛏️ DUE LETTI, O TRE
+
+«Piccola» e «grande» non sono un'impressione: sono le **tessere della stanza**, e la soglia sta a 44.
+
+| casa | tessere | letti |
+|---|---|---|
+| `casa_b`, `casa_d` (file laterali) | 12x4 = **48** | **3** |
+| `casa_f` (spiazzo) | 8x5 = **40** | **2** |
+| `casa_e` (spiazzo) | 7x5 = **35** | **2** |
+
+Stanno **in fila contro la parete piu' lontana dalla porta** — due letti in mezzo alla stanza sono un
+dormitorio, due contro il muro sono una casa — e **a filo di muro**, per la stessa ragione imparata in
+locanda nella v2.33: con mezza tessera di scarto dietro la testiera resta una striscia troppo stretta
+per starci dentro e abbastanza larga da esistere.
+
+Il resto dell'arredo si e' ridisposto attorno: tavolo e due panche sulla parete del camino, la madia
+sulla parete dei letti dalla parte della porta.
+
+---
+
+### 🧪 IL GUASTO DI QUESTA VERSIONE
+
+**Una persona infilata fra due letti.** Il secondo abitante stava «a sinistra del centro» — una regola
+scritta quando in mezzo alla stanza c'era il fuoco e di gente ne stava una sola. Con i letti in fila, fra
+un letto e l'altro restano **sei pixel**, e la prima stesura ci ha messo dentro un paesano: la nicchia si
+e' chiusa e sopra sono rimaste due posizioni libere in cui non si arriva. L'ha trovato il flood fill coi
+corpi solidi, non l'occhio. Adesso chi lavora sta in mezzo alla stanza, dalla parte della porta — che e'
+anche dove uno si mette davvero, con la luce dell'uscio addosso.
+
+**Prova:** 6.834 asserzioni verdi. Il test delle case non chiede piu' «un focolare in mezzo» ma quattro
+cose misurabili: il camino sta a meno di una tessera e mezza da **due** pareti (un camino a meta' di un
+muro passerebbe su un lato solo), si apre **verso** il centro (prodotto scalare positivo, non a occhio),
+i letti sono almeno due o tre secondo le tessere della stanza, e sono tutti sulla stessa riga a filo di
+muro. Passaggio di sabotaggio: camino di nuovo in mezzo → otto rossi; un letto solo per casa → quattro;
+camino girato verso il muro → quattro.
+
+> Resta rosso a intermittenza, da prima di questa versione, il test della *braccata* (un mostro che deve
+> raggiungerti da qualunque punto della mappa entro 60 s): un giro su tre circa. E' pathing di ondata, non
+> c'entra col villaggio.
+
+---
+
 ### [2.33.0] — 2026-10-01 · "La locanda in mezzo alla piazza"
 
 Paolo: *«la casa dell'orafo e' molto spoglia, aggiungi giusto un paio di bacheche o scaffali / in mezzo

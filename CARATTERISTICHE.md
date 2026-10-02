@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.33.0`
+**Versione attuale:** `2.34.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -782,6 +782,40 @@ da cui si entra in cucina (invisibile a tutti e due i controlli che spaccano, l'
 una striscia di tredici pixel dietro i letti, troppo stretta per starci e abbastanza larga da esistere;
 due fessure fra braciere e cartello nel mercato; e quattro bracieri piazzati dentro un muro — un corpo
 solido dove non si cammina non da' fastidio a nessuno, e proprio per questo non se ne accorge nessuno.
+
+### 🔥 v2.34 — LA CASA: il camino in un angolo, i letti in fila
+
+Paolo: *«nelle case piu' piccole del villaggio aggiungi almeno 2 letti, in quelle piu' grandi 3. Al
+posto del falo' al centro della stanza crea un piccolo camino in un angolo della casa»*.
+
+Fino alla v2.33 il **focolare stava in mezzo**, ed e' quello che impediva tutto il resto: la parte
+abitabile era un anello attorno al fuoco e contro le pareti non restava niente. Il camino nell'angolo
+libera la parete lunga, ed e' li' che i letti stanno in fila.
+
+| | focolare (in mezzo) | camino (nell'angolo) |
+|---|---|---|
+| corpo | 20 px di raggio | **15** |
+| fiamma · luce | 1,28 · 170 px | **0,93 · 124 px** |
+| verso | nessuno: e' simmetrico | **`ang`**, punta al centro della stanza |
+
+Il camino **non e' il focolare rimpicciolito**: ha un dietro (la cappa a conci) e un davanti (la bocca
+nera con le braci e i ciocchi). Visto dall'alto, senza sapere da che parte si apre, sarebbe una macchia
+grigia — per questo il prop porta `ang`, e lo stesso angolo dice anche dove si mette chi si scalda.
+
+**Quanti letti**, e la soglia non e' a occhio ma in tessere: `casa_b` e `casa_d` sono 12x4 = 48 tessere
+→ **tre letti**; `casa_e` 7x5 = 35 e `casa_f` 8x5 = 40 → **due**. La soglia sta a 44. Vanno **in fila
+contro la parete piu' lontana dalla porta** e **a filo di muro**: mezza tessera di scarto dietro la
+testiera lascia una striscia troppo stretta per starci e abbastanza larga da esistere (e' il guasto che
+la locanda aveva gia' insegnato nella v2.33).
+
+**`fs` ha smesso di essere decorativo.** Il campo esisteva dalla v2.0 e nessuno lo leggeva: ogni fuoco
+aveva fiamma 1,5 e luce 200. Adesso fiamma, bagliore e buco nel velo lo moltiplicano — e i focolari
+bruciano del 15% piu' piccoli, come dichiaravano gia'.
+
+**Il guasto della versione:** il secondo abitante stava «a sinistra del centro», una regola scritta
+quando in mezzo c'era il fuoco. Con i letti in fila, fra un letto e l'altro restano sei pixel, e la
+prima stesura ci ha messo dentro un paesano: nicchia chiusa, due posizioni libere irraggiungibili sopra.
+Trovato dal flood fill, non dall'occhio.
 
 ### 🪨 Fuori e' grotta, dentro e' casa
 
