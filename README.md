@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.32.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.33.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -24,6 +24,25 @@ Test: `npm test`
 | Musica | M |
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🏚️ v2.33.0 — la Locanda in mezzo alla piazza
+
+Lo spiazzo centrale del villaggio si divide in due.
+
+**Di sopra, la Locanda**: una casa vera, con i muri e la porta che si apre sul mercato. Dentro, **nove
+posti letto** su due file contro le pareti, il focolare, due tavoli con le panche. E, dietro una porta
+che dà solo sul dormitorio, una **cucina chiusa** con il suo **Cuoco** — grembiule chiaro e pentolone
+in mano, l'unico del paese vestito di una cosa che si sporca. Non vende niente: sta lì.
+
+**Di sotto, il mercato**: resta la terra battuta, resta il pozzo, **il falò non c'è più**. Le
+bancarelle erano dodici sparse; adesso sono **otto su due file parallele** — pane, carne, pesce, frutta
+di qua, vasi, tessuti, spezie, vino di là — con in mezzo la corsia in cui si cammina. A scaldare la
+piazza, al posto del falò, c'è un giro di bracieri lungo il muro della locanda e attorno al battuto.
+
+**E la bottega dell'Orafo non è più vuota**: due bacheche sulla parete di fondo, il banco da lavoro, una
+terza vetrina, le lanterne appese.
+
+---
 
 ## 💍 v2.32.0 — l'Orafo: due anelli e una collana
 

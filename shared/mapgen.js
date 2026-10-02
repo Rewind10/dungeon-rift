@@ -1087,11 +1087,19 @@
   // l'arredamento sa da che parte si entra senza doverlo dedurre.
   const VILLAGE = {
     w: 60, h: 46,
-    // la PIAZZA: il rettangolo di terra battuta in mezzo allo spiazzo. Il falo' al centro, il pozzo di
-    // fianco, e tutt'attorno il giro di torce e bancarelle.
-    piazza: { x0: 22, y0: 13, x1: 37, y1: 30 },
-    fire: { x: 29, y: 21 },
-    pozzo: { x: 25, y: 25 },
+    // v2.33 — LO SPIAZZO SI DIVIDE IN DUE. Paolo: *«in mezzo alla sala centrale in terra battuta del
+    // villaggio crea una casa grande con all'interno molti posti letto e un piccolo [ambiente] chiuso
+    // con una cucina e un cuoco. Meta' della sezione e' per la casa mentre l'altra meta' resta com'e'
+    // ora in terra con pozzo (togli il falo') e le varie bancarelle disposte pero' su 2 file
+    // parallele»*.
+    // META' DI SOPRA: la LOCANDA, una casa vera con muri e porta — dormitorio e cucina.
+    // META' DI SOTTO: la terra battuta col pozzo e il mercato su due file.
+    piazza: { x0: 22, y0: 22, x1: 37, y1: 31 },
+    // il FALO' NON C'E' PIU'. Il suo punto resta come CENTRO del paese, e serve ancora a una cosa
+    // sola: e' il verso in cui guardano tutti i mercanti (`mk`). Adesso e' il centro del mercato.
+    centro: { x: 29.5, y: 26.2 },
+    // il pozzo si sposta a ponente del mercato: in mezzo starebbe in mezzo alla corsia fra le due file.
+    pozzo: { x: 23.6, y: 26.2 },
     // v2.6 — IL PORTALE NON STA PIU' IN PIAZZA. Stava nel mezzo dello spiazzo, e uno spiazzo con un
     // buco viola al centro non e' una piazza: e' una sala del portale con delle case attorno. Adesso e'
     // dentro la CASA DEL PORTALE, la prima della fila di ponente, con due guardie sulla soglia.
@@ -1135,6 +1143,13 @@
       // via di levante e' quella di chi vende cose che non si affilano. Lastre viola, non legno.
       { id: 'arcano',  kind: 'bottega', x0: 44, y0: 32, x1: 55, y1: 36, porta: [43, 34, 'o'], pav: 'lastre', col: '#3a3358' },
       { id: 'casa_d',  kind: 'casa',    x0: 44, y0: 39, x1: 55, y1: 42, porta: [43, 40, 'o'], pav: 'legno',  col: '#554129' },
+      // ---- v2.33 — LA LOCANDA IN MEZZO ALLO SPIAZZO ----
+      // Due stanze attaccate, un muro solo fra loro (la colonna 33, che non viene scavata da nessuna
+      // delle due). Il `kind` NON e' 'casa': se lo fosse ci penserebbe `arredaCasa` a riempirle col
+      // suo arredo standard — focolare in mezzo, un letto, un tavolo — e qui serve altro.
+      { id: 'dormitorio', kind: 'locanda', x0: 23, y0: 14, x1: 32, y1: 20, porta: [27, 21, 's'], pav: 'legno',  col: '#4a3824' },
+      // la cucina e' CHIUSA: ci si entra solo dal dormitorio, dalla porta sul muro di mezzo.
+      { id: 'cucina',     kind: 'locanda', x0: 34, y0: 14, x1: 36, y1: 20, porta: [33, 16, 'o'], pav: 'lastre', col: '#4a3028' },
       // ---- LE TRE CASE DELLO SPIAZZO: due a mezzogiorno e una a settentrione ----
       { id: 'casa_e',  kind: 'casa',    x0: 21, y0: 38, x1: 27, y1: 42, porta: [24, 37, 'n'], pav: 'legno', col: '#554129' },
       { id: 'casa_f',  kind: 'casa',    x0: 31, y0: 38, x1: 38, y1: 42, porta: [34, 37, 'n'], pav: 'legno', col: '#554129' },
@@ -1151,7 +1166,15 @@
       [40, 4,  42, 42],   // la via di levante
       [17, 8,  42, 10],   // la via alta, sotto la casa di settentrione
       [17, 33, 42, 35],   // la via bassa, davanti alle due case di mezzogiorno
-      [20, 11, 39, 32],   // e lo spiazzo, con dentro la piazza
+      // v2.33 — LO SPIAZZO ERA UN RETTANGOLO SOLO (`[20, 11, 39, 32]`) e per questo in mezzo non ci
+      // poteva stare niente: le strade si scavano DOPO le stanze, quindi una casa messa li' dentro si
+      // sarebbe ritrovata senza muri — la strada glieli avrebbe mangiati. Adesso sono quattro fasce
+      // che GIRANO ATTORNO alla locanda, e la roccia che resta in mezzo (le colonne 22 e 37, le righe
+      // 13 e 21) e' esattamente il muro della casa.
+      [20, 11, 21, 32],   // la fascia di ponente
+      [38, 11, 39, 32],   // quella di levante
+      [22, 11, 37, 12],   // la fascia alta, sopra la locanda
+      [22, 22, 37, 32],   // e il mercato, sotto
     ],
     // dove sta ogni mercante, e il colore della sua luce
     stalls: [
@@ -1185,6 +1208,11 @@
       // classe, quindi chiunque entri trova la stessa vetrina.
       { x: 29,   y: 5,    kind: 'goldsmith', name: 'Orafo',      shop: 1, cat: 'monile', sub: 'anelli e collane',
         col: '#ffcf4a', room: 'orafo' },
+      // v2.33 — IL CUOCO DELLA LOCANDA. Nessuna bandiera: non vende, non cura, non da' taglie. Sta in
+      // questo elenco per lo stesso motivo per cui ci sta l'Anziano — avere una stanza, un alone del
+      // proprio colore e la faccia girata verso il paese — non perche' abbia un banco.
+      { x: 35,   y: 16.2, kind: 'cook',      name: 'Cuoco',      sub: 'ai fornelli della locanda',
+        col: '#ff9a5a', room: 'cucina' },
     ],
   };
   // v2.6 — IL VILLAGGIO E' SCAVATO NELLA STESSA ROCCIA DELLE GROTTE. Prima aveva una tavolozza sua,
@@ -1287,54 +1315,72 @@
     // ===================== LA PIAZZA =====================
     // Il falo' al centro, il pozzo di fianco, e tutt'attorno il giro: una torcia, una bancarella, una
     // torcia. E' il giro a dire che e' una piazza — senza, un rettangolo di terra e' solo un rettangolo.
-    P('bonfire', VILLAGE.fire.x, VILLAGE.fire.y, 1.45);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2;
-      P('rock', VILLAGE.fire.x + Math.cos(a) * 1.6, VILLAGE.fire.y + Math.sin(a) * 1.15, 0.5); }
+    // v2.33 — IL FALO' NON C'E' PIU' (e con lui il suo giro di sassi): al suo posto, due tessere piu'
+    // su, c'e' la locanda. Il pozzo si sposta a ponente del mercato — in mezzo starebbe in mezzo alla
+    // corsia fra le due file di banchi, cioe' esattamente dove si cammina.
     P('pozzo', VILLAGE.pozzo.x, VILLAGE.pozzo.y, 1.3);
-    P('panca', 33.4, 25.2, 1, { r: 0 });
-    P('panca', 25.4, 17.4, 1, { r: 0 });
-    P('signpost', 31.6, 15.4, 1);
+    P('panca', 23.2, 23.4, 1, { r: 0 });
+    P('panca', 23.2, 29.2, 1, { r: 0 });
+    P('signpost', 22.4, 24.0, 1, { txt: 'MERCATO' });
 
-    // le TORCE attorno alla piazza: agli angoli e a meta' di ogni lato
+    // le TORCE attorno al mercato
     {
+      // v2.33 — le torce girano attorno al MERCATO (la meta' che e' rimasta terra battuta) e corrono
+      // lungo il muro della locanda: e' quel muro che adesso chiude la piazza a settentrione, e un muro
+      // al buio si legge come il bordo della mappa invece che come una casa.
+      //
+      // ATTENZIONE: prima stavano a `PZ.y0 - 0.4`, che con la vecchia pianta era spiazzo e adesso e'
+      // la riga 21, cioe' il MURO della locanda. Un braciere dentro un muro e' un corpo solido in un
+      // punto dove non si cammina: non da' fastidio a nessuno e proprio per questo non se ne accorge
+      // nessuno. Qui si sta tutti dentro il rettangolo del mercato (x 22..37, y 22..31).
+      // E le colonne 27 e 28 restano libere: li' si apre la porta della locanda, e un braciere
+      // davanti a un uscio e' esattamente la cosa che Paolo aveva gia' fatto togliere nella v2.19.2.
       const TORCE = [
-        [PZ.x0 - 0.4, PZ.y0 - 0.4], [PZ.x1 + 0.4, PZ.y0 - 0.4],
-        [PZ.x0 - 0.4, PZ.y1 + 0.4], [PZ.x1 + 0.4, PZ.y1 + 0.4],
-        [25.2, PZ.y0 - 0.4], [33.8, PZ.y0 - 0.4],
-        [25.2, PZ.y1 + 0.4], [33.8, PZ.y1 + 0.4],
-        [PZ.x0 - 0.4, 17.5], [PZ.x0 - 0.4, 26.5],
-        [PZ.x1 + 0.4, 17.5], [PZ.x1 + 0.4, 26.5],
+        [22.2, 22.2], [36.8, 22.2],       // i due angoli di settentrione, sotto il muro della locanda
+        [36.8, 26.4],                     // meta' del lato di levante (a ponente c'e' il pozzo)
+        [25.2, 22.2], [30.2, 22.2],       // lungo la facciata, ai due lati della porta
+        // A MEZZOGIORNO SOLO DUE, e non agli angoli. Al primo tentativo erano quattro, allineate coi
+        // cartelli dei banchi: fra un braciere (26 px di corpo col personaggio) e un cartello (21)
+        // restavano meno di quaranta pixel, e in quelle due fessure il flood fill ha trovato due
+        // posizioni libere in cui non si arriva. Qui stanno in mezzo agli intervalli fra i cartelli.
+        [23.8, 30.8], [34.3, 30.8],
+        // e sul fianco della locanda, nelle due fasce dello spiazzo che le girano attorno
+        [21.0, 13.5], [38.5, 13.5], [21.0, 19.0], [38.5, 19.0],
       ];
       for (const [tx, ty] of TORCE) P('brazier', tx, ty, 1.1);
     }
 
     // ===================== v2.5/2.6 — LE BANCARELLE DI CONTORNO =====================
     // Non si comprano: non hanno mercante, non hanno alone, non succede niente ad avvicinarsi. Servono a
-    // dire che il paese vive anche quando tu non ci sei. Dodici mestieri, tutti attorno alla piazza,
-    // alternati alle torce e girati verso il centro.
+    // dire che il paese vive anche quando tu non ci sei.
+    //
+    // v2.33 — ERANO DODICI SPARSE TUTT'ATTORNO ALLO SPIAZZO. Paolo: *«le varie bancarelle disposte
+    // pero' su 2 file parallele (se non ci stanno tutte eliminane qualcuna)»*. Adesso sono OTTO, due
+    // file da quattro dentro la meta' di terra battuta, una di fronte all'altra, con in mezzo la
+    // corsia in cui si cammina. Quattro mestieri sono stati tagliati (pellami, ferro, candele,
+    // formaggi): nelle due file ci stavano, ma a 1,6 tessere l'uno dall'altro si leggevano come un
+    // muro di banchi invece che come un mercato.
+    //
+    // Le due file sono a y 24 e y 29,2; la corsia e' la fascia di mezzo, attorno a y 26,5, dove
+    // stanno il pozzo (a ponente) e chi cammina. I cartelli vanno verso FUORI — sopra la fila alta,
+    // sotto quella bassa — perche' in mezzo ci si passa.
     {
       const BANCHI = [
-        // [x, y, verso, mestiere, colore della merce, cartello]
-        [23.4, 11.9, 0, 'pane',     '#d9a55c', 'PANE'],
-        [27.4, 11.9, 0, 'carne',    '#b04a48', 'CARNE'],
-        [31.4, 11.9, 0, 'pesce',    '#8fb6c8', 'PESCE'],
-        [35.4, 11.9, 0, 'frutta',   '#c87a3a', 'FRUTTA'],
-        [23.4, 31.7, 0, 'vasi',     '#a4703e', 'VASI'],
-        [27.4, 31.7, 0, 'tessuti',  '#7a6bb0', 'TESSUTI'],
-        [31.4, 31.7, 0, 'candele',  '#e8d08a', 'CANDELE'],
-        [35.4, 31.7, 0, 'formaggi', '#e0c070', 'FORMAGGI'],
-        [20.6, 16.2, 1, 'spezie',   '#b8703a', 'SPEZIE'],
-        [20.6, 27.8, 1, 'pellami',  '#8a5a34', 'PELLAMI'],
-        // v2.27 — il cartello di questo banco finiva a due tessere dalla porta dell'Anziano, proprio
-        // in mezzo all'ingresso che la stessa versione rende riconoscibile. Il banco resta dov'e', il
-        // cartello passa dall'altro lato (`sdx` negativo): e' roba sua, non deve stare sull'uscio di
-        // un altro.
-        [38.9, 16.2, 1, 'ferro',    '#8d97a5', 'FERRO', -1.15],
-        [38.9, 27.8, 1, 'vino',     '#8e3b52', 'VINO'],
+        // [x, y, verso, mestiere, colore della merce, cartello]  ·  verso 0 = banco disteso lungo x
+        [25.0, 24.0, 0, 'pane',     '#d9a55c', 'PANE'],
+        [28.4, 24.0, 0, 'carne',    '#b04a48', 'CARNE'],
+        [31.8, 24.0, 0, 'pesce',    '#8fb6c8', 'PESCE'],
+        [35.2, 24.0, 0, 'frutta',   '#c87a3a', 'FRUTTA'],
+        [25.0, 29.2, 0, 'vasi',     '#a4703e', 'VASI'],
+        [28.4, 29.2, 0, 'tessuti',  '#7a6bb0', 'TESSUTI'],
+        [31.8, 29.2, 0, 'spezie',   '#b8703a', 'SPEZIE'],
+        [35.2, 29.2, 0, 'vino',     '#8e3b52', 'VINO'],
       ];
-      for (const [bx, by, verso, mest, col, txt, sdx] of BANCHI) {
+      for (const [bx, by, verso, mest, col, txt] of BANCHI) {
         P('bancarella', bx, by, 1, { col, mest, r: verso });
-        P('signpost', bx + (sdx != null ? sdx : (verso ? 0.95 : 1.25)), by + (verso ? 1.05 : (by < 20 ? -0.55 : 0.55)), 0.8, { txt });
+        // il cartello sta dalla parte del MURO, non della corsia: la fila alta lo porta sopra, la
+        // bassa sotto. Cosi' in mezzo resta sgombro anche quello che non ingombra.
+        P('signpost', bx + 1.05, by + (by < 26 ? -0.95 : 0.95), 0.8, { txt });
       }
     }
 
@@ -1531,6 +1577,86 @@
       P('barrel', r.x0 + 3.4, r.y1 - 1.2, 0.95);
     }
 
+    // ===================== v2.33 — LA BOTTEGA DELL'ORAFO =====================
+    // Paolo: *«la casa dell'orafo e' molto spoglia, aggiungi giusto un paio di bacheche o scaffali»*.
+    // Nella v2.32 la stanza era nata senza una riga di arredo: c'era il mercante e basta.
+    //
+    // La stanza e' BASSA — quattro righe (y 3..6), nove colonne (x 25..33) — e la porta e' a
+    // mezzogiorno, in mezzo (tessera 29). La fascia dell'uscio (x 27,5..30,5) tiene quindi fuori
+    // tutta la colonna centrale: qualunque cosa solida va messa ai due lati. Per questo non c'e' un
+    // bancone davanti all'Orafo come nelle altre botteghe — non ci starebbe senza chiudere l'unico
+    // passaggio — e il suo banco da lavoro sta a ponente, di fianco a lui.
+    {
+      const r = R('orafo');
+      // le due BACHECHE sulla parete di fondo, una per lato: e' li' che sta la roba in mostra
+      P('scaffale', r.x0 + 1.4, r.y0 + 0.4, 1, { r: 0, col: '#ffcf4a' });
+      P('scaffale', r.x1 - 1.4, r.y0 + 0.4, 1, { r: 0, col: '#ffcf4a' });
+      // il banco da lavoro a ponente e una terza vetrina a levante, contro i due muri corti
+      P('bancone', r.x0 + 1.2, r.y1 - 0.6, 1, { r: 0 });
+      P('scaffale', r.x1 - 1.2, r.y1 - 0.6, 1, { r: 0, col: '#ffcf4a' });
+      // e quello che si attraversa: due lanterne appese sopra le bacheche e due stendardi d'oro
+      P('hanging_lantern', r.x0 + 2.6, r.y0 + 0.4, 1.0); P('hanging_lantern', r.x1 - 2.6, r.y0 + 0.4, 1.0);
+      P('flag', r.x0 + 0.2, r.y1 - 0.2, 1.15, { col: '#ffcf4a' });
+      P('flag', r.x1 - 0.2, r.y1 - 0.2, 1.15, { col: '#ffcf4a' });
+    }
+
+    // ===================== v2.33 — LA LOCANDA: IL DORMITORIO E LA CUCINA =====================
+    // Paolo: *«in mezzo alla sala centrale in terra battuta del villaggio crea una casa grande con
+    // all'interno molti posti letto e un piccolo [ambiente] anche (chiuso) con una cucina e un
+    // cuoco»*.
+    //
+    // Le due stanze sono `kind: 'locanda'` e non `'casa'` APPOSTA: `arredaCasa` mette sempre le
+    // stesse quattro cose — un focolare, UN letto, un tavolo, una madia — e qui serve l'opposto,
+    // nove letti in fila. Arredarle a mano e' l'unico modo, ed e' anche l'unico punto del paese dove
+    // il numero dei mobili conta piu' della loro varieta'.
+    //
+    // La porta del dormitorio e' a mezzogiorno sulle colonne 27-28, e si apre sul mercato. La fascia
+    // dell'uscio (x 25,5..28,5 da y 18,4 in giu') resta vuota: per questo la fila di letti di
+    // mezzogiorno e' interrotta in mezzo — i due buchi sono il corridoio che porta alla porta.
+    {
+      const r = R('dormitorio');
+      // I LETTI VANNO SCHIACCIATI CONTRO IL MURO, non accostati. Alla prima stesura stavano mezza
+      // tessera piu' dentro, e fra il muro e la testiera restava una striscia larga tredici pixel:
+      // un corridoio in cui un personaggio (35 px) non ci sta, ma che il controllo delle zone
+      // isolate trova — e ha ragione a trovarlo, perche' e' spazio che esiste e in cui non si va.
+      // Con i letti a filo di muro quella striscia non c'e', e gli intervalli fra un letto e l'altro
+      // diventano nicchie aperte sulla stanza invece che tasche chiuse.
+      for (const bx of [23.4, 25.4, 27.4, 29.4, 31.4]) P('letto', bx, r.y0 + 0.2, 1, { r: 0 });
+      // --- la fila di mezzogiorno: quattro, due per lato del corridoio che porta alla porta ---
+      for (const bx of [23.3, 24.9, 29.1, 30.7]) P('letto', bx, r.y1 - 0.2, 1, { r: 0 });
+      // --- in mezzo: il fuoco, due tavoli e la madia contro la parete di ponente ---
+      P('focolare', 27.4, 17.0, 1.15);
+      P('tavolo', 24.4, 17.2, 0.95); P('panca', 24.4, 18.3, 0.9); P('panca', 24.4, 16.1, 0.9);
+      P('tavolo', 30.4, 17.2, 0.95); P('panca', 30.4, 18.3, 0.9); P('panca', 30.4, 16.1, 0.9);
+      P('credenza', 23.2, 16.8, 0.95, { r: 1 });
+      P('hanging_lantern', 25.4, 16.9, 1.05); P('hanging_lantern', 29.4, 16.9, 1.05);
+      P('tappeto', 27.4, 18.6, 1.2, { col: '#6b4630' });
+      // NIENTE barili o casse sul lato di levante: la porta della cucina si apre sulla colonna 33 e
+      // il punto da cui ci si entra e' la tessera 32,16. Il primo tentativo ci aveva messo un barile
+      // a 31,8 — fuori dalla fascia dell'uscio del dormitorio (che guarda la SUA porta, a
+      // mezzogiorno) e fuori dal riquadro della cucina, quindi invisibile a tutti e due i controlli
+      // che spaccano. Risultato: una cucina in cui non si entrava, trovata solo dal flood fill.
+    }
+    {
+      // LA CUCINA e' chiusa: l'unico ingresso e' la porta sul muro di mezzo (colonna 33, righe
+      // 16-17), che da' sul dormitorio. Dal mercato non ci si entra, e non e' una svista: Paolo l'ha
+      // chiesta *chiusa*.
+      //
+      // E' larga TRE colonne (34..36) e la fascia dell'uscio ne occupa due e mezza fino a y 17,5:
+      // tutto l'arredo solido sta quindi sopra la riga 14 o sotto la 18, e in mezzo resta la corsia
+      // che porta al Cuoco (la regola della corsia del banco, in fondo al file, la verifica da sola
+      // perche' il Cuoco e' nell'elenco degli `stalls`).
+      // La stanza e' larga TRE colonne: ogni mobile solido in piu' e' un pezzo di stanza in meno, e
+      // sotto una certa soglia resta un angolo in cui non si entra. Qui dentro ci stanno TRE corpi —
+      // la madia contro il muro di fondo, il banco da lavoro e il fuoco — e tutti e tre sono a filo
+      // di parete, cosi' il passaggio resta tutto da una parte invece che spezzarsi in due metri.
+      P('credenza', 35.2, 14.2, 0.95, { r: 0 });
+      P('bancone', 35.4, 18.0, 0.8, { r: 0 });
+      P('focolare', 35.2, 20.0, 1.1);
+      P('hanging_lantern', 35.2, 16.0, 1.0);
+      P('tappeto', 34.6, 17.4, 0.9, { col: '#5a3828' });
+    }
+
     // ===================== LE CASE =====================
     // Sette case, e tutte arredate dalla STESSA funzione. Non e' pigrizia: e' che una casa di nani ha
     // sempre le stesse quattro cose — il focolare in mezzo (e' la ragione per cui la stanza esiste), il
@@ -1706,8 +1832,8 @@
     }
 
     const village = (() => {
-        // Ogni mercante sta nella SUA stanza, girato verso il falo' della piazza.
-        const mk = (s) => { const dx = s.x - VILLAGE.fire.x, dy = s.y - VILLAGE.fire.y;
+        // Ogni mercante sta nella SUA stanza, girato verso il centro del paese.
+        const mk = (s) => { const dx = s.x - VILLAGE.centro.x, dy = s.y - VILLAGE.centro.y;
           return { x: s.x * TILE + TILE / 2, y: s.y * TILE + TILE / 2,
                    kind: s.kind, name: s.name, shop: s.shop || 0, cat: s.cat || '', pot: s.pot || 0, bnd: s.bnd || 0, crd: s.crd || 0, inn: s.inn || 0, sub: s.sub || '', col: s.col || '',
                    soon: s.soon || 0, seated: s.seated || 0, face: Math.atan2(-dy, -dx) }; };
@@ -1722,8 +1848,12 @@
           { x: 9.6,  y: 17.3, kind: 'bottegaio', face: 0 },
           { x: 12.0, y: 17.3, kind: 'paesana',   face: Math.PI },
           { x: 6.0,  y: 13.2, kind: 'vecchio',   face: 1.9 },
-          { x: 24.2, y: 14.4, kind: 'monaco',    face: 0.6, act: 'guarda' },
-          { x: 34.6, y: 28.6, kind: 'paesana',   face: 3.4 },
+          // v2.33 — questi due stavano dove adesso c'e' roba: il monaco in mezzo ai letti del
+          // dormitorio, la paesana addosso al banco del vino. Il monaco esce nella fascia di ponente
+          // dello spiazzo, girato verso la locanda; la paesana passa nella corsia fra le due file —
+          // che e' il posto dove uno al mercato ci sta davvero.
+          { x: 21.0, y: 15.4, kind: 'monaco',    face: 0,   act: 'guarda' },
+          { x: 33.0, y: 26.6, kind: 'paesana',   face: 3.4 },
           { x: 21.4, y: 34.2, kind: 'bimbo',     face: 0, act: 'cammina' },
           { x: 38.4, y: 9.4,  kind: 'paesano',   face: Math.PI, act: 'cammina' },
           { x: 46.4, y: 9.2,  kind: 'bottegaio', face: 1.4 },
@@ -1772,7 +1902,12 @@
         // lista vera: chi sa delle tre le usa, chi non lo sa continua a vedere il fabbro di prima.
         const botteghe = npcs.filter(n => n.shop).map(n => ({ x: n.x, y: n.y, cat: n.cat || 'guerriero', kind: n.kind, name: n.name, face: n.face }));
         const sm = botteghe[0] || { x: npcs[0].x, y: npcs[0].y, face: npcs[0].face };
-      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, botteghe, npcs, extras, girovaghi, fire: { x: VILLAGE.fire.x * TILE + TILE / 2, y: VILLAGE.fire.y * TILE + TILE / 2 } };
+      // v2.33 — qui c'era `fire`, il punto del falo'. Il falo' non c'e' piu' e il campo si chiama
+      // `centro`: e' il centro del mercato, il verso in cui guardano i mercanti, e il punto da cui si
+      // misura "sono in mezzo al paese". Nessuno lo usava per accendere niente — la luce del falo'
+      // veniva dal prop `bonfire`, non da questo campo — quindi il cambio di nome e' tutto il cambio.
+      return { smith: { x: sm.x, y: sm.y }, smithFace: sm.face, botteghe, npcs, extras, girovaghi,
+               centro: { x: VILLAGE.centro.x * TILE + TILE / 2, y: VILLAGE.centro.y * TILE + TILE / 2 } };
     })();
 
     return {

@@ -921,7 +921,10 @@ function testV152() {
     assert(gd.length === 2, 'due guardie sulla soglia del portale, non una e non tre (ne ho ' + gd.length + ')');
     assert(Math.sign(gd[0].y - soglia.y) !== Math.sign(gd[1].y - soglia.y), 'una per lato');
   }
-  assert(MU.dist(room.map.village.fire.x, room.map.village.fire.y, cxw, cyw) < T * 6, 'il falo invece resta in mezzo alla piazza, che e il centro del paese');
+  // v2.33 — ERA IL FALO'. Il falo' non c'e' piu' — al suo posto, due tessere piu' su, c'e' la
+  // locanda — e il campo si chiama `centro`. Quello che il test deve pretendere non cambia: il
+  // mezzo del paese dev'essere il mezzo del paese.
+  assert(MU.dist(room.map.village.centro.x, room.map.village.centro.y, cxw, cyw) < T * 6, 'il centro del mercato resta in mezzo alla piazza, che e il centro del paese');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, pw.x, pw.y) < T * 24, 'la fucina si raggiunge dalla piazza');
   // acquisto: serve essere vicini al banco GIUSTO
   // v2.19 — «il banco giusto» e' la novita': il giocatore qui e' un ARCIERE, e il cuoio lo vende
@@ -1067,7 +1070,11 @@ function testV157() {
     'le due botteghe nuove hanno la loro stanza');
   // v2.6 — e una terza specie: la CASA DEL PORTALE, che non e' ne' una bottega ne' un'abitazione
   assert(V.rooms.filter(r => r.kind === 'portale').length === 1, 'e una casa del portale, una sola');
-  assert(V.rooms.every(r => r.kind === 'bottega' || r.kind === 'casa' || r.kind === 'portale'), 'ogni stanza dice cosa e');
+  // v2.33 — e una quarta: la LOCANDA in mezzo allo spiazzo (dormitorio + cucina). Non e' 'casa'
+  // apposta: `arredaCasa` mette sempre lo stesso arredo — un focolare, UN letto, un tavolo — e qui
+  // di letti ce ne vogliono nove. Il `kind` e' la bandierina che la tiene fuori da quella funzione.
+  assert(V.rooms.filter(r => r.kind === 'locanda').length === 2, 'e la locanda, che e due stanze');
+  assert(V.rooms.every(r => ['bottega', 'casa', 'portale', 'locanda'].indexOf(r.kind) >= 0), 'ogni stanza dice cosa e');
   // v2.6 — DUE FILE CHE SI GUARDANO. E' questa la cosa che fa leggere un paese dall'alto, e se qualcuno
   // sparpaglia di nuovo le stanze il test deve accorgersene: ogni stanza dei lati sta tutta a ponente o
   // tutta a levante dello spiazzo, e ce ne sono almeno quattro per parte.
@@ -1152,17 +1159,30 @@ function testV157() {
   for (const L of lunghe) assert(L[2] - L[0] + 1 >= 3, 'e ognuna e larga almeno tre tile (' + (L[2] - L[0] + 1) + ')');
   assert(lunghe[0][2] < V.piazza.x0 && lunghe[1][0] > V.piazza.x1, 'una a ponente e una a levante della piazza');
   // e ogni porta dei lati si apre su una di quelle due
+  // v2.33 — TRANNE LA CUCINA. La sua porta e' a ponente ma non da' su una strada: da' sul
+  // dormitorio, perche' Paolo l'ha chiesta *chiusa* — ci si entra solo passando dalla locanda.
+  // E' l'unica stanza del paese senza un ingresso dall'esterno, e la regola qui parla delle porte
+  // che si affacciano sul villaggio.
   for (const r of V.rooms) { const [px, py, lato] = r.porta; if (lato === 'n' || lato === 's') continue;
+    if (r.id === 'cucina') continue;
     const vicino = lato === 'e' ? px + 1 : px - 1;
     assert(lunghe.some(L => vicino >= L[0] && vicino <= L[2] && py >= L[1] && py <= L[3]),
       'la porta di ' + r.id + ' si apre su una via lunga'); }
 
-  // --- il falo' sta nella piazza, ed e' l'unica sorgente di luce dichiarata ---
-  assert(!!m.village.fire, 'il falo e esposto nella mappa (e la sorgente di luce)');
-  const fireT = { x: (m.village.fire.x / T) | 0, y: (m.village.fire.y / T) | 0 };
-  assert(fireT.x === (V.fire.x | 0) && fireT.y === (V.fire.y | 0), 'il falo e dove lo mette la pianta');
-  assert(dentro(fireT.x, fireT.y, V.piazza), 'e il falo sta nella piazza centrale');
-  assert(m.props.filter(p => p.type === 'bonfire').length === 1, 'un solo falo');
+  // --- v2.33 — IL CENTRO DEL MERCATO (era il falo') ---
+  // Paolo: *«togli il falo'»*. Il fuoco se n'e' andato e con lui la sua luce; il PUNTO e' rimasto,
+  // perche' e' il verso in cui guardano tutti i mercanti. Il test cambia di conseguenza: non piu'
+  // «c'e' un falo e sta nella piazza», ma «il centro e' dichiarato, sta dove lo mette la pianta,
+  // sta nel mercato — e di falo' non ce n'e' piu' nemmeno uno».
+  assert(!!m.village.centro, 'il centro del paese e esposto nella mappa');
+  // il confronto si fa in PIXEL, non in tessere: il centro sta a meta' tessera (29,5) e l'arrotonda-
+  // mento a tessera lo spostava di uno — un test che fallisce per il modo in cui e' scritto, non per
+  // quello che misura.
+  assert(m.village.centro.x === V.centro.x * T + T / 2 && m.village.centro.y === V.centro.y * T + T / 2,
+    'il centro e dove lo mette la pianta');
+  assert(dentro(V.centro.x, V.centro.y, V.piazza), 'e sta dentro il rettangolo di terra battuta');
+  assert(m.props.filter(p => p.type === 'bonfire').length === 0, 'il falo non c e piu');
+  assert(V.fire === undefined, 'e la pianta non lo nomina nemmeno piu');
 
   // --- i pavimenti per stanza: sei rettangoli (piazza + cinque stanze) ---
   assert(Array.isArray(m.floors) && m.floors.length === V.rooms.length + 1, 'il renderer riceve un pavimento per stanza, piu la piazza');
@@ -1170,7 +1190,9 @@ function testV157() {
 
   // --- sette mercanti, ognuno nella SUA stanza, dietro il suo banco ---
   assert(m.props.filter(p => p.type === 'stall').length === 0, 'i banchetti sono spariti in v1.75: restano le persone');
-  assert(m.village.npcs.length === 8, 'ci sono 8 mercanti (con l Orafo)');
+  // v2.33 — NOVE: con il Cuoco della locanda, che in questo elenco ci sta senza vendere niente
+  // (come l'Anziano) perche' l'elenco e' «chi ha una stanza sua», non «chi ha un banco».
+  assert(m.village.npcs.length === 9, 'ci sono 9 abitanti con una stanza (con l Orafo e il Cuoco)');
   // v2.19 — TRE vendono equipaggiamento, e ognuno il SUO catalogo. Il conto e' la meta' della regola;
   // l'altra meta' e' che i tre cataloghi siano diversi, se no sono tre porte sullo stesso negozio.
   const venditori = m.village.npcs.filter(n => n.shop);
@@ -1199,7 +1221,7 @@ function testV157() {
   assert(m.village.npcs.filter(n => n.bnd).length === 1, 'e il Banditore ha aperto in v1.72');
   assert(m.village.npcs.filter(n => n.pot).length === 1, "e l'Erborista e aperto");
   assert(m.village.npcs.every(n => n.col), 'ogni mercante ha il suo colore: e cosi che lo riconosci da lontano');
-  assert(new Set(m.village.npcs.map(n => n.col)).size === 8, 'gli otto colori sono tutti diversi');
+  assert(new Set(m.village.npcs.map(n => n.col)).size === 9, 'i nove colori sono tutti diversi');
   let fuori = 0;
   for (let i2 = 0; i2 < V.stalls.length; i2++) {
     const s2 = V.stalls[i2], r = V.rooms.find(x => x.id === s2.room);
@@ -1225,14 +1247,14 @@ function testV157() {
   // che dichiara `lit`, e il velo scuro li' non si stende.
   assert(m.lit === 1, 'il villaggio e illuminato: e la sosta, non un\'ondata');
   for (const lv of [1, 5, 10, 20]) assert(!MapGen.generate(77, lv).lit, 'ma l ondata ' + lv + ' resta buia');
-  assert(m.props.filter(p => p.type === 'glowspot').length === 8, "un alone di luce per mercante");
+  assert(m.props.filter(p => p.type === 'glowspot').length === 9, "un alone di luce per abitante con una stanza");
   assert(m.market === 1, 'la mappa si dichiara mercato');
   assert(m.enemySpawns.length === 0 && m.crateSpawns.length === 0, 'niente spawn nemici ne casse');
 
   // --- la stanza vera del Room coincide, e nessuno nasce nella roccia ---
   const room = new Room('v157'); room.addPlayer('b', { send() {} }, 'B', 'arciere'); room.startGame();
   room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');   // v1.79 — il villaggio e una sezione del menu
-  assert(room.map.village && room.map.village.npcs.length === 8, 'la stanza mercato usa il villaggio');
+  assert(room.map.village && room.map.village.npcs.length === 9, 'la stanza mercato usa il villaggio');
   assert(room.monsters.length === 0 && room.crates.length === 0, 'nel villaggio non ci sono nemici ne casse');
   assert(MU.dist(room.gearMerchant.x, room.gearMerchant.y, room.map.village.smith.x, room.map.village.smith.y) < 1, 'il mercante e agganciato al fabbro');
   let inside = false;
@@ -2961,6 +2983,11 @@ function testV175() {
     // v2.27 — e i due bracieri della soglia dell'Anziano, per lo stesso motivo dei precedenti: sono
     // li' apposta, e stanno FUORI dalla bocca della porta (lo misura il TEST 86, che prova a passarci).
     if (p.type === 'brazier' && tx >= 41 && tx <= 43 && (ty === 16 || ty === 19)) continue;
+    // v2.33 — e i quattro che illuminano i FIANCHI DELLA LOCANDA. Da questa versione in mezzo allo
+    // spiazzo c'e' un edificio, e le due fasce che lo girano (colonne 20-21 e 38-39) sono strada: la
+    // sola maniera di non lasciare al buio quei due muri e' una torcia sulla strada. Che non diano
+    // fastidio lo misura il flood fill coi corpi solidi, come per tutte le altre.
+    if (p.type === 'brazier' && (tx <= 21 || tx >= 38) && ty >= 12 && ty <= 20) continue;
     if (V.rooms.some(r => dentro(tx, ty, r)) || dentro(tx, ty, V.piazza)) continue;
     if (inLink2(tx, ty)) inCorridoio++; else sparsi++;
   }
@@ -2992,7 +3019,10 @@ function testV1752() {
 
   // --- cosa e solido e cosa no ---
   const SOLIDI = ['tavolo', 'bancone', 'incudine', 'alambicco', 'crystal_cluster', 'barrel', 'sack', 'brazier',
-                  'candelabra', 'signpost', 'mortaio', 'bonfire', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
+                  // v2.33 — il 'bonfire' e' uscito da questo elenco perche' nel villaggio non c'e'
+                  // piu' (al suo posto, in mezzo allo spiazzo, c'e' la locanda). Resta nella tabella
+                  // INGOMBRI di mapgen: il tipo esiste ancora, semplicemente nessuno ne piazza uno.
+                  'candelabra', 'signpost', 'mortaio', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
                   'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
                   'bancarella',                   // v2.5 — e il banco delle botteghe di contorno
                   'bersaglio'];                   // v2.19 — la balla di paglia dell'archeria
@@ -9562,6 +9592,149 @@ function testV232() {
   ok('ventiquattro monili, l Orafo che li vende, sette caselle e la schermata nuova');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV233() {
+  console.log('\n[TEST 93] v2.33 — la locanda in mezzo alla piazza, il mercato su due file, la bottega dell Orafo arredata');
+  const MapGen = require('../shared/mapgen.js');
+  const V = MapGen.VILLAGE, T = C.TILE;
+  const m = MapGen.generateMarket(1);
+  const props = m.props;
+  const tile = (p) => ({ x: p.x / T - 0.5, y: p.y / T - 0.5 });
+  const dentro = (x, y, r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const stanza = (id) => V.rooms.find(r => r.id === id);
+  const inStanza = (id) => { const r = stanza(id); return props.filter(p => { const t = tile(p); return dentro(t.x, t.y, r); }); };
+
+  // --- 1) LA LOCANDA E' UNA CASA VERA, con dentro due ambienti ------------------------------
+  // Paolo: *«crea una casa grande con all'interno molti posti letto e un piccolo anche (chiuso)
+  // con una cucina e un cuoco»*. Le due cose che la rendono una casa e non un recinto sono i MURI
+  // (la griglia dice roccia tutt'attorno) e il fatto che si stia IN MEZZO allo spiazzo.
+  const dor = stanza('dormitorio'), cuc = stanza('cucina');
+  assert(!!dor && !!cuc, 'la locanda e' + "'" + ' fatta di due stanze: dormitorio e cucina');
+  assert(dor.kind === 'locanda' && cuc.kind === 'locanda',
+    'e nessuna delle due e una "casa": se lo fosse le arrederebbe arredaCasa, che mette UN letto');
+  // sta in mezzo: il suo centro cade dentro il vecchio spiazzo, sopra la piazza di terra battuta
+  const cxL = (dor.x0 + cuc.x1) / 2;
+  assert(cxL > 20 && cxL < 39 && dor.y1 < V.piazza.y0, 'la locanda sta in mezzo allo spiazzo, a settentrione del battuto');
+  // i muri ci sono per davvero: tutto il contorno delle due stanze e' roccia, tranne le due porte
+  {
+    const wall = (x, y) => m.grid[y * m.w + x] === C.T_WALL;
+    let buchi = 0;
+    for (const r of [dor, cuc]) for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) {
+      if (x > r.x0 - 1 && x < r.x1 + 1 && y > r.y0 - 1 && y < r.y1 + 1) continue;
+      if (!wall(x, y) && !dentro(x, y, dor) && !dentro(x, y, cuc)) buchi++;
+    }
+    // I BUCHI PREVISTI SONO SEI, e il conto va spiegato perche' a occhio se ne direbbero quattro.
+    // La porta del dormitorio apre due tessere sulla riga 21 (il muro di mezzogiorno). La porta
+    // della cucina ne apre due sulla colonna 33 — che e' il muro di LEVANTE del dormitorio e
+    // insieme quello di PONENTE della cucina, quindi le stesse due tessere si contano una volta
+    // per stanza. Due piu' due per due: sei.
+    assert(buchi === 6, 'il contorno della locanda e tutto muro tranne le due porte (' + buchi + ' tessere aperte)');
+  }
+
+  // --- 2) MOLTI POSTI LETTO -----------------------------------------------------------------
+  const letti = inStanza('dormitorio').filter(p => p.type === 'letto');
+  assert(letti.length >= 8, 'nel dormitorio ci sono molti posti letto (' + letti.length + ')');
+  // su DUE file: tutti attaccati a una delle due pareti lunghe, nessuno sparso in mezzo
+  const alte = letti.filter(p => tile(p).y < (dor.y0 + dor.y1) / 2);
+  assert(alte.length >= 4 && letti.length - alte.length >= 3, 'e stanno in due file contro le due pareti');
+  for (const b of letti) { const t = tile(b);
+    assert(t.y - dor.y0 < 1.2 || dor.y1 - t.y < 1.2, 'ogni letto e a filo di muro (altrimenti dietro resta una striscia in cui non si entra)'); }
+
+  // --- 3) LA CUCINA E' CHIUSA, E DENTRO C'E' IL CUOCO ---------------------------------------
+  // "Chiusa" vuol dire una cosa misurabile: la sua unica porta non da' su una strada, da' sul
+  // dormitorio. E' l'unica stanza del paese per cui questo e' vero.
+  {
+    const [px, py] = cuc.porta;
+    assert(dentro(px - 1, py, dor), 'dalla cucina si esce nel dormitorio, non in strada: e chiusa');
+    // ed e' l'UNICA cosi': di tutte le altre stanze, nessuna ha la tessera di fuori dentro
+    // un'altra stanza. E' questo che distingue un ambiente interno da una bottega sulla via.
+    const interne = V.rooms.filter(r => {
+      const [qx, qy, lato] = r.porta;
+      const vx = lato === 'e' ? qx + 1 : lato === 'o' ? qx - 1 : qx;
+      const vy = lato === 'n' ? qy - 1 : lato === 's' ? qy + 1 : qy;
+      return V.rooms.some(q => q.id !== r.id && dentro(vx, vy, q));
+    }).map(r => r.id);
+    assert(interne.join(',') === 'cucina', 'ed e la sola stanza interna del paese (' + (interne.join(',') || 'nessuna') + ')');
+  }
+  const cuoco = m.village.npcs.find(n => n.kind === 'cook');
+  assert(!!cuoco && cuoco.name === 'Cuoco', 'in cucina c e il Cuoco');
+  { const t = { x: cuoco.x / T - 0.5, y: cuoco.y / T - 0.5 };
+    assert(dentro(t.x, t.y, cuc), 'e sta dentro la cucina, non sulla soglia'); }
+  assert(!cuoco.shop && !cuoco.pot && !cuoco.bnd && !cuoco.inn, 'non vende niente: e una persona, non un banco');
+  // e il renderer sa come vestirlo: un `kind` senza tavolozza diventa un avventore qualunque
+  { const fs = require('fs'), path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+    assert(/\n\s+cook:\s+\{/.test(src), 'il renderer ha la tavolozza del cuoco');
+    assert(/kind === 'cook'/.test(src), 'e il suo attrezzo in mano (il pentolone), se no gli resta il boccale di tutti'); }
+  const focolari = inStanza('cucina').filter(p => p.type === 'focolare');
+  assert(focolari.length === 1, 'e c e un fuoco su cui cucinare');
+
+  // --- 4) IL MERCATO: META' DELLO SPIAZZO, DUE FILE PARALLELE, NIENTE FALO' ------------------
+  // Paolo: *«l'altra meta' resta com'e' ora in terra con pozzo (togli il falo') e le varie
+  // bancarelle disposte pero' su 2 file parallele»*.
+  assert(props.filter(p => p.type === 'bonfire').length === 0, 'il falo non c e piu');
+  assert(props.filter(p => p.type === 'pozzo').length === 1, 'il pozzo invece resta');
+  { const pz = props.find(p => p.type === 'pozzo'), t = tile(pz);
+    assert(dentro(t.x, t.y, V.piazza), 'e sta nella meta di terra battuta'); }
+  const banchi = props.filter(p => p.type === 'bancarella');
+  assert(banchi.length === 8, 'otto bancarelle: quattro ne sono state tolte perche su due file non ci stavano larghe (' + banchi.length + ')');
+  { // DUE file, e parallele: due sole quote di y, e su ognuna lo stesso numero di banchi
+    const righe = [...new Set(banchi.map(b => Math.round(tile(b).y * 10) / 10))].sort((a, z) => a - z);
+    assert(righe.length === 2, 'stanno su due sole righe (' + righe.join(' e ') + ')');
+    assert(banchi.filter(b => Math.round(tile(b).y * 10) / 10 === righe[0]).length === 4, 'quattro per fila');
+    assert(righe[1] - righe[0] >= 4, 'e fra le due file resta una corsia larga (' + (righe[1] - righe[0]).toFixed(1) + ' tessere)');
+    for (const b of banchi) { const t = tile(b); assert(dentro(t.x, t.y, V.piazza), 'ogni banco sta nel battuto, non in strada'); }
+    // parallele vuol dire anche ALLINEATE: le quattro colonne sono le stesse sopra e sotto
+    const col = (y) => banchi.filter(b => Math.round(tile(b).y * 10) / 10 === y).map(b => Math.round(tile(b).x * 10) / 10).sort((a, z) => a - z).join(',');
+    assert(col(righe[0]) === col(righe[1]), 'e le due file sono incolonnate (' + col(righe[0]) + ')');
+    // nessun mestiere ripetuto: otto banchi, otto cose diverse da vendere
+    assert(new Set(banchi.map(b => b.mest)).size === 8, 'otto mestieri diversi');
+  }
+
+  // --- 5) LA BOTTEGA DELL'ORAFO NON E' PIU' VUOTA -------------------------------------------
+  // Paolo: *«la casa dell'orafo e' molto spoglia, aggiungi giusto un paio di bacheche o scaffali»*.
+  // «Giusto un paio» e' un limite in due sensi, e il test tiene tutti e due: almeno due, e non
+  // tanti da riempirla — e' una stanza alta quattro tessere con la porta in mezzo.
+  {
+    const dentroOrafo = inStanza('orafo');
+    const bacheche = dentroOrafo.filter(p => p.type === 'scaffale');
+    assert(bacheche.length >= 2 && bacheche.length <= 4, 'dall Orafo ci sono due o tre bacheche (' + bacheche.length + ')');
+    assert(dentroOrafo.some(p => p.type === 'bancone'), 'e un banco da lavoro');
+    assert(dentroOrafo.some(p => p.type === 'hanging_lantern'), 'e la luce che le illumina');
+    // v2.32 la stanza era NUDA: questo e' il conto che non deve tornare a zero
+    assert(dentroOrafo.filter(p => MapGen.INGOMBRI ? !!MapGen.INGOMBRI[p.type] : p.type !== 'flag').length >= 4,
+      'in tutto almeno quattro mobili: nella v2.32 non ce n era nemmeno uno');
+  }
+
+  // --- 6) E NIENTE DI TUTTO QUESTO HA MURATO QUALCOSA ---------------------------------------
+  // La regressione da temere non e' "il mobile e' brutto": e' "la stanza c'e' ma non ci si entra".
+  // Il flood fill completo lo fa il TEST 47; qui si prova la cosa nuova — che dalla piazza si
+  // arrivi nel dormitorio, e dal dormitorio in cucina — perche' e' il percorso che prima della
+  // v2.33 non esisteva.
+  {
+    const room = new Room('v233'); room.addPlayer('b', { send() {} }, 'B', 'paladino'); room.startGame();
+    room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');
+    const p = [...room.players.values()][0], r = p.radius * 0.8, mm = room.map;
+    const libero = (x, y) => !room._blk(x, y, r);
+    const PASSO = 8, W = Math.ceil(mm.w * T / PASSO), H = Math.ceil(mm.h * T / PASSO);
+    const visto = new Uint8Array(W * H), coda = [[Math.round(mm.spawn.x / PASSO), Math.round(mm.spawn.y / PASSO)]];
+    while (coda.length) { const c = coda.pop(), gx = c[0], gy = c[1], k = gy * W + gx;
+      if (gx < 0 || gy < 0 || gx >= W || gy >= H || visto[k]) continue;
+      if (!libero(gx * PASSO, gy * PASSO)) continue; visto[k] = 1;
+      coda.push([gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]); }
+    const arrivo = (tx, ty) => { const gx = Math.round((tx * T + T / 2) / PASSO), gy = Math.round((ty * T + T / 2) / PASSO);
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const q = (gy + dy) * W + (gx + dx); if (q >= 0 && q < visto.length && visto[q]) return true; } return false; };
+    assert(arrivo((dor.x0 + dor.x1) / 2, (dor.y0 + dor.y1) / 2), 'dalla piazza si entra nel dormitorio');
+    assert(arrivo((cuc.x0 + cuc.x1) / 2, (cuc.y0 + cuc.y1) / 2), 'e dal dormitorio si entra in cucina');
+    assert(arrivo(29, 5), 'e la bottega dell Orafo, adesso che e arredata, resta attraversabile');
+    // e il Cuoco si raggiunge: un cuoco in una cucina murata e' esattamente il guasto da temere
+    const dC = (() => { let best = Infinity;
+      for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) if (visto[gy * W + gx])
+        best = Math.min(best, MU.dist(gx * PASSO, gy * PASSO, cuoco.x, cuoco.y)); return best; })();
+    assert(dC <= C.MARKET_MERCH_RANGE, 'e si arriva a parlare col Cuoco (' + dC.toFixed(0) + ' px)');
+  }
+  ok('la locanda, il cuoco, il mercato su due file e la bottega dell Orafo arredata');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

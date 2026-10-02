@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.32.0`
+**Versione attuale:** `2.33.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -723,11 +723,65 @@ riconoscibile a colpo d'occhio dall'alto: **due file di case che si guardano**, 
 |---|---|
 | **Fila di ponente** | casa del portale · **osteria** · **fucina** · due case |
 | **Fila di levante** | **erboristeria** · **antro dell’Anziano** · **gilda** · due case |
-| **Nello spiazzo** | una casa a settentrione, due a mezzogiorno |
-| **Al centro** | la **piazza**: 16x18 di terra battuta, il falo' nel mezzo, il pozzo di fianco |
-| **Attorno alla piazza** | **dodici torce** e **dodici bancarelle**, alternate, girate verso il centro |
+| **Nello spiazzo** | la **locanda** (v2.33) a settentrione, la bottega dell'**Orafo** piu' su, due case a mezzogiorno |
+| **Al centro** | la meta' di sopra e' la **locanda**, quella di sotto il **mercato**: terra battuta, pozzo, **niente falo'** (v2.33) |
+| **Nel mercato** | **otto bancarelle su due file parallele** e un giro di bracieri lungo i muri (v2.33) |
 | **Le strade** | le due **vie lunghe** davanti alle porte delle file, la via alta e la via bassa a chiudere |
 | **Oltre** | la roccia delle grotte, e poi il nero: non c'e' un bordo mappa, c'e' la montagna |
+
+### 🏚️ v2.33 — LO SPIAZZO SI DIVIDE IN DUE: la locanda e il mercato
+
+Paolo: *«in mezzo alla sala centrale in terra battuta del villaggio crea una casa grande con all'interno
+molti posti letto e un piccolo anche (chiuso) con una cucina e un cuoco. Meta' della sezione e' per la
+casa mentre l'altra meta' resta com'e' ora in terra con pozzo (togli il falo') e le varie bancarelle
+disposte pero' su 2 file parallele»*.
+
+```
+ y 11..12  la fascia alta, sopra la locanda
+ y 13      il muro di settentrione
+ y 14..20  DORMITORIO (x 23..32)  │ cucina (x 34..36)        ← la LOCANDA
+ y 21      il muro di mezzogiorno, con la porta sulle colonne 27-28
+ y 22..31  il MERCATO: terra battuta, pozzo a ponente, otto banchi su due file
+ x 20..21 e 38..39  le due fasce che girano attorno alla locanda
+```
+
+| | |
+|---|---|
+| **Dormitorio** | nove posti letto su due file a filo di muro, focolare, due tavoli con panche, madia |
+| **Cucina** | **chiusa**: l'unica porta da' sul dormitorio. Madia, banco, fuoco — e il **Cuoco** |
+| **Mercato** | pozzo a (23,6 · 26,2), otto banchi a y 24 e y 29,2, corsia in mezzo |
+
+**Perche' lo spiazzo e' diventato quattro strade.** Era un rettangolo unico, e per questo in mezzo non ci
+poteva stare niente: le strade si scavano **dopo** le stanze, quindi una casa messa li' dentro si sarebbe
+ritrovata senza muri — la strada glieli avrebbe mangiati. Adesso sono quattro fasce che **girano attorno**
+alla locanda, e la roccia che resta in mezzo e' esattamente il muro della casa.
+
+**Perche' il `kind` e' `'locanda'` e non `'casa'`.** `arredaCasa` mette sempre lo stesso arredo — un
+focolare, **un** letto, un tavolo, una madia. Qui di letti ne servono nove: il `kind` e' la bandierina
+che tiene queste due stanze fuori da quella funzione.
+
+**Cosa vuol dire «chiusa», in modo misurabile.** La cucina e' l'unica stanza del paese la cui
+tessera-di-fuori cade **dentro un'altra stanza** invece che su una strada. E' questo che distingue un
+ambiente interno da una bottega sulla via, ed e' cosi' che lo verifica il test.
+
+**Il Cuoco** sta nell'elenco degli abitanti con una stanza senza nessuna bandiera: non vende, non cura,
+non da' taglie. Ci sta per lo stesso motivo per cui ci sta l'Anziano — una stanza sua, un alone del
+proprio colore, la faccia girata verso il paese. Grembiule chiaro, pentolone e mestolo in mano.
+
+**La luce, senza il falo'.** Il falo' era l'unica sorgente di `bigLight`. Toglierlo **non** toglie
+visibilita' — la mappa del villaggio dichiara `lit: 1` e `_drawDarkness` esce subito per le mappe
+illuminate — toglie **calore**. Al suo posto: bracieri lungo il muro della locanda, attorno al battuto, e
+quattro sui fianchi, nelle fasce che la girano. Sono quei due muri che altrimenti si leggerebbero come il
+bordo della mappa invece che come una casa.
+
+**`village.fire` si chiama `village.centro`.** Il fuoco non c'e' piu'; il punto resta, ed e' il verso in
+cui guardano tutti i mercanti.
+
+**Quattro guasti trovati dai controlli e non dall'occhio:** un barile che sedeva esattamente sul punto
+da cui si entra in cucina (invisibile a tutti e due i controlli che spaccano, l'ha preso il flood fill);
+una striscia di tredici pixel dietro i letti, troppo stretta per starci e abbastanza larga da esistere;
+due fessure fra braciere e cartello nel mercato; e quattro bracieri piazzati dentro un muro — un corpo
+solido dove non si cammina non da' fastidio a nessuno, e proprio per questo non se ne accorge nessuno.
 
 ### 🪨 Fuori e' grotta, dentro e' casa
 

@@ -2,6 +2,123 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.33.0] — 2026-10-01 · "La locanda in mezzo alla piazza"
+
+Paolo: *«la casa dell'orafo e' molto spoglia, aggiungi giusto un paio di bacheche o scaffali / in mezzo
+alla sala centrale in terra battuta del villaggio crea una casa grande con all'interno molti posti letto
+e un piccolo anche (chiuso) con una cucina e un cuoco. Meta' della sezione che ti ho mostrato e' per la
+casa mentre l'altra meta' resta com'e' ora in terra con pozzo (togli il falo') e le varie bancarelle
+disposte pero' su 2 file parallele (se non ci stanno tutte eliminane qualcuna)»*.
+
+Tre richieste, un solo pezzo di mappa: lo **spiazzo centrale** del villaggio si divide in due.
+
+---
+
+### 🏚️ LA LOCANDA — meta' di sopra
+
+Due stanze attaccate, con un muro solo fra loro:
+
+| | tessere | pavimento | porta |
+|---|---|---|---|
+| **Dormitorio** | x 23–32, y 14–20 | assi | a mezzogiorno (27–28), si apre sul mercato |
+| **Cucina** | x 34–36, y 14–20 | lastre | a ponente (colonna 33), si apre **sul dormitorio** |
+
+**Nove posti letto**, cinque contro la parete di settentrione e quattro contro quella di mezzogiorno,
+interrotti in mezzo dal corridoio che porta alla porta. In mezzo il focolare, due tavoli con le panche,
+la madia e un tappeto.
+
+La **cucina e' chiusa**, e «chiusa» qui e' una cosa misurabile, non un aggettivo: e' l'unica stanza del
+paese la cui tessera-di-fuori cade **dentro un'altra stanza**. Dal mercato non ci si entra. Dentro ci
+sono la madia, il banco da lavoro, il fuoco su cui si cucina — e il **Cuoco**.
+
+Il Cuoco sta nell'elenco degli abitanti con una stanza (`VILLAGE.stalls`) **senza nessuna bandiera**:
+non vende, non cura, non da' taglie. Ci sta per lo stesso motivo per cui ci sta l'Anziano — avere una
+stanza sua, un alone del proprio colore, la faccia girata verso il paese. Grembiule chiaro: e' l'unico
+del villaggio vestito di una cosa che si sporca, e in mano ha il pentolone col mestolo.
+
+**Perche' le due stanze sono `kind: 'locanda'` e non `'casa'.** Perche' `arredaCasa` mette sempre lo
+stesso arredo — un focolare, **un** letto, un tavolo, una madia — ed e' giusto cosi' per le case. Qui
+di letti ne servono nove: il `kind` e' la bandierina che tiene queste due stanze fuori da quella
+funzione, e le fa arredare a mano.
+
+**Perche' lo spiazzo e' diventato quattro strade.** Prima era un rettangolo unico (`[20, 11, 39, 32]`),
+e per questo in mezzo non ci poteva stare niente: le strade si scavano **dopo** le stanze, quindi una
+casa messa li' dentro si sarebbe ritrovata senza muri — la strada glieli avrebbe mangiati. Adesso sono
+quattro fasce che **girano attorno** alla locanda, e la roccia che resta in mezzo (le colonne 22 e 37,
+le righe 13 e 21) e' esattamente il muro della casa.
+
+---
+
+### 🏺 IL MERCATO — meta' di sotto
+
+Resta terra battuta, col **pozzo** (spostato a ponente: in mezzo sarebbe finito in mezzo alla corsia) e
+**senza falo'**. Al suo posto, due tessere piu' su, c'e' la locanda.
+
+Le bancarelle erano **dodici**, sparse tutt'attorno allo spiazzo. Adesso sono **otto, su due file da
+quattro**, una di fronte all'altra, incolonnate, con in mezzo la corsia in cui si cammina:
+
+```
+   PANE    CARNE    PESCE    FRUTTA        ← fila alta  (y 24)
+ ·········· corsia · pozzo ··········      ← y 26,5
+   VASI   TESSUTI   SPEZIE    VINO         ← fila bassa (y 29,2)
+```
+
+Quattro mestieri sono stati tagliati (pellami, ferro, candele, formaggi): su due file ci stavano, ma a
+1,6 tessere l'uno dall'altro si leggevano come un muro di banchi invece che come un mercato. I cartelli
+vanno verso **fuori** — sopra la fila alta, sotto quella bassa — perche' in mezzo ci si passa.
+
+**La luce.** Il falo' era l'unica sorgente di `bigLight` (renderer, riga 859). Toglierlo **non** toglie
+visibilita': la mappa del villaggio dichiara `lit: 1` e `_drawDarkness` esce subito per le mappe
+illuminate — toglie **calore**. Al suo posto il mercato ha un giro di bracieri lungo il muro della
+locanda e lungo i tre lati del battuto, piu' quattro sui fianchi della locanda, nelle due fasce che la
+girano: sono quei due muri che altrimenti si leggerebbero come il bordo della mappa invece che come una
+casa.
+
+---
+
+### 💍 LA BOTTEGA DELL'ORAFO, arredata
+
+Nella v2.32 la stanza era nata **senza una riga di arredo**: c'era il mercante e basta. Adesso ha due
+bacheche sulla parete di fondo, un banco da lavoro a ponente, una terza vetrina a levante, due lanterne
+appese e due stendardi d'oro.
+
+Non c'e' un bancone davanti all'Orafo come nelle altre botteghe, e non e' una dimenticanza: la stanza e'
+alta quattro tessere con la porta in mezzo, e la fascia dell'uscio tiene fuori tutta la colonna
+centrale. Un banco li' chiuderebbe l'unico passaggio.
+
+---
+
+### 🧪 QUATTRO GUASTI TROVATI DAI CONTROLLI, non dall'occhio
+
+1. **Una cucina in cui non si entrava.** Un barile messo a 31,8 nel dormitorio sedeva **esattamente**
+   sul punto da cui si passa per entrare in cucina. Era fuori dalla fascia dell'uscio del dormitorio
+   (che guarda la **sua** porta, a mezzogiorno) e fuori dal riquadro della cucina: invisibile a tutti
+   e due i controlli che spaccano. L'ha trovato il flood fill coi corpi solidi.
+2. **Una striscia dietro i letti.** Con i letti mezza tessera dentro, fra il muro e la testiera
+   restavano tredici pixel: un corridoio in cui un personaggio (35 px) non ci sta, ma che esiste. Letti
+   a filo di muro, e gli intervalli fra l'uno e l'altro diventano nicchie aperte sulla stanza invece
+   che tasche chiuse.
+3. **Due fessure nel mercato.** Fra un braciere (26 px di corpo, col personaggio) e un cartello (21)
+   restavano meno di quaranta pixel, e in quelle due fessure il flood fill ha trovato due posizioni
+   libere in cui non si arriva. I bracieri di mezzogiorno sono scesi da quattro a due, in mezzo agli
+   intervalli fra i cartelli.
+4. **Bracieri dentro un muro.** Il giro di torce stava a `piazza.y0 − 0,4`, che con la vecchia pianta
+   era spiazzo e adesso e' la riga 21: il **muro** della locanda. Un corpo solido in un punto dove non
+   si cammina non da' fastidio a nessuno — e proprio per questo non se ne accorge nessuno.
+
+**Il campo `village.fire` si chiama `village.centro`.** Il falo' non c'e' piu'; il punto resta, ed e' il
+verso in cui guardano tutti i mercanti. Nessuno lo usava per accendere niente (la luce veniva dal prop
+`bonfire`, non dal campo), quindi il cambio di nome e' tutto il cambio.
+
+**Prova:** 6.802 asserzioni verdi, tre giri di fila. Il blocco nuovo (TEST 93) misura i muri della
+locanda tessera per tessera, i nove letti a filo di parete, la cucina come unica stanza interna del
+paese, le due file incolonnate di quattro banchi, l'arredo dell'Orafo, e che dalla piazza si arrivi nel
+dormitorio, dal dormitorio in cucina e fino a parlare col Cuoco. Passaggio di sabotaggio: letti
+staccati dal muro → rosso; mercato su una fila sola → cinque rossi; Orafo di nuovo spoglio → quattro
+rossi; cucina aperta sul mercato → il villaggio si rifiuta di generarsi.
+
+---
+
 ### [2.32.0] — 2026-10-01 · "Due anelli e una collana"
 
 Paolo: *«vorrei aggiungere collana (max 1) e anelli (max 2), le stat devono essere bilanciate. Piu' alto

@@ -2283,6 +2283,9 @@
       // v2.32 — L'ORAFO. Grembiule scuro e oro: lavora metalli piccoli, non spade. E' l'unico banco
       // che vende a chiunque, quindi e' anche l'unico vestito di un colore che non dice una classe.
       goldsmith: { cloth: '#3f3a46', clothDk: '#211e28', steelDk: '#4a4038', pelo: '#3a3038', skin: '#e0bd98', trim: '#ffcf4a' },
+      // v2.33 — IL CUOCO DELLA LOCANDA. Grembiule chiaro: e' l'unico del paese vestito di una cosa
+      // che si sporca, ed e' per questo che si riconosce in mezzo a gente in cuoio e lana scura.
+      cook:      { cloth: '#d8cfbc', clothDk: '#8a8070', steelDk: '#5a5248', pelo: '#4a3a28', skin: '#e8c49a', trim: '#ff9a5a' },
       patron:    { cloth: '#a08a68', clothDk: '#6b5940', body: '#a08a68', bodyDk: '#6b5940', pelo: '#63513a', skin: '#e6c79c', wood: '#7a5a34', trim: '#e8d9b0' },
     },
     _vendorTool(ctx, kind, r) {
@@ -2331,6 +2334,14 @@
         ctx.strokeStyle = '#cfd7ea'; ctx.lineWidth = 1.4;
         ctx.beginPath(); ctx.arc(7, -5, 3, 0, 7); ctx.stroke();             // la lente
         ctx.beginPath(); ctx.moveTo(9, -3); ctx.lineTo(12, 1); ctx.stroke();  // il manico
+      } else if (kind === 'cook') {                 // v2.33 — il pentolone e il mestolo
+        ctx.fillStyle = '#3a3a40'; ctx.strokeStyle = '#17171c'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.ellipse(1, 2, 7.5, 5.5, 0, 0, 7); ctx.fill(); ctx.stroke();   // la pentola
+        ctx.fillStyle = '#c2884a'; ctx.beginPath(); ctx.ellipse(1, 1, 5.4, 3.6, 0, 0, 7); ctx.fill();  // la minestra
+        ctx.strokeStyle = '#8a6534'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(8, -9); ctx.stroke();                // il mestolo
+        ctx.lineCap = 'butt';
+        ctx.fillStyle = '#cfd7ea'; ctx.beginPath(); ctx.arc(1, 0, 2.4, 0, 7); ctx.fill();
       } else {                                      // boccale
         ctx.fillStyle = '#8a6a30'; ctx.strokeStyle = '#4a3512'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(2, 2, 3.6, 0, 7); ctx.fill(); ctx.stroke();
       }
