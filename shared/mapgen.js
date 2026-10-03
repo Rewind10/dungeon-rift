@@ -1394,11 +1394,10 @@
     // soglia: dentro darebbero fastidio a chi attraversa.
     {
       const r = R('portale');
-      // v2.19.2 — i due candelabri di levante e la rastrelliera stavano nella fascia della porta:
-      // entrando nella casa della faglia ci si sfiorava contro. I candelabri si stringono verso i
-      // due angoli, la rastrelliera passa alla parete di ponente insieme alle altre.
-      P('candelabra', r.x0 + 1.4, r.y0 + 0.9, 1.05); P('candelabra', r.x1 - 3.4, r.y0 + 0.9, 1.05);
-      P('candelabra', r.x0 + 1.4, r.y1 - 0.9, 1.05); P('candelabra', r.x1 - 3.4, r.y1 - 0.9, 1.05);
+      // v2.35 — qui c'erano QUATTRO CANDELABRI, e la v2.19.2 aveva gia' dovuto spostarli perche'
+      // due stavano nella fascia della porta. Un candelabro e' un mobile: ha un corpo, sta per terra
+      // in mezzo alla stanza, e prima o poi finisce dove si cammina. Li sostituiscono le torce a
+      // muro, che la stessa luce la fanno appese (vedi `torceStanza` piu' sotto).
       P('flag', r.x0 + 0.8, r.y0 + 2.6, 1.2, { col: '#9a5cff' });
       P('flag', r.x0 + 0.8, r.y1 - 2.6, 1.2, { col: '#9a5cff' });
       P('rastrelliera', r.x0 + 4.2, r.y0 + 0.7, 0.9, { r: 0 });
@@ -1422,9 +1421,9 @@
         P('tavolo', tx, ty, 1); P('panca', tx - 1.3, ty, 0.95); P('panca', tx + 1.3, ty, 0.95);
       }
       // v2.6 — qui c'era un braciere nell'angolo, e fra lui e il tavolo restava una tasca larga otto
-      // pixel: irraggiungibile, invisibile, e il flood fill la trovava ogni volta. Due candelabri
-      // lungo la parete del bancone fanno la stessa luce e ingombrano un terzo.
-      P('candelabra', r.x0 + 3.4, r.y0 + 0.7, 1);
+      // pixel: irraggiungibile, invisibile, e il flood fill la trovava ogni volta. Poi due candelabri,
+      // che ingombravano un terzo. v2.35 — adesso niente: la luce la fanno le torce a muro, che di
+      // corpo non ne hanno nessuno, e il fuoco e' il camino.
     }
 
     // ===================== LA FUCINA =====================
@@ -1462,7 +1461,6 @@
       // le faretre e il cuoio da conciare, lungo la parete di mezzogiorno
       P('cratebox', r.x0 + 5.6, r.y1 - 0.8, 0.9); P('sack', r.x0 + 6.8, r.y1 - 0.8, 0.9);
       P('barrel', r.x0 + 0.8, cy + 1.6, 0.95);
-      P('candelabra', r.x0 + 4.0, r.y0 + 0.7, 1); P('candelabra', r.x0 + 4.0, r.y1 - 0.7, 1);
       // gli stendardi restano accanto alla porta: si attraversano, quindi non ingombrano niente
       P('flag', r.x1 - 0.7, r.y0 + 0.8, 1.2, { col: '#8fd96a' });
       P('flag', r.x1 - 0.7, r.y1 - 0.8, 1.2, { col: '#8fd96a' });
@@ -1499,7 +1497,6 @@
       P('crystal_cluster', r.x0 + 5.6, r.y1 - 0.5, 1.0,  { col: '#a98cff', gr: 70, ga: 0.30 });
       P('rastrelliera', r.x1 - 4.2, r.y0 + 0.45, 0.95, { r: 0 });   // i bastoni in piedi, come le armi dal fabbro
       P('rastrelliera', r.x1 - 4.2, r.y1 - 0.45, 0.95, { r: 0 });
-      P('candelabra', r.x0 + 7.4, r.y0 + 0.5, 1.05); P('candelabra', r.x0 + 7.4, r.y1 - 0.5, 1.05);
       P('cratebox', r.x0 + 2.0, r.y1 - 0.5, 0.9);
     }
 
@@ -1559,7 +1556,6 @@
       P('tappeto', r.x1 - 2.4, cy, 1.3, { col: '#2f5a52' });
       // v2.19.11 — il fuoco stava in mezzo alla strada fra l'uscio e l'Anziano: spostato di lato.
       P('focolare', r.x1 - 4.6, cy - 1.5, 1.05);
-      P('candelabra', r.x1 - 0.9, r.y0 + 0.9, 1); P('candelabra', r.x1 - 0.9, r.y1 - 0.9, 1);
       P('scaffale', r.x0 + 0.8, cy - 1.6, 1, { r: 1, col: '#7fd6c0' });
       P('crystal_cluster', r.x0 + 1.4, r.y0 + 0.9, 0.9, { col: '#7fd6c0', gr: 58, ga: 0.26 });
       P('crystal_cluster', r.x0 + 1.4, r.y1 - 0.9, 0.9, { col: '#7fd6c0', gr: 58, ga: 0.26 });
@@ -1597,7 +1593,9 @@
       P('scaffale', r.x1 - 1.4, r.y0 + 0.4, 1, { r: 0, col: '#ffcf4a' });
       // il banco da lavoro a ponente e una terza vetrina a levante, contro i due muri corti
       P('bancone', r.x0 + 1.2, r.y1 - 0.6, 1, { r: 0 });
-      P('scaffale', r.x1 - 1.2, r.y1 - 0.6, 1, { r: 0, col: '#ffcf4a' });
+      // v2.35 — qui c'era una TERZA vetrina. Paolo aveva chiesto *«giusto un paio di bacheche»* e
+      // di bacheche ne restano due: l'angolo di levante lo prende il camino, che in una stanza
+      // alta quattro tessere con la porta in mezzo e' l'unico posto dove ci sta.
       // e quello che si attraversa: due lanterne appese sopra le bacheche e due stendardi d'oro
       P('hanging_lantern', r.x0 + 2.6, r.y0 + 0.4, 1.0); P('hanging_lantern', r.x1 - 2.6, r.y0 + 0.4, 1.0);
       P('flag', r.x0 + 0.2, r.y1 - 0.2, 1.15, { col: '#ffcf4a' });
@@ -1784,6 +1782,98 @@
       if ((r.x1 - r.x0) >= 7) abitanti.push({ x: cx + altroLato * 2.5, y: cy + 0.1, kind: ALLAVORO[k % ALLAVORO.length], face: altroLato > 0 ? 0 : Math.PI, act: k % 3 === 0 ? 'martella' : 'rimesta' });
     };
     { let k = 0; for (const r of VILLAGE.rooms) if (r.kind === 'casa') arredaCasa(r, k++); }
+
+    // ============================================================================================
+    // v2.35 — LA LUCE DELLE STANZE: torce a muro dappertutto, un camino dove manca il fuoco
+    // ============================================================================================
+    // Paolo: *«nelle case e/o negozi aggiungi i camini e le torce a muro (un paio ai lati
+    // dell'ingresso ove possibile e due nella parete opposta) e togli i candelabri»*.
+    //
+    // Il candelabro era la soluzione comoda e la peggiore: fa luce, ma e' un MOBILE — ha un corpo,
+    // sta per terra, e in tre versioni diverse (v2.6, v2.19.2, v2.19.11) ha dovuto essere spostato
+    // perche' finiva dove si cammina. La torcia a muro fa la stessa luce ed e' appesa: non ingombra
+    // niente, per costruzione, e quindi non puo' ripetere quel guasto.
+    //
+    // Queste due funzioni girano DOPO che tutte le stanze sono state arredate, ed e' voluto: il
+    // camino deve poter guardare i mobili gia' messi per scegliere dove non da' fastidio.
+    {
+      // --- LE TORCE: due ai lati dell'uscio, due sulla parete di fronte, tutte a filo di muro ---
+      const torceStanza = (r) => {
+        const [px, py, lato] = r.porta;
+        const B = 0.45;                       // quanto stanno oltre l'ultima tessera: sulla faccia del muro
+        const dentroX = (x) => Math.min(Math.max(x, r.x0 - 0.1), r.x1 + 0.1);
+        const dentroY = (y) => Math.min(Math.max(y, r.y0 - 0.1), r.y1 + 0.1);
+        if (lato === 'e' || lato === 'o') {
+          // la porta apre le righe py e py+1: le due torce stanno appena fuori da quell'apertura
+          const xUscio = lato === 'e' ? r.x1 + B : r.x0 - B;
+          const xFondo = lato === 'e' ? r.x0 - B : r.x1 + B;
+          P('torch', xUscio, dentroY(py - 1.1), 1); P('torch', xUscio, dentroY(py + 2.1), 1);
+          P('torch', xFondo, r.y0 + 0.6, 1);        P('torch', xFondo, r.y1 - 0.6, 1);
+        } else {
+          // qui l'apertura e' sulle colonne px e px+1
+          const yUscio = lato === 's' ? r.y1 + B : r.y0 - B;
+          const yFondo = lato === 's' ? r.y0 - B : r.y1 + B;
+          P('torch', dentroX(px - 1.1), yUscio, 1); P('torch', dentroX(px + 2.1), yUscio, 1);
+          P('torch', r.x0 + 0.6, yFondo, 1);        P('torch', r.x1 - 0.6, yFondo, 1);
+        }
+      };
+      for (const r of VILLAGE.rooms) torceStanza(r);
+
+      // --- IL CAMINO: dove non c'e' gia' un fuoco, e in un angolo che non dia fastidio ---
+      // Dove metterlo non lo decido stanza per stanza: lo decide una regola, e la regola e' la
+      // stessa che le due asserzioni in fondo al file useranno per bocciarmi. Si provano i quattro
+      // angoli in ordine di distanza dalla porta — il piu' lontano per primo, che e' dove un camino
+      // sta bene e dove non e' sulla strada di nessuno — e si prende il primo che non cade nella
+      // fascia dell'uscio, non invade la corsia del banco e non tocca un mobile gia' messo. Se non
+      // ne va bene nessuno la stanza resta senza: meglio niente che un camino in mezzo al passaggio.
+      const FUOCHI = ['focolare', 'camino', 'brazier', 'lavapool'];
+      const inStanza = (pr, r) => { const x = pr.x / TILE - 0.5, y = pr.y / TILE - 0.5;
+        return x >= r.x0 - 0.6 && x <= r.x1 + 0.6 && y >= r.y0 - 0.6 && y <= r.y1 + 0.6; };
+      const RC = INGOMBRI.camino.c / TILE;    // il raggio del camino, in tessere
+      const caminoStanza = (r) => {
+        const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+        const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+        const s = VILLAGE.stalls.find(q => q.room === r.id);
+        const lontano = (a, b) => Math.hypot(b[0] - px, b[1] - py) - Math.hypot(a[0] - px, a[1] - py);
+        // prima i QUATTRO ANGOLI, che e' dove un camino sta bene. Se nessuno e' libero (nelle
+        // botteghe strette le pareti sono gia' tutte occupate) si ripiega sui punti di mezzo delle
+        // pareti: sempre addossato, solo non piu' in un angolo. Meglio un fuoco a meta' muro che una
+        // bottega senza fuoco — ma l'ordine dice chiaro qual e' la prima scelta.
+        const posti = [[r.x0 + 0.5, r.y0 + 0.5], [r.x1 - 0.5, r.y0 + 0.5],
+                       [r.x0 + 0.5, r.y1 - 0.5], [r.x1 - 0.5, r.y1 - 0.5]].sort(lontano)
+          .concat([[cx, r.y0 + 0.5], [cx, r.y1 - 0.5], [r.x0 + 0.5, cy], [r.x1 - 0.5, cy],
+                   [(r.x0 + cx) / 2, r.y0 + 0.5], [(r.x1 + cx) / 2, r.y0 + 0.5],
+                   [(r.x0 + cx) / 2, r.y1 - 0.5], [(r.x1 + cx) / 2, r.y1 - 0.5]].sort(lontano));
+        for (const ang of posti) {
+          const ax = ang[0], ay = ang[1];
+          const inSoglia = oriz ? (Math.abs(ay - py) <= 1.5 && Math.abs(ax - px) <= 2.6)
+                                : (Math.abs(ax - px) <= 1.5 && Math.abs(ay - py) <= 2.6);
+          if (inSoglia) continue;
+          if (s) {   // la corsia porta -> banco, con lo stesso conto del controllo che spacca
+            const invade = oriz ? Math.abs(ay - s.y) < 0.6 + RC : Math.abs(ax - s.x) < 0.6 + RC;
+            const a0 = oriz ? ax : ay, q0 = oriz ? px : py, q1 = oriz ? s.x : s.y;
+            if (invade && a0 + RC > Math.min(q0, q1) && a0 - RC < Math.max(q0, q1)) continue;
+          }
+          // e un mobile gia' messo. Il margine (0,62 tessere = 30 px) non e' di gusto: e' poco piu'
+          // del corpo del personaggio, cioe' la larghezza minima perche' fra i due ci si passi.
+          let occupato = false;
+          for (const pr of props) {
+            const d = INGOMBRI[pr.type]; if (!d) continue;
+            const x = pr.x / TILE - 0.5, y = pr.y / TILE - 0.5, sc = pr.s || 1;
+            let hw, hh;
+            if (d.c) { hw = hh = d.c * sc / TILE; }
+            else { hw = d.r[0] * sc / TILE; hh = d.r[1] * sc / TILE;
+                   if (GIRANO[pr.type] && (pr.r || 0) > 0.5) { const t = hw; hw = hh; hh = t; } }
+            if (Math.abs(x - ax) < hw + RC + 0.62 && Math.abs(y - ay) < hh + RC + 0.62) { occupato = true; break; }
+          }
+          if (occupato) continue;
+          P('camino', ax, ay, 1, { ang: Math.atan2(cy - ay, cx - ax) });
+          return;
+        }
+      };
+      for (const r of VILLAGE.rooms)
+        if (!props.some(pr => FUOCHI.indexOf(pr.type) >= 0 && inStanza(pr, r))) caminoStanza(r);
+    }
 
     // --- l'alone del colore di ogni mercante: lo stacca dalla roccia e dice chi e' da lontano ---
     for (const s of VILLAGE.stalls) P('glowspot', s.x, s.y, 1, { col: s.col, gr: 100, ga: 0.34 });

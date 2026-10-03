@@ -2,6 +2,80 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.35.0] — 2026-10-03 · "Torce a muro, e il buio non parte piu' acceso"
+
+Paolo: *«togli la modalita' illuminazione (tasto L) predefinita / nelle case e/o negozi aggiungi i
+camini e le torce a muro (un paio ai lati dell'ingresso ove possibile e due nella parete opposta) e
+togli i candelabri»*.
+
+---
+
+### 🌑 IL VELO DEL BUIO PARTE SPENTO
+
+Il tasto **L** resta e fa quello che ha sempre fatto — chi vuole il buio lo riaccende, e la scelta si
+ricorda — ma la partita non comincia piu' sotto la coperta nera.
+
+Due cose sono cambiate, e vanno insieme: il valore di partenza (`torch: false`) **e** la lettura di
+cio' che il browser si ricorda, che era scritta in negativo (`!== '0'`, cioe' *acceso finche' non lo
+spegni*) e adesso e' in positivo (`=== '1'`, cioe' *spento finche' non lo accendi*). Cambiarne uno
+solo e' il classico mezzo lavoro: parte spento, e al secondo avvio torna acceso.
+
+**Quello che illumina non e' quello che oscura.** Il velo (`_drawDarkness`) e il calore
+(`_drawLighting`) sono due passaggi distinti: spegnere il primo non spegne il secondo, quindi i
+fuochi scaldano la scena esattamente come prima. Cambia solo che non c'e' piu' niente da bucare — ed
+e' il motivo per cui questa modifica e la prossima stanno nella stessa versione: l'arredo delle
+stanze, sotto il velo, non si vedeva.
+
+---
+
+### 🔥 VIA I CANDELABRI, DENTRO LE TORCE A MURO
+
+**Il candelabro era la soluzione comoda e la peggiore.** Fa luce, ma e' un **mobile**: ha un corpo,
+sta per terra, e in tre versioni diverse ha dovuto essere spostato perche' finiva dove si cammina —
+v2.6 (la taverna), v2.19.2 (la casa della faglia), v2.19.11. La torcia a muro fa la stessa luce ed e'
+**appesa**: non ingombra niente *per costruzione*, quindi non puo' ripetere quel guasto.
+
+Nel villaggio adesso ci sono **zero candelabri e sessanta torce** — quattro per stanza, in tutte e
+quindici: **due ai lati dell'uscio** (una per parte, nessuna in mezzo all'apertura) e **due sulla
+parete di fronte**. Il tipo `candelabra` non e' stato cancellato: lo usano le micro-aree delle grotte
+e la stanza del prologo, e cancellarlo avrebbe spento quelle senza che nessuno l'avesse chiesto.
+
+### 🏠 E UN CAMINO DOVE IL FUOCO MANCAVA
+
+**Dieci camini nuovi**, uno per ogni stanza che non ne aveva gia' uno. Dove il fuoco c'era non se ne
+aggiunge un secondo: la fucina ha la colata e il braciere, l'antro dell'Anziano il focolare per terra,
+la locanda i suoi due.
+
+Dove metterlo **non e' deciso stanza per stanza**: lo decide una regola, ed e' la stessa che le due
+asserzioni in fondo a `mapgen.js` useranno per bocciarla. Si provano i quattro angoli in ordine di
+distanza dalla porta — il piu' lontano per primo — e si prende il primo che non cade nella fascia
+dell'uscio, non invade la corsia del banco e non tocca un mobile gia' messo. Se nessun angolo va bene
+si ripiega sui punti di mezzo delle pareti; se non va bene nemmeno uno di quelli, **la stanza resta
+senza**: meglio nessun camino che un camino in mezzo al passaggio.
+
+**Una stanza e' rimasta senza, ed e' voluto:** la **bottega arcana**. Dodici per cinque tessere con
+dentro il cerchio di quattro cristalli, due rastrelliere, due scaffali, il banco e il tappeto runico —
+nessun angolo e nessun mezzo muro resta libero. La sua luce sono i cristalli, che e' anche piu' giusto
+per un negozio di magia. Il test lo mette nero su bianco invece di nasconderlo: *«ogni stanza ha il suo
+fuoco tranne la bottega arcana»*.
+
+Dall'**Orafo** la terza vetrina ha lasciato il posto al camino: Paolo aveva chiesto *«giusto un paio di
+bacheche»* e di bacheche ne restano due.
+
+---
+
+**Prova:** 6.957 asserzioni verdi. Il blocco nuovo (TEST 94) misura il valore di partenza **e** la
+lettura della memoria (non uno solo dei due), che nel villaggio i candelabri siano zero **e** che il
+tipo sia vivo altrove, le quattro torce per stanza **con la loro posizione** (quattro torce in un
+angolo sono quattro torce), che nessuna torcia sia finita dentro un mobile, e che gli otto corpi nuovi
+non abbiano murato niente.
+
+Passaggio di sabotaggio: velo di nuovo acceso di partenza → rosso; le due torce dell'uscio dalla stessa
+parte → undici rossi; torcia resa solida → il villaggio **si rifiuta di generarsi**, con l'elenco delle
+quindici porte che avrebbe tappato.
+
+---
+
 ### [2.34.0] — 2026-10-02 · "Il camino nell'angolo"
 
 Paolo: *«nelle case piu' piccole del villaggio aggiungi almeno 2 letti, in quelle piu' grandi 3. Al

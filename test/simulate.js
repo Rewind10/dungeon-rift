@@ -3022,7 +3022,11 @@ function testV1752() {
                   // v2.33 — il 'bonfire' e' uscito da questo elenco perche' nel villaggio non c'e'
                   // piu' (al suo posto, in mezzo allo spiazzo, c'e' la locanda). Resta nella tabella
                   // INGOMBRI di mapgen: il tipo esiste ancora, semplicemente nessuno ne piazza uno.
-                  'candelabra', 'signpost', 'mortaio', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
+                  // v2.35 — e con lui e' uscito il 'candelabra'. Paolo: *«togli i candelabri»*. Nel
+                  // villaggio non ce n'e' piu' uno: la luce delle stanze la fanno le torce a muro,
+                  // che un corpo non ce l'hanno. Il tipo resta (lo usano le micro-aree delle grotte
+                  // e la stanza del prologo) e resta solido: semplicemente il paese non lo adopera.
+                  'signpost', 'mortaio', 'credenza', 'scaffale', 'rastrelliera', 'aiuola', 'cratebox',
                   'pozzo', 'focolare', 'letto',   // v2.0 — i tre mobili del villaggio
                   'camino',                       // v2.34 — il camino di casa: addossato al muro, ma un corpo ce l'ha
                   'bancarella',                   // v2.5 — e il banco delle botteghe di contorno
@@ -3030,7 +3034,10 @@ function testV1752() {
   // v2.27 — l'ARCO della soglia dell'Anziano sta fra i passanti, e deve restarci: e' l'unica cosa
   // del villaggio che sta IN MEZZO a una porta. Il giorno che qualcuno gli desse un corpo,
   // l'ingresso piu' riconoscibile del paese diventerebbe l'unico in cui non si entra.
-  const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot', 'arch'];
+  // v2.35 — la 'torch' entra fra i PASSANTI, ed e' il punto di tutta la versione: una torcia e'
+  // APPESA AL MURO, quindi non ingombra niente — mentre il candelabro che sostituisce stava per
+  // terra e in tre versioni diverse aveva dovuto essere spostato perche' finiva dove si cammina.
+  const PASSANTI = ['tappeto', 'lavapool', 'web', 'flag', 'panca', 'skull', 'hanging_lantern', 'rock', 'glowspot', 'arch', 'torch'];
   for (const t of SOLIDI) assert(m.props.some(p => p.type === t), 'nel villaggio c e almeno un "' + t + '"');
   for (const t of PASSANTI) assert(m.props.some(p => p.type === t), 'e almeno un "' + t + '"');
   const persone = m.solids.filter(s2 => s2.chi);
@@ -9759,6 +9766,123 @@ function testV233() {
   ok('la locanda, il cuoco, il mercato su due file e la bottega dell Orafo arredata');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+function testV235() {
+  console.log('\n[TEST 94] v2.35 — il velo del buio parte spento, i candelabri lasciano il posto alle torce a muro');
+  const MapGen = require('../shared/mapgen.js');
+  const fs2 = require('fs'), path = require('path');
+  const V = MapGen.VILLAGE, T = C.TILE;
+  const m = MapGen.generateMarket(1);
+  const tile = (p) => ({ x: p.x / T - 0.5, y: p.y / T - 0.5 });
+  const dentro = (x, y, r) => x >= r.x0 - 0.6 && x <= r.x1 + 0.6 && y >= r.y0 - 0.6 && y <= r.y1 + 0.6;
+
+  // --- 1) IL TASTO L NON E' PIU' ACCESO DI SUA INIZIATIVA ------------------------------------
+  // Paolo: *«togli la modalita' illuminazione (tasto L) predefinita»*. Due cose, e vanno insieme:
+  // il valore di partenza e la lettura di cio' che il browser si ricorda. Cambiarne uno solo e'
+  // il classico mezzo lavoro — parte spento, ma al secondo avvio torna acceso, o viceversa.
+  {
+    const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+    assert(/\n\s*torch:\s*false,/.test(src), 'il velo del buio nasce spento');
+    assert(/localStorage\.getItem\('dr_torcia'\) === '1'/.test(src),
+      'e chi non ha mai toccato il tasto L lo trova spento (la memoria si legge in positivo, non in negativo)');
+    assert(/e\.code === 'KeyL'/.test(src) && /setItem\('dr_torcia'/.test(src),
+      'ma il tasto c e ancora e la scelta si continua a ricordare: e un valore di partenza, non una funzione tolta');
+    // e la pagina non promette piu' il contrario
+    const html = fs2.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+    assert(!/Parte accesa/.test(html), 'e il riquadro dei comandi non dice piu "parte accesa"');
+  }
+
+  // --- 2) NEL VILLAGGIO NON C'E' PIU' UN CANDELABRO ------------------------------------------
+  // Paolo: *«togli i candelabri»*. Il tipo pero' NON e' stato cancellato: lo usano le micro-aree
+  // delle grotte e la stanza del prologo, e cancellarlo avrebbe spento quelle senza che nessuno
+  // l'avesse chiesto. Qui si pretende la cosa giusta: zero in paese, e vivo altrove.
+  assert(m.props.filter(p => p.type === 'candelabra').length === 0, 'zero candelabri nel villaggio');
+  { const mg = fs2.readFileSync(path.join(__dirname, '..', 'shared', 'mapgen.js'), 'utf8');
+    assert(/putC\('candelabra'/.test(mg), "ma il candelabro resta nelle micro-aree delle grotte"); }
+
+  // --- 3) QUATTRO TORCE A MURO IN OGNI STANZA ------------------------------------------------
+  // *«un paio ai lati dell'ingresso ove possibile e due nella parete opposta»*. Il conto da solo
+  // non basta — quattro torce ammucchiate in un angolo sono quattro torce — quindi si misura
+  // DOVE stanno: due sulla parete della porta e due su quella di fronte.
+  for (const r of V.rooms) {
+    const torce = m.props.filter(p => { const t = tile(p); return p.type === 'torch' && dentro(t.x, t.y, r); });
+    assert(torce.length === 4, r.id + ': quattro torce a muro (' + torce.length + ')');
+    const [px, py, lato] = r.porta, oriz = lato === 'e' || lato === 'o';
+    // la coordinata che conta e' quella perpendicolare al muro della porta
+    const q = (p) => oriz ? tile(p).x : tile(p).y;
+    const qUscio = oriz ? (lato === 'e' ? r.x1 : r.x0) : (lato === 's' ? r.y1 : r.y0);
+    const qFondo = oriz ? (lato === 'e' ? r.x0 : r.x1) : (lato === 's' ? r.y0 : r.y1);
+    const suUscio = torce.filter(p => Math.abs(q(p) - qUscio) < 1);
+    const suFondo = torce.filter(p => Math.abs(q(p) - qFondo) < 1);
+    assert(suUscio.length === 2, r.id + ': due ai lati dell ingresso (' + suUscio.length + ')');
+    assert(suFondo.length === 2, r.id + ': e due sulla parete opposta (' + suFondo.length + ')');
+    // e quelle dell'uscio stanno AI LATI dell'apertura, non dentro: una per parte
+    const apertura = oriz ? py + 0.5 : px + 0.5;
+    const trasv = (p) => oriz ? tile(p).y : tile(p).x;
+    assert(Math.sign(trasv(suUscio[0]) - apertura) !== Math.sign(trasv(suUscio[1]) - apertura),
+      r.id + ': una per lato della porta, non due dalla stessa parte');
+    for (const p of suUscio) assert(Math.abs(trasv(p) - apertura) > 1.2,
+      r.id + ': e nessuna in mezzo all apertura (sarebbe luce messa dove si passa)');
+  }
+  // --- 4) E UNA TORCIA NON HA UN CORPO -------------------------------------------------------
+  // E' tutta la ragione del cambio: il candelabro stava per terra ed e' stato spostato tre volte
+  // (v2.6, v2.19.2, v2.19.11) perche' finiva dove si cammina. Se un giorno qualcuno desse un
+  // corpo alla torcia, il guasto tornerebbe — e tornerebbe moltiplicato per sessanta.
+  {
+    const MG = MapGen;
+    assert(!MG.INGOMBRI || !MG.INGOMBRI.torch, 'la torcia non e nella tabella degli ingombri');
+    let addosso = 0;
+    for (const p of m.props) { if (p.type !== 'torch') continue;
+      for (const s of m.solids) { if (s.chi) continue;
+        if (s.t === 'c' ? Math.hypot(p.x - s.x, p.y - s.y) < s.r : (Math.abs(p.x - s.x) < s.hw && Math.abs(p.y - s.y) < s.hh)) { addosso++; break; } } }
+    assert(addosso === 0, 'e nessuna torcia e finita dentro un mobile (' + addosso + ')');
+  }
+
+  // --- 5) OGNI STANZA HA IL SUO FUOCO --------------------------------------------------------
+  // *«aggiungi i camini»*. Dove un fuoco c'era gia' non se ne aggiunge un secondo: la fucina ha
+  // la colata e il braciere, l'antro dell'Anziano il focolare per terra, la locanda i suoi due.
+  // L'UNICA eccezione e' la BOTTEGA ARCANA: dodici per cinque tessere con dentro il cerchio di
+  // cristalli, due rastrelliere, due scaffali, il banco e il tappeto runico — nessun angolo e
+  // nessun mezzo muro resta libero, e la regola che sceglie il posto preferisce lasciare la
+  // stanza senza camino piuttosto che metterlo dove si cammina. La sua luce sono i cristalli.
+  const FUOCHI = ['focolare', 'camino', 'brazier', 'lavapool'];
+  const senzaFuoco = V.rooms.filter(r => !m.props.some(p => { const t = tile(p);
+    return FUOCHI.indexOf(p.type) >= 0 && dentro(t.x, t.y, r); })).map(r => r.id);
+  assert(senzaFuoco.join(',') === 'arcano', 'ogni stanza ha il suo fuoco tranne la bottega arcana (senza: ' + (senzaFuoco.join(',') || 'nessuna') + ')');
+  { const cristalli = m.props.filter(p => { const t = tile(p); return p.type === 'crystal_cluster' && dentro(t.x, t.y, V.rooms.find(q => q.id === 'arcano')); });
+    assert(cristalli.length >= 4, 'e la bottega arcana ha i suoi cristalli accesi al posto del fuoco (' + cristalli.length + ')'); }
+  // ogni camino sta ADDOSSATO a una parete: a meta' della stanza sarebbe un focolare, non un camino
+  for (const p of m.props) { if (p.type !== 'camino') continue;
+    const t = tile(p), r = V.rooms.find(q => dentro(t.x, t.y, q));
+    assert(!!r, 'ogni camino sta dentro una stanza');
+    assert(Math.min(t.x - r.x0, r.x1 - t.x) < 1.2 || Math.min(t.y - r.y0, r.y1 - t.y) < 1.2,
+      r.id + ': il camino e addossato a una parete (' + t.x.toFixed(1) + ',' + t.y.toFixed(1) + ')'); }
+
+  // --- 6) E NIENTE DI TUTTO QUESTO HA CHIUSO UNA STANZA --------------------------------------
+  // Sessanta oggetti nuovi in quindici stanze: e' esattamente il genere di aggiunta che mura
+  // qualcosa senza che si veda. Le torce un corpo non ce l'hanno, ma gli otto camini si'.
+  {
+    const room = new Room('v235'); room.addPlayer('b', { send() {} }, 'B', 'paladino'); room.startGame();
+    room.wave = 3; room.phase = C.PHASE_SHOP; room.vaiAlVillaggio('b');
+    const p = [...room.players.values()][0], rr = p.radius * 0.8, mm = room.map;
+    const libero = (x, y) => !room._blk(x, y, rr);
+    const PASSO = 8, W = Math.ceil(mm.w * T / PASSO), H = Math.ceil(mm.h * T / PASSO);
+    const visto = new Uint8Array(W * H), coda = [[Math.round(mm.spawn.x / PASSO), Math.round(mm.spawn.y / PASSO)]];
+    while (coda.length) { const c = coda.pop(), gx = c[0], gy = c[1], k = gy * W + gx;
+      if (gx < 0 || gy < 0 || gx >= W || gy >= H || visto[k]) continue;
+      if (!libero(gx * PASSO, gy * PASSO)) continue; visto[k] = 1;
+      coda.push([gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]); }
+    let isolate = 0;
+    for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++)
+      if (!visto[gy * W + gx] && libero(gx * PASSO, gy * PASSO)) isolate++;
+    assert(isolate === 0, 'nessuna zona resta tagliata fuori dai camini nuovi (' + isolate + ')');
+    for (const n of mm.village.npcs) { let best = Infinity;
+      for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) if (visto[gy * W + gx])
+        best = Math.min(best, MU.dist(gx * PASSO, gy * PASSO, n.x, n.y));
+      assert(best <= C.MARKET_MERCH_RANGE, 'e si arriva ancora a parlare con ' + n.name + ' (' + best.toFixed(0) + ' px)'); }
+  }
+  ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
+}
+
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

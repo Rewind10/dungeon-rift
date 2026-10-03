@@ -1,6 +1,6 @@
 # ⚔️ DUNGEON RIFT — Caratteristiche complete del gioco
 
-**Versione attuale:** `2.34.0`
+**Versione attuale:** `2.35.0`
 Roguelike co-op frenetico per **fino a 6 giocatori**, motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
 
@@ -816,6 +816,35 @@ bruciano del 15% piu' piccoli, come dichiaravano gia'.
 quando in mezzo c'era il fuoco. Con i letti in fila, fra un letto e l'altro restano sei pixel, e la
 prima stesura ci ha messo dentro un paesano: nicchia chiusa, due posizioni libere irraggiungibili sopra.
 Trovato dal flood fill, non dall'occhio.
+
+### 🌑 v2.35 — LA LUCE DELLE STANZE: torce a muro, camini, e il velo spento di partenza
+
+Paolo: *«togli la modalita' illuminazione (tasto L) predefinita / nelle case e/o negozi aggiungi i
+camini e le torce a muro (un paio ai lati dell'ingresso ove possibile e due nella parete opposta) e
+togli i candelabri»*.
+
+**Il velo del buio parte spento.** Il tasto L resta e la scelta si ricorda; cambiano due cose insieme,
+il valore di partenza (`torch: false`) e la lettura della memoria, che era scritta in negativo
+(`!== '0'`: *acceso finche' non lo spegni*) e adesso e' in positivo (`=== '1'`). Cambiarne uno solo
+vuol dire partire spenti e ritrovarsi accesi al secondo avvio. Il velo (`_drawDarkness`) e il calore
+(`_drawLighting`) sono **due passaggi distinti**: spegnere il primo non spegne il secondo.
+
+**Zero candelabri, sessanta torce.** Il candelabro e' un MOBILE — corpo, per terra — e in tre versioni
+(v2.6, v2.19.2, v2.19.11) era dovuto essere spostato perche' finiva dove si cammina. La torcia e'
+appesa: non ingombra niente per costruzione. Quattro per stanza in tutte e quindici: due ai lati
+dell'uscio, una per parte e nessuna in mezzo all'apertura, due sulla parete di fronte. Il tipo
+`candelabra` resta vivo nelle micro-aree delle grotte e nella stanza del prologo.
+
+**Dieci camini**, uno per ogni stanza senza fuoco. La posizione non e' scelta a mano ma da una regola,
+e la regola e' la stessa che le due asserzioni che spaccano useranno per bocciarla: si provano i
+quattro angoli in ordine di distanza dalla porta (il piu' lontano per primo), poi i mezzi delle
+pareti, e si prende il primo che non cade nella fascia dell'uscio, non invade la corsia del banco e
+non tocca un mobile gia' messo. Se non ne va bene nessuno **la stanza resta senza**.
+
+**La bottega arcana e' rimasta senza, ed e' voluto.** Dodici per cinque tessere col cerchio di quattro
+cristalli, due rastrelliere, due scaffali, il banco e il tappeto runico: non c'e' un angolo ne' un
+mezzo muro libero. La sua luce sono i cristalli — per un negozio di magia e' anche piu' giusto — e il
+test lo dichiara invece di nasconderlo.
 
 ### 🪨 Fuori e' grotta, dentro e' casa
 

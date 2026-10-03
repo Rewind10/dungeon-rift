@@ -354,9 +354,15 @@
     // riempimento pixel, cioe' roba che una scheda video fa quasi gratis e una integrata no: l'unico
     // modo di sapere come va su una macchina vera e' guardarlo su quella macchina.
     fpsOn: false, _fpsT: [], _fpsUltimo: 0, _fpsMed: 0, _fpsP95: 0, _fpsAgg: 0,
-    torch: true, darkCv: null, darkCtx: null, darkScale: 0.5, darkness: 0.86, haloR: 260, dust: [], fog: [], critters: [],  // v1.17/1.23 — torcia + nebbia + animaletti (rune rimosse)
+    // v2.35 — IL VELO DEL BUIO PARTE SPENTO. Paolo: *«togli la modalita' illuminazione (tasto L)
+    // predefinita»*. Il tasto resta e fa quello che ha sempre fatto — chi vuole il buio lo riaccende
+    // e la scelta si ricorda — ma la partita non comincia piu' sotto la coperta nera. Sotto non si
+    // vedeva quasi niente dell'arredo: camini, torce a muro, pavimenti. Quello che ACCENDE le cose
+    // (`_drawLighting`) e' un passaggio a parte e resta attivo sempre, quindi i fuochi scaldano la
+    // scena come prima: cambia solo che non c'e' piu' il velo da bucare.
+    torch: false, darkCv: null, darkCtx: null, darkScale: 0.5, darkness: 0.86, haloR: 260, dust: [], fog: [], critters: [],  // v1.17/1.23 — torcia + nebbia + animaletti (rune rimosse)
     mAtk: {}, deaths: [],  // v1.26 — animazioni di attacco (per eid) e di morte (sprite effimeri)
-    init(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); for (const k in PUPPETS) PUPPETS[k].load(); for (const k in SHEETS) SHEETS[k].load(); this.resize(); window.addEventListener('resize', () => this.resize()); try { this.torch = localStorage.getItem('dr_torcia') !== '0'; } catch (_) {} window.addEventListener('keydown', (e) => { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.code === 'KeyL') { this.torch = !this.torch; try { localStorage.setItem('dr_torcia', this.torch ? '1' : '0'); } catch (_) {} } }); },
+    init(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); for (const k in PUPPETS) PUPPETS[k].load(); for (const k in SHEETS) SHEETS[k].load(); this.resize(); window.addEventListener('resize', () => this.resize()); try { this.torch = localStorage.getItem('dr_torcia') === '1'; } catch (_) {} window.addEventListener('keydown', (e) => { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.code === 'KeyL') { this.torch = !this.torch; try { localStorage.setItem('dr_torcia', this.torch ? '1' : '0'); } catch (_) {} } }); },
     // v2.1.4 — LA TORCIA E' ACCESA DI SUA INIZIATIVA. Lo strato del tasto L c'era dalla v1.16 e il suo
     // valore predefinito era gia' 'acceso' — ma chi l'aveva spento anche una volta sola si ritrovava un
     // '0' salvato nel browser, e da li' in poi il gioco partiva senza. Con il campo visivo della v2.1 i

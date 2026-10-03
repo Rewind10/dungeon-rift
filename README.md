@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.34.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.35.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -23,7 +23,24 @@ Test: `npm test`
 | Negozio: pronto | Spazio |
 | Musica | M |
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
+| **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🌑 v2.35.0 — torce a muro, e il buio non parte più acceso
+
+Il **velo del buio** non è più acceso di sua iniziativa: il tasto **L** c'è ancora e la scelta si
+ricorda, ma decidi tu. Quello che *illumina* è un passaggio a parte da quello che *oscura*, quindi i
+fuochi scaldano la scena come prima — solo che adesso l'arredo delle stanze si vede.
+
+**Via i candelabri.** Erano mobili: avevano un corpo, stavano per terra, e in tre versioni diverse
+erano dovuti essere spostati perché finivano dove si cammina. Al loro posto **sessanta torce a muro**,
+quattro per stanza: due ai lati dell'uscio e due sulla parete di fronte. Una torcia è appesa — non
+ingombra niente, per costruzione.
+
+**E dieci camini nuovi**, uno in ogni stanza che un fuoco non ce l'aveva. Dove c'era già (la colata
+della fucina, il focolare dell'Anziano, i due della locanda) non se ne aggiunge un secondo.
+
+---
 
 ## 🔥 v2.34.0 — il camino nell'angolo, e piu' posti letto
 
