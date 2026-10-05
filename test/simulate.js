@@ -9766,6 +9766,65 @@ function testV233() {
   ok('la locanda, il cuoco, il mercato su due file e la bottega dell Orafo arredata');
 }
 
+function testV237() {
+  console.log('\n[TEST 95] v2.37 — il Barbaro ha un corpo suo, e si muove');
+  const fs2 = require('fs'), path = require('path');
+  const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+
+  // --- 1) IL CORPO C'E', ED E' SOLO DEL BARBARO ---------------------------------------------
+  assert(/_heroBarbaro\(ctx, r, t, atk, eq\)/.test(src), 'esiste un corpo dedicato al barbaro');
+  assert(/id === 'barbaro' && !eq\.civile/.test(src),
+    'e lo usa SOLO il barbaro, e solo se non e un civile');
+  // Il perche' del `!eq.civile` non e' un dettaglio: `_vendorBase` manda il fabbro e il Capitano
+  // del villaggio sulla base 'barbaro'. Senza quella guardia il paese si riempirebbe di barbari
+  // con l'elmo — due paesani su nove.
+  { const i = src.indexOf('_vendorBase: {'), riga = src.slice(i, i + 200);
+    assert(/smith:\s*'barbaro'/.test(riga) && /crier:\s*'barbaro'/.test(riga),
+      'e due mercanti del villaggio usano davvero quella base (fabbro e Capitano)'); }
+
+  // --- 2) LE ARMI SONO USCITE DAL CORPO ------------------------------------------------------
+  // Erano quaranta righe in mezzo a `_heroGuerriero`. Con due corpi che le usano, lasciarle li'
+  // voleva dire copiarle — ed e' cosi' che due disegni cominciano a divergere senza accorgersene.
+  assert(/_armiGuerriero\(ctx, r, atk, eq, _P, DK, sway, _civ\)/.test(src), 'le armi sono una funzione a parte');
+  assert((src.match(/this\._armiGuerriero\(/g) || []).length === 2,
+    'e la chiamano in due: il guerriero di sempre e il barbaro nuovo');
+  assert(!/this\._lamaGenerica\(ctx, r, atk, arma1\.carattere[\s\S]{0,200}this\._lamaGenerica\(ctx, r, atk, arma1\.carattere/.test(src),
+    'e il disegno dell arma non e stato duplicato');
+
+  // --- 3) L'ANIMAZIONE: le cinque cose che il corpo vecchio non faceva -----------------------
+  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- GUERRIERO: armatura abbozzata'));
+  assert(B.length > 2000, 'il corpo del barbaro e tutto li (' + B.length + ' caratteri)');
+  // il passo viene dalla DISTANZA percorsa, non dall orologio: e la differenza fra piedi che
+  // camminano e piedi che slittano, e si vede nel codice prima che a schermo.
+  assert(/S\.d \+= passo/.test(B) && /\(S\.d \/ 62\)/.test(B), 'il passo viene dalla distanza percorsa');
+  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'e il corpo sale DUE volte a falcata (il coseno in valore assoluto)');
+  assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'i due stivali sono in opposizione');
+  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.5\)/.test(B),
+    'spalle contro bacino, e la testa resta indietro quando giri');
+  assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'il colpo ha tre tempi, non un seno solo');
+  assert(/ctx\.rotate\(-sgn \* col \* 0\.62\)/.test(B), 'e le braccia lo seguono, ognuna attorno alla sua spalla');
+
+  // --- 4) L'ELMO E GLI OCCHI ----------------------------------------------------------------
+  assert(/GLI OCCHI A SEMICERCHIO/.test(B), 'gli occhi sono a semicerchio');
+  assert(/ctx\.arc\(ex \* r, -r \* 0\.19 \+ by, r \* 0\.085, 0, _PI\)/.test(B),
+    'e sono davvero mezze lune: un arco da 0 a PI, non un cerchio intero');
+  assert(/sc\(clothDk, 0\.55\)/.test(B), 'la fascia dell elmo e di CUOIO');
+  // col `pelo` veniva dello stesso valore del ferro e l'elmo diventava un casco tutto d'un pezzo
+  assert(!/ctx\.fillStyle = pelo;[\s\S]{0,400}nasale/.test(B), 'e non di pelo, che col ferro si confondeva');
+
+  // --- 5) LE ALTRE SEI CLASSI NON SONO STATE TOCCATE -----------------------------------------
+  // La regressione da temere non e "il barbaro e brutto": e "ho rotto il paladino".
+  const MapGen = require('../shared/mapgen.js');
+  assert(/_heroGuerriero\(ctx, r, t, atk, eq\)/.test(src), 'il corpo del guerriero c e ancora');
+  assert(/_heroLadro\(/.test(src) && /_heroMago\(/.test(src), 'e cosi quelli del ladro e del mago');
+  // le sette righe di STILE: si guarda la TABELLA, non il file intero — una classe puo' comparire
+  // in un commento e sembrare viva mentre il suo stile e' sparito.
+  { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
+    for (const k of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
+      assert(new RegExp('\\n\\s*' + k + ':\\s*\\{').test(tab), k + ' e ancora nella tabella degli stili'); }
+  ok('corpo del barbaro, armi staccate, cinque cose di animazione e sei classi intatte');
+}
+
 function testV235() {
   console.log('\n[TEST 94] v2.35 — il velo del buio parte spento, i candelabri lasciano il posto alle torce a muro');
   const MapGen = require('../shared/mapgen.js');
@@ -9883,6 +9942,6 @@ function testV235() {
   ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

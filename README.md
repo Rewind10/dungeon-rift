@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.35.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.37.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,22 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🪓 v2.37.0 — il Barbaro ha un corpo suo
+
+Criniera frastagliata, veste lunga, braccia nude fuori dal torso, e un **elmo** di ferro e cuoio con
+gli **occhi a semicerchio** — che a quaranta pixel si vedono, mentre i due punti tondi di prima
+sparivano dentro il viso.
+
+Soprattutto, **si muove**: il passo viene dalla distanza percorsa e non dall'orologio (prima
+ondeggiava uguale fermo o in corsa), ci sono due stivali che escono davanti e dietro, il corpo sale
+due volte a falcata, spalle e bacino girano al contrario, e il colpo ha tre tempi — carica, stacco,
+ricaduta — con le braccia che lo seguono.
+
+Le **armi** sono uscite dal corpo: `_armiGuerriero` è una funzione sola chiamata da due disegni, e
+continua a leggere quello che hai davvero in mano.
+
+---
 
 ## 🌑 v2.35.0 — torce a muro, e il buio non parte più acceso
 

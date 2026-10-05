@@ -1,0 +1,26 @@
+{
+ "name": "eroe",
+ "cols": 6,
+ "rows": 4,
+ "cell": 160,
+ "charH": 93,
+ "blend": 0.12,
+ "anims": {
+  "idle": {
+   "file": "idle.png",
+   "frames": 24,
+   "fps": 10
+  },
+  "walk": {
+   "file": "walk.png",
+   "frames": 24,
+   "cyclePx": 120
+  },
+  "attack": {
+   "file": "attack.png",
+   "frames": 24,
+   "oneShot": true,
+   "hitFrame": 13
+  }
+ }
+}

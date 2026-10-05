@@ -2,6 +2,87 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.37.0] — 2026-10-06 · "Il Barbaro ha un corpo suo"
+
+Dopo quattro giri di prove in una pagina a parte — il disegno di oggi, il mio rifatto, il codice di
+Paolo, e la fusione — questo e' quello che ha vinto guardandolo muoversi.
+
+---
+
+### 🪓 IL CORPO
+
+Nasce dal disegno di Paolo. Tre cose sue, tutte di SAGOMA, che e' l'unica cosa che a 46 px arriva:
+la **criniera frastagliata** (un cerchio liscio, dall'alto, e' una testa qualunque), la **veste
+lunga**, e le **braccia nude fuori dal torso** invece delle due placche attaccate ai fianchi.
+
+Piu' un **elmo da barbaro**: calotta di ferro, fascia di **cuoio**, nasale, due ribattini d'oro —
+ferro, cuoio e oro, gli stessi tre materiali del vestito, cosi' non sembra preso in prestito da
+un'altra classe. La criniera continua a uscirne tutt'attorno: e' lei la sagoma del barbaro, e un elmo
+che la coprisse farebbe sparire la classe.
+
+> La fascia l'avevo fatta **di pelo**, ed era sbagliato: `pelo` (#6a5a44) ha lo stesso valore del
+> ferro, e l'elmo diventava un casco di metallo tutto d'un pezzo. Cuoio caldo e ferro freddo a
+> quaranta pixel si distinguono ancora; lo stesso grigio due volte no.
+
+**Gli occhi sono due semicerchi** col taglio dritto in alto, sotto il bordo dell'elmo. Prima erano
+due punti tondi come quelli delle altre classi, e a questa dimensione sparivano dentro il viso. Non
+si leggono come occhi: si leggono come *quello e' il davanti*, ed e' tutto quello che devono fare.
+
+---
+
+### 🚶 E ADESSO SI MUOVE
+
+E' la meta' che mancava, e vale piu' del disegno:
+
+| | prima | adesso |
+|---|---|---|
+| il passo | `sin(t * 5)` — l'orologio | la **distanza percorsa** / 62 px di falcata |
+| i piedi | non ce n'erano | due stivali, in opposizione, che escono davanti e dietro |
+| il saliscendi | nessuno | il corpo sale **due volte** a falcata, una per passo |
+| spalle e bacino | fermi | girano **al contrario**, e la testa resta indietro quando giri |
+| il colpo | un seno | **tre tempi**: carica, stacco, ricaduta |
+| le braccia nel colpo | ferme | ognuna ruota attorno alla **propria spalla** |
+
+**Il passo agganciato al terreno** e' la differenza fra piedi che camminano e piedi che slittano: con
+`sin(t*5)` il personaggio ondeggiava uguale che corresse o stesse fermo in mezzo alla piazza, e se la
+velocita' cambiava la cadenza non se ne accorgeva. Adesso la fase e' la distanza divisa per la
+falcata — se rallenti, rallenta il passo, da solo.
+
+**I tre tempi del colpo** sono la cosa che si vede di piu' e che costa di meno: un solo seno non ha
+anticipo, e senza anticipo un fendente non pesa. Con la carica — l'arma che torna indietro prima di
+partire — lo stesso identico colpo sembra pesare dieci chili.
+
+---
+
+### ⚔️ LE ARMI SONO USCITE DAL CORPO
+
+Erano quaranta righe in mezzo a `_heroGuerriero`. Finche' il corpo era uno andava bene; con due corpi
+che impugnano le stesse armi, lasciarle li' voleva dire **copiarle** — ed e' esattamente cosi' che due
+disegni cominciano a divergere senza che nessuno se ne accorga. Adesso sono `_armiGuerriero`, la
+stessa identica funzione chiamata da due posti. **Il disegno dell'arma non cambia di un pixel**:
+l'estrazione e' meccanica, e continua a leggere `wp`, `wx` e `sh`, cioe' quello che hai davvero in
+mano — non quello che la classe dovrebbe avere.
+
+---
+
+### 🧪 QUELLO CHE IL TEST GUARDA
+
+Non «il barbaro e' bello», che non si misura, ma le cose che si rompono in silenzio:
+
+- che il corpo nuovo lo usi **solo il barbaro, e solo se non e' un civile**. Non e' un dettaglio:
+  `_vendorBase` manda il **fabbro** e il **Capitano** del villaggio sulla base `'barbaro'`, e senza
+  quella guardia il paese si riempirebbe di barbari con l'elmo — due paesani su nove;
+- che `_armiGuerriero` sia chiamata da **due** posti e che il disegno dell'arma **non** sia duplicato;
+- che il passo venga davvero dalla distanza (`S.d / 62`) e non dall'orologio;
+- che gli occhi siano un arco **da 0 a PI**, non un cerchio intero;
+- che le **altre sei classi** siano ancora tutte nella tabella degli stili — la regressione da temere
+  non e' «il barbaro e' brutto», e' «ho rotto il paladino».
+
+**Prova:** 6.984 asserzioni verdi. Sabotaggi: barbaro riportato al corpo del guerriero → rosso;
+occhi di nuovo tondi → rosso; passo riagganciato all'orologio → rosso.
+
+---
+
 ### [2.35.0] — 2026-10-03 · "Torce a muro, e il buio non parte piu' acceso"
 
 Paolo: *«togli la modalita' illuminazione (tasto L) predefinita / nelle case e/o negozi aggiungi i
