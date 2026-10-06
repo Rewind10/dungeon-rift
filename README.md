@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.37.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.38.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,24 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 📏 v2.38.0 — l'eroe e' piu' grande, e gira come si gira
+
+L'eroe passa da **46 a 56 px** di sagoma. Solo lui: `HERO_VIS` e' una scala a parte da `VIS_SCALE`,
+che e' quella del mondo — alzare quella avrebbe ingrandito anche mostri, arredo e paesani, cioe' non
+avrebbe ingrandito niente. Il **corpo che urta non cambia** (17,28 px): cresce quanto si vede, non
+quanto si urta, e nessuna porta o corridoio va ritarato.
+
+E il **giro su se stesso** e' tarato. Girare adesso e' **camminare**: chi ruota sul posto muove i
+piedi invece di scivolare, perche' un giro vale un pezzo di falcata. I piedi **scavalcano il centro**
+e si disegnano **sopra la veste** — prima stavano dietro il corpo, nascosti dalla gonna, e il barbaro
+sembrava trascinare le gambe. E a restare indietro adesso e' il **busto**, di cinque gradi, mentre la
+**testa resta sulla mira**: prima si torceva tutto di quattordici, testa compresa, che e' il contrario
+di come si gira.
+
+Dei dettagli della v2.37 non si e' toccato niente: elmo, pelliccia, braccia e gambe sono quelli.
+
+---
 
 ## 🪓 v2.37.0 — il Barbaro ha un corpo suo
 

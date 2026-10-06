@@ -2,6 +2,83 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.38.0] — 2026-10-06 · "Piu' grande, e che giri come si gira"
+
+Tre righe di Paolo e due schermate del gioco:
+
+> *«la grandezza dello sprite puo' essere maggiore, per me e' troppo piccola»*
+> *«dovresti calibrare il movimento su se stesso perche' come vedi nella seconda immagine e' innaturale»*
+> *«non puoi prendere i dettagli grafici di questa versione (elmo, pelliccia, movimenti di braccia e
+> gambe) e modificare la tua versione migliorata?»*
+
+La terza riga dice **cosa non si tocca**, ed e' la meta' piu' importante del lavoro: elmo, pelliccia,
+braccia e gambe della v2.37 escono da qui identici. Cambiano la **taglia** e il **giro su se stesso**.
+
+---
+
+### 📏 L'EROE E' PIU' GRANDE — 46 → **56 px**
+
+`VIS_SCALE` non era la manopola giusta: e' la scala di **tutto** — mostri, arredo, paesani — e alzarla
+avrebbe ingrandito l'eroe **insieme** allo sfondo, cioe' non lo avrebbe ingrandito affatto. La nuova
+`HERO_VIS` vale **solo per chi e' giocato**: 16 × 1,75 = **28** di raggio, **56 px** di sagoma.
+
+| | prima | adesso |
+|---|---|---|
+| sagoma dell'eroe | 46,4 px | **56 px** |
+| corpo che urta | 17,28 px | **17,28 px** — invariato |
+| fabbro, paesani, prigionieri | 46,4 px | 46,4 px — invariati |
+| barra della vita e scritte | 60 px | 60 px — solo piu' in alto |
+
+Il **corpo fisico non cresce**, ed e' questo che rende la modifica sicura: se fosse cresciuto anche
+l'urto, porte, corridoi e pertugi di **tutte** le mappe andavano ritarati e il giocatore si sarebbe
+incastrato. Cambia quanto si **vede**, non quanto si **urta**.
+
+I **paesani restano** della misura di sempre: sono gente del mondo e devono misurarsi col mondo. Un
+fabbro grande come te, dietro il suo banco, direbbe che e' un eroe anche lui. E la **barra della vita**
+non cresce con te — e' interfaccia, non corpo, e in co-op tre barre piu' larghe si sovrappongono.
+
+---
+
+### 🔄 IL GIRO SU SE' STESSO
+
+Tre difetti, tutti e tre visibili fermando l'immagine che ha mandato Paolo.
+
+**1. Girare non era camminare.** La falcata veniva dalla distanza *percorsa* — che e' la cosa giusta
+in corsa, ed e' la conquista della v2.37 — ma chi ruota sul posto non percorre niente: i piedi
+restavano incollati e la figura girava **come un cartello su un palo**. Adesso un giro vale un pezzo
+di passo (mezzo giro ≈ mezza falcata) e gli stivali si rimettono in moto.
+
+**2. I piedi stavano dietro il corpo.** La base era `r * 0,62` **dietro** il centro: in pianta il
+barbaro trascinava le gambe, e girando i due stivali orbitavano larghi attorno al perno invece di
+pestare sul posto. Adesso **scavalcano il centro** (0,34 ± 0,44) e si disegnano **sopra la veste**:
+sotto, la gonna li copriva per tre quarti del passo e l'unica cosa che si vedeva era il piede di
+dietro che spuntava — esattamente l'aria di chi striscia.
+
+**3. Si torceva il busto invece della testa.** Era `- S.da * 0.5`: fino a **14 gradi** di torsione
+tenuti per tutta la durata del giro, col tronco staccato dalle gambe. E la testa, che sta dentro quel
+gruppo, restava indietro **insieme** a lui — al contrario di come si gira davvero. Adesso il busto
+ritarda di un'inezia (**0,18**, circa 5 gradi) e la **testa si riprende lo stesso angolo** ruotando
+attorno al collo: lo sguardo resta sulla mira, e' il corpo che la insegue.
+
+**E la falcata e' proporzionale all'eroe.** 62 px erano la misura giusta con un raggio di 23,2; a 28
+sarebbero diventati passetti. 62 / 23,2 = **2,67 raggi**: la stessa andatura, a qualunque taglia.
+
+---
+
+### ✅ COLLAUDO
+
+**7.025 verifiche, zero rosse.** Il TEST 96 nuovo pretende, in quest'ordine: i 56 px; che il raggio di
+collisione sia rimasto **17,28** e che il server non sappia nemmeno che `HERO_VIS` esista; che
+`_rEroe()` sia usata in **due** posti e che `_drawVendor` **non** sia uno di quelli; i tre punti del
+giro; e — meta' del test — che elmo, fascia di cuoio, occhi a semicerchio, pelliccia, rotazione delle
+braccia attorno alla spalla, saliscendi a due tempi e colpo a tre tempi siano **ancora tutti li'**.
+
+Quattro sabotaggi, quattro rossi: piedi rimessi a 0,62 (3 rosse), `HERO_VIS` riportata a 1,45 (2),
+busto rimesso a 0,5 (3), paesani ingranditi anche loro (2). E una passata a schermo: 180 fotogrammi —
+fermo, in corsa, in rotazione, sotto attacco — piu' le altre sei classi, zero eccezioni.
+
+---
+
 ### [2.37.0] — 2026-10-06 · "Il Barbaro ha un corpo suo"
 
 Dopo quattro giri di prove in una pagina a parte — il disegno di oggi, il mio rifatto, il codice di

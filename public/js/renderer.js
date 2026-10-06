@@ -2032,7 +2032,7 @@
     levelUp(who, lv) { this.levelUps.push({ who, lv: lv || 0, t: 0, dur: 1.6 }); },
     _drawLevelUps(ctx, world) {
       if (!this.levelUps.length) return;
-      const r = C.PLAYER_RADIUS * (C.VIS_SCALE || 1);
+      const r = this._rEroe();   // v2.38 — l'alone sta addosso all'eroe, quindi segue la sua misura
       for (const L of this.levelUps) {
         const p = (world.players || []).find(x => x.i === L.who); if (!p || p.d) continue;
         const u = L.t / L.dur;
@@ -4266,8 +4266,16 @@
       ctx.beginPath(); ctx.moveTo(-L, -b.r * 0.7); ctx.lineTo(-L * 0.55, 0); ctx.lineTo(-L, b.r * 0.7); ctx.stroke();
       ctx.restore();
     },
+    // v2.38 — IL RAGGIO DI DISEGNO DELL'EROE, in un posto solo. Paolo: *«la grandezza dello sprite puo'
+    // essere maggiore, per me e' troppo piccola»*. Alzare VIS_SCALE non serviva a niente: e' la scala di
+    // TUTTO (mostri, props, paesani), quindi l'eroe sarebbe cresciuto insieme allo sfondo e sullo schermo
+    // non sarebbe cambiato nulla. HERO_VIS prende il posto di VIS_SCALE per chi e' GIOCATO, e per nessun
+    // altro: 23,2 -> 28 di raggio, 46 -> 56 px di sagoma. Si usa qui e nell'alone del passaggio di
+    // livello, che gli sta addosso. Il fabbro, i paesani e i prigionieri della sala dei record restano
+    // alla misura di sempre: sono gente del mondo, e devono misurarsi col mondo.
+    _rEroe() { return C.PLAYER_RADIUS * (C.HERO_VIS || C.VIS_SCALE || 1); },
     _drawPlayer(ctx, p, isMe) {
-      const h = HERO[p.h] || HERO.barbaro; const r = C.PLAYER_RADIUS * (C.VIS_SCALE || 1); const x = p.x, y = p.y; this._shadow(ctx, x, y, r);
+      const h = HERO[p.h] || HERO.barbaro; const r = this._rEroe(); const x = p.x, y = p.y; this._shadow(ctx, x, y, r);
       if (p.d) { ctx.globalAlpha = 0.5; ctx.fillStyle = '#555'; ctx.fillRect(x - 8, y - 12, 16, 20); ctx.globalAlpha = 1; return; }
       ctx.save(); ctx.translate(x, y);
       if (p.iv) { ctx.strokeStyle = 'rgba(255,235,120,' + (0.5 + 0.4 * Math.sin(this.time * 10)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 9, 0, 7); ctx.stroke(); }
@@ -4329,7 +4337,9 @@
       ctx.restore(); ctx.restore(); ctx.globalAlpha = 1;
       }   // v1.82 — `p` porta anche p.pal: e' la tinta del mercenario, letta da _heroGuerriero/_heroMago/_heroLadro
       if (p.dash) this.particles.push({ x, y, vx: 0, vy: 0, life: 0.25, t: 0.25, color: h.accent, r: 5, over: false });
-      const bw = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
+      // v2.38 — la BARRA e le scritte NON crescono con l'eroe: sono interfaccia, non personaggio, e
+      // in co-op tre barre piu' larghe si sovrappongono. Restano alla misura di sempre, solo piu' in alto.
+      const bw = C.PLAYER_RADIUS * (C.VIS_SCALE || 1) * 2.6; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - r - 22, bw, 5); const hf = Math.max(0, p.hp / p.mhp); ctx.fillStyle = hf > 0.4 ? '#4bd66b' : '#ff4b6b'; ctx.fillRect(x - bw / 2, y - r - 22, bw * hf, 5);
       for (let i = 0; i < (p.lv || 0); i++) { ctx.fillStyle = '#ff5a7a'; ctx.beginPath(); ctx.arc(x - bw / 2 + 4 + i * 9, y - r - 28, 2.6, 0, 7); ctx.fill(); }
       // v1.73 — SOPRA LA TUA TESTA NON C'E' PIU' NULLA. Nome, livello, rango e barra dell'XP sono passati
       // nel box dell'HUD (#heroBox): erano scritte fisse in mezzo all'azione, proprio dove serve vedere.
@@ -4344,7 +4354,7 @@
           const rk = LV.rankName(p.h, p.lvl, p.sp || null), spec = LV.rankForLevel(p.lvl) >= 5;
           ctx.font = '11px Segoe UI'; ctx.fillStyle = spec ? '#ffd27a' : '#8d97ab';
           ctx.fillText('Lv.' + p.lvl + ' · ' + rk, x, y - r - 44);
-          if ((p.prg || 0) < 1) { const bw2 = r * 2.6; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
+          if ((p.prg || 0) < 1) { const bw2 = bw; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2, 2.5); ctx.fillStyle = '#8bd6ff'; ctx.fillRect(x - bw2 / 2, y - r - 15, bw2 * (p.prg || 0), 2.5); }
         }
         ctx.textAlign = 'left';
       }
@@ -4624,7 +4634,8 @@
     //     uguale fermo o in corsa). I piedi non slittano, e se rallenti rallenta il passo;
     //   · ci sono gli STIVALI, che escono davanti e dietro — e' la cosa che da sola dice «cammina»;
     //   · il corpo sale DUE volte a falcata, una per passo;
-    //   · spalle e bacino girano al CONTRARIO, e la testa resta un filo indietro quando giri;
+    //   · spalle e bacino girano al CONTRARIO; e girando su se stesso (v2.38) il busto resta indietro
+    //     di un'inezia mentre la TESTA resta sulla mira — non il contrario, com'era in v2.37;
     //   · il colpo ha TRE TEMPI (carica · stacco · ricaduta) e le BRACCIA lo seguono, ruotando
     //     ognuna attorno alla propria spalla. Senza l'anticipo della carica il fendente non pesa.
     //
@@ -4650,17 +4661,29 @@
       //     della sala dei record) resta fermo, che e' giusto.
       const ST = this._ehB || (this._ehB = {});
       const chi = (eq && eq.i != null) ? eq.i : '_';
-      const S = ST[chi] || (ST[chi] = { x: (eq && eq.x) || 0, y: (eq && eq.y) || 0, d: 0, v: 0, lt: t, a: (eq && eq.a) || 0, da: 0 });
+      const S = ST[chi] || (ST[chi] = { x: (eq && eq.x) || 0, y: (eq && eq.y) || 0, d: 0, v: 0, lt: t, a: (eq && eq.a) || 0, da: 0, vg: 0 });
       const dt = Math.max(0.001, Math.min(0.05, t - S.lt)); S.lt = t;
       const px = (eq && eq.x) || 0, py = (eq && eq.y) || 0;
-      const passo = Math.hypot(px - S.x, py - S.y); S.d += passo; S.x = px; S.y = py;
+      const passo = Math.hypot(px - S.x, py - S.y); S.x = px; S.y = py;
       S.v += ((passo / dt) - S.v) * Math.min(1, dt * 9);
-      { const a0 = (eq && eq.a) || 0; let d = a0 - S.a;          // la rotazione, per il ritardo della testa
+      // v2.38 — ANCHE GIRARE E' CAMMINARE. Finche' la falcata veniva dalla sola distanza PERCORSA, chi
+      // girava sul posto non percorreva niente: i piedi restavano incollati e la figura ruotava come un
+      // cartello su un palo. E' l'innaturalezza della seconda immagine di Paolo. Adesso un giro vale un
+      // pezzo di passo — mezzo giro, mezza falcata — e gli stivali si rimettono in moto.
+      let giro = 0;
+      { const a0 = (eq && eq.a) || 0; let d = a0 - S.a;
         while (d > _PI) d -= _TAU; while (d < -_PI) d += _TAU;
-        S.a = a0; S.da += (Math.max(-0.5, Math.min(0.5, d / dt * 0.12)) - S.da) * Math.min(1, dt * 10); }
+        giro = Math.abs(d); S.a = a0;
+        S.da += (Math.max(-0.5, Math.min(0.5, d / dt * 0.12)) - S.da) * Math.min(1, dt * 10);
+        S.vg += ((giro / dt) - S.vg) * Math.min(1, dt * 9); }
+      S.d += passo + giro * r * 0.50;
 
-      const mov = Math.max(0, Math.min(1, S.v / 90)), fermo = 1 - mov;
-      const f = (S.d / 62) * _TAU;
+      // v2.38 — LA FALCATA E' PROPORZIONALE ALL'EROE. 62 px erano giusti col raggio a 23,2; con HERO_VIS
+      // il raggio e' 28, e un barbaro piu' grande deve fare passi piu' LUNGHI, non piu' numerosi —
+      // altrimenti a parita' di velocita' zampetta. 62 / 23,2 = 2,67 raggi: la stessa andatura di prima,
+      // a qualunque misura. E la soglia del «si muove» tiene conto anche della rotazione.
+      const mov = Math.max(0, Math.min(1, Math.max(S.v / 90, S.vg / 2.4))), fermo = 1 - mov;
+      const f = (S.d / (r * 2.67)) * _TAU;
       const gamba = _SIN(f) * mov, su = Math.abs(Math.cos(f)) * mov;
       const resp = _SIN(t * 2.0) * fermo, peso = _SIN(t * 1.05) * fermo;
       // i tre tempi: -0,24 in carica (l'arma torna indietro), +1 a fine stacco, poi si riassesta
@@ -4677,21 +4700,30 @@
       ctx.save();
       ctx.rotate(_PI / 2);                     // il disegno guarda in alto, il gioco guarda in +x
 
+      // v2.38 — I PIEDI STANNO SOTTO IL CORPO. Prima la base era r*0,62 DIETRO il centro: in pianta il
+      // barbaro trascinava le gambe, e girando su se stesso i due stivali orbitavano larghi attorno al
+      // perno invece di pestare sul posto. Adesso scavalcano il centro (0,34 ± 0,44) e si disegnano SOPRA
+      // la veste — sotto erano coperti dalla gonna per tre quarti della falcata, e l'unica cosa che si
+      // vedeva era il piede di dietro che spuntava: esattamente l'aria di chi striscia.
       const piede = (sgn, av) => {
         ctx.save();
-        ctx.translate(sgn * r * 0.22, r * (0.62 + av * 0.34));
-        ctx.rotate(-av * 0.10 * sgn);
+        ctx.translate(sgn * r * 0.26, r * (0.34 + av * 0.44));
+        ctx.rotate(-av * 0.14 * sgn);
         ctx.fillStyle = sc(clothDk, -0.10); ctx.strokeStyle = DK; ctx.lineWidth = Math.max(1.2, r * 0.07);
         ctx.beginPath(); ctx.ellipse(0, 0, r * 0.16, r * 0.25, 0, 0, 7); ctx.fill(); ctx.stroke();
         ctx.fillStyle = sc(clothDk, 0.30);
         ctx.beginPath(); ctx.ellipse(0, -r * 0.10, r * 0.11, r * 0.065, 0, 0, 7); ctx.fill();
         ctx.restore();
       };
-      piede(1, gamba); piede(-1, -gamba);
 
       ctx.save();
       ctx.translate(0, -r * spinta + peso * r * 0.03);
-      ctx.rotate(gamba * 0.11 - S.da * 0.5);
+      // v2.38 — IL BUSTO RESTA INDIETRO DI POCO. Era `- S.da * 0.5`: fino a 14 gradi di torsione tenuti
+      // per tutta la durata del giro, col risultato che il tronco si staccava dalle gambe e la testa —
+      // che sta dentro questo gruppo — restava indietro INSIEME a lui. Al contrario di come si gira: la
+      // testa va dove guardi, e' il corpo che la insegue. Qui il corpo ritarda di un'inezia; piu' sotto
+      // la testa si riprende lo stesso angolo e torna esattamente sulla mira.
+      ctx.rotate(gamba * 0.11 - S.da * 0.18);
       const kk = 1 + su * 0.034; ctx.scale(kk, kk);
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.lineWidth = r * 0.07; ctx.strokeStyle = DK;
@@ -4748,6 +4780,10 @@
       ctx.quadraticCurveTo(-r * 0.19, r * 0.42 + sway, -r * 0.47, r * 0.27 + sway);
       ctx.closePath(); ctx.fill();
 
+      // gli STIVALI, qui: sopra la veste e sotto le braccia. E' l'unica cosa che da sola dice «cammina»,
+      // quindi dev'essere l'unica cosa che non viene mai coperta.
+      piede(1, gamba); piede(-1, -gamba);
+
       // le BRACCIA, che seguono il colpo ruotando attorno alla propria spalla
       const braccio = (sgn) => {
         const sx = sgn * r * 0.34, sy = -r * 0.18;
@@ -4770,7 +4806,11 @@
       };
       braccio(-1); braccio(1);
 
-      // la TESTA: criniera, viso, barba
+      // la TESTA: criniera, viso, barba — e il suo collo. Si riprende l'angolo che il busto ha
+      // lasciato indietro, ruotando attorno alla BASE del cranio e non attorno al centro della figura:
+      // cosi' chi gira tiene lo sguardo sulla mira e si torce sotto. (v2.38)
+      ctx.save();
+      ctx.translate(0, -r * 0.10); ctx.rotate(S.da * 0.18); ctx.translate(0, r * 0.10);
       const by = breathe;
       ctx.fillStyle = cri; ctx.strokeStyle = DK;
       ctx.beginPath();
@@ -4850,6 +4890,7 @@
         ctx.beginPath(); ctx.arc(ex * r, -r * 0.19 + by, r * 0.085, 0, _PI); ctx.closePath(); ctx.fill();
       }
 
+      ctx.restore();   // fine della testa (v2.38)
       ctx.restore();   // fine strato di animazione
       ctx.restore();   // fine quarto di giro
 

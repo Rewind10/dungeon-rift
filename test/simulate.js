@@ -9766,6 +9766,104 @@ function testV233() {
   ok('la locanda, il cuoco, il mercato su due file e la bottega dell Orafo arredata');
 }
 
+// =============================================================================================
+// TEST 96 — v2.38: l'eroe e' piu' grande, e il giro su se stesso e' tarato
+// =============================================================================================
+// Paolo, guardando due schermate del gioco:
+//   · *«la grandezza dello sprite puo' essere maggiore, per me e' troppo piccola»*
+//   · *«dovresti calibrare il movimento su se stesso perche' come vedi nella seconda immagine
+//      e' innaturale»*
+//   · *«non puoi prendere i dettagli grafici di questa versione (elmo, pelliccia, movimenti di
+//      braccia e gambe) e modificare la tua versione migliorata?»*
+// Il terzo punto dice cosa NON si tocca, ed e' la meta' piu' importante del collaudo: elmo,
+// pelliccia, braccia e gambe della v2.37 devono uscire da qui identici.
+function testV238() {
+  console.log('\n[TEST 96] v2.38 — eroe piu grande, giro su se stesso tarato');
+  const fs2 = require('fs'), path = require('path');
+  const R = (f) => fs2.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const src = R(path.join('public', 'js', 'renderer.js'));
+
+  // --- 1) PIU' GRANDE, E SOLO LUI ------------------------------------------------------------
+  // Alzare VIS_SCALE sarebbe stato il modo sbagliato: e' la scala di mostri, props e paesani, e
+  // l'eroe sarebbe cresciuto INSIEME allo sfondo — sullo schermo, nessuna differenza.
+  assert(typeof C.HERO_VIS === 'number' && C.HERO_VIS > 1, 'esiste una scala solo per l eroe, ed e maggiore di 1');
+  assert(Math.abs(C.VIS_SCALE - 1.45) < 1e-9, 'e la scala del MONDO non e stata toccata');
+  const rEroe = C.PLAYER_RADIUS * C.HERO_VIS;
+  assert(Math.abs(rEroe * 2 - 56) < 1.0, 'la sagoma dell eroe misura 56 px (' + (rEroe * 2).toFixed(1) + ')');
+  assert(rEroe > C.PLAYER_RADIUS * C.VIS_SCALE, 'cioe piu di prima (era ' + (C.PLAYER_RADIUS * C.VIS_SCALE * 2).toFixed(1) + ' px)');
+
+  // --- 2) IL CORPO FISICO NON E' CRESCIUTO ---------------------------------------------------
+  // E' il punto che rende la modifica sicura: se cresceva anche l'urto, porte, corridoi e
+  // pertugi di TUTTE le mappe andavano ritarati, e il giocatore si sarebbe incastrato.
+  const room = R(path.join('server', 'Room.js'));
+  assert(/radius:\s*C\.PLAYER_RADIUS \* \(C\.COL_SCALE \|\| 1\)/.test(room),
+    'il corpo che urta resta PLAYER_RADIUS x COL_SCALE');
+  assert(!/HERO_VIS/.test(room), 'e il server non sa nemmeno che la scala di disegno esista');
+  assert(Math.abs(C.PLAYER_RADIUS * C.COL_SCALE - 17.28) < 1e-6, 'il raggio di collisione e quello di sempre');
+
+  // --- 3) CRESCE L'EROE, NON IL VILLAGGIO ----------------------------------------------------
+  assert(/_rEroe\(\)\s*\{\s*return C\.PLAYER_RADIUS \* \(C\.HERO_VIS \|\| C\.VIS_SCALE \|\| 1\);/.test(src),
+    'la misura dell eroe sta in un posto solo');
+  const corpo = (nome, fine) => { const i = src.indexOf(nome); return src.slice(i, src.indexOf(fine, i)); };
+  assert(/const r = this\._rEroe\(\);/.test(corpo('_drawPlayer(ctx, p, isMe) {', '_boot(ctx, x, y, r)')),
+    'e il giocatore la usa');
+  assert(/this\._rEroe\(\)/.test(corpo('_drawLevelUps(ctx, world) {', '_drawDamageNumbers')),
+    'e cosi l alone del passaggio di livello, che gli sta addosso');
+  const vend = corpo('_drawVendor(ctx, n, opts) {', '_beaconBottega');
+  assert(!/_rEroe/.test(vend) && /C\.PLAYER_RADIUS \* \(C\.VIS_SCALE \|\| 1\)/.test(vend),
+    'il fabbro e i paesani NO: sono gente del mondo e si misurano col mondo');
+  assert((src.match(/this\._rEroe\(\)/g) || []).length === 2, 'e non e finita in nessun altro posto');
+
+  // --- 4) L'INTERFACCIA NON E' CRESCIUTA CON LUI ---------------------------------------------
+  // Tre barre della vita piu' larghe, in co-op, si sovrappongono: sono interfaccia, non corpo.
+  assert(/const bw = C\.PLAYER_RADIUS \* \(C\.VIS_SCALE \|\| 1\) \* 2\.6;/.test(src),
+    'la barra della vita resta della misura di sempre');
+
+  // --- 5) IL GIRO SU SE' STESSO ---------------------------------------------------------------
+  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- v2.37 — LE ARMI DEL GUERRIERO'));
+  assert(B.length > 2000, 'il corpo del barbaro e tutto li (' + B.length + ' caratteri)');
+  // a) girare e' camminare: senza questo, chi ruota sul posto non percorre niente e i piedi
+  //    restano incollati — e' l'immobilita' che Paolo ha chiamato innaturale.
+  assert(/S\.d \+= passo \+ giro \* r \* 0\.50;/.test(B), 'un giro vale un pezzo di falcata');
+  assert(/S\.vg \+= \(\(giro \/ dt\) - S\.vg\)/.test(B), 'e la velocita di rotazione e smorzata come quella di corsa');
+  assert(/Math\.max\(S\.v \/ 90, S\.vg \/ 2\.4\)/.test(B), 'cosi chi gira sul posto risulta «in movimento» e le gambe partono');
+  // b) la falcata e' proporzionale all'eroe: 62 px fissi, su un raggio cresciuto, erano passetti
+  assert(/\(S\.d \/ \(r \* 2\.67\)\)/.test(B) && !/S\.d \/ 62/.test(B),
+    'la lunghezza del passo segue la taglia del personaggio');
+  // c) i piedi stanno SOTTO il corpo, non dietro
+  assert(/r \* \(0\.34 \+ av \* 0\.44\)/.test(B), 'gli stivali scavalcano il centro invece di restare dietro');
+  assert(!/r \* \(0\.62 \+ av \* 0\.34\)/.test(B), 'e la base trascinata della v2.37 non c e piu');
+  // ...e si vedono: dopo la veste e la pelliccia, non sotto.
+  assert(B.indexOf('piede(1, gamba); piede(-1, -gamba)') > B.indexOf('la PELLICCIA sulle spalle'),
+    'e si disegnano SOPRA la veste, se no la gonna li copre per tre quarti del passo');
+  // d) il busto resta indietro di poco e la TESTA resta sulla mira (prima era il contrario)
+  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.18\)/.test(B), 'il busto ritarda di un inezia');
+  assert(!/S\.da \* 0\.5\)/.test(B), 'non piu di 14 gradi tenuti per tutto il giro');
+  assert(/ctx\.translate\(0, -r \* 0\.10\); ctx\.rotate\(S\.da \* 0\.18\); ctx\.translate\(0, r \* 0\.10\);/.test(B),
+    'e la testa si riprende lo stesso angolo, ruotando attorno al collo');
+  // e) il disegno resta chiuso: ogni save ha il suo restore
+  assert(B.split('ctx.save()').length === B.split('ctx.restore()').length,
+    'save e restore sono in pari (' + (B.split('ctx.save()').length - 1) + ')');
+
+  // --- 6) I DETTAGLI GRAFICI DELLA v2.37 SONO INTATTI ----------------------------------------
+  // *«prendi i dettagli grafici di questa versione (elmo, pelliccia, movimenti di braccia e
+  // gambe)»*: qui non si aggiunge niente di nuovo, si pretende che non sia sparito niente.
+  assert(/l'ELMO: calotta di ferro, fascia di CUOIO/.test(B) && /sc\(clothDk, 0\.55\)/.test(B), 'l elmo e la sua fascia di cuoio ci sono');
+  assert(/ctx\.arc\(ex \* r, -r \* 0\.19 \+ by, r \* 0\.085, 0, _PI\)/.test(B), 'gli occhi sono ancora due semicerchi');
+  assert(/la PELLICCIA sulle spalle/.test(B) && /ctx\.fillStyle = pelo;/.test(B), 'la pelliccia e al suo posto');
+  assert(/ctx\.rotate\(-sgn \* col \* 0\.62\)/.test(B), 'le braccia girano ancora attorno alla propria spalla');
+  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'e il corpo sale ancora due volte a falcata');
+  assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'il colpo ha ancora tre tempi');
+  assert(/this\._armiGuerriero\(ctx, r, a, eq, _P, DK, sway/.test(B), 'e l arma resta quella equipaggiata');
+
+  // --- 7) E LE ALTRE SEI CLASSI NON SONO STATE TOCCATE ---------------------------------------
+  { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
+    for (const k of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
+      assert(new RegExp('\\n\\s*' + k + ':\\s*\\{').test(tab), k + ' e ancora nella tabella degli stili'); }
+  assert(C.NOVITA.v === C.VERSION, 'e il riquadro delle novita parla della versione giusta');
+  ok('eroe a 56 px con urto invariato, giro su se stesso tarato e dettagli della v2.37 intatti');
+}
+
 function testV237() {
   console.log('\n[TEST 95] v2.37 — il Barbaro ha un corpo suo, e si muove');
   const fs2 = require('fs'), path = require('path');
@@ -9796,11 +9894,12 @@ function testV237() {
   assert(B.length > 2000, 'il corpo del barbaro e tutto li (' + B.length + ' caratteri)');
   // il passo viene dalla DISTANZA percorsa, non dall orologio: e la differenza fra piedi che
   // camminano e piedi che slittano, e si vede nel codice prima che a schermo.
-  assert(/S\.d \+= passo/.test(B) && /\(S\.d \/ 62\)/.test(B), 'il passo viene dalla distanza percorsa');
+  assert(/S\.d \+= passo/.test(B) && /\(S\.d \/ \(r \* 2\.67\)\)/.test(B),
+    'il passo viene dalla distanza percorsa (v2.38: e la falcata e proporzionale al raggio, non 62 px fissi)');
   assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'e il corpo sale DUE volte a falcata (il coseno in valore assoluto)');
   assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'i due stivali sono in opposizione');
-  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.5\)/.test(B),
-    'spalle contro bacino, e la testa resta indietro quando giri');
+  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.18\)/.test(B),
+    'spalle contro bacino, e il busto resta indietro quando giri (v2.38: 0,18 e non piu 0,5)');
   assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'il colpo ha tre tempi, non un seno solo');
   assert(/ctx\.rotate\(-sgn \* col \* 0\.62\)/.test(B), 'e le braccia lo seguono, ognuna attorno alla sua spalla');
 
@@ -9942,6 +10041,6 @@ function testV235() {
   ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);
