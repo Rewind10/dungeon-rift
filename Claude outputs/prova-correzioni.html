@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Barbaro &mdash; le tre correzioni</title>
+<style>
+  :root{--bg:#0e1118;--pan:#161a24;--bor:#2c3446;--txt:#ecf0f8;--gri:#96a0af;--oro:#ffcf4a;--ver:#8fd96a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--gri);font-size:14px;margin:0 0 20px}
+  .cmd{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--pan);border:1px solid var(--bor);
+       border-radius:10px;padding:12px 14px;margin-bottom:18px;position:sticky;top:0;z-index:5}
+  button{background:#222a38;color:var(--txt);border:1px solid var(--bor);border-radius:7px;padding:7px 14px;
+         font:inherit;cursor:pointer}
+  button.on{background:var(--oro);color:#1a1305;border-color:var(--oro);font-weight:700}
+  label{color:var(--gri);font-size:13px;display:flex;align-items:center;gap:7px}
+  input[type=range]{width:120px}
+  .duo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .col{background:var(--pan);border:1px solid var(--bor);border-radius:10px;padding:14px}
+  .col h2{font-size:17px;margin:0 0 2px}
+  .col .n{color:var(--gri);font-size:12.5px;margin:0 0 12px;min-height:38px}
+  .pal{display:flex;gap:18px;align-items:center;justify-content:center;background:#0b0e14;
+       border-radius:8px;padding:14px 10px 10px}
+  .pal figure{margin:0;text-align:center}
+  .pal figcaption{color:var(--gri);font-size:11.5px;margin-top:6px}
+  canvas{display:block}
+  .note{background:var(--pan);border:1px solid var(--bor);border-radius:10px;padding:14px 18px;margin-top:18px}
+  .note h3{font-size:15px;margin:0 0 8px;color:var(--oro)}
+  .note li{margin:5px 0}
+  .note b{color:var(--ver)}
+  @media(max-width:1000px){.duo{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+
+<h1>Il Barbaro &mdash; le tre correzioni</h1>
+<p class="sub">Base: <b>la mia versione migliorata</b>. Cambia <b>solo la testa</b>, con le tre cose che
+hai chiesto: occhi a semicerchio, via le sei linee dritte, elmo al posto del copricapo marrone.
+Nessun file del gioco &egrave; stato toccato &mdash; questa pagina si apre da sola.</p>
+
+<div class="cmd">
+  <button data-s="fermo" class="on">Fermo</button>
+  <button data-s="cammina">Cammina</button>
+  <button data-s="gira">Gira su s&eacute;</button>
+  <button data-s="attacca">Attacca</button>
+  <label>velocit&agrave; <input type="range" id="vel" min="20" max="260" value="130"></label>
+  <label><input type="checkbox" id="griglia"> riquadro del corpo fisico</label>
+
+</div>
+
+<div class="duo">
+  <div class="col"><h2>In gioco ora</h2>
+    <p class="n">la v2.38: nata dal <b>tuo</b> disegno &mdash; criniera, veste lunga, braccia nude</p>
+    <div class="pal">
+      <figure><canvas id="a1" width="72" height="72"></canvas><figcaption>56 px &mdash; grandezza vera</figcaption></figure>
+      <figure><canvas id="a4" width="288" height="288"></canvas><figcaption>4&times;</figcaption></figure>
+    </div></div>
+  <div class="col"><h2>La mia versione migliorata</h2>
+    <p class="n">il corpo del guerriero di sempre dentro lo strato di animazione. Mai entrata in gioco</p>
+    <div class="pal">
+      <figure><canvas id="b1" width="72" height="72"></canvas><figcaption>56 px &mdash; grandezza vera</figcaption></figure>
+      <figure><canvas id="b4" width="288" height="288"></canvas><figcaption>4&times;</figcaption></figure>
+    </div></div>
+  <div class="col" style="border-color:#6b5a1e"><h2 style="color:#ffcf4a">Con le tre correzioni</h2>
+    <p class="n">occhi a mezzaluna, niente linee, elmo, pelliccia unica e cuoio al posto dell'acciaio</p>
+    <div class="pal">
+      <figure><canvas id="c1" width="72" height="72"></canvas><figcaption>56 px &mdash; grandezza vera</figcaption></figure>
+      <figure><canvas id="c4" width="288" height="288"></canvas><figcaption>4&times;</figcaption></figure>
+    </div></div>
+</div>
+
+<div class="note"><h3>Cosa &egrave; cambiato</h3>
+<ul style="margin:0;padding-left:20px">
+<li><b>Gli occhi</b> sono due semicerchi, <b>capovolti</b>: il taglio dritto sta dietro e la mezzaluna
+guarda avanti. I due puntini tondi, a questa scala, sparivano dentro il viso.</li>
+<li><b>Le sei linee dritte marroni</b> che partivano dalla testa non ci sono piu'. Il codino dietro resta:
+non &egrave; una linea, ed &egrave; l'unica cosa che da dietro dice da che parte guardi.</li>
+<li><b>L'elmo</b> ha preso il posto del copricapo marrone &mdash; stesso centro, stessa misura, cambia solo
+il materiale: calotta di ferro, fascia di cuoio attraverso la fronte, nasale e due ribattini d'oro.</li>
+<li><b>La pelliccia &egrave; una sola</b>, continua, che gira attorno alle spalle e si chiude sul torso.
+Erano due pezzi staccati e a questa scala si leggevano come due valigie quadrate appoggiate ai fianchi.</li>
+<li><b>Stivali e bracciali sono di cuoio</b>, non d'acciaio: l'azzurro ferro era ereditato dal paladino,
+e addosso al barbaro non ci sta.</li>
+<li style="color:#96a0af">Tutto il resto &mdash; torso, cinghia, barba, viso, animazione &mdash; &egrave;
+identico alla colonna di mezzo.</li>
+</ul></div>
+
+</div>
+<script>
+const ATTUALE = {
+    _heroGuerriero(ctx, r, t, atk, eq) {
+      // v2.18 — tre classi su questa impalcatura. `ST` da' la base (tinta, testa, spalle, arma); la
+      // tinta dell'EQUIPAGGIAMENTO resta sopra, com'e' sempre stato dalla v1.88: un barbaro con
+      // un'armatura azzurra si vede azzurro, non marrone.
+      const st = (eq && eq._st) || {};
+      const _P = Object.assign({}, st, (eq && eq.pal) || {});
+      const DK = '#0a0c12', clothDk = _P.clothDk || '#243516', cloth = _P.cloth || '#3f5a2c', steelDk = _P.steelDk || '#3a424e';
+      // v1.82.2 — DALL'ALTO IL GUERRIERO E' QUASI TUTTO METALLO: elmo, piastra e spalline coprivano la
+      // sagoma e avevano tre grigi scritti a mano, quindi la tinta del vestito non si vedeva. Adesso i tre
+      // pezzi nascono da UN colore (`metallo`) e dalle sue schiariture: cambiarlo cambia l'armatura intera.
+      const met = _P.metallo || '#7f8895';
+      const metS = this._shade(met, -69), metM = this._shade(met, 46), metL = this._shade(met, 99);
+      const sway = Math.sin(t * 5) * 0.12;
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+      const armPlate = (y0, y1, x1) => {                                       // bracciali segmentati
+        ctx.strokeStyle = '#2c333d'; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.32;
+        ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1.6;
+        for (let k = 1; k <= 2; k++) { const u = k / 3; ctx.beginPath(); ctx.moveTo(x1 * u - r * 0.05, y0 + (y1 - y0) * u - r * 0.16); ctx.lineTo(x1 * u + r * 0.05, y0 + (y1 - y0) * u + r * 0.16); ctx.stroke(); }
+      };
+      armPlate(-r * 0.45, -r * 0.30, r * 0.62); armPlate(r * 0.45, r * 0.16, r * 0.70);
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      const gr = this._grad('h_torso|gue|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
+      ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
+      if (st.piastra === 0) {
+        // BARBARO: petto nudo e una cinghia di cuoio al posto del pettorale. E' la sua difesa che
+        // manca, e si deve vedere prima ancora di leggere i numeri.
+        ctx.fillStyle = _P.pelle || '#c08050'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        this._rr(ctx, -r * 0.30, -r * 0.30, r * 0.62, r * 0.60, r * 0.24); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#4a3520'; ctx.lineWidth = r * 0.10;
+        ctx.beginPath(); ctx.moveTo(-r * 0.34, r * 0.34); ctx.lineTo(r * 0.26, -r * 0.30); ctx.stroke();
+      } else {
+      const pg = this._grad('h_plate|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, metS); q.addColorStop(0.5, met); q.addColorStop(1, '#c2c9d4'); return q; });
+      ctx.fillStyle = pg; this._rr(ctx, -r * 0.36, -r * 0.34, r * 0.74, r * 0.68, r * 0.26); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.30); ctx.lineTo(r * 0.24, -r * 0.24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.32, 0); ctx.lineTo(r * 0.28, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.30); ctx.lineTo(r * 0.24, r * 0.24); ctx.stroke();
+      // PALADINO: il tabarro chiaro col sole sul petto. E' l'unico segno che lo distingue a colpo
+      // d'occhio dal maestro d'armi, che porta la stessa piastra.
+      if (st.tabarro) {
+        ctx.fillStyle = st.tabarro; ctx.globalAlpha = 0.9; ctx.fillRect(-r * 0.34, -r * 0.10, r * 0.70, r * 0.20); ctx.globalAlpha = 1;
+        ctx.fillStyle = _P.orlo || '#e0b64a'; ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.11, 0, 7); ctx.fill();
+      }
+      }
+      const sp = this._grad('h_spall|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); q.addColorStop(0, this._shade(met, -95)); q.addColorStop(1, this._shade(met, -45)); return q; });
+      for (const sgy of [-1, 1]) {
+        if (st.spalle === 'pelliccia') {
+          // BARBARO: pelliccia invece degli spallacci. Il contorno e' volutamente frastagliato — un
+          // ellisse pulito, a questa scala, si legge come acciaio qualunque colore abbia.
+          ctx.fillStyle = _P.pelo || '#6a5a44'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < 9; i++) { const an = i / 8 * Math.PI * 2, rad = r * (0.27 + (i % 2 ? 0.06 : 0));
+            const X = -r * 0.14 + Math.cos(an) * rad * 1.05, Y = sgy * r * 0.62 + Math.sin(an) * rad * 0.78;
+            i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          continue;
+        }
+        ctx.fillStyle = sp; ctx.strokeStyle = DK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-r * 0.14, sgy * r * 0.60, r * 0.30, r * 0.21, sgy * 0.3, 0, 7); ctx.fill(); ctx.stroke();
+      }
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      // v1.75 — CIVILE: la stessa sagoma senza scudo e senza elmo. La usano i mercanti, che condividono
+      // il linguaggio degli eroi (spalle, corazza, mantello) ma non vanno in battaglia.
+      const _civ = !!(eq && eq.civile);
+      // ============================================================================================
+      // v2.19.5 — IL GUERRIERO IMPUGNA CIO' CHE HA IN MANO, non cio' che dice la sua classe
+      // ============================================================================================
+      // Fino alla v2.19.4 le armi di questa impalcatura venivano dallo STILE della classe: il barbaro
+      // aveva sempre l'ascia, il maestro sempre due spade, il paladino sempre lo scudo. Paolo ha trovato
+      // i due modi in cui questo si rompe:
+      //  · *«hai disegnato il barbaro con un'ascia, ma se equipaggia una spada e' un'incongruenza»*;
+      //  · il paladino che impugna un'arma a DUE MANI si toglie lo scudo — e il gioco si CONGELAVA.
+      //    Lo stile diceva `scudo: 1` («questa classe si disegna con lo scudo»), e `scudo` e' anche il
+      //    nome del COLORE che la tinta dello scudo impugnato ci scrive sopra. Senza scudo in mano, al
+      //    posto del colore restava il numero 1, `_shade(1)` lanciava a ogni fotogramma, e il ciclo di
+      //    disegno si fermava sull'ultima immagine buona: il villaggio fermo.
+      // Stessa radice: il disegno guardava la classe invece dell'equipaggiamento. Adesso guarda cosa c'e'
+      // nelle mani — `wp` (arma principale), `wx` (seconda arma), `sh` (scudo), mandati dal server —
+      // e lo disegna con UNA LAMA GENERICA, come Paolo ha chiesto (*«fallo piu' generico»*): non
+      // un'ascia, una spada o un maglio, ma «un'arma», che non contraddice nessun pezzo del listino.
+      // Cio' che la lama dice e' il PESO, che e' l'unica cosa che conta al colpo: la leggera e' corta e
+      // sottile, l'equilibrata e' la spada di mezzo, la pesante e' lunga e larga — e se e' a due mani
+      // la tengono tutte e due, davanti al corpo invece che di lato.
+      const _G = window.GAME && window.GAME.Gear, _H = window.GAME && window.GAME.Heroes;
+      const _pz = (id) => (_G && id && _G.BY_ID[id]) || null;
+      const arma1 = _civ ? null : _pz(eq && eq.wp), arma2 = _civ ? null : _pz(eq && eq.wx);
+      const scudoIt = _civ ? null : _pz(eq && eq.sh);
+      const mani = (_H && _H.maniDi && eq && eq._hid) ? _H.maniDi(eq._hid) : null;
+      const dueMani = !!(arma1 && _G && _G.aDueMani && _G.aDueMani(arma1, mani));
+      if (arma1) this._lamaGenerica(ctx, r, atk, arma1.carattere, dueMani ? 0 : 1, _P, DK);
+      if (arma2) this._lamaGenerica(ctx, r, atk, arma2.carattere, -1, _P, DK);
+      // lo scudo si disegna SE C'E', e per chiunque lo impugni — non solo per il paladino: la tabella
+      // lo concede anche al barbaro e al maestro d'armi, e finora loro lo portavano invisibile.
+      if (scudoIt) {
+      ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
+      // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
+      // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
+      // v1.88 — QUATTRO SCUDI, non piu' due. Piu' alto e' il rango, piu' l'arco e' AMPIO e la lastra
+      // spessa: e' l'unico pezzo d'armatura che cambia la sagoma vista dall'alto, ed e' anche il pezzo
+      // che nel gioco para davvero — la forma dice quanto copre, e la dice senza numeri.
+      const srk = (eq._rk && eq._rk.s) || 1;
+      // v2.19.5 — il colore si usa solo se E' un colore. Non si fida del nome della chiave: e' proprio
+      // un nome condiviso fra un'impostazione e un colore che ha congelato la partita.
+      const scCol = (typeof _P.scudo === 'string') ? _P.scudo : '#8d97a5', orlo = (typeof _P.orlo === 'string') ? _P.orlo : '#c8a23a';
+      const RS = r * (0.86 + 0.052 * (srk - 1)), TH = r * (0.26 + 0.052 * (srk - 1));
+      const A0 = -(1.15 + 0.145 * (srk - 1)), A1 = -A0;
+      const sgd = this._grad('h_scudo|' + r + '|' + srk + '|' + scCol, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, this._shade(scCol, -78)); q.addColorStop(0.55, scCol); q.addColorStop(1, this._shade(scCol, 60)); return q; });
+      ctx.fillStyle = sgd; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2, A0, A1); ctx.arc(0, 0, RS - TH / 2, A1, A0, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = orlo; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
+      ctx.fillStyle = orlo; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * (0.11 + 0.012 * (srk - 1)), 0, 7); ctx.fill(); ctx.stroke();
+      // i rivetti: uno in piu' per rango, distribuiti sull'arco. Contarli non serve — si legge la densita'.
+      ctx.fillStyle = '#e6ecf4';
+      ctx.beginPath();
+      for (let k = 0; k < srk + 1; k++) { const u = (k + 1) / (srk + 2), an = A0 + (A1 - A0) * u; ctx.arc(Math.cos(an) * RS, Math.sin(an) * RS, r * 0.05, 0, 7); }
+      ctx.fill();
+      if (srk >= 2) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
+      if (srk >= 4) {   // l'Aegis: una runa accesa lungo il bordo
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = this._rgba(orlo, 0.55 + 0.3 * Math.sin(t * 3)); ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(0, 0, RS - TH * 0.15, A0 + 0.2, A1 - 0.2); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+      }
+      if (_civ) {   // testa scoperta: capelli e la fetta di viso davanti, al posto dell'elmo
+        ctx.fillStyle = _P.pelo || '#4a3520'; ctx.strokeStyle = DK; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.44, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = _P.skin || '#c79b6a';
+        ctx.beginPath(); ctx.arc(r * 0.12, 0, r * 0.3, -1.25, 1.25); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.1, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.1, r * 0.045, 0, 7); ctx.fill();
+        return;
+      }
+      // v2.18 — TRE TESTE. Il barbaro e' a capo scoperto (criniera, codino, barba), il maestro d'armi
+      // ha l'elmo aperto col viso in vista e la sciarpa che svolazza, il paladino tiene l'elmo chiuso
+      // della v1.66. Una classe si riconosce dalla testa prima che dall'arma: e' la parte che sta
+      // sempre al centro della sagoma.
+      if (st.testa === 'nuda') {
+        const cri = _P.criniera || '#5a3a1e';
+        ctx.strokeStyle = cri; ctx.lineWidth = r * 0.10; ctx.lineCap = 'round';
+        for (let i = 0; i < 6; i++) { const an = 2.0 + i * 0.75;
+          ctx.beginPath(); ctx.moveTo(Math.cos(an) * r * 0.34, Math.sin(an) * r * 0.34);
+          ctx.lineTo(Math.cos(an) * r * (0.62 + 0.08 * Math.sin(t * 3 + i)), Math.sin(an) * r * (0.62 + 0.08 * Math.sin(t * 3 + i))); ctx.stroke(); }
+        ctx.lineCap = 'butt';
+        ctx.fillStyle = cri; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(-r * 0.44, 0, r * 0.15, 0, 7); ctx.fill(); ctx.stroke();      // codino
+        ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.42, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(cri, -26);
+        ctx.beginPath(); ctx.arc(r * 0.09, 0, r * 0.33, -1.30, 1.30); ctx.closePath(); ctx.fill();   // barba
+        ctx.fillStyle = _P.pelle || '#c08050';
+        ctx.beginPath(); ctx.arc(r * 0.14, 0, r * 0.25, -1.15, 1.15); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.09, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.09, r * 0.045, 0, 7); ctx.fill();
+        return;
+      }
+      if (st.testa === 'elmoAperto') {
+        ctx.fillStyle = _P.pelle || '#c79b6a'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.45, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(met, -30); ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.46, 1.05, -1.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.arc(r * 0.30, -r * 0.11, r * 0.05, 0, 7); ctx.arc(r * 0.30, r * 0.11, r * 0.05, 0, 7); ctx.fill();
+        if (st.fascia) {
+          ctx.fillStyle = st.fascia; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-r * 0.20, -r * 0.26); ctx.quadraticCurveTo(-r * 0.80, -r * (0.36 + sway), -r * 0.94, -r * 0.02);
+          ctx.quadraticCurveTo(-r * 0.74, r * 0.16, -r * 0.20, r * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        return;
+      }
+      const hg = this._grad('h_elmo|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, this._shade(met, -17)); q.addColorStop(0.5, metM); q.addColorStop(1, '#e2e7ee'); return q; });
+      ctx.fillStyle = hg; ctx.strokeStyle = DK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.46, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#0b0e13'; this._rr(ctx, r * 0.16, -r * 0.22, r * 0.30, r * 0.44, 3); ctx.fill();   // feritoia
+      ctx.fillStyle = '#0b0e13'; this._rr(ctx, -r * 0.02, -r * 0.06, r * 0.34, r * 0.12, 2); ctx.fill();
+      ctx.fillStyle = st.cresta || steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2;                       // cresta corta
+      ctx.beginPath(); ctx.moveTo(-r * 0.16, -r * 0.10); ctx.quadraticCurveTo(-r * 0.62, -r * 0.06 + sway * r * 0.4, -r * 0.78, 0);
+      ctx.quadraticCurveTo(-r * 0.62, r * 0.06 + sway * r * 0.4, -r * 0.16, r * 0.10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    },
+    // ---- LADRO: cappuccio, mantellina corta, faretra, e l'arco disegnato di LATO — la curva ")" corre
+    // lungo il fianco, non davanti: di fronte sarebbe uno scudo, non un arco.,
+    _boot(ctx, x, y, r) { this._rr(ctx, x - r * 0.17, y - r * 0.17, r * 0.34, r * 0.34, 3); ctx.fill(); ctx.stroke(); },
+    _lamaGenerica(ctx, r, atk, carattere, lato, P, DK) {
+      const F = carattere === 'pesante' ? { L: 1.22, W: 0.105, G: 0.34, M: 0.30 }
+              : carattere === 'leggera' ? { L: 0.80, W: 0.055, G: 0.20, M: 0.20 }
+              :                           { L: 0.98, W: 0.075, G: 0.26, M: 0.24 };
+      const y = lato === 0 ? r * 0.06 : lato * r * 0.44;
+      const rot = lato === 0 ? (-0.10 + atk * 0.20) : lato * (0.30 - atk * 0.28);
+      ctx.save(); ctx.translate(r * (0.42 + 0.26 * atk), y); ctx.rotate(rot);
+      // l'impugnatura: piu' lunga se la tengono due mani
+      ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = r * 0.09; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-r * F.M, 0); ctx.lineTo(r * 0.02, 0); ctx.stroke(); ctx.lineCap = 'butt';
+      // la guardia
+      ctx.fillStyle = (P && P.orlo) || '#c8a23a'; ctx.strokeStyle = DK; ctx.lineWidth = 1.4;
+      ctx.fillRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G); ctx.strokeRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G);
+      // la lama, con la punta
+      ctx.fillStyle = '#dfe5ee'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(r * 0.06, -r * F.W); ctx.lineTo(r * (F.L - 0.10), -r * F.W * 0.55); ctx.lineTo(r * F.L, 0);
+      ctx.lineTo(r * (F.L - 0.10), r * F.W * 0.55); ctx.lineTo(r * 0.06, r * F.W); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // la sguscia: una riga scura lungo il mezzo, che la fa leggere come lama anche piccola
+      ctx.strokeStyle = 'rgba(40,48,60,.45)'; ctx.lineWidth = Math.max(1, r * 0.022);
+      ctx.beginPath(); ctx.moveTo(r * 0.10, 0); ctx.lineTo(r * (F.L - 0.16), 0); ctx.stroke();
+      ctx.restore();
+    },
+    _grad(key, make) {
+      const c = this._gcache || (this._gcache = new Map());
+      let g = c.get(key);
+      if (g === undefined) { g = make(); if (c.size > 512) c.clear(); c.set(key, g); }
+      return g;
+    },
+    _shade(hex, amt) { const n = parseInt(hex.slice(1), 16); let R = (n >> 16) + amt, G = ((n >> 8) & 255) + amt, B = (n & 255) + amt; R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B)); return 'rgb(' + R + ',' + G + ',' + B + ')'; },
+    _rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; },
+    _rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+};
+const STILE_BARBARO = { corpo: 'guerriero', testa: 'nuda',       spalle: 'pelliccia', arma: 'ascia',      piastra: 0, criniera: '#5a3a1e', pelo: '#6a5a44', pelle: '#c08050', metallo: '#8a7a63', cloth: '#6b4a2a', clothDk: '#3a2716', orlo: '#d8a33a' };
+
+// =============================================================================================
+// IL BARBARO — STESSO DISEGNO, ALTRO MOVIMENTO
+// =============================================================================================
+// Ho provato prima a ridisegnarlo da capo e il risultato era PEGGIO di quello che c'e': il disegno
+// di oggi, a quaranta pixel, si legge — spalle larghe, testa tonda in mezzo, ascia che sporge — e
+// rifarlo a mano significava rimettere in discussione una cosa che funziona per guadagnarci niente.
+// Quello che non funziona non e' il disegno: e' il MOVIMENTO. Quindi questo file non ridisegna un
+// pixel. Prende `_heroGuerriero` cosi' com'e' e gli mette attorno uno STRATO DI ANIMAZIONE.
+//
+// Si innesta nel gioco come un involucro: nessuna delle 178 righe del corpo cambia.
+//
+// Sei cose, tutte visibili guardando:
+//
+//  1. IL PASSO VIENE DALLA DISTANZA, non dall'orologio. Oggi dentro c'e' `sin(t*5)`: ondeggia uguale
+//     che tu corra o stia fermo in mezzo alla piazza. Qui la fase e' la distanza percorsa divisa per
+//     la falcata: i piedi non slittano, e se rallenti rallenta il passo.
+//  2. CI SONO I PIEDI. Dall'alto il guerriero oggi e' un disco — gambe non ne ha. Due stivali che
+//     escono e rientrano da sotto la sagoma sono la cosa che da sola dice «sta camminando».
+//  3. IL CORPO SALE DUE VOLTE a falcata, una per passo. Una sola e' l'errore che viene naturale.
+//  4. SPALLE E BACINO GIRANO AL CONTRARIO. Qui si ottiene ruotando il corpo di pochi gradi avanti e
+//     indietro mentre gli stivali vanno all'opposto: e' quello che distingue un uomo che cammina da
+//     una statua che trasla.
+//  5. IL COLPO HA TRE TEMPI — carica, stacco, ricaduta — e NON si tocca il disegno: si RI-TEMPORIZZA
+//     il numero che gli si passa. Il corpo riceve sempre un `atk` fra 0 e 1, ma invece di scorrere
+//     dritto adesso indugia sulla carica e brucia lo stacco. Lo stesso identico fendente, con
+//     l'anticipo, sembra pesare dieci chili. E' una riga di codice.
+//  6. IL CORPO ENTRA NEL COLPO: mezzo passo avanti sull'impatto, e torna. Senza, il braccio va e il
+//     resto dell'uomo guarda.
+//
+// Da fermo: respiro lento e peso che si sposta da un piede all'altro. Oggi non c'e' nessuna
+// differenza fra fermo e in corsa, ed e' la cosa che si nota per prima.
+const NUOVO = {
+  _sh(hex, a) { const n = parseInt(hex.slice(1), 16); const c = (v) => Math.max(0, Math.min(255, v + a));
+    return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')'; },
+
+  // --- LA RI-TEMPORIZZAZIONE DEL COLPO ------------------------------------------------------
+  // Entra 0..1 lineare, esce 0..1 con tre tempi. Il corpo non sa niente di tutto questo.
+  //   0,00-0,26  CARICA   l'arma torna indietro: in uscita si resta quasi a zero
+  //   0,26-0,46  STACCO   tutto il fendente in un quinto del tempo
+  //   0,46-1,00  RICADUTA il braccio si riassesta
+  tempo(a) {
+    if (a <= 0) return 0;
+    if (a < 0.26) { const u = a / 0.26; return 0.06 * u; }
+    if (a < 0.46) { const u = (a - 0.26) / 0.20; return 0.06 + 0.64 * (u * u * (3 - 2 * u)); }
+    const u = (a - 0.46) / 0.54; return 0.70 + 0.30 * (1 - (1 - u) * (1 - u));
+  },
+
+  // S = { fase 0..1 · mov 0..1 · atk 0..1 · t · dAng }
+  disegna(ctx, r, S, P, corpo) {
+    const f = S.fase * Math.PI * 2, mov = S.mov;
+    const gamba = Math.sin(f) * mov;                  // +1 = destra avanti
+    const su = Math.abs(Math.cos(f)) * mov;           // DUE salite a falcata, non una
+    const fermo = 1 - mov;
+    const resp = Math.sin(S.t * 1.9) * fermo;         // il respiro
+    const peso = Math.sin(S.t * 1.05) * fermo;        // e il peso da un piede all'altro
+
+    // il colpo: quanto e' "dentro" la fase di stacco, per la spinta del corpo
+    const A = S.atk, re = this.tempo(A);
+    const spinta = A > 0 ? (A < 0.46 ? (A < 0.26 ? -0.04 * (A / 0.26) : 0.14 * ((A - 0.26) / 0.20))
+                                     : 0.14 * (1 - (A - 0.46) / 0.54)) : 0;
+
+    // --- GLI STIVALI, sotto tutto -----------------------------------------------------------
+    // Il piede viaggia AVANTI E INDIETRO, non di lato: visto dall'alto, un uomo che cammina mostra
+    // la punta davanti e il tallone dietro, non due stivali che gli spuntano dai fianchi. Di lato
+    // stanno stretti (0,24 r), quanto l'anca; in profondita' la falcata li porta da -0,35 a +0,41 r,
+    // cioe' fuori dalla sagoma davanti e dietro — ed e' li' che si vede.
+    const clothDk = P.clothDk || '#3a2716';
+    const piede = (sgn, av) => {
+      ctx.save();
+      ctx.translate(r * (0.03 + av * 0.38), sgn * r * 0.24);
+      ctx.rotate(av * 0.10 * sgn);
+      ctx.fillStyle = this._sh(clothDk, -4); ctx.strokeStyle = '#0a0c12';
+      ctx.lineWidth = Math.max(1.2, r * 0.065);
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 0.27, r * 0.165, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = this._sh(clothDk, 20);           // la fascia della stringa, verso il tallone
+      ctx.beginPath(); ctx.ellipse(-r * 0.10, 0, r * 0.065, r * 0.12, 0, 0, 7); ctx.fill();
+      ctx.restore();
+    };
+    piede(1, gamba); piede(-1, -gamba);
+
+    // --- IL CORPO: quello di sempre, dentro una scatola che si muove -------------------------
+    ctx.save();
+    ctx.translate(r * spinta, peso * r * 0.035);        // entra nel colpo · oscilla da fermo
+    ctx.rotate(gamba * 0.13 - (S.dAng || 0) * 0.18);    // spalle contro bacino · il busto resta indietro (taratura v2.38)
+    const k = 1 + su * 0.035 + resp * 0.014;            // sale due volte a falcata · e respira da fermo
+    ctx.scale(k, k);
+    corpo(ctx, r, S.t, re);                             // <- `_heroGuerriero`, non toccato
+    ctx.restore();
+  },
+};
+
+// Estratto riga per riga da public/js/renderer.js (v2.38): e' ESATTAMENTE il barbaro che hai in gioco.
+const _SIN = Math.sin, _TAU = Math.PI * 2, _PI = Math.PI;
+const GIOCO = {
+  _armiGuerriero() {},            // nell'anteprima non c'e' equipaggiamento: nessun'arma da disegnare
+    _heroBarbaro(ctx, r, t, atk, eq) {
+      const st = (eq && eq._st) || {};
+      const _P = Object.assign({}, st, (eq && eq.pal) || {});
+      const DK = '#0a0c12';
+      const sc = (hex, f) => {                 // f e' una FRAZIONE (-0.3 = 30% piu' scuro): `_shade`
+        const n = parseInt(String(hex).slice(1), 16), k = 1 + f;   // invece SOMMA sui canali 0..255,
+        if (!isFinite(n)) return hex;                              // ed e' un'altra cosa.
+        const c = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+        return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')';
+      };
+      const cri = _P.criniera || '#5a3a1e', pelo = _P.pelo || '#6a5a44';
+      const pelle = _P.pelle || '#c08050', cloth = _P.cloth || '#6b4a2a';
+      const clothDk = _P.clothDk || '#3a2716', met = _P.metallo || '#8a7a63';
+      const orlo = (typeof _P.orlo === 'string' && _P.orlo[0] === '#') ? _P.orlo : '#d8a33a';
+
+      // --- LO STATO PER-PERSONAGGIO: distanza percorsa e velocita' smorzata. Sono le due cose che
+      //     una funzione del solo tempo non puo' sapere, ed e' per questo che il passo di oggi e'
+      //     slegato dal terreno. La chiave e' l'indice del giocatore; chi non ce l'ha (le statue
+      //     della sala dei record) resta fermo, che e' giusto.
+      const ST = this._ehB || (this._ehB = {});
+      const chi = (eq && eq.i != null) ? eq.i : '_';
+      const S = ST[chi] || (ST[chi] = { x: (eq && eq.x) || 0, y: (eq && eq.y) || 0, d: 0, v: 0, lt: t, a: (eq && eq.a) || 0, da: 0, vg: 0 });
+      const dt = Math.max(0.001, Math.min(0.05, t - S.lt)); S.lt = t;
+      const px = (eq && eq.x) || 0, py = (eq && eq.y) || 0;
+      const passo = Math.hypot(px - S.x, py - S.y); S.x = px; S.y = py;
+      S.v += ((passo / dt) - S.v) * Math.min(1, dt * 9);
+      // v2.38 — ANCHE GIRARE E' CAMMINARE. Finche' la falcata veniva dalla sola distanza PERCORSA, chi
+      // girava sul posto non percorreva niente: i piedi restavano incollati e la figura ruotava come un
+      // cartello su un palo. E' l'innaturalezza della seconda immagine di Paolo. Adesso un giro vale un
+      // pezzo di passo — mezzo giro, mezza falcata — e gli stivali si rimettono in moto.
+      let giro = 0;
+      { const a0 = (eq && eq.a) || 0; let d = a0 - S.a;
+        while (d > _PI) d -= _TAU; while (d < -_PI) d += _TAU;
+        giro = Math.abs(d); S.a = a0;
+        S.da += (Math.max(-0.5, Math.min(0.5, d / dt * 0.12)) - S.da) * Math.min(1, dt * 10);
+        S.vg += ((giro / dt) - S.vg) * Math.min(1, dt * 9); }
+      S.d += passo + giro * r * 0.50;
+
+      // v2.38 — LA FALCATA E' PROPORZIONALE ALL'EROE. 62 px erano giusti col raggio a 23,2; con HERO_VIS
+      // il raggio e' 28, e un barbaro piu' grande deve fare passi piu' LUNGHI, non piu' numerosi —
+      // altrimenti a parita' di velocita' zampetta. 62 / 23,2 = 2,67 raggi: la stessa andatura di prima,
+      // a qualunque misura. E la soglia del «si muove» tiene conto anche della rotazione.
+      const mov = Math.max(0, Math.min(1, Math.max(S.v / 90, S.vg / 2.4))), fermo = 1 - mov;
+      const f = (S.d / (r * 2.67)) * _TAU;
+      const gamba = _SIN(f) * mov, su = Math.abs(Math.cos(f)) * mov;
+      const resp = _SIN(t * 2.0) * fermo, peso = _SIN(t * 1.05) * fermo;
+      // i tre tempi: -0,24 in carica (l'arma torna indietro), +1 a fine stacco, poi si riassesta
+      const a = Math.max(0, Math.min(1, atk || 0));
+      let col = 0;
+      if (a > 0) {
+        if (a < 0.26) col = -0.24 * _SIN((a / 0.26) * _PI / 2);
+        else if (a < 0.46) { const u = (a - 0.26) / 0.20; col = -0.24 + 1.24 * (u * u * (3 - 2 * u)); }
+        else { const u = (a - 0.46) / 0.54; col = 1 - u * u; }
+      }
+      const spinta = Math.max(0, col) * 0.13;
+      const breathe = resp * r * 0.016, sway = _SIN(t * 1.7) * r * 0.010 * fermo;
+
+      ctx.save();
+      ctx.rotate(_PI / 2);                     // il disegno guarda in alto, il gioco guarda in +x
+
+      // v2.38 — I PIEDI STANNO SOTTO IL CORPO. Prima la base era r*0,62 DIETRO il centro: in pianta il
+      // barbaro trascinava le gambe, e girando su se stesso i due stivali orbitavano larghi attorno al
+      // perno invece di pestare sul posto. Adesso scavalcano il centro (0,34 ± 0,44) e si disegnano SOPRA
+      // la veste — sotto erano coperti dalla gonna per tre quarti della falcata, e l'unica cosa che si
+      // vedeva era il piede di dietro che spuntava: esattamente l'aria di chi striscia.
+      const piede = (sgn, av) => {
+        ctx.save();
+        ctx.translate(sgn * r * 0.26, r * (0.34 + av * 0.44));
+        ctx.rotate(-av * 0.14 * sgn);
+        ctx.fillStyle = sc(clothDk, -0.10); ctx.strokeStyle = DK; ctx.lineWidth = Math.max(1.2, r * 0.07);
+        ctx.beginPath(); ctx.ellipse(0, 0, r * 0.16, r * 0.25, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = sc(clothDk, 0.30);
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.10, r * 0.11, r * 0.065, 0, 0, 7); ctx.fill();
+        ctx.restore();
+      };
+
+      ctx.save();
+      ctx.translate(0, -r * spinta + peso * r * 0.03);
+      // v2.38 — IL BUSTO RESTA INDIETRO DI POCO. Era `- S.da * 0.5`: fino a 14 gradi di torsione tenuti
+      // per tutta la durata del giro, col risultato che il tronco si staccava dalle gambe e la testa —
+      // che sta dentro questo gruppo — restava indietro INSIEME a lui. Al contrario di come si gira: la
+      // testa va dove guardi, e' il corpo che la insegue. Qui il corpo ritarda di un'inezia; piu' sotto
+      // la testa si riprende lo stesso angolo e torna esattamente sulla mira.
+      ctx.rotate(gamba * 0.11 - S.da * 0.18);
+      const kk = 1 + su * 0.034; ctx.scale(kk, kk);
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.lineWidth = r * 0.07; ctx.strokeStyle = DK;
+
+      // la VESTE lunga
+      ctx.fillStyle = clothDk;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.46, r * 0.24);
+      ctx.quadraticCurveTo(-r * 0.43, r * 0.63, -r * 0.26, r * 0.79);
+      ctx.lineTo(-r * 0.03, r * 0.71); ctx.lineTo(r * 0.08, r * 0.87);
+      ctx.lineTo(r * 0.30, r * 0.76);
+      ctx.quadraticCurveTo(r * 0.47, r * 0.54, r * 0.43, r * 0.22);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+
+      // il TORSO
+      ctx.fillStyle = cloth;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.38, -r * 0.22 + breathe);
+      ctx.quadraticCurveTo(-r * 0.34, -r * 0.52 + breathe, -r * 0.12, -r * 0.58 + breathe);
+      ctx.quadraticCurveTo(r * 0.15, -r * 0.60 + breathe, r * 0.39, -r * 0.31 + breathe);
+      ctx.quadraticCurveTo(r * 0.48, -r * 0.02 + breathe, r * 0.39, r * 0.34 + breathe);
+      ctx.quadraticCurveTo(r * 0.12, r * 0.49 + breathe, -r * 0.25, r * 0.39 + breathe);
+      ctx.quadraticCurveTo(-r * 0.43, r * 0.14 + breathe, -r * 0.38, -r * 0.22 + breathe);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.31, r * 0.22 + breathe);
+      ctx.quadraticCurveTo(-r * 0.02, r * 0.40 + breathe, r * 0.35, r * 0.24 + breathe);
+      ctx.lineTo(r * 0.27, r * 0.37 + breathe);
+      ctx.quadraticCurveTo(-r * 0.04, r * 0.51 + breathe, -r * 0.27, r * 0.36 + breathe);
+      ctx.closePath(); ctx.fillStyle = sc(cloth, -0.18); ctx.fill();
+
+      // la PELLICCIA sulle spalle
+      ctx.fillStyle = pelo; ctx.strokeStyle = DK;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.42, -r * 0.25 + sway);
+      ctx.lineTo(-r * 0.58, -r * 0.34 + sway); ctx.lineTo(-r * 0.68, -r * 0.20 + sway);
+      ctx.lineTo(-r * 0.63, -r * 0.02 + sway); ctx.lineTo(-r * 0.73, r * 0.08 + sway);
+      ctx.lineTo(-r * 0.61, r * 0.18 + sway); ctx.lineTo(-r * 0.52, r * 0.30 + sway);
+      ctx.lineTo(-r * 0.35, r * 0.24 + sway);
+      ctx.quadraticCurveTo(0, r * 0.42 + sway, r * 0.36, r * 0.24 + sway);
+      ctx.lineTo(r * 0.52, r * 0.30 + sway); ctx.lineTo(r * 0.61, r * 0.17 + sway);
+      ctx.lineTo(r * 0.72, r * 0.08 + sway); ctx.lineTo(r * 0.63, -r * 0.02 + sway);
+      ctx.lineTo(r * 0.69, -r * 0.20 + sway); ctx.lineTo(r * 0.57, -r * 0.34 + sway);
+      ctx.lineTo(r * 0.40, -r * 0.25 + sway);
+      ctx.quadraticCurveTo(0, -r * 0.43 + sway, -r * 0.42, -r * 0.25 + sway);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = sc(pelo, -0.22);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.54, r * 0.12 + sway);
+      ctx.quadraticCurveTo(-r * 0.20, r * 0.34 + sway, 0, r * 0.36 + sway);
+      ctx.quadraticCurveTo(r * 0.23, r * 0.34 + sway, r * 0.54, r * 0.12 + sway);
+      ctx.lineTo(r * 0.46, r * 0.27 + sway);
+      ctx.quadraticCurveTo(r * 0.16, r * 0.42 + sway, 0, r * 0.40 + sway);
+      ctx.quadraticCurveTo(-r * 0.19, r * 0.42 + sway, -r * 0.47, r * 0.27 + sway);
+      ctx.closePath(); ctx.fill();
+
+      // gli STIVALI, qui: sopra la veste e sotto le braccia. E' l'unica cosa che da sola dice «cammina»,
+      // quindi dev'essere l'unica cosa che non viene mai coperta.
+      piede(1, gamba); piede(-1, -gamba);
+
+      // le BRACCIA, che seguono il colpo ruotando attorno alla propria spalla
+      const braccio = (sgn) => {
+        const sx = sgn * r * 0.34, sy = -r * 0.18;
+        ctx.save(); ctx.translate(sx, sy); ctx.rotate(-sgn * col * 0.62); ctx.translate(-sx, -sy);
+        ctx.fillStyle = pelle; ctx.strokeStyle = DK;
+        ctx.beginPath();
+        ctx.moveTo(sgn * r * 0.40, -r * 0.16);
+        ctx.quadraticCurveTo(sgn * r * 0.60, -r * 0.08, sgn * r * 0.69, r * 0.12);
+        ctx.quadraticCurveTo(sgn * r * 0.74, r * 0.27, sgn * r * 0.62, r * 0.36);
+        ctx.quadraticCurveTo(sgn * r * 0.49, r * 0.42, sgn * r * 0.39, r * 0.30);
+        ctx.quadraticCurveTo(sgn * r * 0.48, r * 0.18, sgn * r * 0.28, r * 0.00);
+        ctx.closePath(); ctx.stroke(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(sgn * r * 0.61, r * 0.15);
+        ctx.quadraticCurveTo(sgn * r * 0.67, r * 0.27, sgn * r * 0.59, r * 0.33);
+        ctx.quadraticCurveTo(sgn * r * 0.49, r * 0.38, sgn * r * 0.43, r * 0.28);
+        ctx.quadraticCurveTo(sgn * r * 0.53, r * 0.27, sgn * r * 0.61, r * 0.15);
+        ctx.closePath(); ctx.fillStyle = sc(pelle, -0.18); ctx.fill();
+        ctx.restore();
+      };
+      braccio(-1); braccio(1);
+
+      // la TESTA: criniera, viso, barba — e il suo collo. Si riprende l'angolo che il busto ha
+      // lasciato indietro, ruotando attorno alla BASE del cranio e non attorno al centro della figura:
+      // cosi' chi gira tiene lo sguardo sulla mira e si torce sotto. (v2.38)
+      ctx.save();
+      ctx.translate(0, -r * 0.10); ctx.rotate(S.da * 0.18); ctx.translate(0, r * 0.10);
+      const by = breathe;
+      ctx.fillStyle = cri; ctx.strokeStyle = DK;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.72 + by);
+      ctx.quadraticCurveTo(r * 0.30, -r * 0.70 + by, r * 0.48, -r * 0.48 + by);
+      ctx.lineTo(r * 0.61, -r * 0.42 + by); ctx.lineTo(r * 0.53, -r * 0.23 + by);
+      ctx.lineTo(r * 0.62, -r * 0.09 + by); ctx.lineTo(r * 0.51, r * 0.04 + by);
+      ctx.lineTo(r * 0.56, r * 0.21 + by); ctx.lineTo(r * 0.38, r * 0.22 + by);
+      ctx.lineTo(r * 0.30, r * 0.38 + by); ctx.lineTo(r * 0.11, r * 0.31 + by);
+      ctx.lineTo(0, r * 0.42 + by); ctx.lineTo(-r * 0.12, r * 0.31 + by);
+      ctx.lineTo(-r * 0.31, r * 0.38 + by); ctx.lineTo(-r * 0.38, r * 0.22 + by);
+      ctx.lineTo(-r * 0.56, r * 0.21 + by); ctx.lineTo(-r * 0.51, r * 0.04 + by);
+      ctx.lineTo(-r * 0.62, -r * 0.09 + by); ctx.lineTo(-r * 0.53, -r * 0.23 + by);
+      ctx.lineTo(-r * 0.61, -r * 0.42 + by); ctx.lineTo(-r * 0.48, -r * 0.48 + by);
+      ctx.quadraticCurveTo(-r * 0.30, -r * 0.70 + by, 0, -r * 0.72 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = pelle;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.30, -r * 0.35 + by);
+      ctx.quadraticCurveTo(-r * 0.24, -r * 0.56 + by, 0, -r * 0.57 + by);
+      ctx.quadraticCurveTo(r * 0.25, -r * 0.55 + by, r * 0.30, -r * 0.34 + by);
+      ctx.lineTo(r * 0.27, -r * 0.08 + by);
+      ctx.quadraticCurveTo(r * 0.21, r * 0.18 + by, 0, r * 0.29 + by);
+      ctx.quadraticCurveTo(-r * 0.21, r * 0.18 + by, -r * 0.27, -r * 0.08 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = cri;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.25, -r * 0.02 + by);
+      ctx.quadraticCurveTo(0, r * 0.10 + by, r * 0.25, -r * 0.02 + by);
+      ctx.lineTo(r * 0.20, r * 0.20 + by); ctx.lineTo(r * 0.09, r * 0.31 + by);
+      ctx.lineTo(0, r * 0.25 + by); ctx.lineTo(-r * 0.09, r * 0.31 + by);
+      ctx.lineTo(-r * 0.20, r * 0.20 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = sc(cri, -0.25);
+      for (const s2 of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(s2 * r * 0.51, -r * 0.23 + by);
+        ctx.quadraticCurveTo(s2 * r * 0.43, r * 0.02 + by, s2 * r * 0.27, r * 0.20 + by);
+        ctx.lineTo(s2 * r * 0.38, r * 0.22 + by); ctx.lineTo(s2 * r * 0.56, r * 0.21 + by);
+        ctx.lineTo(s2 * r * 0.51, r * 0.04 + by); ctx.lineTo(s2 * r * 0.62, -r * 0.09 + by);
+        ctx.closePath(); ctx.fill();
+      }
+
+      // l'ELMO: calotta di ferro, fascia di CUOIO, nasale, due ribattini
+      ctx.strokeStyle = DK; ctx.lineWidth = r * 0.07;
+      ctx.fillStyle = met;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.30, -r * 0.20 + by);
+      ctx.quadraticCurveTo(-r * 0.31, -r * 0.54 + by, 0, -r * 0.58 + by);
+      ctx.quadraticCurveTo(r * 0.31, -r * 0.54 + by, r * 0.30, -r * 0.20 + by);
+      ctx.quadraticCurveTo(0, -r * 0.10 + by, -r * 0.30, -r * 0.20 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = sc(met, -0.28);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.26, -r * 0.21 + by);
+      ctx.quadraticCurveTo(0, -r * 0.12 + by, r * 0.26, -r * 0.21 + by);
+      ctx.quadraticCurveTo(0, -r * 0.30 + by, -r * 0.26, -r * 0.21 + by);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = sc(clothDk, 0.55);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.31, -r * 0.23 + by);
+      ctx.quadraticCurveTo(0, -r * 0.12 + by, r * 0.31, -r * 0.23 + by);
+      ctx.lineTo(r * 0.28, -r * 0.33 + by);
+      ctx.quadraticCurveTo(0, -r * 0.22 + by, -r * 0.28, -r * 0.33 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = sc(met, 0.12);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.055, -r * 0.26 + by); ctx.lineTo(r * 0.055, -r * 0.26 + by);
+      ctx.lineTo(r * 0.045, -r * 0.03 + by); ctx.lineTo(-r * 0.045, -r * 0.03 + by);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = orlo;
+      for (const rx of [-0.19, 0.19]) { ctx.beginPath(); ctx.arc(rx * r, -r * 0.42 + by, r * 0.035, 0, 7); ctx.fill(); }
+
+      // GLI OCCHI A SEMICERCHIO, col taglio dritto in alto
+      ctx.fillStyle = 'rgba(0,0,0,.72)';
+      for (const ex of [-0.115, 0.115]) {
+        ctx.beginPath(); ctx.arc(ex * r, -r * 0.19 + by, r * 0.085, 0, _PI); ctx.closePath(); ctx.fill();
+      }
+
+      ctx.restore();   // fine della testa (v2.38)
+      ctx.restore();   // fine strato di animazione
+      ctx.restore();   // fine quarto di giro
+
+      // e l'ARMA, che e' quella equipaggiata: stesso codice del guerriero, nel sistema del gioco
+      this._armiGuerriero(ctx, r, a, eq, _P, DK, sway, !!(eq && eq.civile));
+    }
+};
+
+// =============================================================================================
+// LE TRE CORREZIONI — sulla MIA versione migliorata, e solo sulla testa
+// =============================================================================================
+// Base: il corpo del guerriero di sempre dentro lo strato di animazione di `nuovo.js`. Non una
+// riga del torso, dei bracciali, della pelliccia sulle spalle o degli stivali e' diversa.
+// Cambia SOLO il blocco della testa, con le tre cose chieste da Paolo:
+//   1. gli occhi come quelli della versione in gioco (semicerchi);
+//   2. via le sei linee dritte marroni che partivano dalla testa;
+//   3. l'elmo al posto del copricapo marrone.
+const CORR = Object.assign(Object.create(ATTUALE), {
+  corpo(ctx, r, t, atk, eq) {
+    // v2.18 — tre classi su questa impalcatura. `ST` da' la base (tinta, testa, spalle, arma); la
+    // tinta dell'EQUIPAGGIAMENTO resta sopra, com'e' sempre stato dalla v1.88: un barbaro con
+    // un'armatura azzurra si vede azzurro, non marrone.
+    const st = (eq && eq._st) || {};
+    const _P = Object.assign({}, st, (eq && eq.pal) || {});
+    const DK = '#0a0c12', clothDk = _P.clothDk || '#243516', cloth = _P.cloth || '#3f5a2c', steelDk = _P.steelDk || '#3a424e';
+    // v1.82.2 — DALL'ALTO IL GUERRIERO E' QUASI TUTTO METALLO: elmo, piastra e spalline coprivano la
+    // sagoma e avevano tre grigi scritti a mano, quindi la tinta del vestito non si vedeva. Adesso i tre
+    // pezzi nascono da UN colore (`metallo`) e dalle sue schiariture: cambiarlo cambia l'armatura intera.
+    const met = _P.metallo || '#7f8895';
+    const metS = this._shade(met, -69), metM = this._shade(met, 46), metL = this._shade(met, 99);
+    const sway = Math.sin(t * 5) * 0.12;
+    ctx.lineJoin = 'round';
+    // [gambe marroni] il barbaro non ha niente d'acciaio addosso: stivali e bracciali erano
+    // dell'azzurro ferro (`steelDk` #3a424e, `#2c333d`) ereditato dal paladino. Per lui, cuoio.
+    const _cuoio = st.piastra === 0 ? (_P.clothDk || '#3a2716') : steelDk;
+    const _cuoioBr = st.piastra === 0 ? this._shade(_P.clothDk || '#3a2716', 18) : '#2c333d';
+    ctx.fillStyle = _cuoio; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+    const armPlate = (y0, y1, x1) => {                                       // bracciali segmentati
+      ctx.strokeStyle = _cuoioBr; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.32;
+      ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1.6;
+      for (let k = 1; k <= 2; k++) { const u = k / 3; ctx.beginPath(); ctx.moveTo(x1 * u - r * 0.05, y0 + (y1 - y0) * u - r * 0.16); ctx.lineTo(x1 * u + r * 0.05, y0 + (y1 - y0) * u + r * 0.16); ctx.stroke(); }
+    };
+    armPlate(-r * 0.45, -r * 0.30, r * 0.62); armPlate(r * 0.45, r * 0.16, r * 0.70);
+    ctx.strokeStyle = DK; ctx.lineWidth = 2;
+    const gr = this._grad('h_torso|gue|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
+    ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
+    if (st.piastra === 0) {
+      // BARBARO: petto nudo e una cinghia di cuoio al posto del pettorale. E' la sua difesa che
+      // manca, e si deve vedere prima ancora di leggere i numeri.
+      ctx.fillStyle = _P.pelle || '#c08050'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      this._rr(ctx, -r * 0.30, -r * 0.30, r * 0.62, r * 0.60, r * 0.24); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#4a3520'; ctx.lineWidth = r * 0.10;
+      ctx.beginPath(); ctx.moveTo(-r * 0.34, r * 0.34); ctx.lineTo(r * 0.26, -r * 0.30); ctx.stroke();
+    } else {
+    const pg = this._grad('h_plate|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, metS); q.addColorStop(0.5, met); q.addColorStop(1, '#c2c9d4'); return q; });
+    ctx.fillStyle = pg; this._rr(ctx, -r * 0.36, -r * 0.34, r * 0.74, r * 0.68, r * 0.26); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.30); ctx.lineTo(r * 0.24, -r * 0.24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r * 0.32, 0); ctx.lineTo(r * 0.28, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.30); ctx.lineTo(r * 0.24, r * 0.24); ctx.stroke();
+    // PALADINO: il tabarro chiaro col sole sul petto. E' l'unico segno che lo distingue a colpo
+    // d'occhio dal maestro d'armi, che porta la stessa piastra.
+    if (st.tabarro) {
+      ctx.fillStyle = st.tabarro; ctx.globalAlpha = 0.9; ctx.fillRect(-r * 0.34, -r * 0.10, r * 0.70, r * 0.20); ctx.globalAlpha = 1;
+      ctx.fillStyle = _P.orlo || '#e0b64a'; ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.11, 0, 7); ctx.fill();
+    }
+    }
+    if (st.spalle === 'pelliccia') {
+      // [pelliccia fusa] Erano DUE pezzi staccati, uno per spalla, e a questa scala si leggevano come
+      // due valigie quadrate appoggiate ai fianchi. Nella versione in gioco la pelliccia e' UNA sola,
+      // continua, che gira attorno alle spalle e si chiude sul torso: si fonde col corpo invece di
+      // stargli accanto. Stessi numeri di quel disegno — che nasce «a testa in su», quindi sta dentro
+      // un quarto di giro — schiacciati un po' avanti-indietro per non mangiarsi i bracciali.
+      ctx.save(); ctx.rotate(Math.PI / 2); ctx.scale(1.0, 0.86); ctx.translate(0, r * 0.05);
+      const _pelo = _P.pelo || '#6a5a44';
+      const _pf = (f) => { const n = parseInt(_pelo.slice(1), 16), k = 1 + f;
+        const c = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+        return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')'; };
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = _pelo; ctx.strokeStyle = DK; ctx.lineWidth = r * 0.07;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.42, -r * 0.25);
+      ctx.lineTo(-r * 0.58, -r * 0.34); ctx.lineTo(-r * 0.68, -r * 0.20);
+      ctx.lineTo(-r * 0.63, -r * 0.02); ctx.lineTo(-r * 0.73, r * 0.08);
+      ctx.lineTo(-r * 0.61, r * 0.18); ctx.lineTo(-r * 0.52, r * 0.30);
+      ctx.lineTo(-r * 0.35, r * 0.24);
+      ctx.quadraticCurveTo(0, r * 0.42, r * 0.36, r * 0.24);
+      ctx.lineTo(r * 0.52, r * 0.30); ctx.lineTo(r * 0.61, r * 0.17);
+      ctx.lineTo(r * 0.72, r * 0.08); ctx.lineTo(r * 0.63, -r * 0.02);
+      ctx.lineTo(r * 0.69, -r * 0.20); ctx.lineTo(r * 0.57, -r * 0.34);
+      ctx.lineTo(r * 0.40, -r * 0.25);
+      ctx.quadraticCurveTo(0, -r * 0.43, -r * 0.42, -r * 0.25);
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = _pf(-0.22);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.54, r * 0.12);
+      ctx.quadraticCurveTo(-r * 0.20, r * 0.34, 0, r * 0.36);
+      ctx.quadraticCurveTo(r * 0.23, r * 0.34, r * 0.54, r * 0.12);
+      ctx.lineTo(r * 0.46, r * 0.27);
+      ctx.quadraticCurveTo(r * 0.16, r * 0.42, 0, r * 0.40);
+      ctx.quadraticCurveTo(-r * 0.19, r * 0.42, -r * 0.47, r * 0.27);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else {
+      const sp = this._grad('h_spall|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); q.addColorStop(0, this._shade(met, -95)); q.addColorStop(1, this._shade(met, -45)); return q; });
+      for (const sgy of [-1, 1]) {
+        ctx.fillStyle = sp; ctx.strokeStyle = DK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-r * 0.14, sgy * r * 0.60, r * 0.30, r * 0.21, sgy * 0.3, 0, 7); ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = DK; ctx.lineWidth = 2;
+    // v1.75 — CIVILE: la stessa sagoma senza scudo e senza elmo. La usano i mercanti, che condividono
+    // il linguaggio degli eroi (spalle, corazza, mantello) ma non vanno in battaglia.
+    const _civ = !!(eq && eq.civile);
+    // ============================================================================================
+    // v2.19.5 — IL GUERRIERO IMPUGNA CIO' CHE HA IN MANO, non cio' che dice la sua classe
+    // ============================================================================================
+    // Fino alla v2.19.4 le armi di questa impalcatura venivano dallo STILE della classe: il barbaro
+    // aveva sempre l'ascia, il maestro sempre due spade, il paladino sempre lo scudo. Paolo ha trovato
+    // i due modi in cui questo si rompe:
+    //  · *«hai disegnato il barbaro con un'ascia, ma se equipaggia una spada e' un'incongruenza»*;
+    //  · il paladino che impugna un'arma a DUE MANI si toglie lo scudo — e il gioco si CONGELAVA.
+    //    Lo stile diceva `scudo: 1` («questa classe si disegna con lo scudo»), e `scudo` e' anche il
+    //    nome del COLORE che la tinta dello scudo impugnato ci scrive sopra. Senza scudo in mano, al
+    //    posto del colore restava il numero 1, `_shade(1)` lanciava a ogni fotogramma, e il ciclo di
+    //    disegno si fermava sull'ultima immagine buona: il villaggio fermo.
+    // Stessa radice: il disegno guardava la classe invece dell'equipaggiamento. Adesso guarda cosa c'e'
+    // nelle mani — `wp` (arma principale), `wx` (seconda arma), `sh` (scudo), mandati dal server —
+    // e lo disegna con UNA LAMA GENERICA, come Paolo ha chiesto (*«fallo piu' generico»*): non
+    // un'ascia, una spada o un maglio, ma «un'arma», che non contraddice nessun pezzo del listino.
+    // Cio' che la lama dice e' il PESO, che e' l'unica cosa che conta al colpo: la leggera e' corta e
+    // sottile, l'equilibrata e' la spada di mezzo, la pesante e' lunga e larga — e se e' a due mani
+    // la tengono tutte e due, davanti al corpo invece che di lato.
+    const _G = window.GAME && window.GAME.Gear, _H = window.GAME && window.GAME.Heroes;
+    const _pz = (id) => (_G && id && _G.BY_ID[id]) || null;
+    const arma1 = _civ ? null : _pz(eq && eq.wp), arma2 = _civ ? null : _pz(eq && eq.wx);
+    const scudoIt = _civ ? null : _pz(eq && eq.sh);
+    const mani = (_H && _H.maniDi && eq && eq._hid) ? _H.maniDi(eq._hid) : null;
+    const dueMani = !!(arma1 && _G && _G.aDueMani && _G.aDueMani(arma1, mani));
+    if (arma1) this._lamaGenerica(ctx, r, atk, arma1.carattere, dueMani ? 0 : 1, _P, DK);
+    if (arma2) this._lamaGenerica(ctx, r, atk, arma2.carattere, -1, _P, DK);
+    // lo scudo si disegna SE C'E', e per chiunque lo impugni — non solo per il paladino: la tabella
+    // lo concede anche al barbaro e al maestro d'armi, e finora loro lo portavano invisibile.
+    if (scudoIt) {
+    ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
+    // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
+    // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
+    // v1.88 — QUATTRO SCUDI, non piu' due. Piu' alto e' il rango, piu' l'arco e' AMPIO e la lastra
+    // spessa: e' l'unico pezzo d'armatura che cambia la sagoma vista dall'alto, ed e' anche il pezzo
+    // che nel gioco para davvero — la forma dice quanto copre, e la dice senza numeri.
+    const srk = (eq._rk && eq._rk.s) || 1;
+    // v2.19.5 — il colore si usa solo se E' un colore. Non si fida del nome della chiave: e' proprio
+    // un nome condiviso fra un'impostazione e un colore che ha congelato la partita.
+    const scCol = (typeof _P.scudo === 'string') ? _P.scudo : '#8d97a5', orlo = (typeof _P.orlo === 'string') ? _P.orlo : '#c8a23a';
+    const RS = r * (0.86 + 0.052 * (srk - 1)), TH = r * (0.26 + 0.052 * (srk - 1));
+    const A0 = -(1.15 + 0.145 * (srk - 1)), A1 = -A0;
+    const sgd = this._grad('h_scudo|' + r + '|' + srk + '|' + scCol, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, this._shade(scCol, -78)); q.addColorStop(0.55, scCol); q.addColorStop(1, this._shade(scCol, 60)); return q; });
+    ctx.fillStyle = sgd; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2, A0, A1); ctx.arc(0, 0, RS - TH / 2, A1, A0, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = orlo; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
+    ctx.fillStyle = orlo; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * (0.11 + 0.012 * (srk - 1)), 0, 7); ctx.fill(); ctx.stroke();
+    // i rivetti: uno in piu' per rango, distribuiti sull'arco. Contarli non serve — si legge la densita'.
+    ctx.fillStyle = '#e6ecf4';
+    ctx.beginPath();
+    for (let k = 0; k < srk + 1; k++) { const u = (k + 1) / (srk + 2), an = A0 + (A1 - A0) * u; ctx.arc(Math.cos(an) * RS, Math.sin(an) * RS, r * 0.05, 0, 7); }
+    ctx.fill();
+    if (srk >= 2) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
+    if (srk >= 4) {   // l'Aegis: una runa accesa lungo il bordo
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = this._rgba(orlo, 0.55 + 0.3 * Math.sin(t * 3)); ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(0, 0, RS - TH * 0.15, A0 + 0.2, A1 - 0.2); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    }
+    if (_civ) {   // testa scoperta: capelli e la fetta di viso davanti, al posto dell'elmo
+      ctx.fillStyle = _P.pelo || '#4a3520'; ctx.strokeStyle = DK; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.44, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = _P.skin || '#c79b6a';
+      ctx.beginPath(); ctx.arc(r * 0.12, 0, r * 0.3, -1.25, 1.25); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.1, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.1, r * 0.045, 0, 7); ctx.fill();
+      return;
+    }
+    // v2.18 — TRE TESTE. Il barbaro e' a capo scoperto (criniera, codino, barba), il maestro d'armi
+    // ha l'elmo aperto col viso in vista e la sciarpa che svolazza, il paladino tiene l'elmo chiuso
+    // della v1.66. Una classe si riconosce dalla testa prima che dall'arma: e' la parte che sta
+    // sempre al centro della sagoma.
+    if (st.testa === 'nuda') {
+      // ===================================================================================
+      // LE TRE CORREZIONI DI PAOLO — e nient'altro. Il corpo sotto non ha una riga diversa.
+      //   1. gli OCCHI come quelli della versione in gioco: due semicerchi, non due puntini;
+      //   2. VIA le sei linee dritte marroni che partivano dalla testa;
+      //   3. l'ELMO al posto del copricapo marrone.
+      // ===================================================================================
+      const cri = _P.criniera || '#5a3a1e';
+      const met2 = _P.metallo || '#8a7a63';
+      const scf = (hex, f) => {                  // f e' una FRAZIONE: `_shade` invece somma su 0..255
+        const n = parseInt(String(hex).slice(1), 16), k = 1 + f;
+        if (!isFinite(n)) return hex;
+        const c = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+        return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')';
+      };
+      // [2] le sei linee dritte NON si disegnano piu'. Il codino dietro resta: non e' una linea,
+      //     ed e' l'unica cosa che da dietro dice da che parte guarda.
+      ctx.fillStyle = cri; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(-r * 0.44, 0, r * 0.15, 0, 7); ctx.fill(); ctx.stroke();
+      // [3] L'ELMO prende il posto della calotta marrone: stessa misura, stesso centro — cambia
+      //     solo il materiale, quindi la sagoma che gia' funzionava non si muove di un pixel.
+      const eg = this._grad('inn_elmo|' + r + '|' + met2, () => {
+        const q = ctx.createLinearGradient(-r * 0.40, -r * 0.40, r * 0.30, r * 0.40);
+        q.addColorStop(0, this._shade(met2, -82)); q.addColorStop(0.55, this._shade(met2, -44)); q.addColorStop(1, this._shade(met2, 2));
+        return q; });
+      ctx.fillStyle = eg; ctx.strokeStyle = DK; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.42, 0, 7); ctx.fill(); ctx.stroke();
+      // la barba e il viso, come prima
+      ctx.fillStyle = this._shade(cri, -26);
+      ctx.beginPath(); ctx.arc(r * 0.09, 0, r * 0.33, -1.30, 1.30); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = _P.pelle || '#c08050';
+      ctx.beginPath(); ctx.arc(r * 0.14, 0, r * 0.25, -1.15, 1.15); ctx.closePath(); ctx.fill();
+      // la fascia di CUOIO attraverso la fronte, dietro gli occhi. Di cuoio e non di pelo: col pelo
+      // viene dello stesso valore del ferro e l'elmo diventa un casco tutto d'un pezzo. E' ritagliata
+      // sulla calotta, cosi' non sborda fuori dalla testa.
+      ctx.save();
+      ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.42, 0, 7); ctx.clip();
+      ctx.fillStyle = scf(_P.clothDk || '#3a2716', 0.55); ctx.strokeStyle = DK; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.rect(r * 0.00, -r * 0.46, r * 0.13, r * 0.92); ctx.fill(); ctx.stroke();
+      // i due ribattini d'oro, alle estremita' della fascia
+      ctx.fillStyle = (typeof _P.orlo === 'string' && _P.orlo[0] === '#') ? _P.orlo : '#d8a33a';
+      for (const ry of [-0.31, 0.31]) { ctx.beginPath(); ctx.arc(r * 0.065, ry * r, r * 0.042, 0, 7); ctx.fill(); }
+      ctx.restore();
+      // il NASALE, che scende dalla fascia sul viso
+      ctx.fillStyle = scf(met2, 0.12); ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.12, -r * 0.052); ctx.lineTo(r * 0.36, -r * 0.038);
+      ctx.lineTo(r * 0.36, r * 0.038); ctx.lineTo(r * 0.12, r * 0.052);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // [1] GLI OCCHI A SEMICERCHIO, capovolti: il taglio dritto dietro, la mezzaluna verso avanti.
+      //     I due puntini tondi di prima, a questa scala, sparivano dentro il viso.
+      ctx.fillStyle = 'rgba(0,0,0,.72)';
+      for (const ey of [-0.145, 0.145]) {
+        ctx.beginPath(); ctx.arc(r * 0.255, ey * r, r * 0.088, Math.PI * 1.5, Math.PI * 0.5); ctx.closePath(); ctx.fill();
+      }
+      return;
+    }
+    if (st.testa === 'elmoAperto') {
+      ctx.fillStyle = _P.pelle || '#c79b6a'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.45, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = this._shade(met, -30); ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.46, 1.05, -1.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.arc(r * 0.30, -r * 0.11, r * 0.05, 0, 7); ctx.arc(r * 0.30, r * 0.11, r * 0.05, 0, 7); ctx.fill();
+      if (st.fascia) {
+        ctx.fillStyle = st.fascia; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-r * 0.20, -r * 0.26); ctx.quadraticCurveTo(-r * 0.80, -r * (0.36 + sway), -r * 0.94, -r * 0.02);
+        ctx.quadraticCurveTo(-r * 0.74, r * 0.16, -r * 0.20, r * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      return;
+    }
+    const hg = this._grad('h_elmo|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, this._shade(met, -17)); q.addColorStop(0.5, metM); q.addColorStop(1, '#e2e7ee'); return q; });
+    ctx.fillStyle = hg; ctx.strokeStyle = DK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.46, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#0b0e13'; this._rr(ctx, r * 0.16, -r * 0.22, r * 0.30, r * 0.44, 3); ctx.fill();   // feritoia
+    ctx.fillStyle = '#0b0e13'; this._rr(ctx, -r * 0.02, -r * 0.06, r * 0.34, r * 0.12, 2); ctx.fill();
+    ctx.fillStyle = st.cresta || steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2;                       // cresta corta
+    ctx.beginPath(); ctx.moveTo(-r * 0.16, -r * 0.10); ctx.quadraticCurveTo(-r * 0.62, -r * 0.06 + sway * r * 0.4, -r * 0.78, 0);
+    ctx.quadraticCurveTo(-r * 0.62, r * 0.06 + sway * r * 0.4, -r * 0.16, r * 0.10); ctx.closePath(); ctx.fill(); ctx.stroke();
+  },
+  disegna(ctx, r, S, P) {
+    NUOVO.disegna(ctx, r, S, P, (g, rr, tt, aa) =>
+      this.corpo(g, rr, tt, aa, { _st: P, pal: {}, _hid: 'barbaro', _pk: '' }));
+  },
+});
+
+
+const PAL = STILE_BARBARO;
+let stato = 'fermo', vel = 130, griglia = false;
+let dist = 0, ang = 0, angPrec = 0, atk = 0, ultimo = performance.now() / 1000;
+let px = 0, py = 0;
+
+const R_GIOCO = 16 * 1.75;                 // PLAYER_RADIUS x HERO_VIS: il raggio della v2.38
+const FALCATA = R_GIOCO * 2.67;
+
+document.querySelectorAll('.cmd button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.cmd button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); stato = b.dataset.s; if (stato === 'attacca') atk = 0;
+});
+document.getElementById('vel').oninput = e => vel = +e.target.value;
+document.getElementById('griglia').onchange = e => griglia = e.target.checked;
+
+function passo(dt) {
+  const cammina = (stato === 'cammina') ? 1 : 0;
+  if (stato === 'cammina') { dist += vel * dt; px += Math.cos(ang) * vel * dt; py += Math.sin(ang) * vel * dt; }
+  if (stato === 'gira') ang += dt * 1.6;
+  if (stato === 'attacca') { atk += dt / 0.55; if (atk > 1.6) atk = 0; } else atk = 0;
+  const dA = (ang - angPrec) / Math.max(dt, 0.001); angPrec = ang;
+  return { cammina, dAng: Math.max(-0.5, Math.min(0.5, dA * 0.12)) };
+}
+
+function pannello(cv, chi, S, mov) {
+  const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, cv.width, cv.height);
+  const k = cv.width / (R_GIOCO * 2.6);
+  g.save(); g.translate(cv.width / 2, cv.height / 2); g.scale(k, k);
+  if (griglia) { g.strokeStyle = 'rgba(255,90,110,.75)'; g.lineWidth = 1.4 / k;
+    g.beginPath(); g.arc(0, 0, 16 * 1.08, 0, 7); g.stroke(); }
+  g.save(); g.rotate(ang - Math.PI / 2);          // nell'anteprima guarda sempre in alto
+  g.fillStyle = 'rgba(0,0,0,.35)';
+  g.beginPath(); g.ellipse(0, 0, R_GIOCO * .62, R_GIOCO * .5, 0, 0, 7); g.fill();
+  const A = Math.max(0, Math.min(1, atk));
+  try {
+    if (chi === 'a') {
+      GIOCO._heroBarbaro(g, R_GIOCO, S.t, A, { _st: PAL, pal: {}, i: cv.id, x: px, y: py, a: ang });
+    } else if (chi === 'b') {
+      NUOVO.disegna(g, R_GIOCO, { fase: (dist / FALCATA) % 1, mov, atk: A, t: S.t, dAng: S.dAng },
+        PAL, (gg, rr, tt, aa) => ATTUALE._heroGuerriero(gg, rr, tt, aa, { _st: PAL, pal: {}, _hid: 'barbaro' }));
+    } else {
+      CORR.disegna(g, R_GIOCO, { fase: (dist / FALCATA) % 1, mov, atk: A, t: S.t, dAng: S.dAng }, PAL);
+    }
+  } catch (e) { g.restore(); g.restore(); console.error(chi, e); return; }
+  g.restore(); g.restore();
+}
+
+let movSm = 0;
+function giro(now) {
+  const t = now / 1000, dt = Math.min(0.05, t - ultimo); ultimo = t;
+  const S0 = passo(dt);
+  movSm += (S0.cammina - movSm) * Math.min(1, dt * 8);
+  const S = { t, dAng: S0.dAng };
+  for (const [id, chi] of [['a1','a'],['a4','a'],['b1','b'],['b4','b'],['c1','c'],['c4','c']])
+    pannello(document.getElementById(id), chi, S, movSm);
+  requestAnimationFrame(giro);
+}
+requestAnimationFrame(giro);
+</script></body></html>

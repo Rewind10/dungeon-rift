@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.38.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.39.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,25 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🪓 v2.39.0 — il Barbaro torna al corpo di sempre, ma animato
+
+Il corpo ridisegnato della v2.37 è stato **buttato**: messo accanto al corpo di sempre dentro lo
+strato di animazione, perdeva. `_heroBarbaro` adesso non disegna niente — prende `_heroGuerriero`
+così com'è e gli mette attorno solo il **movimento**: passo agganciato al terreno, stivali che
+escono davanti e dietro, saliscendi a due tempi per falcata, spalle contro bacino, respiro da fermo,
+e il colpo a **tre tempi** ottenuto ri-temporizzando il numero che si passa al disegno — che quindi
+non sa niente di tutto questo.
+
+**La testa cambia**: elmo di ferro e cuoio al posto del copricapo marrone (stesso centro, stessa
+misura), occhi a **mezzaluna** al posto dei due puntini, e via le sei linee dritte dei capelli, che
+dall'alto si leggevano come stecchi. La **pelliccia** è un pezzo solo, fuso col torso, invece di due
+spalline quadrate; stivali e bracciali sono di **cuoio**, non dell'azzurro ferro del paladino.
+
+Tutto questo solo per il barbaro: paladino e maestro d'armi condividono l'impalcatura e tengono il
+loro acciaio.
+
+---
 
 ## 📏 v2.38.0 — l'eroe e' piu' grande, e gira come si gira
 

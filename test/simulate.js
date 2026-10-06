@@ -9830,31 +9830,20 @@ function testV238() {
   // b) la falcata e' proporzionale all'eroe: 62 px fissi, su un raggio cresciuto, erano passetti
   assert(/\(S\.d \/ \(r \* 2\.67\)\)/.test(B) && !/S\.d \/ 62/.test(B),
     'la lunghezza del passo segue la taglia del personaggio');
-  // c) i piedi stanno SOTTO il corpo, non dietro
-  assert(/r \* \(0\.34 \+ av \* 0\.44\)/.test(B), 'gli stivali scavalcano il centro invece di restare dietro');
-  assert(!/r \* \(0\.62 \+ av \* 0\.34\)/.test(B), 'e la base trascinata della v2.37 non c e piu');
-  // ...e si vedono: dopo la veste e la pelliccia, non sotto.
-  assert(B.indexOf('piede(1, gamba); piede(-1, -gamba)') > B.indexOf('la PELLICCIA sulle spalle'),
-    'e si disegnano SOPRA la veste, se no la gonna li copre per tre quarti del passo');
-  // d) il busto resta indietro di poco e la TESTA resta sulla mira (prima era il contrario)
-  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.18\)/.test(B), 'il busto ritarda di un inezia');
+  // c) i piedi viaggiano AVANTI E INDIETRO, non di lato: dall alto un uomo che cammina mostra la
+  //    punta davanti e il tallone dietro, non due stivali che gli spuntano dai fianchi.
+  assert(/r \* \(0\.03 \+ av \* 0\.38\), sgn \* r \* 0\.24/.test(B), 'gli stivali scavalcano il centro');
+  assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'e sono in opposizione');
+  // d) il busto resta indietro di poco: erano 14 gradi tenuti per tutto il giro, adesso sono 5
+  assert(/ctx\.rotate\(gamba \* 0\.13 - S\.da \* 0\.18\)/.test(B), 'il busto ritarda di un inezia');
   assert(!/S\.da \* 0\.5\)/.test(B), 'non piu di 14 gradi tenuti per tutto il giro');
-  assert(/ctx\.translate\(0, -r \* 0\.10\); ctx\.rotate\(S\.da \* 0\.18\); ctx\.translate\(0, r \* 0\.10\);/.test(B),
-    'e la testa si riprende lo stesso angolo, ruotando attorno al collo');
   // e) il disegno resta chiuso: ogni save ha il suo restore
   assert(B.split('ctx.save()').length === B.split('ctx.restore()').length,
     'save e restore sono in pari (' + (B.split('ctx.save()').length - 1) + ')');
 
-  // --- 6) I DETTAGLI GRAFICI DELLA v2.37 SONO INTATTI ----------------------------------------
-  // *«prendi i dettagli grafici di questa versione (elmo, pelliccia, movimenti di braccia e
-  // gambe)»*: qui non si aggiunge niente di nuovo, si pretende che non sia sparito niente.
-  assert(/l'ELMO: calotta di ferro, fascia di CUOIO/.test(B) && /sc\(clothDk, 0\.55\)/.test(B), 'l elmo e la sua fascia di cuoio ci sono');
-  assert(/ctx\.arc\(ex \* r, -r \* 0\.19 \+ by, r \* 0\.085, 0, _PI\)/.test(B), 'gli occhi sono ancora due semicerchi');
-  assert(/la PELLICCIA sulle spalle/.test(B) && /ctx\.fillStyle = pelo;/.test(B), 'la pelliccia e al suo posto');
-  assert(/ctx\.rotate\(-sgn \* col \* 0\.62\)/.test(B), 'le braccia girano ancora attorno alla propria spalla');
-  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'e il corpo sale ancora due volte a falcata');
-  assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'il colpo ha ancora tre tempi');
-  assert(/this\._armiGuerriero\(ctx, r, a, eq, _P, DK, sway/.test(B), 'e l arma resta quella equipaggiata');
+  // --- 6) IL RESTO DELL ANIMAZIONE E AL SUO POSTO --------------------------------------------
+  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'il corpo sale due volte a falcata');
+  assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'e il colpo ha tre tempi');
 
   // --- 7) E LE ALTRE SEI CLASSI NON SONO STATE TOCCATE ---------------------------------------
   { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
@@ -9864,64 +9853,135 @@ function testV238() {
   ok('eroe a 56 px con urto invariato, giro su se stesso tarato e dettagli della v2.37 intatti');
 }
 
+// =============================================================================================
+// TEST 97 — v2.39: il barbaro torna al corpo di sempre, animato — e la testa cambia
+// =============================================================================================
+// Messi a confronto in una pagina di prova, il corpo ridisegnato della v2.37 e il corpo di sempre
+// dentro lo strato di animazione, Paolo ha scelto il secondo: *«ok si ci siamo, applicala nel
+// gioco»*. Piu' le correzioni che aveva chiesto guardando l'anteprima:
+//   · *«Occhi: ok ma capovolgili»*
+//   · *«togliere le linee dritte marroni che partono dalla testa»*
+//   · *«L'elmo puo' essere messo al posto del copricapo marrone attuale»*
+//   · *«Le due spalle quadrate marroni cerca di fonderle col corpo»*
+//   · *«infine le gambe marroni e non blu»*
+// Quello che questo test difende, oltre alle cinque, e' il confine: tutto cio' che cambia deve
+// toccare SOLO il barbaro. Paladino e maestro d'armi condividono la stessa impalcatura.
+function testV239() {
+  console.log('\n[TEST 97] v2.39 — il corpo di sempre animato, e la testa nuova del barbaro');
+  const fs2 = require('fs'), path = require('path');
+  const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- v2.37 — LE ARMI DEL GUERRIERO'));
+  const G = src.slice(src.indexOf('_heroGuerriero(ctx, r, t, atk, eq) {'), src.indexOf('// ---- LADRO: cappuccio'));
+
+  // --- 1) IL BARBARO NON HA PIU' UN DISEGNO SUO: HA UN INVOLUCRO ------------------------------
+  // E' la differenza che conta. Un secondo disegno del barbaro vuol dire due corpi da tenere
+  // allineati a ogni modifica, ed e' esattamente il motivo per cui la v2.37 e' stata buttata.
+  assert(/this\._heroGuerriero\(ctx, r, t, re, eq\);/.test(B),
+    'il barbaro disegna il CORPO DEL GUERRIERO, non un corpo suo');
+  assert(B.length < 7000, 'e quello che resta e solo movimento (' + B.length + ' caratteri)');
+  for (const sparito of ['la VESTE lunga', 'la PELLICCIA sulle spalle', 'GLI OCCHI A SEMICERCHIO'])
+    assert(!B.includes(sparito), 'il pezzo di disegno «' + sparito + '» non e rimasto nell involucro');
+
+  // --- 2) L ANIMAZIONE E TUTTA LI' -----------------------------------------------------------
+  assert(/S\.d \+= passo \+ giro \* r \* 0\.50;/.test(B), 'il passo viene dalla distanza, e girare vale un pezzo di falcata');
+  assert(/\(S\.d \/ \(r \* 2\.67\)\)/.test(B), 'la falcata e proporzionale alla taglia dell eroe');
+  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'il corpo sale due volte a falcata');
+  assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'i due stivali sono in opposizione');
+  assert(/ctx\.rotate\(gamba \* 0\.13 - S\.da \* 0\.18\)/.test(B), 'spalle contro bacino, e il busto ritarda di un inezia');
+  // il colpo: si ri-temporizza il NUMERO, il disegno non sa niente di tre tempi
+  assert(/re = 0\.06 \* u/.test(B) && /re = 0\.06 \+ 0\.64/.test(B) && /re = 0\.70 \+ 0\.30/.test(B),
+    'il colpo ha tre tempi, ottenuti ri-temporizzando il numero passato al corpo');
+  assert(/this\._heroGuerriero\(ctx, r, t, re, eq\)/.test(B) && !/this\._heroGuerriero\(ctx, r, t, atk, eq\)/.test(B),
+    'e al corpo arriva il numero ri-temporizzato, non quello crudo');
+
+  // --- 3) LA TESTA: le tre correzioni --------------------------------------------------------
+  const T = G.slice(G.indexOf("if (st.testa === 'nuda') {"), G.indexOf("if (st.testa === 'elmoAperto') {"));
+  assert(T.length > 800, 'la testa a capo scoperto e tutta li (' + T.length + ' caratteri)');
+  // [1] occhi a mezzaluna, CAPOVOLTI: il taglio dritto dietro, la curva verso avanti
+  assert(/ctx\.arc\(r \* 0\.255, ey \* r, r \* 0\.088, _PI \* 1\.5, _PI \* 0\.5\)/.test(T),
+    'gli occhi sono due mezzelune capovolte: l arco va da 1,5 PI a 0,5 PI, non il contrario');
+  assert(!/ctx\.arc\(r \* 0\.26, -r \* 0\.1, r \* 0\.045, 0, 7\)/.test(T), 'e non sono piu due puntini tondi');
+  // [2] via le sei linee dritte. Il codino dietro resta.
+  assert(!/for \(let i = 0; i < 6; i\+\+\)/.test(T), 'le sei linee dritte dei capelli non ci sono piu');
+  assert(/ctx\.arc\(-r \* 0\.44, 0, r \* 0\.15, 0, 7\)/.test(T), 'ma il codino dietro resta: non e una linea');
+  // [3] l'elmo al posto del copricapo marrone — stesso centro, stessa misura
+  assert(/h_elmoBar/.test(T) && /ctx\.arc\(-r \* 0\.02, 0, r \* 0\.42, 0, 7\)/.test(T),
+    'la calotta e di ferro, nello stesso punto e della stessa misura di quella marrone');
+  assert(/scf\(_P\.clothDk \|\| '#3a2716', 0\.55\)/.test(T), 'la fascia e di CUOIO');
+  // col `pelo` verrebbe dello stesso valore del ferro e l'elmo diventerebbe un casco d'un pezzo
+  assert(!/ctx\.fillStyle = _P\.pelo[\s\S]{0,300}nasale/.test(T), 'e non di pelo, che col ferro si confonde');
+  assert(/il nasale/.test(T), 'c e il nasale');
+  assert(/ctx\.arc\(r \* 0\.065, ry \* r, r \* 0\.042, 0, 7\)/.test(T), 'e i due ribattini d oro');
+
+  // --- 4) LA PELLICCIA E' UNA SOLA, FUSA COL CORPO -------------------------------------------
+  assert(/if \(st\.spalle === 'pelliccia'\) \{[\s\S]{0,400}ctx\.rotate\(_PI \/ 2\)/.test(G),
+    'la pelliccia e un pezzo unico, nel sistema del disegno a testa in su');
+  assert(!/for \(const sgy of \[-1, 1\]\) \{\s*\n\s*if \(st\.spalle === 'pelliccia'\)/.test(G),
+    'non sono piu due pezzi, uno per spalla');
+  // e chi NON ha la pelliccia tiene le sue spalline d acciaio, una per lato
+  assert(/\} else \{[\s\S]{0,600}for \(const sgy of \[-1, 1\]\)[\s\S]{0,300}ctx\.ellipse\(-r \* 0\.14, sgy \* r \* 0\.60/.test(G),
+    'e paladino e maestro d armi tengono le due spalline d acciaio');
+
+  // --- 5) CUOIO E NON ACCIAIO, MA SOLO ADDOSSO AL BARBARO ------------------------------------
+  assert(/const _cuoio = st\.piastra === 0 \? \(_P\.clothDk \|\| '#3a2716'\) : steelDk;/.test(G),
+    'stivali di cuoio per chi combatte a petto nudo, d acciaio per gli altri');
+  assert(/const _cuoioBr = st\.piastra === 0 \? this\._shade\(_P\.clothDk \|\| '#3a2716', 18\) : '#2c333d';/.test(G),
+    'e lo stesso per i bracciali');
+  assert(/ctx\.strokeStyle = _cuoioBr;/.test(G) && !/ctx\.strokeStyle = '#2c333d'; ctx\.lineCap/.test(G),
+    'il blu fisso dei bracciali non c e piu');
+  // la guardia e' `piastra === 0`, cioe' il barbaro e nessun altro: lo si pretende sulla TABELLA
+  { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
+    const conPiastra0 = (tab.match(/piastra: 0/g) || []).length;
+    assert(conPiastra0 === 1, 'e una sola classe ha il petto nudo (' + conPiastra0 + ')');
+    const rigaBar = tab.slice(tab.indexOf('\n    barbaro:'), tab.indexOf('\n    paladino:'));
+    assert(/piastra: 0/.test(rigaBar), 'ed e il barbaro');
+    assert(/spalle: 'pelliccia'/.test(rigaBar), 'che e anche l unico con la pelliccia');
+    const rigaPal = tab.slice(tab.indexOf('\n    paladino:'), tab.indexOf('\n    maestro:'));
+    assert(!/piastra: 0/.test(rigaPal) && !/spalle: 'pelliccia'/.test(rigaPal),
+      'il paladino non e stato toccato: piastra e spalline restano le sue'); }
+
+  // --- 6) IL DISEGNO RESTA CHIUSO ------------------------------------------------------------
+  for (const [nome, corpo] of [['l involucro del barbaro', B], ['il corpo del guerriero', G]])
+    assert(corpo.split('ctx.save()').length === corpo.split('ctx.restore()').length,
+      'save e restore sono in pari in ' + nome);
+
+  assert(C.NOVITA.v === C.VERSION, 'e il riquadro delle novita parla della versione giusta');
+  ok('corpo di sempre animato, testa nuova, pelliccia fusa, cuoio al posto dell acciaio — e solo per lui');
+}
+
 function testV237() {
-  console.log('\n[TEST 95] v2.37 — il Barbaro ha un corpo suo, e si muove');
+  console.log('\n[TEST 95] v2.37 — le armi staccate dal corpo, e il barbaro instradato a parte');
   const fs2 = require('fs'), path = require('path');
   const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
 
-  // --- 1) IL CORPO C'E', ED E' SOLO DEL BARBARO ---------------------------------------------
-  assert(/_heroBarbaro\(ctx, r, t, atk, eq\)/.test(src), 'esiste un corpo dedicato al barbaro');
+  // Della v2.37 il DISEGNO non e' sopravvissuto: il corpo ridisegnato del barbaro e' stato buttato
+  // in v2.39, dopo che Paolo ha scelto il corpo di sempre animato. Sono sopravvissute due cose
+  // strutturali, e sono quelle che vanno difese dal tempo.
+
+  // --- 1) IL BARBARO HA UN SUO INGRESSO, E SOLO LUI ------------------------------------------
+  assert(/_heroBarbaro\(ctx, r, t, atk, eq\)/.test(src), 'esiste un ingresso dedicato al barbaro');
   assert(/id === 'barbaro' && !eq\.civile/.test(src),
     'e lo usa SOLO il barbaro, e solo se non e un civile');
   // Il perche' del `!eq.civile` non e' un dettaglio: `_vendorBase` manda il fabbro e il Capitano
-  // del villaggio sulla base 'barbaro'. Senza quella guardia il paese si riempirebbe di barbari
-  // con l'elmo — due paesani su nove.
+  // del villaggio sulla base 'barbaro'. Senza quella guardia due paesani su nove si metterebbero
+  // a camminare col passo dell'eroe, in mezzo alla piazza, da fermi.
   { const i = src.indexOf('_vendorBase: {'), riga = src.slice(i, i + 200);
     assert(/smith:\s*'barbaro'/.test(riga) && /crier:\s*'barbaro'/.test(riga),
       'e due mercanti del villaggio usano davvero quella base (fabbro e Capitano)'); }
 
   // --- 2) LE ARMI SONO USCITE DAL CORPO ------------------------------------------------------
-  // Erano quaranta righe in mezzo a `_heroGuerriero`. Con due corpi che le usano, lasciarle li'
-  // voleva dire copiarle — ed e' cosi' che due disegni cominciano a divergere senza accorgersene.
   assert(/_armiGuerriero\(ctx, r, atk, eq, _P, DK, sway, _civ\)/.test(src), 'le armi sono una funzione a parte');
-  assert((src.match(/this\._armiGuerriero\(/g) || []).length === 2,
-    'e la chiamano in due: il guerriero di sempre e il barbaro nuovo');
+  assert(/this\._armiGuerriero\(/.test(src), 'e il corpo del guerriero la chiama');
   assert(!/this\._lamaGenerica\(ctx, r, atk, arma1\.carattere[\s\S]{0,200}this\._lamaGenerica\(ctx, r, atk, arma1\.carattere/.test(src),
     'e il disegno dell arma non e stato duplicato');
 
-  // --- 3) L'ANIMAZIONE: le cinque cose che il corpo vecchio non faceva -----------------------
-  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- GUERRIERO: armatura abbozzata'));
-  assert(B.length > 2000, 'il corpo del barbaro e tutto li (' + B.length + ' caratteri)');
-  // il passo viene dalla DISTANZA percorsa, non dall orologio: e la differenza fra piedi che
-  // camminano e piedi che slittano, e si vede nel codice prima che a schermo.
-  assert(/S\.d \+= passo/.test(B) && /\(S\.d \/ \(r \* 2\.67\)\)/.test(B),
-    'il passo viene dalla distanza percorsa (v2.38: e la falcata e proporzionale al raggio, non 62 px fissi)');
-  assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'e il corpo sale DUE volte a falcata (il coseno in valore assoluto)');
-  assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'i due stivali sono in opposizione');
-  assert(/ctx\.rotate\(gamba \* 0\.11 - S\.da \* 0\.18\)/.test(B),
-    'spalle contro bacino, e il busto resta indietro quando giri (v2.38: 0,18 e non piu 0,5)');
-  assert(/a < 0\.26/.test(B) && /a < 0\.46/.test(B), 'il colpo ha tre tempi, non un seno solo');
-  assert(/ctx\.rotate\(-sgn \* col \* 0\.62\)/.test(B), 'e le braccia lo seguono, ognuna attorno alla sua spalla');
-
-  // --- 4) L'ELMO E GLI OCCHI ----------------------------------------------------------------
-  assert(/GLI OCCHI A SEMICERCHIO/.test(B), 'gli occhi sono a semicerchio');
-  assert(/ctx\.arc\(ex \* r, -r \* 0\.19 \+ by, r \* 0\.085, 0, _PI\)/.test(B),
-    'e sono davvero mezze lune: un arco da 0 a PI, non un cerchio intero');
-  assert(/sc\(clothDk, 0\.55\)/.test(B), 'la fascia dell elmo e di CUOIO');
-  // col `pelo` veniva dello stesso valore del ferro e l'elmo diventava un casco tutto d'un pezzo
-  assert(!/ctx\.fillStyle = pelo;[\s\S]{0,400}nasale/.test(B), 'e non di pelo, che col ferro si confondeva');
-
-  // --- 5) LE ALTRE SEI CLASSI NON SONO STATE TOCCATE -----------------------------------------
-  // La regressione da temere non e "il barbaro e brutto": e "ho rotto il paladino".
-  const MapGen = require('../shared/mapgen.js');
+  // --- 3) LE SETTE CLASSI SONO ANCORA TUTTE LI' ----------------------------------------------
   assert(/_heroGuerriero\(ctx, r, t, atk, eq\)/.test(src), 'il corpo del guerriero c e ancora');
   assert(/_heroLadro\(/.test(src) && /_heroMago\(/.test(src), 'e cosi quelli del ladro e del mago');
-  // le sette righe di STILE: si guarda la TABELLA, non il file intero — una classe puo' comparire
-  // in un commento e sembrare viva mentre il suo stile e' sparito.
   { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
     for (const k of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
       assert(new RegExp('\\n\\s*' + k + ':\\s*\\{').test(tab), k + ' e ancora nella tabella degli stili'); }
-  ok('corpo del barbaro, armi staccate, cinque cose di animazione e sei classi intatte');
+  ok('armi staccate, barbaro instradato a parte e sette classi intatte');
 }
 
 function testV235() {
@@ -10041,6 +10101,6 @@ function testV235() {
   ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testV239(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

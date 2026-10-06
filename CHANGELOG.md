@@ -2,6 +2,92 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.39.0] — 2026-10-06 · "Il Barbaro torna al corpo di sempre — ma animato"
+
+Quattro giri di anteprima in una pagina a parte, e poi: *«ok si ci siamo, applicala nel gioco»*.
+
+Il corpo ridisegnato della v2.37 — criniera, veste lunga, braccia nude — **e' stato buttato**.
+Messo accanto al corpo di sempre dentro lo strato di animazione, perdeva. Ed e' la decisione giusta
+anche per un motivo che non si vede: due disegni del barbaro vogliono dire due corpi da tenere
+allineati a ogni modifica futura, e il secondo diverge sempre.
+
+---
+
+### 🪓 L'INVOLUCRO, non un corpo
+
+`_heroBarbaro` adesso non disegna **niente**: prende `_heroGuerriero` — il corpo che il gioco ha
+sempre avuto, non una riga diversa — e gli mette attorno solo il **movimento**.
+
+| | prima | adesso |
+|---|---|---|
+| il passo | `sin(t * 5)` — l'orologio | la **distanza percorsa** (e girare vale un pezzo di falcata) |
+| i piedi | non ce n'erano | due stivali, in opposizione, punta davanti e tallone dietro |
+| il saliscendi | nessuno | il corpo sale **due volte** a falcata, una per passo |
+| spalle e bacino | fermi | girano **al contrario**; girando, il busto ritarda di cinque gradi |
+| il colpo | un seno | **tre tempi** — e il disegno non lo sa |
+| da fermo | identico che in corsa | respiro lento, e il peso che passa da un piede all'altro |
+
+**I tre tempi senza toccare il disegno.** Il corpo riceve sempre un `atk` fra 0 e 1. Invece di
+scorrere dritto, adesso quel numero indugia sulla carica (0 → 0,26 produce appena 0,06) e brucia lo
+stacco (0,26 → 0,46 produce tutto il resto). Lo stesso identico fendente, con l'anticipo, sembra
+pesare dieci chili. Piu' mezzo passo avanti sull'impatto: senza, il braccio va e il resto dell'uomo
+guarda.
+
+---
+
+### 🪖 E LA TESTA CAMBIA — cinque correzioni, una per riga di Paolo
+
+> *«Occhi: ok ma capovolgili»* — due **mezzelune**, taglio dritto dietro e curva verso avanti. I due
+> puntini tondi di prima, a 56 px, sparivano dentro il viso: non dicevano dove stai guardando.
+
+> *«togliere le linee dritte marroni che partono dalla testa»* — erano i capelli, e dall'alto si
+> leggevano come **sei stecchi piantati nel cranio**. Via. Il codino dietro resta: non e' una linea,
+> ed e' l'unica cosa che da dietro dice da che parte sei girato.
+
+> *«L'elmo puo' essere messo al posto del copricapo marrone attuale»* — **stesso centro, stessa
+> misura**: cambia solo il materiale, cosi' la sagoma che gia' funzionava non si sposta di un pixel.
+> Calotta di ferro, fascia di **cuoio** attraverso la fronte, nasale, due ribattini d'oro.
+> La fascia e' di cuoio e non di pelo perche' `pelo` (#6a5a44) ha lo stesso valore del ferro, e
+> l'elmo diventerebbe un casco tutto d'un pezzo.
+
+> *«Le due spalle quadrate marroni cerca di fonderle col corpo»* — la pelliccia era **due** pezzi
+> staccati, uno per spalla, e a questa scala si leggevano come due valigie appoggiate ai fianchi.
+> Adesso e' **una sola**, continua, che gira attorno alle spalle e si chiude sul torso.
+
+> *«infine le gambe marroni e non blu»* — stivali e bracciali nascevano dell'azzurro ferro
+> (`steelDk`, `#2c333d`) ereditato dal paladino. Addosso a uno che combatte a petto nudo, **cuoio**.
+
+---
+
+### 🛡️ IL CONFINE
+
+Tutto quanto sopra tocca **solo il barbaro**, e non per fiducia: la pelliccia e' agganciata a
+`spalle === 'pelliccia'`, il cuoio a `piastra === 0`, e la tabella degli stili dice che una sola
+classe su sette ha l'una e l'altro. Paladino e maestro d'armi condividono la stessa impalcatura e
+tengono le loro due spalline d'acciaio e i loro stivali di ferro — c'e' un test che lo pretende,
+perche' *«dopo una modifica va verificato anche cio' che NON e' stato toccato»*.
+
+I **paesani** non sono toccati: il fabbro e il Capitano del villaggio usano la base `barbaro`, ma
+sono `civile` e non passano dall'involucro — altrimenti si metterebbero a camminare col passo
+dell'eroe stando fermi dietro il banco.
+
+---
+
+### ✅ COLLAUDO
+
+**7.042 verifiche, zero rosse.** Il TEST 97 nuovo pretende: che `_heroBarbaro` disegni il corpo del
+guerriero e non un corpo suo (e che nell'involucro non sia rimasto nessun pezzo di disegno); i sei
+punti dell'animazione; le cinque correzioni della testa una per una; che la pelliccia sia un pezzo
+solo e che chi non ce l'ha tenga le due spalline; e che `piastra: 0` e `spalle: 'pelliccia'`
+compaiano **una volta sola** in tutta la tabella degli stili.
+
+Quattro sabotaggi, quattro rossi: occhi rimessi dritti, barbaro rimandato al numero crudo, cuoio
+dato anche al paladino, sei linee rimesse. E una passata a schermo sul gioco vero: 150 fotogrammi
+per **tutte e sette** le classi — fermo, in corsa, in rotazione, sotto attacco — 1.050 disegni,
+zero eccezioni.
+
+---
+
 ### [2.38.0] — 2026-10-06 · "Piu' grande, e che giri come si gira"
 
 Tre righe di Paolo e due schermate del gioco:

@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.38.0',
+    VERSION: '2.39.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.38.0',
+      v: '2.39.0',
       righe: [
-        'L&rsquo;eroe e&rsquo; <b>piu&rsquo; grande</b>: 56 px di sagoma. Il corpo fisico non cambia.',
-        'Il <b>giro su se stesso</b> e&rsquo; tarato: i piedi stanno sotto il corpo e si muovono anche quando giri.',
-        'Resta indietro solo la <b>testa</b>, come dev&rsquo;essere: prima si torceva tutto il busto.',
+        'Il <b>Barbaro</b> torna al corpo di sempre &mdash; ma animato: passo, stivali, respiro, tre tempi nel colpo.',
+        'Testa nuova: <b>elmo</b> di ferro e cuoio, occhi a mezzaluna, via i capelli a stecchi.',
+        'La <b>pelliccia</b> e&rsquo; una sola, fusa col corpo. Stivali e bracciali di cuoio, non d&rsquo;acciaio.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
