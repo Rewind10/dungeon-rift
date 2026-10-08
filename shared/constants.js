@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.39.0',
+    VERSION: '2.40.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.39.0',
+      v: '2.40.0',
       righe: [
-        'Il <b>Barbaro</b> torna al corpo di sempre &mdash; ma animato: passo, stivali, respiro, tre tempi nel colpo.',
-        'Testa nuova: <b>elmo</b> di ferro e cuoio, occhi a mezzaluna, via i capelli a stecchi.',
-        'La <b>pelliccia</b> e&rsquo; una sola, fusa col corpo. Stivali e bracciali di cuoio, non d&rsquo;acciaio.',
+        'Il <b>Mago</b> e il <b>Warlock</b> adesso <b>lanciano</b>: hanno le mani, e il colpo ha tre tempi.',
+        'E camminano &mdash; lo strato di animazione del Barbaro adesso e&rsquo; di tutti e due.',
+        'Orlo luminoso tutto attorno, cuspide arricciata, rune a rombo, vuoto sotto il cappuccio.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)

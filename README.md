@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.39.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.40.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,26 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## ✨ v2.40.0 — il Mago lancia, e ha le mani
+
+Il mago impugnava il bastone con due maniche identiche che finivano nel vuoto, e quando lanciava si
+accendeva l'orbe mentre il braccio restava fermo a guardare. Adesso ci sono **le mani** — due,
+sfalsate, con l'asta che riappare sopra il pugno — e il lancio ha **tre tempi**: il bastone prima
+rientra e l'orbe si smorza, poi scatta avanti e divampa, poi si riassesta. Il **warlock** tende invece
+un braccio solo con la mano **aperta**: il sigillo gli sta sospeso sul palmo.
+
+**E camminano.** Lo strato di animazione del Barbaro è uscito da `_heroBarbaro` ed è diventato
+`_animaEroe`, condiviso: passo agganciato al terreno, stivali, saliscendi a due tempi, respiro da
+fermo. Il colpo no — quello il mago se lo fa da solo, perché per far *rientrare* un bastone serve una
+curva che vada sotto zero.
+
+Più sei dettagli presi dall'illustrazione: orlo luminoso tutto attorno, cuspide del cappello
+arricciata, rune a rombo, vuoto sotto il cappuccio del warlock, denti del mantello più aguzzi,
+filamenti con l'anima chiara. I paesani che usano questo corpo (erborista, Anziano, Arcanista) restano
+fermi e senza mani.
+
+---
 
 ## 🪓 v2.39.0 — il Barbaro torna al corpo di sempre, ma animato
 

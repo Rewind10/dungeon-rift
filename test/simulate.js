@@ -9820,8 +9820,10 @@ function testV238() {
     'la barra della vita resta della misura di sempre');
 
   // --- 5) IL GIRO SU SE' STESSO ---------------------------------------------------------------
-  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- v2.37 — LE ARMI DEL GUERRIERO'));
-  assert(B.length > 2000, 'il corpo del barbaro e tutto li (' + B.length + ' caratteri)');
+  // v2.40 — lo strato di animazione e' uscito da `_heroBarbaro` ed e' diventato `_animaEroe`,
+  // condiviso col mago. Le verifiche del movimento guardano li': e' dove il movimento vive adesso.
+  const B = src.slice(src.indexOf('_animaEroe(ctx, r, t, atk, eq, disegna, ritempo) {'), src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'));
+  assert(B.length > 2000, 'lo strato di animazione e tutto li (' + B.length + ' caratteri)');
   // a) girare e' camminare: senza questo, chi ruota sul posto non percorre niente e i piedi
   //    restano incollati — e' l'immobilita' che Paolo ha chiamato innaturale.
   assert(/S\.d \+= passo \+ giro \* r \* 0\.50;/.test(B), 'un giro vale un pezzo di falcata');
@@ -9866,21 +9868,106 @@ function testV238() {
 //   · *«infine le gambe marroni e non blu»*
 // Quello che questo test difende, oltre alle cinque, e' il confine: tutto cio' che cambia deve
 // toccare SOLO il barbaro. Paladino e maestro d'armi condividono la stessa impalcatura.
+// =============================================================================================
+// TEST 98 — v2.40: il mago e il warlock lanciano, e camminano
+// =============================================================================================
+// Paolo: *«non si potrebbe fare una piccola animazione per l'attacco? ad esempio il lancio della
+// bacchetta come il tipico mago. servirebbe disegnare le mani»*. Piu' i sei dettagli presi
+// dall'illustrazione che aveva fatto fare. Quello che il test difende, oltre alle novita', e' che
+// lo strato di animazione sia UNO SOLO: due copie sono due andature che fra tre versioni non
+// corrispondono piu', ed e' lo stesso errore per cui la v2.37 e' stata buttata.
+function testV240() {
+  console.log('\n[TEST 98] v2.40 — il mago e il warlock lanciano, e camminano');
+  const fs2 = require('fs'), path = require('path');
+  const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
+  const M = src.slice(src.indexOf('_heroMago(ctx, r, t, atk, eq) {'), src.indexOf("// v2.40 — LO STRATO DI ANIMAZIONE E' DI TUTTI"));
+  const MA = src.slice(src.indexOf('_heroMagoAnim(ctx, r, t, atk, eq) {'), src.indexOf('// ---- v2.37 — LE ARMI DEL GUERRIERO'));
+
+  // --- 1) LO STRATO DI ANIMAZIONE E' UNO SOLO ------------------------------------------------
+  assert(/_animaEroe\(ctx, r, t, atk, eq, disegna, ritempo\)/.test(src), 'lo strato di animazione e una funzione a parte');
+  assert((src.match(/this\._animaEroe\(/g) || []).length === 2,
+    'e la chiamano in due: il barbaro e il mago');
+  // la prova che non e' stato copiato: il passo esiste UNA volta sola in tutto il file
+  assert((src.match(/S\.d \+= passo \+ giro \* r \* 0\.50;/g) || []).length === 1,
+    'e il calcolo del passo e scritto una volta sola');
+  assert(/this\._heroMago\(c, rr, tt, re, e\), false\)/.test(MA),
+    'il mago entra nello strato, ma col suo colpo: la ri-temporizzazione e SPENTA');
+
+  // --- 2) PERCHE' SPENTA: il bastone deve RIENTRARE ------------------------------------------
+  // La curva dello strato non va mai sotto zero, quindi non puo' far arretrare niente. Quella del
+  // mago si', ed e' l'unico modo di avere l'anticipo del lancio.
+  assert(/col = -0\.26 \* Math\.sin/.test(M), 'in carica il bastone torna indietro (la curva va sotto zero)');
+  assert(/col = -0\.26 \+ 1\.26 \*/.test(M) && /col = 1 - u \* u/.test(M), 'poi lo stacco, poi la ricaduta');
+  assert(/const fl = Math\.max\(0, col\)/.test(M), 'e il divampare prende solo la parte in avanti');
+  assert(/const spinta = col \* r \* 0\.42/.test(M), 'il braccio si protende con la stessa curva');
+
+  // --- 3) LE MANI ----------------------------------------------------------------------------
+  assert(/const MANO_A = \{/.test(M) && /const MANO_B = \{/.test(M), 'ci sono due mani, non due maniche nel vuoto');
+  assert(/MANO_A\.x \+ spinta/.test(M) && /MANO_B\.x \+ spinta/.test(M), 'e le braccia ci arrivano davvero');
+  assert(M.indexOf('MANO_A') < M.indexOf('MANO_B'), 'sono sfalsate: una avanti e una dietro');
+  // il bastone passa DENTRO il pugno: senza, due ovali accanto a un asta sono due sassi
+  assert(/IL BASTONE PASSA DENTRO IL PUGNO/.test(M), 'e l asta riappare sopra il pugno');
+  // il warlock non impugna: tende UN braccio con la mano APERTA
+  assert(/if \(st\.arma === 'sigillo'\) \{   \/\/ il warlock tende UN braccio solo/.test(M),
+    'il warlock tende un braccio solo');
+  assert(/LA MANO APERTA sotto il sigillo/.test(M), 'con la mano aperta: il sigillo gli sta sospeso sul palmo');
+
+  // --- 4) I SEI DETTAGLI DALL ILLUSTRAZIONE --------------------------------------------------
+  assert(/L'ORLO GIRA TUTTO ATTORNO/.test(M), 'l orlo luminoso gira tutto attorno al mantello');
+  assert(/LA CUSPIDE SI ARRICCIA/.test(M), 'la cuspide del cappello si arriccia');
+  assert(/LE RUNE SONO GLIFI, NON PALLINI/.test(M), 'le rune sono rombi');
+  assert(/ctx\.fillStyle = st\.tentacoli \? '#07080c' : skin;/.test(M),
+    'sotto il cappuccio del warlock c e il vuoto, e il mago tiene la sua pelle');
+  assert(/\(i % 2\) \? 0\.66 : 1\.04/.test(M), 'i denti del mantello stracciato sono piu aguzzi');
+  assert(/\[\[0\.13, 0\.30, acc2\], \[0\.040, 0\.70, this\._shade\(acc2, 70\)\]\]/.test(M),
+    'e i filamenti hanno un anima chiara (due passate sullo stesso percorso)');
+  // il collare ad arco e' stato PROVATO E BUTTATO: il commento lo dice, e il codice non lo contiene
+  assert(/IL COLLARE — NON SI PUO' PRENDERE/.test(M), 'ed e scritto perche il collare ad arco non si poteva prendere');
+
+  // --- 5) I PAESANI NON CAMMINANO SUL POSTO --------------------------------------------------
+  // L'erborista, l'Anziano e l'Arcanista usano QUESTO corpo. Se passassero dallo strato, starebbero
+  // fermi dietro il banco muovendo i piedi — peggio di un paesano immobile.
+  assert(/else if \(corpo === 'mago'\) \{ if \(eq\.civile\) this\._heroMago\(ctx, r, t, a, eq\); else this\._heroMagoAnim\(ctx, r, t, a, eq\); \}/.test(src),
+    'il mago giocato passa dallo strato, il paesano no');
+  { const i = src.indexOf('_vendorBase: {'), riga = src.slice(i, i + 260);
+    assert(/herbalist:\s*'mago'/.test(riga) && /anziano:\s*'mago'/.test(riga) && /arcanist:\s*'mago'/.test(riga),
+      'e tre paesani usano davvero questa base'); }
+
+  // --- 6) LE ALTRE CLASSI NON SONO STATE TOCCATE ---------------------------------------------
+  assert(/_heroGuerriero\(ctx, r, t, atk, eq\)/.test(src) && /_heroLadro\(/.test(src), 'guerriero e ladro sono li');
+  { const i = src.indexOf('const STILE = {'), tab = src.slice(i, src.indexOf('const ITEM_BY_ID', i));
+    for (const k of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
+      assert(new RegExp('\\n\\s*' + k + ':\\s*\\{').test(tab), k + ' e ancora nella tabella degli stili');
+    const rigaMago = tab.slice(tab.indexOf('\n    mago:'), tab.indexOf('\n    warlock:'));
+    assert(/cappello: 'tesa'/.test(rigaMago) && !/stracciato/.test(rigaMago), 'il mago tiene la tesa e non e stracciato');
+    const rigaWar = tab.slice(tab.indexOf('\n    warlock:'));
+    assert(/stracciato: 1/.test(rigaWar) && /tentacoli: 1/.test(rigaWar), 'e il warlock i suoi brandelli e i filamenti'); }
+
+  // --- 7) IL DISEGNO RESTA CHIUSO ------------------------------------------------------------
+  for (const [nome, corpo] of [['il corpo del mago', M], ['lo strato condiviso', src.slice(src.indexOf('_animaEroe(ctx'), src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'))]])
+    assert(corpo.split('ctx.save()').length === corpo.split('ctx.restore()').length,
+      'save e restore sono in pari in ' + nome);
+
+  assert(C.NOVITA.v === C.VERSION, 'e il riquadro delle novita parla della versione giusta');
+  ok('lancio a tre tempi, mani, sei dettagli, strato condiviso e paesani fermi');
+}
+
 function testV239() {
   console.log('\n[TEST 97] v2.39 — il corpo di sempre animato, e la testa nuova del barbaro');
   const fs2 = require('fs'), path = require('path');
   const src = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'renderer.js'), 'utf8');
-  const B = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('// ---- v2.37 — LE ARMI DEL GUERRIERO'));
+  const B = src.slice(src.indexOf('_animaEroe(ctx, r, t, atk, eq, disegna, ritempo) {'), src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'));
+  const BAR = src.slice(src.indexOf('_heroBarbaro(ctx, r, t, atk, eq) {'), src.indexOf('_heroMagoAnim(ctx, r, t, atk, eq) {'));
   const G = src.slice(src.indexOf('_heroGuerriero(ctx, r, t, atk, eq) {'), src.indexOf('// ---- LADRO: cappuccio'));
 
   // --- 1) IL BARBARO NON HA PIU' UN DISEGNO SUO: HA UN INVOLUCRO ------------------------------
   // E' la differenza che conta. Un secondo disegno del barbaro vuol dire due corpi da tenere
   // allineati a ogni modifica, ed e' esattamente il motivo per cui la v2.37 e' stata buttata.
-  assert(/this\._heroGuerriero\(ctx, r, t, re, eq\);/.test(B),
+  assert(/this\._heroGuerriero\(c, rr, tt, re, e\)/.test(BAR),
     'il barbaro disegna il CORPO DEL GUERRIERO, non un corpo suo');
-  assert(B.length < 7000, 'e quello che resta e solo movimento (' + B.length + ' caratteri)');
+  assert(BAR.length < 1400, 'e di suo non gli resta niente: solo la chiamata (' + BAR.length + ' caratteri)');
   for (const sparito of ['la VESTE lunga', 'la PELLICCIA sulle spalle', 'GLI OCCHI A SEMICERCHIO'])
-    assert(!B.includes(sparito), 'il pezzo di disegno «' + sparito + '» non e rimasto nell involucro');
+    assert(!B.includes(sparito) && !BAR.includes(sparito), 'il pezzo di disegno «' + sparito + '» non e rimasto nell involucro');
 
   // --- 2) L ANIMAZIONE E TUTTA LI' -----------------------------------------------------------
   assert(/S\.d \+= passo \+ giro \* r \* 0\.50;/.test(B), 'il passo viene dalla distanza, e girare vale un pezzo di falcata');
@@ -9891,8 +9978,8 @@ function testV239() {
   // il colpo: si ri-temporizza il NUMERO, il disegno non sa niente di tre tempi
   assert(/re = 0\.06 \* u/.test(B) && /re = 0\.06 \+ 0\.64/.test(B) && /re = 0\.70 \+ 0\.30/.test(B),
     'il colpo ha tre tempi, ottenuti ri-temporizzando il numero passato al corpo');
-  assert(/this\._heroGuerriero\(ctx, r, t, re, eq\)/.test(B) && !/this\._heroGuerriero\(ctx, r, t, atk, eq\)/.test(B),
-    'e al corpo arriva il numero ri-temporizzato, non quello crudo');
+  assert(/disegna\(ctx, r, t, re, eq\);/.test(B), 'e al corpo arriva il numero ri-temporizzato, non quello crudo');
+  assert(/this\._heroGuerriero\(c, rr, tt, re, e\), true\);/.test(BAR), 'e per il guerriero la ri-temporizzazione e accesa');
 
   // --- 3) LA TESTA: le tre correzioni --------------------------------------------------------
   const T = G.slice(G.indexOf("if (st.testa === 'nuda') {"), G.indexOf("if (st.testa === 'elmoAperto') {"));
@@ -10101,6 +10188,6 @@ function testV235() {
   ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testV239(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testV239(); testV240(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

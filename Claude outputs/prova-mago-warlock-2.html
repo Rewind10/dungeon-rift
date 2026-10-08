@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mago e Warlock &mdash; prova</title>
+<style>
+  :root{--bg:#0e1118;--pan:#161a24;--bor:#2c3446;--txt:#ecf0f8;--gri:#96a0af;--oro:#ffcf4a;--ver:#8fd96a;--ros:#ff6b7f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:1400px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--gri);font-size:14px;margin:0 0 20px}
+  .cmd{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--pan);border:1px solid var(--bor);
+       border-radius:10px;padding:12px 14px;margin-bottom:18px;position:sticky;top:0;z-index:5}
+  button{background:#222a38;color:var(--txt);border:1px solid var(--bor);border-radius:7px;padding:7px 14px;
+         font:inherit;cursor:pointer}
+  button.on{background:var(--oro);color:#1a1305;border-color:var(--oro);font-weight:700}
+  label{color:var(--gri);font-size:13px;display:flex;align-items:center;gap:7px}
+  .duo{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+  .col{background:var(--pan);border:1px solid var(--bor);border-radius:10px;padding:14px}
+  .col h2{font-size:16px;margin:0 0 2px}
+  .col .n{color:var(--gri);font-size:12.5px;margin:0 0 12px;min-height:34px}
+  .pal{display:flex;gap:14px;align-items:center;justify-content:center;background:#0b0e14;
+       border-radius:8px;padding:12px 8px 8px}
+  .pal figure{margin:0;text-align:center}
+  .pal figcaption{color:var(--gri);font-size:11.5px;margin-top:6px}
+  canvas{display:block}
+  .note{background:var(--pan);border:1px solid var(--bor);border-radius:10px;padding:14px 18px;margin-top:18px}
+  .note h3{font-size:15px;margin:0 0 8px;color:var(--oro)}
+  .note li{margin:6px 0}
+  .note b{color:var(--ros)}
+  @media(max-width:1200px){.duo{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="wrap">
+
+<h1>Mago e Warlock &mdash; sette dettagli dall&rsquo;illustrazione</h1>
+<p class="sub">A sinistra di ogni coppia quello che hai in gioco oggi (v2.39), a destra lo <b>stesso disegno</b>
+con addosso sette dettagli presi dall'illustrazione. Non &egrave; stato ridisegnato niente da capo.
+Nessun file del gioco &egrave; stato toccato.</p>
+
+<div class="cmd">
+  <button data-s="fermo" class="on">Fermo</button>
+  <button data-s="gira">Gira su s&eacute;</button>
+  <button data-s="attacca">Lancia</button>
+  <label><input type="checkbox" id="griglia"> riquadro del corpo fisico</label>
+  <label><input type="checkbox" id="assi"> gli assi (rosso = dove guarda)</label>
+</div>
+
+<div class="duo">
+  <div class="col"><h2>Mago &mdash; in gioco</h2><p class="n">`_heroMago` della v2.39</p>
+    <div class="pal">
+      <figure><canvas id="a1" width="110" height="110"></canvas><figcaption>vera</figcaption></figure>
+      <figure><canvas id="a3" width="330" height="330"></canvas><figcaption>3&times;</figcaption></figure>
+    </div></div>
+  <div class="col" style="border-color:#6b5a1e"><h2 style="color:#ffcf4a">Mago &mdash; ritoccato</h2>
+    <p class="n">orlo che gira tutto, collare ad arco, cuspide arricciata, rune a rombo</p>
+    <div class="pal">
+      <figure><canvas id="b1" width="110" height="110"></canvas><figcaption>vera</figcaption></figure>
+      <figure><canvas id="b3" width="330" height="330"></canvas><figcaption>3&times;</figcaption></figure>
+    </div></div>
+  <div class="col"><h2>Warlock &mdash; in gioco</h2><p class="n">stesso corpo, con `stracciato` e `tentacoli`</p>
+    <div class="pal">
+      <figure><canvas id="c1" width="110" height="110"></canvas><figcaption>vera</figcaption></figure>
+      <figure><canvas id="c3" width="330" height="330"></canvas><figcaption>3&times;</figcaption></figure>
+    </div></div>
+  <div class="col" style="border-color:#6b5a1e"><h2 style="color:#ffcf4a">Warlock &mdash; ritoccato</h2>
+    <p class="n">vuoto sotto il cappuccio, denti piu&rsquo; aguzzi, filamenti con l&rsquo;anima chiara</p>
+    <div class="pal">
+      <figure><canvas id="d1" width="110" height="110"></canvas><figcaption>vera</figcaption></figure>
+      <figure><canvas id="d3" width="330" height="330"></canvas><figcaption>3&times;</figcaption></figure>
+    </div></div>
+</div>
+
+<div class="note" style="border-color:#6b5a1e"><h3>Il lancio, fotogramma per fotogramma</h3>
+<p style="margin:0 0 10px;color:#96a0af">Il colpo dura mezzo secondo e dal vivo si perde. Qui sono sette
+istanti dello stesso gesto: <b style="color:#8fd96a">carica</b> (il bastone rientra e l'orbe si smorza),
+<b style="color:#8fd96a">stacco</b> (scatta avanti e divampa), <b style="color:#8fd96a">ricaduta</b>.</p>
+<canvas id="strip" width="1750" height="640" style="width:100%;height:auto;background:#0b0e14;border-radius:8px"></canvas>
+</div>
+
+<div class="note"><h3>I sette dettagli, e da dove vengono</h3>
+<ol style="margin:0;padding-left:20px">
+<li><b style="color:#8fd96a">L'orlo gira tutto attorno</b>, non solo dietro. Nell'illustrazione il filo di luce
+corre lungo l'intero bordo: &egrave; quello che stacca la figura dal pavimento scuro, e a 56&nbsp;px si vede per primo.</li>
+<li><b style="color:#8fd96a">Il collare &egrave; un arco</b> col fermaglio tondo davanti. Era una barretta dritta in
+mezzo al torso, e dall'alto non si capiva cosa fosse.</li>
+<li><b style="color:#8fd96a">La cuspide del cappello si arriccia</b>, con una fascia chiara alla base. Era un cuneo
+dritto all'indietro e sembrava una coda.</li>
+<li><b style="color:#8fd96a">Le rune sono rombi</b>, non pallini: tre forme appuntite si distinguono anche a
+un'unghia, e dicono <i>magia</i> invece di <i>luce</i>.</li>
+<li><b style="color:#8fd96a">Sotto il cappuccio del warlock c'&egrave; il vuoto</b>, nero pieno, al posto del viso livido.
+Senza occhi accesi, che restano vietati.</li>
+<li><b style="color:#8fd96a">I denti del mantello stracciato sono pi&ugrave; lunghi e aguzzi</b> (0,66 contro 0,76).</li>
+<li><b style="color:#8fd96a">Ci sono LE MANI</b>, e il lancio ha tre tempi. Il mago impugna il bastone a
+due mani sfalsate &mdash; una avanti, una dietro &mdash; e l'asta riappare sopra il pugno, se no due ovali
+accanto a un bastone sono due sassi. Il warlock invece tende <b>un braccio solo</b>, con la mano
+<b>aperta</b>: il sigillo gli sta sospeso sul palmo, non lo stringe.</li>
+<li><b style="color:#8fd96a">I filamenti hanno un'anima quasi bianca</b>: due passate sullo stesso percorso, larga e
+tenue poi stretta e accesa. Da tre righe sbiadite a tre cose vive.</li>
+</ol>
+<p style="margin:10px 0 0;color:#96a0af">Quello che <b style="color:#96a0af">non</b> &egrave; stato preso: la tesa larga
+resta la tesa del gioco (nell'illustrazione &egrave; vista di tre quarti e dall'alto non si tradurrebbe), le spalline
+e le pieghe dipinte del mantello, e le proporzioni &mdash; l'illustrazione &egrave; alta, il gioco &egrave; zenitale.</p></div>
+
+</div>
+<script>
+const ATTUALE = {
+    _heroGuerriero(ctx, r, t, atk, eq) {
+      // v2.18 — tre classi su questa impalcatura. `ST` da' la base (tinta, testa, spalle, arma); la
+      // tinta dell'EQUIPAGGIAMENTO resta sopra, com'e' sempre stato dalla v1.88: un barbaro con
+      // un'armatura azzurra si vede azzurro, non marrone.
+      const st = (eq && eq._st) || {};
+      const _P = Object.assign({}, st, (eq && eq.pal) || {});
+      const DK = '#0a0c12', clothDk = _P.clothDk || '#243516', cloth = _P.cloth || '#3f5a2c', steelDk = _P.steelDk || '#3a424e';
+      // v1.82.2 — DALL'ALTO IL GUERRIERO E' QUASI TUTTO METALLO: elmo, piastra e spalline coprivano la
+      // sagoma e avevano tre grigi scritti a mano, quindi la tinta del vestito non si vedeva. Adesso i tre
+      // pezzi nascono da UN colore (`metallo`) e dalle sue schiariture: cambiarlo cambia l'armatura intera.
+      const met = _P.metallo || '#7f8895';
+      const metS = this._shade(met, -69), metM = this._shade(met, 46), metL = this._shade(met, 99);
+      const sway = Math.sin(t * 5) * 0.12;
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+      const armPlate = (y0, y1, x1) => {                                       // bracciali segmentati
+        ctx.strokeStyle = '#2c333d'; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.32;
+        ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1.6;
+        for (let k = 1; k <= 2; k++) { const u = k / 3; ctx.beginPath(); ctx.moveTo(x1 * u - r * 0.05, y0 + (y1 - y0) * u - r * 0.16); ctx.lineTo(x1 * u + r * 0.05, y0 + (y1 - y0) * u + r * 0.16); ctx.stroke(); }
+      };
+      armPlate(-r * 0.45, -r * 0.30, r * 0.62); armPlate(r * 0.45, r * 0.16, r * 0.70);
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      const gr = this._grad('h_torso|gue|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, clothDk); q.addColorStop(1, cloth); return q; });
+      ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
+      if (st.piastra === 0) {
+        // BARBARO: petto nudo e una cinghia di cuoio al posto del pettorale. E' la sua difesa che
+        // manca, e si deve vedere prima ancora di leggere i numeri.
+        ctx.fillStyle = _P.pelle || '#c08050'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        this._rr(ctx, -r * 0.30, -r * 0.30, r * 0.62, r * 0.60, r * 0.24); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#4a3520'; ctx.lineWidth = r * 0.10;
+        ctx.beginPath(); ctx.moveTo(-r * 0.34, r * 0.34); ctx.lineTo(r * 0.26, -r * 0.30); ctx.stroke();
+      } else {
+      const pg = this._grad('h_plate|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.3, r * 0.4); q.addColorStop(0, metS); q.addColorStop(0.5, met); q.addColorStop(1, '#c2c9d4'); return q; });
+      ctx.fillStyle = pg; this._rr(ctx, -r * 0.36, -r * 0.34, r * 0.74, r * 0.68, r * 0.26); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.30); ctx.lineTo(r * 0.24, -r * 0.24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.32, 0); ctx.lineTo(r * 0.28, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.30); ctx.lineTo(r * 0.24, r * 0.24); ctx.stroke();
+      // PALADINO: il tabarro chiaro col sole sul petto. E' l'unico segno che lo distingue a colpo
+      // d'occhio dal maestro d'armi, che porta la stessa piastra.
+      if (st.tabarro) {
+        ctx.fillStyle = st.tabarro; ctx.globalAlpha = 0.9; ctx.fillRect(-r * 0.34, -r * 0.10, r * 0.70, r * 0.20); ctx.globalAlpha = 1;
+        ctx.fillStyle = _P.orlo || '#e0b64a'; ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.11, 0, 7); ctx.fill();
+      }
+      }
+      const sp = this._grad('h_spall|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); q.addColorStop(0, this._shade(met, -95)); q.addColorStop(1, this._shade(met, -45)); return q; });
+      for (const sgy of [-1, 1]) {
+        if (st.spalle === 'pelliccia') {
+          // BARBARO: pelliccia invece degli spallacci. Il contorno e' volutamente frastagliato — un
+          // ellisse pulito, a questa scala, si legge come acciaio qualunque colore abbia.
+          ctx.fillStyle = _P.pelo || '#6a5a44'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < 9; i++) { const an = i / 8 * Math.PI * 2, rad = r * (0.27 + (i % 2 ? 0.06 : 0));
+            const X = -r * 0.14 + Math.cos(an) * rad * 1.05, Y = sgy * r * 0.62 + Math.sin(an) * rad * 0.78;
+            i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          continue;
+        }
+        ctx.fillStyle = sp; ctx.strokeStyle = DK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-r * 0.14, sgy * r * 0.60, r * 0.30, r * 0.21, sgy * 0.3, 0, 7); ctx.fill(); ctx.stroke();
+      }
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      // v1.75 — CIVILE: la stessa sagoma senza scudo e senza elmo. La usano i mercanti, che condividono
+      // il linguaggio degli eroi (spalle, corazza, mantello) ma non vanno in battaglia.
+      const _civ = !!(eq && eq.civile);
+      // ============================================================================================
+      // v2.19.5 — IL GUERRIERO IMPUGNA CIO' CHE HA IN MANO, non cio' che dice la sua classe
+      // ============================================================================================
+      // Fino alla v2.19.4 le armi di questa impalcatura venivano dallo STILE della classe: il barbaro
+      // aveva sempre l'ascia, il maestro sempre due spade, il paladino sempre lo scudo. Paolo ha trovato
+      // i due modi in cui questo si rompe:
+      //  · *«hai disegnato il barbaro con un'ascia, ma se equipaggia una spada e' un'incongruenza»*;
+      //  · il paladino che impugna un'arma a DUE MANI si toglie lo scudo — e il gioco si CONGELAVA.
+      //    Lo stile diceva `scudo: 1` («questa classe si disegna con lo scudo»), e `scudo` e' anche il
+      //    nome del COLORE che la tinta dello scudo impugnato ci scrive sopra. Senza scudo in mano, al
+      //    posto del colore restava il numero 1, `_shade(1)` lanciava a ogni fotogramma, e il ciclo di
+      //    disegno si fermava sull'ultima immagine buona: il villaggio fermo.
+      // Stessa radice: il disegno guardava la classe invece dell'equipaggiamento. Adesso guarda cosa c'e'
+      // nelle mani — `wp` (arma principale), `wx` (seconda arma), `sh` (scudo), mandati dal server —
+      // e lo disegna con UNA LAMA GENERICA, come Paolo ha chiesto (*«fallo piu' generico»*): non
+      // un'ascia, una spada o un maglio, ma «un'arma», che non contraddice nessun pezzo del listino.
+      // Cio' che la lama dice e' il PESO, che e' l'unica cosa che conta al colpo: la leggera e' corta e
+      // sottile, l'equilibrata e' la spada di mezzo, la pesante e' lunga e larga — e se e' a due mani
+      // la tengono tutte e due, davanti al corpo invece che di lato.
+      const _G = window.GAME && window.GAME.Gear, _H = window.GAME && window.GAME.Heroes;
+      const _pz = (id) => (_G && id && _G.BY_ID[id]) || null;
+      const arma1 = _civ ? null : _pz(eq && eq.wp), arma2 = _civ ? null : _pz(eq && eq.wx);
+      const scudoIt = _civ ? null : _pz(eq && eq.sh);
+      const mani = (_H && _H.maniDi && eq && eq._hid) ? _H.maniDi(eq._hid) : null;
+      const dueMani = !!(arma1 && _G && _G.aDueMani && _G.aDueMani(arma1, mani));
+      if (arma1) this._lamaGenerica(ctx, r, atk, arma1.carattere, dueMani ? 0 : 1, _P, DK);
+      if (arma2) this._lamaGenerica(ctx, r, atk, arma2.carattere, -1, _P, DK);
+      // lo scudo si disegna SE C'E', e per chiunque lo impugni — non solo per il paladino: la tabella
+      // lo concede anche al barbaro e al maestro d'armi, e finora loro lo portavano invisibile.
+      if (scudoIt) {
+      ctx.save(); ctx.translate(r * (0.30 + 0.22 * atk), -r * 0.14 + sway * 3);  // scudo: si protende nel colpo
+      // scudo a torre: copre di piu' (arco piu' ampio) ed e' piu' spesso. E' l'unico pezzo d'armatura che
+      // cambia la sagoma vista dall'alto, quindi vale la pena disegnarlo diverso.
+      // v1.88 — QUATTRO SCUDI, non piu' due. Piu' alto e' il rango, piu' l'arco e' AMPIO e la lastra
+      // spessa: e' l'unico pezzo d'armatura che cambia la sagoma vista dall'alto, ed e' anche il pezzo
+      // che nel gioco para davvero — la forma dice quanto copre, e la dice senza numeri.
+      const srk = (eq._rk && eq._rk.s) || 1;
+      // v2.19.5 — il colore si usa solo se E' un colore. Non si fida del nome della chiave: e' proprio
+      // un nome condiviso fra un'impostazione e un colore che ha congelato la partita.
+      const scCol = (typeof _P.scudo === 'string') ? _P.scudo : '#8d97a5', orlo = (typeof _P.orlo === 'string') ? _P.orlo : '#c8a23a';
+      const RS = r * (0.86 + 0.052 * (srk - 1)), TH = r * (0.26 + 0.052 * (srk - 1));
+      const A0 = -(1.15 + 0.145 * (srk - 1)), A1 = -A0;
+      const sgd = this._grad('h_scudo|' + r + '|' + srk + '|' + scCol, () => { const q = ctx.createLinearGradient(RS - TH, 0, RS + TH * 0.6, 0); q.addColorStop(0, this._shade(scCol, -78)); q.addColorStop(0.55, scCol); q.addColorStop(1, this._shade(scCol, 60)); return q; });
+      ctx.fillStyle = sgd; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2, A0, A1); ctx.arc(0, 0, RS - TH / 2, A1, A0, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = orlo; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, RS + TH / 2 - 2, A0 + 0.05, A1 - 0.05); ctx.stroke();
+      ctx.fillStyle = orlo; ctx.strokeStyle = DK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(RS, 0, r * (0.11 + 0.012 * (srk - 1)), 0, 7); ctx.fill(); ctx.stroke();
+      // i rivetti: uno in piu' per rango, distribuiti sull'arco. Contarli non serve — si legge la densita'.
+      ctx.fillStyle = '#e6ecf4';
+      ctx.beginPath();
+      for (let k = 0; k < srk + 1; k++) { const u = (k + 1) / (srk + 2), an = A0 + (A1 - A0) * u; ctx.arc(Math.cos(an) * RS, Math.sin(an) * RS, r * 0.05, 0, 7); }
+      ctx.fill();
+      if (srk >= 2) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, RS, A0 + 0.12, A1 - 0.12); ctx.stroke(); }
+      if (srk >= 4) {   // l'Aegis: una runa accesa lungo il bordo
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = this._rgba(orlo, 0.55 + 0.3 * Math.sin(t * 3)); ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(0, 0, RS - TH * 0.15, A0 + 0.2, A1 - 0.2); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+      }
+      if (_civ) {   // testa scoperta: capelli e la fetta di viso davanti, al posto dell'elmo
+        ctx.fillStyle = _P.pelo || '#4a3520'; ctx.strokeStyle = DK; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.44, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = _P.skin || '#c79b6a';
+        ctx.beginPath(); ctx.arc(r * 0.12, 0, r * 0.3, -1.25, 1.25); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.1, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.1, r * 0.045, 0, 7); ctx.fill();
+        return;
+      }
+      // v2.18 — TRE TESTE. Il barbaro e' a capo scoperto (criniera, codino, barba), il maestro d'armi
+      // ha l'elmo aperto col viso in vista e la sciarpa che svolazza, il paladino tiene l'elmo chiuso
+      // della v1.66. Una classe si riconosce dalla testa prima che dall'arma: e' la parte che sta
+      // sempre al centro della sagoma.
+      if (st.testa === 'nuda') {
+        const cri = _P.criniera || '#5a3a1e';
+        ctx.strokeStyle = cri; ctx.lineWidth = r * 0.10; ctx.lineCap = 'round';
+        for (let i = 0; i < 6; i++) { const an = 2.0 + i * 0.75;
+          ctx.beginPath(); ctx.moveTo(Math.cos(an) * r * 0.34, Math.sin(an) * r * 0.34);
+          ctx.lineTo(Math.cos(an) * r * (0.62 + 0.08 * Math.sin(t * 3 + i)), Math.sin(an) * r * (0.62 + 0.08 * Math.sin(t * 3 + i))); ctx.stroke(); }
+        ctx.lineCap = 'butt';
+        ctx.fillStyle = cri; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(-r * 0.44, 0, r * 0.15, 0, 7); ctx.fill(); ctx.stroke();      // codino
+        ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-r * 0.02, 0, r * 0.42, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(cri, -26);
+        ctx.beginPath(); ctx.arc(r * 0.09, 0, r * 0.33, -1.30, 1.30); ctx.closePath(); ctx.fill();   // barba
+        ctx.fillStyle = _P.pelle || '#c08050';
+        ctx.beginPath(); ctx.arc(r * 0.14, 0, r * 0.25, -1.15, 1.15); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(r * 0.26, -r * 0.09, r * 0.045, 0, 7); ctx.arc(r * 0.26, r * 0.09, r * 0.045, 0, 7); ctx.fill();
+        return;
+      }
+      if (st.testa === 'elmoAperto') {
+        ctx.fillStyle = _P.pelle || '#c79b6a'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.45, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(met, -30); ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.46, 1.05, -1.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.arc(r * 0.30, -r * 0.11, r * 0.05, 0, 7); ctx.arc(r * 0.30, r * 0.11, r * 0.05, 0, 7); ctx.fill();
+        if (st.fascia) {
+          ctx.fillStyle = st.fascia; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-r * 0.20, -r * 0.26); ctx.quadraticCurveTo(-r * 0.80, -r * (0.36 + sway), -r * 0.94, -r * 0.02);
+          ctx.quadraticCurveTo(-r * 0.74, r * 0.16, -r * 0.20, r * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        return;
+      }
+      const hg = this._grad('h_elmo|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.5, -r * 0.4, r * 0.4, r * 0.4); q.addColorStop(0, this._shade(met, -17)); q.addColorStop(0.5, metM); q.addColorStop(1, '#e2e7ee'); return q; });
+      ctx.fillStyle = hg; ctx.strokeStyle = DK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.46, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#0b0e13'; this._rr(ctx, r * 0.16, -r * 0.22, r * 0.30, r * 0.44, 3); ctx.fill();   // feritoia
+      ctx.fillStyle = '#0b0e13'; this._rr(ctx, -r * 0.02, -r * 0.06, r * 0.34, r * 0.12, 2); ctx.fill();
+      ctx.fillStyle = st.cresta || steelDk; ctx.strokeStyle = DK; ctx.lineWidth = 2;                       // cresta corta
+      ctx.beginPath(); ctx.moveTo(-r * 0.16, -r * 0.10); ctx.quadraticCurveTo(-r * 0.62, -r * 0.06 + sway * r * 0.4, -r * 0.78, 0);
+      ctx.quadraticCurveTo(-r * 0.62, r * 0.06 + sway * r * 0.4, -r * 0.16, r * 0.10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    },
+    // ---- LADRO: cappuccio, mantellina corta, faretra, e l'arco disegnato di LATO — la curva ")" corre
+    // lungo il fianco, non davanti: di fronte sarebbe uno scudo, non un arco.,
+    _boot(ctx, x, y, r) { this._rr(ctx, x - r * 0.17, y - r * 0.17, r * 0.34, r * 0.34, 3); ctx.fill(); ctx.stroke(); },
+    _lamaGenerica(ctx, r, atk, carattere, lato, P, DK) {
+      const F = carattere === 'pesante' ? { L: 1.22, W: 0.105, G: 0.34, M: 0.30 }
+              : carattere === 'leggera' ? { L: 0.80, W: 0.055, G: 0.20, M: 0.20 }
+              :                           { L: 0.98, W: 0.075, G: 0.26, M: 0.24 };
+      const y = lato === 0 ? r * 0.06 : lato * r * 0.44;
+      const rot = lato === 0 ? (-0.10 + atk * 0.20) : lato * (0.30 - atk * 0.28);
+      ctx.save(); ctx.translate(r * (0.42 + 0.26 * atk), y); ctx.rotate(rot);
+      // l'impugnatura: piu' lunga se la tengono due mani
+      ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = r * 0.09; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-r * F.M, 0); ctx.lineTo(r * 0.02, 0); ctx.stroke(); ctx.lineCap = 'butt';
+      // la guardia
+      ctx.fillStyle = (P && P.orlo) || '#c8a23a'; ctx.strokeStyle = DK; ctx.lineWidth = 1.4;
+      ctx.fillRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G); ctx.strokeRect(r * 0.00, -r * F.G / 2, r * 0.055, r * F.G);
+      // la lama, con la punta
+      ctx.fillStyle = '#dfe5ee'; ctx.strokeStyle = DK; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(r * 0.06, -r * F.W); ctx.lineTo(r * (F.L - 0.10), -r * F.W * 0.55); ctx.lineTo(r * F.L, 0);
+      ctx.lineTo(r * (F.L - 0.10), r * F.W * 0.55); ctx.lineTo(r * 0.06, r * F.W); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // la sguscia: una riga scura lungo il mezzo, che la fa leggere come lama anche piccola
+      ctx.strokeStyle = 'rgba(40,48,60,.45)'; ctx.lineWidth = Math.max(1, r * 0.022);
+      ctx.beginPath(); ctx.moveTo(r * 0.10, 0); ctx.lineTo(r * (F.L - 0.16), 0); ctx.stroke();
+      ctx.restore();
+    },
+    _grad(key, make) {
+      const c = this._gcache || (this._gcache = new Map());
+      let g = c.get(key);
+      if (g === undefined) { g = make(); if (c.size > 512) c.clear(); c.set(key, g); }
+      return g;
+    },
+    _shade(hex, amt) { const n = parseInt(hex.slice(1), 16); let R = (n >> 16) + amt, G = ((n >> 8) & 255) + amt, B = (n & 255) + amt; R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B)); return 'rgb(' + R + ',' + G + ',' + B + ')'; },
+    _rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; },
+    _rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+};
+const STILE_BARBARO = { corpo: 'guerriero', testa: 'nuda',       spalle: 'pelliccia', arma: 'ascia',      piastra: 0, criniera: '#5a3a1e', pelo: '#6a5a44', pelle: '#c08050', metallo: '#8a7a63', cloth: '#6b4a2a', clothDk: '#3a2716', orlo: '#d8a33a' };
+
+// `_heroMago` estratto riga per riga da public/js/renderer.js (v2.39): e' il corpo che mago e
+// warlock hanno oggi in gioco. I metodi di servizio (_grad, _shade, _rgba, _rr, _boot) arrivano
+// da ATTUALE, che e' lo stesso oggetto estratto per la prova del barbaro.
+const GIOCO_MW = Object.assign(Object.create(ATTUALE), {
+    _heroMago(ctx, r, t, atk, eq) {
+      const st = (eq && eq._st) || {};
+      const _P = Object.assign({}, st, (eq && eq.pal) || {});
+      const DK = '#0a0c12', body = _P.body || '#16181f', bodyDk = _P.bodyDk || '#05060a', accent = _P.accent || '#00f0c8', skin = _P.skin || '#d8d2c8';
+      const sway = Math.sin(t * 5) * 0.12, sw2 = Math.sin(t * 5 + 0.8) * 0.10;
+      ctx.lineJoin = 'round';
+      const mg = this._grad('h_mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 1.6, -r * 0.6, r * 0.4, r * 0.6); q.addColorStop(0, _P.body || '#20252f'); q.addColorStop(0.55, _P.bodyDk || '#161a22'); q.addColorStop(1, '#0d1016'); return q; });
+      ctx.fillStyle = mg; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.30, -r * 0.34);
+      ctx.quadraticCurveTo(r * 0.02, -r * 1.02, -r * 0.72, -r * 1.16);
+      if (st.stracciato) {
+        // WARLOCK: l'orlo a brandelli. Punte alterne lungo il dietro del mantello, con un respiro
+        // lento: e' la sola differenza di SAGOMA fra lui e il mago, ed e' quella che si legge da sopra.
+        const N = 11, A0 = -1.92, A1 = -2 * Math.PI + 1.92;
+        for (let i = 0; i <= N; i++) {
+          const u = i / N, an = A0 + (A1 - A0) * u;
+          const f = (i % 2) ? 0.76 : 1.0 + 0.05 * Math.sin(t * 2.2 + i);
+          ctx.lineTo(-r * 0.30 + Math.cos(an) * r * 1.50 * f, Math.sin(an) * r * 1.22 * f);
+        }
+      } else {
+        ctx.quadraticCurveTo(-r * 1.62, -r * 1.08, -r * 1.78, -r * (0.30 + sway));
+        ctx.quadraticCurveTo(-r * 1.86, 0, -r * 1.78, r * (0.30 + sw2));
+        ctx.quadraticCurveTo(-r * 1.62, r * 1.08, -r * 0.72, r * 1.16);
+      }
+      ctx.quadraticCurveTo(r * 0.02, r * 1.02, r * 0.30, r * 0.34);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = _P.orlo || 'rgba(0,240,200,.75)'; ctx.lineWidth = 2.2;   // l'accento resta SOLO sull'orlo
+      ctx.beginPath(); ctx.moveTo(-r * 0.72, -r * 1.16);
+      ctx.quadraticCurveTo(-r * 1.62, -r * 1.08, -r * 1.78, -r * (0.30 + sway));
+      ctx.quadraticCurveTo(-r * 1.86, 0, -r * 1.78, r * (0.30 + sw2));
+      ctx.quadraticCurveTo(-r * 1.62, r * 1.08, -r * 0.72, r * 1.16); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 2;         // due pieghe verso l'orlo
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.70); ctx.quadraticCurveTo(-r * 1.00, -r * 0.80, -r * 1.42, -r * 0.46); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.70); ctx.quadraticCurveTo(-r * 1.00, r * 0.80, -r * 1.42, r * 0.46); ctx.stroke();
+      ctx.fillStyle = '#0a0b10'; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+      ctx.strokeStyle = body; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.34;
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 0.7, -r * 0.14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, r * 0.45); ctx.lineTo(r * 0.7, r * 0.14); ctx.stroke();
+      ctx.lineCap = 'butt'; ctx.lineWidth = 2; ctx.strokeStyle = DK;
+      const gr = this._grad('h_torso|mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, bodyDk); q.addColorStop(1, body); return q; });
+      ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.75; ctx.fillRect(-r * 0.5, -r * 0.06, r * 0.9, r * 0.12); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#0a0b10'; ctx.strokeStyle = accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(-r * 0.30, 0, r * 0.16, 0, 7); ctx.fill(); ctx.stroke();
+      const _civM = !!(eq && eq.civile);   // v1.75 — il civile non impugna nulla
+      if (!_civM && st.arma === 'sigillo') {
+        // WARLOCK: niente bastone. Un sigillo che ruota sospeso davanti al palmo, e divampa quando
+        // lancia. Riusa gli stessi due strati dell'orbe (cerchio piu' alone), quindi non costa nulla.
+        ctx.save(); ctx.translate(r * 1.35, 0); ctx.rotate(t * 0.8);
+        ctx.globalCompositeOperation = 'lighter';
+        const acc = _P.accent || '#c06bff';
+        ctx.strokeStyle = this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0.55 + 0.35 * atk); ctx.lineWidth = 2.2;
+        const R2 = r * (0.46 + 0.10 * atk);
+        ctx.beginPath(); ctx.arc(0, 0, R2, 0, 7); ctx.stroke();
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) { const a1 = i * 2.513, b1 = ((i + 2) % 5) * 2.513;
+          ctx.moveTo(Math.cos(a1) * R2, Math.sin(a1) * R2); ctx.lineTo(Math.cos(b1) * R2, Math.sin(b1) * R2); }
+        ctx.stroke();
+        const sg = this._grad('h_sig|' + r + '|' + acc, () => { const q = ctx.createRadialGradient(0, 0, 1, 0, 0, r * 0.55); q.addColorStop(0, 'rgba(255,255,255,.85)'); q.addColorStop(0.35, this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0.7)); q.addColorStop(1, this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0)); return q; });
+        ctx.globalAlpha = 0.7 + 0.3 * atk; ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.fill();
+        ctx.restore();
+      } else if (!_civM) {
+      ctx.fillStyle = '#2a1d10'; ctx.strokeStyle = DK; ctx.lineWidth = 1.5;   // bastone
+      this._rr(ctx, r * 0.45, -r * 0.06, r * 1.05, r * 0.12, 2); ctx.fill(); ctx.stroke();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // orbe: divampa quando lancia
+      // v1.88 — un orbe per bacchetta: colore e grandezza dicono che arma hai in mano.
+      const orb = { mag_scettro: ['163,140,255', 0.62], mag_bastone: ['127,251,228', 0.76], mag_stelle: ['255,217,255', 0.92] }[eq && eq.wp] || ['0,240,200', 0.50];
+      const og = this._grad('h_orb|' + r + '|' + orb[0], () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * orb[1]); q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.28, 'rgba(' + orb[0] + ',.85)'); q.addColorStop(1, 'rgba(' + orb[0] + ',0)'); return q; });
+      ctx.globalAlpha = 0.75 + 0.25 * atk; ctx.fillStyle = og; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * (orb[1] + 0.34 * atk), 0, 7); ctx.fill(); ctx.restore();
+      }
+      ctx.fillStyle = skin; ctx.strokeStyle = DK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.5, 0, 7); ctx.fill(); ctx.stroke();
+      // v2.18 — IL CAPPELLO A TESA LARGA del mago: un disco sotto la punta. Dall'alto e' la sagoma che
+      // lo rende riconoscibile a colpo d'occhio, ed e' l'unica cosa che lo distingue dal warlock, che
+      // tiene il cappuccio a punta di sempre.
+      if (st.cappello === 'tesa') {
+        ctx.fillStyle = _P.capp || '#1b2445'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(-r * 0.05, 0, r * 0.86, r * 0.74, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(_P.capp || '#1b2445', 22);
+      } else ctx.fillStyle = _P.capp || '#0c0d12';
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;     // cappuccio a punta
+      ctx.beginPath(); ctx.moveTo(r * 0.16, -r * 0.46); ctx.quadraticCurveTo(-r * 0.55, -r * 0.52, -r * 1.06, -r * 0.10);
+      ctx.quadraticCurveTo(-r * 1.12, 0, -r * 1.06, r * 0.10);
+      ctx.quadraticCurveTo(-r * 0.55, r * 0.52, r * 0.16, r * 0.46); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = accent; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.42, -2.0, 2.0); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#05060a'; ctx.fillRect(r * 0.22, -r * 0.30, r * 0.16, r * 0.60);
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.55; ctx.fillRect(r * 0.30, -r * 0.24, r * 0.04, r * 0.48); ctx.globalAlpha = 1;
+      if (st.rune !== 0) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // rune orbitanti
+        for (let i = 0; i < 3; i++) { const ang = t * (1.1 + i * 0.35) + i * 2.1; ctx.fillStyle = this._rgba((accent && accent.charAt(0) === '#') ? accent : '#00f0c8', 0.5); ctx.beginPath(); ctx.arc(Math.cos(ang) * r * 1.05, Math.sin(ang) * r * 0.95, r * 0.07, 0, 7); ctx.fill(); }
+        ctx.restore();
+      }
+      // WARLOCK: tre filamenti che strisciano dietro. Non gli sono stati messi gli OCCHI accesi sotto
+      // il cappuccio — c'erano nella prima bozza e Paolo li ha fatti togliere. Non vanno rimessi.
+      if (st.tentacoli) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
+        const acc2 = (accent && accent.charAt(0) === '#') ? accent : '#c06bff';
+        ctx.strokeStyle = this._rgba(acc2, 0.5); ctx.lineWidth = r * 0.09; ctx.lineCap = 'round';
+        for (let i = -1; i <= 1; i++) {
+          const an = Math.PI + i * 0.42 + Math.sin(t * 1.6 + i) * 0.10;
+          ctx.beginPath(); ctx.moveTo(Math.cos(an) * r * 0.9, Math.sin(an) * r * 0.75);
+          ctx.quadraticCurveTo(Math.cos(an) * r * 1.5, Math.sin(an) * r * 1.10 + r * 0.22 * Math.sin(t * 2 + i), Math.cos(an) * r * 2.0, Math.sin(an) * r * 1.30);
+          ctx.stroke();
+        }
+        ctx.restore(); ctx.lineCap = 'butt';
+      }
+    },
+});
+
+// Il mago e il warlock del gioco, con addosso sette dettagli presi dall'illustrazione.
+// Il disegno NON e' stato rifatto: sono modifiche puntuali a quello che c'e' gia'.
+const RIFATTO_MW = Object.assign(Object.create(ATTUALE), {
+    _heroMago(ctx, r, t, atk, eq) {
+      const st = (eq && eq._st) || {};
+      const _P = Object.assign({}, st, (eq && eq.pal) || {});
+      const DK = '#0a0c12', body = _P.body || '#16181f', bodyDk = _P.bodyDk || '#05060a', accent = _P.accent || '#00f0c8', skin = _P.skin || '#d8d2c8';
+      const sway = Math.sin(t * 5) * 0.12, sw2 = Math.sin(t * 5 + 0.8) * 0.10;
+      // ===== IL LANCIO HA TRE TEMPI ============================================================
+      // Un `sin(atk * PI)` fa andare e tornare il bastone alla stessa velocita', e un gesto che va e
+      // torna uguale non ha peso. Qui: il bastone prima RIENTRA (carica), poi scatta avanti in un
+      // quinto del tempo (stacco), poi si riassesta (ricaduta). `col` vale -0,26 nel punto piu'
+      // arretrato, +1 alla fine dello stacco, e torna a zero. E' la stessa curva del barbaro: se un
+      // giorno si cambia il tempismo del gioco, si cambia in due posti con gli stessi numeri.
+      const aM = Math.max(0, Math.min(1, atk || 0));
+      let col = 0;
+      if (aM > 0) {
+        if (aM < 0.30) col = -0.26 * Math.sin((aM / 0.30) * Math.PI / 2);
+        else if (aM < 0.50) { const u = (aM - 0.30) / 0.20; col = -0.26 + 1.26 * (u * u * (3 - 2 * u)); }
+        else { const u = (aM - 0.50) / 0.50; col = 1 - u * u; }
+      }
+      const fl = Math.max(0, col);              // quanto divampa: solo in avanti, mai in carica
+      const spinta = col * r * 0.42;            // di quanto si protende il braccio
+      const respiroB = Math.sin(t * 1.6) * r * 0.012;   // da fermo il bastone non e' una statua
+      ctx.lineJoin = 'round';
+      const mg = this._grad('h_mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 1.6, -r * 0.6, r * 0.4, r * 0.6); q.addColorStop(0, _P.body || '#20252f'); q.addColorStop(0.55, _P.bodyDk || '#161a22'); q.addColorStop(1, '#0d1016'); return q; });
+      ctx.fillStyle = mg; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.30, -r * 0.34);
+      ctx.quadraticCurveTo(r * 0.02, -r * 1.02, -r * 0.72, -r * 1.16);
+      if (st.stracciato) {
+        // WARLOCK: l'orlo a brandelli. Punte alterne lungo il dietro del mantello, con un respiro
+        // lento: e' la sola differenza di SAGOMA fra lui e il mago, ed e' quella che si legge da sopra.
+        const N = 11, A0 = -1.92, A1 = -2 * Math.PI + 1.92;
+        for (let i = 0; i <= N; i++) {
+          const u = i / N, an = A0 + (A1 - A0) * u;
+          const f = (i % 2) ? 0.66 : 1.04 + 0.05 * Math.sin(t * 2.2 + i);   // [6] denti piu' lunghi e aguzzi
+          ctx.lineTo(-r * 0.30 + Math.cos(an) * r * 1.50 * f, Math.sin(an) * r * 1.22 * f);
+        }
+      } else {
+        ctx.quadraticCurveTo(-r * 1.62, -r * 1.08, -r * 1.78, -r * (0.30 + sway));
+        ctx.quadraticCurveTo(-r * 1.86, 0, -r * 1.78, r * (0.30 + sw2));
+        ctx.quadraticCurveTo(-r * 1.62, r * 1.08, -r * 0.72, r * 1.16);
+      }
+      ctx.quadraticCurveTo(r * 0.02, r * 1.02, r * 0.30, r * 0.34);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // [1] L'ORLO GIRA TUTTO ATTORNO. Nell'illustrazione il filo di luce corre lungo l'intero bordo
+      // del mantello, non solo dietro: e' quello che stacca la figura dal pavimento scuro, ed e' la
+      // cosa che a 56 px si vede per prima. Due passate: una tenue su tutto il perimetro, una piena
+      // sul dietro, dove il mantello e' piu' largo.
+      ctx.save(); ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = _P.orlo || 'rgba(0,240,200,.75)'; ctx.lineWidth = r * 0.075; ctx.lineJoin = 'round';
+      ctx.stroke();                                  // ristrascina il percorso del mantello, ancora aperto
+      ctx.restore();
+      ctx.strokeStyle = _P.orlo || 'rgba(0,240,200,.75)'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(-r * 0.72, -r * 1.16);
+      ctx.quadraticCurveTo(-r * 1.62, -r * 1.08, -r * 1.78, -r * (0.30 + sway));
+      ctx.quadraticCurveTo(-r * 1.86, 0, -r * 1.78, r * (0.30 + sw2));
+      ctx.quadraticCurveTo(-r * 1.62, r * 1.08, -r * 0.72, r * 1.16); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 2;         // due pieghe verso l'orlo
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.70); ctx.quadraticCurveTo(-r * 1.00, -r * 0.80, -r * 1.42, -r * 0.46); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.30, r * 0.70); ctx.quadraticCurveTo(-r * 1.00, r * 0.80, -r * 1.42, r * 0.46); ctx.stroke();
+      ctx.fillStyle = '#0a0b10'; ctx.strokeStyle = DK; ctx.lineWidth = 2; this._boot(ctx, -r * 0.5, -r * 0.34, r); this._boot(ctx, -r * 0.5, r * 0.34, r);
+      // LE DUE BRACCIA NON SONO PIU' SIMMETRICHE: impugnano il bastone a DUE MANI, sfalsate — una
+      // avanti e una indietro, come chiunque tenga un bastone. Due maniche identiche che finiscono
+      // nel vuoto erano il motivo per cui il gesto non si capiva.
+      const MANO_A = { x: r * 1.00, y: -r * 0.10 };    // mano avanti
+      const MANO_B = { x: r * 0.64, y:  r * 0.13 };    // mano dietro
+      ctx.strokeStyle = body; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.34;
+      if (st.arma === 'sigillo') {   // il warlock tende UN braccio solo, quello del sigillo
+        ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 1.00 + spinta, respiroB); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, r * 0.45); ctx.lineTo(r * 0.46, r * 0.30 + respiroB); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(MANO_A.x + spinta, MANO_A.y + respiroB); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, r * 0.45); ctx.lineTo(MANO_B.x + spinta, MANO_B.y + respiroB); ctx.stroke();
+      }
+      ctx.lineCap = 'butt'; ctx.lineWidth = 2; ctx.strokeStyle = DK;
+      const gr = this._grad('h_torso|mag|' + r + '|' + (eq._pk || ''), () => { const q = ctx.createLinearGradient(-r * 0.6, 0, r * 0.4, 0); q.addColorStop(0, bodyDk); q.addColorStop(1, body); return q; });
+      ctx.fillStyle = gr; this._rr(ctx, -r * 0.65, -r * 0.55, r * 1.15, r * 1.1, r * 0.4); ctx.fill(); ctx.stroke();
+      // [2] IL COLLARE — NON SI PUO' PRENDERE, e vale la pena scriverlo. Nell'illustrazione e' un arco
+      // di luce attorno al collo col fermaglio davanti, bellissimo di tre quarti; provato dall'alto,
+      // sul mago sparisce sotto la tesa e sul warlock diventa un'aureola attorno alla testa. E' un
+      // dettaglio che vive nel punto di vista dell'illustrazione e muore in questo. Resta la fascia
+      // sul petto di sempre, col fermaglio reso piu' acceso: quello si legge.
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.75; ctx.fillRect(-r * 0.5, -r * 0.06, r * 0.9, r * 0.12); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#0a0b10'; ctx.strokeStyle = accent; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(-r * 0.30, 0, r * 0.17, 0, 7); ctx.fill(); ctx.stroke();
+      const _civM = !!(eq && eq.civile);   // v1.75 — il civile non impugna nulla
+      if (!_civM && st.arma === 'sigillo') {
+        // WARLOCK: niente bastone. Un sigillo che ruota sospeso davanti al palmo, e divampa quando
+        // lancia. Riusa gli stessi due strati dell'orbe (cerchio piu' alone), quindi non costa nulla.
+        ctx.save(); ctx.translate(r * 1.35 + spinta * 1.5, respiroB); ctx.rotate(t * 0.8);
+        ctx.globalCompositeOperation = 'lighter';
+        const acc = _P.accent || '#c06bff';
+        ctx.strokeStyle = this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0.55 + 0.35 * fl); ctx.lineWidth = 2.2;
+        const R2 = r * (0.46 + 0.14 * fl);
+        ctx.beginPath(); ctx.arc(0, 0, R2, 0, 7); ctx.stroke();
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) { const a1 = i * 2.513, b1 = ((i + 2) % 5) * 2.513;
+          ctx.moveTo(Math.cos(a1) * R2, Math.sin(a1) * R2); ctx.lineTo(Math.cos(b1) * R2, Math.sin(b1) * R2); }
+        ctx.stroke();
+        const sg = this._grad('h_sig|' + r + '|' + acc, () => { const q = ctx.createRadialGradient(0, 0, 1, 0, 0, r * 0.55); q.addColorStop(0, 'rgba(255,255,255,.85)'); q.addColorStop(0.35, this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0.7)); q.addColorStop(1, this._rgba(acc.charAt(0) === '#' ? acc : '#c06bff', 0)); return q; });
+        ctx.globalAlpha = 0.7 + 0.3 * fl; ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.fill();
+        ctx.restore();
+        // LA MANO APERTA sotto il sigillo. Il warlock non impugna niente: il sigillo sta sospeso sul
+        // palmo, quindi la mano va disegnata APERTA e piatta — se la chiudi sembra che lo stringa.
+        { const mx = r * 1.02 + spinta;
+          ctx.save(); ctx.translate(mx, respiroB); ctx.rotate(-0.18);
+          ctx.fillStyle = skin; ctx.strokeStyle = DK; ctx.lineWidth = Math.max(1.2, r * 0.055);
+          ctx.beginPath(); ctx.ellipse(0, 0, r * 0.155, r * 0.115, 0, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = this._shade(skin, -40); ctx.lineWidth = Math.max(1, r * 0.028); ctx.lineCap = 'round';
+          for (const d of [-0.055, 0, 0.055]) {        // tre dita, lette come una mano aperta
+            ctx.beginPath(); ctx.moveTo(r * 0.02, d * r); ctx.lineTo(r * 0.13, d * r * 1.5); ctx.stroke(); }
+          ctx.restore(); }
+      } else if (!_civM) {
+      // IL BASTONE E LE MANI stanno in un gruppo solo, che si protende col colpo e ruota un soffio
+      // attorno alla mano di dietro: cosi' la punta corre piu' del pugno, che e' come si muove un
+      // bastone vero. Senza questo, l'orbe divampava e il braccio restava fermo a guardare.
+      ctx.save();
+      ctx.translate(spinta, respiroB);
+      ctx.translate(MANO_B.x, 0); ctx.rotate(col * 0.085); ctx.translate(-MANO_B.x, 0);
+      ctx.fillStyle = '#2a1d10'; ctx.strokeStyle = DK; ctx.lineWidth = 1.5;   // bastone
+      this._rr(ctx, r * 0.45, -r * 0.06, r * 1.05, r * 0.12, 2); ctx.fill(); ctx.stroke();
+      // LE MANI: due, sfalsate, con le nocche in vista. Sono piccole ma sono la cosa che trasforma
+      // «un bastone appoggiato davanti» in «un bastone impugnato».
+      const mano = (mx, my, rot) => {
+        ctx.save(); ctx.translate(mx, my); ctx.rotate(rot);
+        ctx.fillStyle = skin; ctx.strokeStyle = DK; ctx.lineWidth = Math.max(1.2, r * 0.055);
+        ctx.beginPath(); ctx.ellipse(0, 0, r * 0.125, r * 0.098, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(skin, -40);        // il pollice, che chiude la presa
+        ctx.beginPath(); ctx.ellipse(r * 0.045, -r * 0.028, r * 0.055, r * 0.032, -0.5, 0, 7); ctx.fill();
+        ctx.restore();
+      };
+      mano(MANO_A.x, MANO_A.y, -0.22);
+      mano(MANO_B.x, MANO_B.y, 0.26);
+      // IL BASTONE PASSA DENTRO IL PUGNO. Due ovali accanto a un'asta sono due sassi; un'asta che
+      // riappare SOPRA il pugno e' un'asta impugnata. E' un segmento scuro, largo come il bastone.
+      ctx.strokeStyle = '#2a1d10'; ctx.lineCap = 'butt'; ctx.lineWidth = r * 0.085;
+      for (const M of [MANO_A, MANO_B]) {
+        ctx.beginPath(); ctx.moveTo(M.x - r * 0.10, 0); ctx.lineTo(M.x + r * 0.10, 0); ctx.stroke();
+      }
+      ctx.lineCap = 'round';
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // orbe: divampa quando lancia
+      // v1.88 — un orbe per bacchetta: colore e grandezza dicono che arma hai in mano.
+      const orb = { mag_scettro: ['163,140,255', 0.62], mag_bastone: ['127,251,228', 0.76], mag_stelle: ['255,217,255', 0.92] }[eq && eq.wp] || ['0,240,200', 0.50];
+      const og = this._grad('h_orb|' + r + '|' + orb[0], () => { const q = ctx.createRadialGradient(r * 1.62, 0, 1, r * 1.62, 0, r * orb[1]); q.addColorStop(0, 'rgba(255,255,255,.95)'); q.addColorStop(0.28, 'rgba(' + orb[0] + ',.85)'); q.addColorStop(1, 'rgba(' + orb[0] + ',0)'); return q; });
+      // in CARICA l'orbe si smorza e rientra, allo STACCO divampa: e' l'anticipo, ed e' quello che fa
+      // sembrare che il colpo parta da lui invece di comparire.
+      ctx.globalAlpha = 0.75 + 0.25 * fl + 0.30 * Math.min(0, col);
+      ctx.fillStyle = og; ctx.beginPath(); ctx.arc(r * 1.62, 0, r * (orb[1] + 0.40 * fl + 0.22 * Math.min(0, col)), 0, 7); ctx.fill(); ctx.restore();
+      ctx.restore();   // fine del gruppo bastone+mani
+      }
+      // [3] SOTTO IL CAPPUCCIO DEL WARLOCK NON C'E' UN VISO: C'E' IL VUOTO. Nell'illustrazione
+      // l'apertura e' nera piena, e funziona meglio di una faccia livida — senza aggiungere occhi
+      // accesi, che restano vietati. Il mago tiene la sua pelle.
+      ctx.fillStyle = st.tentacoli ? '#07080c' : skin;
+      ctx.strokeStyle = DK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.5, 0, 7); ctx.fill(); ctx.stroke();
+      // v2.18 — IL CAPPELLO A TESA LARGA del mago: un disco sotto la punta. Dall'alto e' la sagoma che
+      // lo rende riconoscibile a colpo d'occhio, ed e' l'unica cosa che lo distingue dal warlock, che
+      // tiene il cappuccio a punta di sempre.
+      if (st.cappello === 'tesa') {
+        ctx.fillStyle = _P.capp || '#1b2445'; ctx.strokeStyle = DK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(-r * 0.05, 0, r * 0.86, r * 0.74, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this._shade(_P.capp || '#1b2445', 22);
+      } else ctx.fillStyle = _P.capp || '#0c0d12';
+      // [4] LA CUSPIDE SI ARRICCIA. Era un cuneo dritto all'indietro, e dall'alto sembrava una coda.
+      // Nell'illustrazione la punta si piega su se stessa e alla sua base c'e' una fascia chiara: due
+      // dettagli, e il cappello smette di essere un triangolo e diventa un cappello.
+      ctx.strokeStyle = DK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(r * 0.16, -r * 0.46);
+      ctx.quadraticCurveTo(-r * 0.58, -r * 0.56, -r * 1.02, -r * 0.26);
+      ctx.quadraticCurveTo(-r * 1.30, -r * 0.06, -r * 1.12, r * 0.18);   // la punta si incurva
+      ctx.quadraticCurveTo(-r * 1.02, r * 0.32, -r * 0.86, r * 0.24);
+      ctx.quadraticCurveTo(-r * 0.46, r * 0.52, r * 0.16, r * 0.46);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      { // la fascia chiara alla base della cuspide
+        const fb = (typeof _P.capp === 'string' && _P.capp[0] === '#') ? this._shade(_P.capp, 40) : accent;
+        ctx.save(); ctx.strokeStyle = fb; ctx.lineWidth = r * 0.10; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-r * 0.30, -r * 0.40);
+        ctx.quadraticCurveTo(-r * 0.56, 0, -r * 0.30, r * 0.40); ctx.stroke(); ctx.restore(); }
+      ctx.strokeStyle = accent; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.02, 0, r * 0.42, -2.0, 2.0); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#05060a'; ctx.fillRect(r * 0.22, -r * 0.30, r * 0.16, r * 0.60);
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.55; ctx.fillRect(r * 0.30, -r * 0.24, r * 0.04, r * 0.48); ctx.globalAlpha = 1;
+      if (st.rune !== 0) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';                   // rune orbitanti
+        // [5] LE RUNE SONO GLIFI, NON PALLINI. Nell'illustrazione sono rombi e parentesi: tre forme
+        // appuntite si distinguono da tre pallini anche a un'unghia, e dicono «magia» invece di «luce».
+        const accR = (accent && accent.charAt(0) === '#') ? accent : '#00f0c8';
+        for (let i = 0; i < 3; i++) {
+          const ang = t * (1.1 + i * 0.35) + i * 2.1;
+          const gx = Math.cos(ang) * r * 1.08, gy = Math.sin(ang) * r * 0.98, gr = r * 0.13;
+          ctx.save(); ctx.translate(gx, gy); ctx.rotate(ang * 0.6);
+          ctx.strokeStyle = this._rgba(accR, 0.75); ctx.lineWidth = r * 0.035; ctx.lineJoin = 'miter';
+          ctx.beginPath(); ctx.moveTo(0, -gr); ctx.lineTo(gr * 0.62, 0); ctx.lineTo(0, gr); ctx.lineTo(-gr * 0.62, 0);
+          ctx.closePath(); ctx.stroke();
+          ctx.fillStyle = this._rgba(accR, 0.55);
+          ctx.beginPath(); ctx.moveTo(0, -gr * 0.42); ctx.lineTo(gr * 0.26, 0); ctx.lineTo(0, gr * 0.42); ctx.lineTo(-gr * 0.26, 0);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+      // WARLOCK: tre filamenti che strisciano dietro. Non gli sono stati messi gli OCCHI accesi sotto
+      // il cappuccio — c'erano nella prima bozza e Paolo li ha fatti togliere. Non vanno rimessi.
+      if (st.tentacoli) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
+        const acc2 = (accent && accent.charAt(0) === '#') ? accent : '#c06bff';
+        // [7] I FILAMENTI HANNO UN'ANIMA. Nell'illustrazione sono spessi, con un nucleo quasi bianco:
+        // due passate sullo stesso percorso — larga e tenue, poi stretta e accesa — e da tre righe
+        // sbiadite diventano tre cose vive. Costa un secondo giro sullo stesso path, nient'altro.
+        ctx.lineCap = 'round';
+        for (const [larg, alfa, col] of [[0.13, 0.30, acc2], [0.040, 0.70, this._shade(acc2, 70)]]) {
+          ctx.strokeStyle = this._rgba(col, alfa); ctx.lineWidth = r * larg;
+          for (let i = -1; i <= 1; i++) {
+            const an = Math.PI + i * 0.42 + Math.sin(t * 1.6 + i) * 0.10;
+            ctx.beginPath(); ctx.moveTo(Math.cos(an) * r * 0.9, Math.sin(an) * r * 0.75);
+            ctx.quadraticCurveTo(Math.cos(an) * r * 1.5, Math.sin(an) * r * 1.10 + r * 0.22 * Math.sin(t * 2 + i), Math.cos(an) * r * 2.0, Math.sin(an) * r * 1.30);
+            ctx.stroke();
+          }
+        }
+        ctx.restore(); ctx.lineCap = 'butt';
+      }
+    },
+});
+
+
+const PAL_MAGO = { corpo:'mago', arma:'bastone', cappello:'tesa', rune:1, body:'#2a3a6a', bodyDk:'#141c36',
+  accent:'#5aa8ff', orlo:'rgba(120,180,255,.8)', capp:'#1b2445', pelle:'#d8d2c8' };
+const PAL_WAR  = { corpo:'mago', arma:'sigillo', cappello:'punta', stracciato:1, tentacoli:1, body:'#3a1f52',
+  bodyDk:'#1a0e28', accent:'#c06bff', orlo:'rgba(190,110,255,.75)', capp:'#25123a', pelle:'#4c3a60' };
+
+let stato = 'fermo', griglia = false, assi = false;
+let ang = 0, atk = 0, ultimo = performance.now() / 1000;
+const R_GIOCO = 16 * 1.75;      // PLAYER_RADIUS x HERO_VIS: il raggio della v2.39
+
+document.querySelectorAll('.cmd button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.cmd button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); stato = b.dataset.s; if (stato === 'attacca') atk = 0;
+});
+document.getElementById('griglia').onchange = e => griglia = e.target.checked;
+document.getElementById('assi').onchange = e => assi = e.target.checked;
+
+function pannello(cv, chi, t) {
+  const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, cv.width, cv.height);
+  const k = cv.width / (R_GIOCO * 4.4);      // il mantello arriva a 1,86 r: ci vuole respiro
+  g.save(); g.translate(cv.width / 2, cv.height / 2); g.scale(k, k);
+  if (griglia) { g.strokeStyle = 'rgba(255,90,110,.75)'; g.lineWidth = 1.6 / k;
+    g.beginPath(); g.arc(0, 0, 16 * 1.08, 0, 7); g.stroke(); }
+  g.save(); g.rotate(ang - Math.PI / 2);     // nell'anteprima il +x guarda in ALTO
+  g.fillStyle = 'rgba(0,0,0,.35)';
+  g.beginPath(); g.ellipse(0, 0, R_GIOCO * .62, R_GIOCO * .5, 0, 0, 7); g.fill();
+  if (assi) {
+    g.lineWidth = 2 / k;
+    g.strokeStyle = 'rgba(160,170,190,.55)';
+    g.beginPath(); g.moveTo(0, -R_GIOCO * 2.1); g.lineTo(0, R_GIOCO * 2.1); g.stroke();
+    g.strokeStyle = 'rgba(255,70,90,.9)';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(R_GIOCO * 2.1, 0); g.stroke();
+  }
+  const A = Math.max(0, Math.min(1, atk));
+  try {
+    if (chi === 'a') GIOCO_MW._heroMago(g, R_GIOCO, t, A, { _st: PAL_MAGO, pal: {}, _pk: '', _hid: 'mago', wp: 'mag_bastone' });
+    else if (chi === 'c') GIOCO_MW._heroMago(g, R_GIOCO, t, A, { _st: PAL_WAR, pal: {}, _pk: '', _hid: 'warlock' });
+    else if (chi === 'b') RIFATTO_MW._heroMago(g, R_GIOCO, t, A, { _st: PAL_MAGO, pal: {}, _pk: 'x', _hid: 'mago', wp: 'mag_bastone' });
+    else RIFATTO_MW._heroMago(g, R_GIOCO, t, A, { _st: PAL_WAR, pal: {}, _pk: 'x', _hid: 'warlock' });
+  } catch (e) { g.restore(); g.restore(); console.error(chi, e); return; }
+  g.restore(); g.restore();
+}
+
+const CELLA = 250, ALT = 320;
+function strisciata(t) {
+  const cv = document.getElementById('strip'); if (!cv) return;
+  const g = cv.getContext('2d'); g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0, 0, cv.width, cv.height);
+  const F = [0, 0.15, 0.30, 0.38, 0.46, 0.60, 0.85];
+  const ETI = ['fermo', 'carica', 'carica', 'stacco', 'stacco', 'ricaduta', 'ricaduta'];
+  const k = CELLA / (R_GIOCO * 4.6);
+  F.forEach((A, i) => {
+    [[PAL_MAGO, 'mago', 'mag_bastone'], [PAL_WAR, 'warlock', null]].forEach((riga, j) => {
+      g.save();
+      g.beginPath(); g.rect(i * CELLA, j * ALT, CELLA, ALT); g.clip();
+      g.translate(i * CELLA + CELLA / 2, j * ALT + ALT * 0.56); g.scale(k, k); g.rotate(-Math.PI / 2);
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 0, R_GIOCO * .62, R_GIOCO * .5, 0, 0, 7); g.fill();
+      try { RIFATTO_MW._heroMago(g, R_GIOCO, t, A, { _st: riga[0], pal: {}, _pk: 'x', _hid: riga[1], wp: riga[2] }); }
+      catch (e) { }
+      g.restore();
+    });
+    g.fillStyle = '#ffcf4a'; g.font = 'bold 15px Segoe UI,sans-serif';
+    g.fillText(ETI[i], i * CELLA + 10, 22);
+    g.fillStyle = '#6b7484'; g.font = '13px Segoe UI,sans-serif';
+    g.fillText('atk ' + A.toFixed(2), i * CELLA + 10, 42);
+  });
+}
+
+function giro(now) {
+  const t = now / 1000, dt = Math.min(0.05, t - ultimo); ultimo = t;
+  if (stato === 'gira') ang += dt * 1.1;
+  if (stato === 'attacca') { atk += dt / 0.6; if (atk > 1.5) atk = 0; } else atk = 0;
+  for (const [id, chi] of [['a1','a'],['a3','a'],['b1','b'],['b3','b'],['c1','c'],['c3','c'],['d1','d'],['d3','d']])
+    pannello(document.getElementById(id), chi, t);
+  strisciata(t);
+  requestAnimationFrame(giro);
+}
+requestAnimationFrame(giro);
+</script></body></html>

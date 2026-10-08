@@ -2,6 +2,98 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.40.0] — 2026-10-08 · "Il Mago lancia, e ha le mani"
+
+> *«non si potrebbe fare una piccola animazione per l'attacco? ad esempio il lancio della bacchetta
+> come il tipico mago. servirebbe disegnare le mani»*
+
+Servivano davvero. Il mago impugnava il bastone con **due maniche identiche che finivano nel vuoto**,
+e quando lanciava si accendeva l'orbe mentre il braccio restava fermo a guardare.
+
+---
+
+### ✋ LE MANI
+
+Il mago impugna a **due mani sfalsate** — una avanti, una dietro, come chiunque tenga un bastone — e
+**l'asta riappare sopra il pugno**: due ovali accanto a un bastone sono due sassi, un'asta che passa
+dentro la mano e' un'asta impugnata.
+
+Il **warlock** no: lui tende **un braccio solo**, con la mano **aperta e piatta**. Il sigillo gli sta
+sospeso sul palmo — se gli chiudi il pugno sembra che lo stringa, ed e' un'altra cosa.
+
+### ✨ IL LANCIO HA TRE TEMPI
+
+| | prima | adesso |
+|---|---|---|
+| il gesto | l'orbe si accendeva, e basta | **carica** · **stacco** · **ricaduta** |
+| in carica | &mdash; | il bastone **rientra** e l'orbe si smorza e si stringe |
+| allo stacco | &mdash; | scatta avanti in un quinto del tempo, e divampa |
+| il bastone | fermo | ruota attorno alla **mano di dietro**: la punta corre piu' del pugno |
+| da fermo | immobile | respira appena |
+
+L'**anticipo** e' tutto: senza il rientro, il colpo sembra comparire dal nulla invece di partire da lui.
+
+### 🚶 E CAMMINANO
+
+Lo strato di animazione del Barbaro era chiuso dentro `_heroBarbaro`. Adesso e' **`_animaEroe`**, e lo
+usano in due. Mago e warlock ereditano passo agganciato al terreno, stivali, saliscendi a due tempi
+per falcata, spalle contro bacino, respiro da fermo.
+
+> **Una copia in piu' sarebbe stata il solito errore.** Due strati identici sono due andature che fra
+> tre versioni non corrispondono piu' — ed e' esattamente il motivo per cui il corpo ridisegnato della
+> v2.37 e' stato buttato. C'e' un test che pretende che il calcolo del passo compaia **una volta sola**
+> in tutto il file.
+
+Il colpo invece **no**: quello il mago se lo fa da solo (`ritempo: false`). La ri-temporizzazione dello
+strato non scende mai sotto zero, e senza un numero negativo non si fa rientrare un bastone.
+
+---
+
+### 🎨 SEI DETTAGLI DALL'ILLUSTRAZIONE
+
+Presi dalla tavola che Paolo ha fatto fare. Il disegno **non e' stato rifatto**: sono modifiche
+puntuali a quello che c'era.
+
+1. **L'orlo luminoso gira tutto attorno**, non solo dietro. E' quello che stacca la figura dal
+   pavimento scuro, e a 56 px si vede per primo.
+2. **La cuspide del cappello si arriccia**, con una fascia chiara alla base. Era un cuneo dritto
+   all'indietro e dall'alto sembrava una coda.
+3. **Le rune sono rombi**, non pallini: tre forme appuntite si distinguono anche a un'unghia.
+4. **Sotto il cappuccio del warlock c'e' il vuoto**, nero pieno, al posto del viso livido. Senza occhi
+   accesi, che restano vietati dalla v2.18.
+5. **I denti del mantello stracciato sono piu' lunghi e aguzzi** (0,66 contro 0,76).
+6. **I filamenti hanno un'anima chiara**: due passate sullo stesso percorso, larga e tenue poi stretta
+   e accesa.
+
+> **Il collare ad arco col fermaglio e' stato provato e buttato**, ed e' la cosa piu' istruttiva della
+> versione. Nell'illustrazione e' il dettaglio piu' bello; dall'alto, sul mago sparisce sotto la tesa e
+> sul warlock diventa un'aureola attorno alla testa. Vive nei tre quarti dell'illustrazione e muore
+> nello zenitale. E' rimasta la fascia sul petto, col fermaglio piu' acceso.
+
+---
+
+### 🛡️ IL CONFINE
+
+L'erborista, l'Anziano e l'Arcanista del villaggio usano **questo stesso corpo**. Passano da
+`_heroMago` diretto, non dallo strato: un paesano che muove i piedi stando fermo dietro il banco e'
+peggio di un paesano immobile. E niente mani, perche' non impugnano niente.
+
+---
+
+### ✅ COLLAUDO
+
+**7.079 verifiche, zero rosse.** Il TEST 98 nuovo pretende: che `_animaEroe` sia chiamata da due e che
+il calcolo del passo esista una volta sola; che per il mago la ri-temporizzazione sia **spenta** e che
+la sua curva vada **sotto zero**; le due mani sfalsate, l'asta dentro il pugno, il braccio solo del
+warlock con la mano aperta; i sei dettagli uno per uno; e che il paesano non passi dallo strato.
+
+Quattro sabotaggi, quattro rossi: mago ri-temporizzato due volte, strato copiato invece che condiviso,
+paesani mandati dentro lo strato, bastone che non rientra piu' in carica. E una passata sul gioco vero:
+170 fotogrammi per **tutte e sette** le classi — fermo, corsa, rotazione, lancio — 1.190 disegni, zero
+eccezioni, piu' il mago civile disegnato a parte.
+
+---
+
 ### [2.39.0] — 2026-10-06 · "Il Barbaro torna al corpo di sempre — ma animato"
 
 Quattro giri di anteprima in una pagina a parte, e poi: *«ok si ci siamo, applicala nel gioco»*.
