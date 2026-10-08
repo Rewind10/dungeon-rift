@@ -2,6 +2,106 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.42.0] — 2026-10-08 · "I ragni balzano, il Cubo rigurgita"
+
+> *«i ragni lanciano la ragnatela ma un ragno nella realta' dovrebbe scattare e attaccare»*
+> *«il muro e' debole, rimane fermo a prendere botte, andrebbe aggiunto qualcosa»*
+> *«gli occhi hanno un raggio di azione troppo lontano, riducilo leggermente»*
+> *«ovviamente rendilo bilanciato»*
+
+L'ultima riga ha deciso il lavoro. **I numeri qui sotto non sono stimati, sono misurati**: banco di
+prova con un solo tipo di nemico in campo, bot identico, stesso seme, danno al minuto. Due passate
+sulla stessa build danno gli stessi numeri alla cifra.
+
+| famiglia | v2.41 | v2.42 |
+|---|---|---|
+| Vedova delle Volte ×3 | **0** | 17 |
+| Tessitrice Verde ×3 | **0** | 121 |
+| Cubo Gelatinoso ×2 | **0** | 81 |
+| Occhio Viola ×3 | 1395 | 1200 (−14%) |
+| Occhio Spettrale ×2 | 1619 | 1165 (−28%) |
+
+Quei tre **zeri** nella colonna di sinistra non sono un errore di misura: contro un bot che tiene la
+distanza, ragni e Cubo facevano **esattamente zero danni**. Paolo aveva detto «poco incisivi» ed era
+generoso.
+
+---
+
+### 🕷️ IL BALZO
+
+Un ragno che ti gira attorno tessendo e basta non e' un ragno: e' una torretta con otto zampe. E la
+tela, da sola, non obbliga a muoversi — obbliga ad aspettare.
+
+Il balzo ha i **tre tempi** di tutto il resto del gioco, perche' uno scatto che parte senza preavviso
+non si schiva, si subisce:
+
+1. **si raccoglie** — fermo, girato verso di te, ~0,45 s (il telegrafo passa dallo stesso cronometro
+   della Lama e della Sfera d'Ossa, quindi il ragno si vede caricare, non solo un anello a terra);
+2. **scatta dritto** a 3× per un terzo di secondo — dritto, quindi si schiva di lato;
+3. **morde** per 1,45–1,55× il danno da contatto, e poi resta **scoperto mezzo secondo**.
+
+Non balza a bruciapelo (sotto 110 sarebbe un morso con l'animazione sbagliata) ne' da oltre il suo
+raggio (sarebbe una carica). Un balzo gia' partito non viene mai interrotto dal tetto alla folla:
+vederlo sparire a meta' volo sarebbe peggio che non averlo.
+
+**Il bilanciamento non sta nel danno del balzo: sta nella TELA**, passata da 5,5 a 7 secondi (e in
+proporzione sulle altre due). Due minacce a cadenza piena erano troppe; cosi' ne ha due, ma
+alternate — e chi gioca ha sempre una delle due da temere, mai tutte e due insieme.
+
+---
+
+### 🟩 IL CUBO DIGERISCE QUELLO CHE INGHIOTTE
+
+Un nemico che assorbe i proiettili e non fa niente con quello che assorbe e' un sacco da boxe.
+
+Il contatore dei colpi assorbiti c'era gia' dalla v2.22 (serviva al client, per disegnare i dardi
+conficcati). Adesso **conta**: ogni colpo lo rende piu' veloce (+7,5%) e piu' duro al contatto
+(+9,5%), fino a sei. E scade da solo, quindi se smetti di sparargli si sgonfia.
+
+> **Ma la sola digestione non bastava, e la misura lo ha detto subito.** A 45 di velocita' contro i
+> 210 del giocatore, anche il +45% a pancia piena lo porta a 65: non raggiunge nessuno. Il danno al
+> minuto era **0 prima e 0 dopo**. Un nemico che non ti puo' toccare non si bilancia alzandogli il
+> danno da contatto — gli si deve dare un modo di arrivarti addosso.
+
+Quel modo e' il **RIGURGITO**: a pancia piena rimanda indietro quello che si e' mangiato, tre sputi
+acidi, e si svuota. E' la risposta esatta alla cosa che Paolo ha notato — adesso riempirlo di colpi
+**ha un prezzo**, e la scelta e' o abbatterlo in fretta o smettere di nutrirlo e aggirarlo.
+
+E al contatto ti **INGLOBA**: lo stesso rallentamento della ragnatela per un secondo. Riusa quel
+buff invece di inventarne uno nuovo — stesso moltiplicatore, stesso indicatore a schermo, zero
+codice in piu' sul client. Due effetti identici con due nomi diversi sono il modo in cui un gioco
+diventa illeggibile.
+
+---
+
+### 👁️ GLI OCCHI VEDONO MENO LONTANO
+
+Raggio **−12%**: 320 → 282, 340 → 300, 400 → 352.
+
+> **Il «leggermente» e' stato tarato tre volte.** A −15% la misura diceva **−26%** di danno, che
+> leggero non e'. A −7,5% diceva **−0,5%**, cioe' invisibile. Il danno cala piu' del raggio perche' il
+> tempo che passi dentro il cono cresce piu' che proporzionalmente con la distanza. Il 12% e' il punto
+> in cui il raggio si sente e l'Occhio resta una minaccia.
+
+**La distanza di orbita NON e' stata toccata**, e anche questo e' un risultato della misura: al primo
+giro l'avevo abbassata insieme al raggio, e l'Occhio Spettrale faceva il **32% di danno in piu'**
+invece che in meno — si avvicinava. Un errore che a occhio non si sarebbe visto.
+
+---
+
+### ✅ COLLAUDO
+
+**7.118 verifiche, zero rosse.** Il TEST 99 non rimisura il danno (sarebbero trenta secondi a ogni
+giro) ma difende le due cose che solo la misura ha dimostrato necessarie: che il Cubo abbia un
+attacco a distanza e non solo la digestione, e che la distanza di orbita degli Occhi resti dov'e'.
+Piu' il telegrafo del balzo, l'inviolabilita' del balzo in volo, la tela diradata, e il resto del
+bestiario non sfiorato.
+
+Cinque sabotaggi, cinque rossi: balzo senza telegrafo, Cubo che non rigurgita, tela rimessa fitta,
+Occhi tagliati al −15%, balzo reso interrompibile.
+
+---
+
 ### [2.41.0] — 2026-10-08 · "Piu' piccolo, e che non barcolli"
 
 > *«direi di tornare alle dimensioni precedenti mi sembra troppo grosso il personaggio. ridimensiona

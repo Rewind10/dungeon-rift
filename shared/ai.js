@@ -251,7 +251,51 @@
     weaver(m, ctx) {
       const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 560);
       if (!sees) { if (!investigate(m, ctx)) caccia(m, ctx, 0.78); return; }
-      const id = m.def.strafeDist || 240;
+      const D = m.def;
+      // v2.42 — IL BALZO. Paolo: *«un ragno nella realta' dovrebbe scattare e attaccare»*. Aveva
+      // ragione, e non era solo realismo: un ragno che ti gira attorno tessendo e basta non e' un
+      // ragno, e' una torretta con otto zampe — e la tela da sola non obbliga a muoversi, obbliga ad
+      // aspettare. Il balzo ha i TRE TEMPI di tutto il resto del gioco, perche' uno scatto che parte
+      // senza preavviso non si schiva, si subisce:
+      //   · si ferma e si raccoglie (telegrafo, ~0,45 s: fermo, girato verso di te)
+      //   · scatta dritto a 3x per un terzo di secondo — dritto, quindi si schiva di lato
+      //   · morde chi tocca, e poi resta SCOPERTO mezzo secondo, che e' la finestra per punirlo
+      // Il bilanciamento non sta nel danno del balzo: sta nella TELA, passata da 5,5 a 7 secondi
+      // (e in proporzione sulle altre due). Due minacce a cadenza piena erano troppe; cosi' ne ha
+      // due, ma alternate — e il giocatore ha sempre una delle due da temere, mai tutte e due.
+      if (m.balzo) {
+        m.balzo.t -= ctx.dt;
+        m.mx = m.balzo.dx * m.speed * (D.balzoSpeed || 3.1);
+        m.my = m.balzo.dy * m.speed * (D.balzoSpeed || 3.1);
+        m.facing = Math.atan2(m.balzo.dy, m.balzo.dx);
+        if (d <= (D.atkRange || 52) + p.radius) {
+          ctx.melee(m, p, Math.round(m.dmg * (D.balzoDmg || 1.45)), D.balzoKnock || 2.2);
+          ctx.emit({ t: 'ragno_morso', x: m.x, y: m.y, tx: p.x, ty: p.y, c: D.eye });
+          m.balzo = null; m.atkT = Math.max(m.atkT, D.balzoRecup || 0.6);
+          return;
+        }
+        if (m.balzo.t <= 0 || (m._stuckT || 0) > 0.2) { m.balzo = null; m.atkT = Math.max(m.atkT, D.balzoRecup || 0.6); }
+        return;
+      }
+      if (m.bwind > 0) {                          // il telegrafo: fermo, raccolto, girato su di te
+        m.bwind -= ctx.dt; m.mx = m.my = 0;
+        m.facing = Math.atan2(p.y - m.y, p.x - m.x);
+        if (m.bwind <= 0) {
+          const n = MU.norm(p.x - m.x, p.y - m.y);
+          m.balzo = { t: D.balzoDur || 0.34, dx: n.x, dy: n.y };
+          ctx.emit({ t: 'ragno_balzo', x: m.x, y: m.y, dx: n.x, dy: n.y, e: m.eid });
+        }
+        return;
+      }
+      m.balzoT = (m.balzoT != null ? m.balzoT : MU.rand(1.4, 3.0)) - ctx.dt;
+      // non balza addosso a chi gli e' gia' sotto (sarebbe un morso con l'animazione sbagliata) ne'
+      // da oltre il suo raggio: un balzo di trecento pixel sarebbe una carica, non un balzo.
+      if (m.balzoT <= 0 && d >= (D.balzoMin || 110) && d <= (D.balzoMax || 300) && ctx.losClear(m.x, m.y, p.x, p.y)) {
+        m.balzoT = D.balzoCd || 4.6; m.bwind = D.balzoWind || 0.46; m.mx = m.my = 0;
+        ctx.emit({ t: 'ragno_wind', e: m.eid, x: m.x, y: m.y, dur: m.bwind });
+        return;
+      }
+      const id = D.strafeDist || 240;
       const toP = MU.norm(p.x - m.x, p.y - m.y);
       let rad = 0; if (d < id - 40) rad = -1; else if (d > id + 40) rad = 1;
       if (m.orbit === undefined) m.orbit = Math.random() < 0.5 ? 1 : -1;
@@ -434,7 +478,35 @@
       const p = ctx.nearest(m); if (!p) { m.mx = m.my = 0; return; }
       caccia(m, ctx, 1);
       const d = MU.dist(m.x, m.y, p.x, p.y);
-      if (d <= m.def.atkRange + p.radius && m.atkT <= 0) { ctx.melee(m, p, m.dmg, 0.6); m.atkT = m.def.atkCd; }
+      // v2.42 — QUELLO CHE INGHIOTTE, LO DIGERISCE. Paolo: *«il muro e' debole, rimane fermo a
+      // prendere botte»*. Era vero ed era un difetto di progetto, non di numeri: un nemico che
+      // assorbe i proiettili e non fa niente con quello che assorbe e' un sacco da boxe. Adesso
+      // ogni colpo che si mangia lo rende piu' veloce (+7,5%) e piu' duro al contatto (+9,5%), fino
+      // a sei — cioe' +45% e +57% a pancia piena. Il contatore `assorbiti` c'era gia' dalla v2.22 e
+      // scade da solo, quindi il cubo si sgonfia se smetti di sparargli: e' esattamente la scelta
+      // che prima non c'era — o lo abbatti in fretta, o smetti di nutrirlo e lo aggiri.
+      // E al CONTATTO ti INGLOBA: lo stesso rallentamento della ragnatela per un secondo. Senza,
+      // da un muro lento bastava allontanarsi camminando.
+      const car = Math.min(m.def.digestMax || 6, m.assorbiti || 0);
+      // IL RIGURGITO. Misurato: la sola digestione non bastava. Col cubo a 45 di velocita' e il
+      // giocatore a 210, anche il +45% a pancia piena lo porta a 65 — non raggiunge nessuno, e il
+      // danno al minuto restava IDENTICO (40 prima, 40 dopo). Un nemico che non ti puo' toccare non
+      // si bilancia alzandogli il danno da contatto: va dato un modo di arrivarti addosso.
+      // A pancia piena rimanda indietro quello che si e' mangiato — tre sputi acidi — e si svuota.
+      // E' la risposta esatta alla cosa che Paolo ha notato: adesso riempirlo di colpi ha un prezzo.
+      m.rigT = (m.rigT || 0) - ctx.dt;
+      if (m.def.rigurgito && car >= (m.def.digestMax || 6) && m.rigT <= 0 && ctx.losClear(m.x, m.y, p.x, p.y)) {
+        const n = MU.norm(p.x - m.x, p.y - m.y);
+        ctx.spread(m, n.x, n.y, m.def.rigurgito, 0.20, m.def.rigSpeed || 196,
+          Math.max(1, Math.round(m.dmg * (m.def.rigDmg || 0.85))), m.def.projColor || '#b0d878');
+        ctx.emit({ t: 'rigurgito', e: m.eid, x: m.x, y: m.y, c: m.def.projColor || '#b0d878' });
+        m.assorbiti = 0; m.assorbT = 0; m.rigT = m.def.rigCd || 1.3;
+      }
+      if (d <= m.def.atkRange + p.radius && m.atkT <= 0) {
+        ctx.melee(m, p, Math.max(1, Math.round(m.dmg * (1 + car * (m.def.digestDmg || 0.095)))), 0.6);
+        if (ctx.ingloba) ctx.ingloba(p, m.def.inglobaDur || 0.95);
+        m.atkT = m.def.atkCd;
+      }
     },
     flock(m, ctx) {
       const { p, d, sees } = perceive(m, ctx, m.def.sightRange || 620);
@@ -591,7 +663,8 @@
     // altri aspettano il turno all'anello. Non si applica a chi e' immobile per mestiere, ai boss, a
     // chi ti vede, e a chi e' in mezzo a un'azione gia' partita (rotolata, slam, balzo): interromperla
     // a meta' si vedrebbe.
-    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto' || mon.pf === 'carica' || mon.pf === 'sferza' || mon.pf === 'punta';
+    const azione = mon.rolling || mon.winding > 0 || mon.lunge > 0 || mon.fase === 'carica' || mon.fase === 'scatto' || mon.pf === 'carica' || mon.pf === 'sferza' || mon.pf === 'punta'
+      || mon.balzo || mon.bwind > 0;   // v2.42 — e il balzo del ragno: interromperlo a meta' si vedrebbe
     // v2.28 — LA CAMPANA. Finche' suona, chi non e' in mezzo a un colpo gia' partito lascia perdere
     // tutto e ci va. Sta PRIMA di ogni altra cosa, e il motivo e' quello che avevo sbagliato al primo
     // giro: avevo dirottato solo il campo di flusso, ma chi non ti vede non usa il campo di flusso —

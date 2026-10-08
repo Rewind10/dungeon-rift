@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.41.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.42.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,28 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 🕷️ v2.42.0 — i ragni balzano, il Cubo rigurgita
+
+Misurato su un banco di prova (danno al minuto, un solo tipo di nemico in campo): **ragni e Cubo
+facevano esattamente zero danni** contro chi tiene la distanza.
+
+I **ragni** adesso **balzano**: si raccolgono per mezzo secondo — telegrafato, come la Lama e la
+Sfera d'Ossa — scattano dritti a 3× e mordono per una volta e mezza, poi restano scoperti. Si
+schivano di lato. In cambio la **tela è più rada** (da 5,5 a 7 secondi): due minacce a cadenza piena
+erano troppe.
+
+Il **Cubo** digerisce quello che assorbe — ogni colpo lo fa più veloce e più duro — e a pancia piena
+**rigurgita**: tre sputi acidi, e si svuota. La sola digestione non bastava (a 45 di velocità non
+raggiunge nessuno: il danno restava zero), e questo è quello che rende il riempirlo di colpi una
+scelta invece che una certezza. Al contatto ti **ingloba**, con lo stesso rallentamento della
+ragnatela.
+
+Gli **Occhi** vedono il **12% meno lontano**. La distanza a cui ti girano attorno resta quella: al
+primo tentativo l'avevo abbassata insieme al raggio e l'Occhio Spettrale faceva il 32% di danno *in
+più*.
+
+---
 
 ## 📏 v2.41.0 — più piccolo, e che non barcolli
 

@@ -9881,6 +9881,92 @@ function testV238() {
 // dall'illustrazione che aveva fatto fare. Quello che il test difende, oltre alle novita', e' che
 // lo strato di animazione sia UNO SOLO: due copie sono due andature che fra tre versioni non
 // corrispondono piu', ed e' lo stesso errore per cui la v2.37 e' stata buttata.
+// =============================================================================================
+// TEST 99 — v2.42: i ragni balzano, il Cubo rigurgita, gli Occhi vedono meno lontano
+// =============================================================================================
+// Paolo, dopo aver letto il bestiario:
+//   · *«i ragni lanciano la ragnatela ma un ragno nella realta' dovrebbe scattare e attaccare»*
+//   · *«il muro e' debole, rimane fermo a prendere botte, andrebbe aggiunto qualcosa»*
+//   · *«gli occhi hanno un raggio di azione troppo lontano, riducilo leggermente»*
+//   · *«ovviamente rendilo bilanciato»*
+// L'ultima riga e' quella che ha deciso il lavoro: i numeri qui sotto non sono stimati, sono
+// MISURATI su un banco di prova (danno al minuto, stesso seme, stessa mappa, bot identico).
+// Questo test non rimisura — sarebbero trenta secondi a ogni giro — ma difende le due cose che
+// la misura ha dimostrato necessarie, e che a occhio non si sarebbero viste.
+function testV242() {
+  console.log('\n[TEST 99] v2.42 — balzo dei ragni, rigurgito del Cubo, raggio degli Occhi');
+  const Mon = require('../shared/monsters.js'), M = Mon.MONSTERS;
+  const fs2 = require('fs'), path = require('path');
+  const ai = fs2.readFileSync(path.join(__dirname, '..', 'shared', 'ai.js'), 'utf8');
+  const W = ai.slice(ai.indexOf('weaver(m, ctx) {'), ai.indexOf('sentry(m, ctx) {'));
+  const G = ai.slice(ai.indexOf('gelatina(m, ctx) {'), ai.indexOf('flock(m, ctx) {'));
+
+  // --- 1) I RAGNI BALZANO, E IL BALZO E' TELEGRAFATO ----------------------------------------
+  // Il preavviso non e' un vezzo: uno scatto che parte senza non si schiva, si subisce — ed e' la
+  // regola che vale gia' per la Lama, la Sfera d'Ossa e il Padrone.
+  for (const k of ['ragno', 'ragno_cripta', 'ragno_veleno']) {
+    const d = M[k];
+    assert(d.balzoCd > 0 && d.balzoWind >= 0.4, k + ' ha un balzo con almeno 0,4s di telegrafo');
+    assert(d.balzoSpeed >= 3 && d.balzoDur > 0, k + ' scatta per davvero');
+    assert(d.balzoMin >= 100, k + ' non balza addosso a chi gli e gia sotto');
+    assert(d.balzoRecup > 0, k + ' resta scoperto dopo il balzo: e la finestra per punirlo');
+  }
+  assert(/m\.bwind > 0/.test(W) && /ctx\.emit\(\{ t: 'ragno_wind'/.test(W), 'il telegrafo esiste ed e annunciato al client');
+  assert(/m\.balzo = \{ t: D\.balzoDur/.test(W), 'e poi parte lo scatto');
+  assert(/ctx\.melee\(m, p, Math\.round\(m\.dmg \* \(D\.balzoDmg/.test(W), 'il morso del balzo fa piu male del contatto');
+  assert(/m\.atkT = Math\.max\(m\.atkT, D\.balzoRecup/.test(W), 'e dopo resta scoperto');
+  // il client deve saperlo disegnare, se no il preavviso e' meta' preavviso
+  { const main = fs2.readFileSync(path.join(__dirname, '..', 'public', 'js', 'main.js'), 'utf8');
+    assert(/case 'ragno_wind':/.test(main) && /R\.hitAttack\(ev\.e/.test(main.slice(main.indexOf("case 'ragno_wind':"), main.indexOf("case 'ragno_wind':") + 200)),
+      'e il client accende il telegrafo sul ragno, non solo un anello a terra'); }
+  // il tetto alla folla non parcheggia un ragno a meta' balzo
+  assert(/mon\.balzo \|\| mon\.bwind > 0/.test(ai), 'un balzo gia partito non si interrompe');
+  // IL BILANCIAMENTO: due minacce a cadenza piena erano troppe, quindi la tela si e' diradata
+  assert(M.ragno.telaCd > 6.5 && M.ragno_cripta.telaCd > 6 && M.ragno_veleno.telaCd > 5.5,
+    'e in cambio la tela e piu rada');
+
+  // --- 2) IL CUBO: DIGERISCE, RIGURGITA, INGLOBA --------------------------------------------
+  // MISURATO: la sola digestione non bastava. A 45 di velocita' contro 210 del giocatore, anche il
+  // +45% a pancia piena non lo porta a contatto, e il danno al minuto restava IDENTICO (0 prima,
+  // 0 dopo, su un bot che tiene la distanza). Il rigurgito e' quello che lo ha portato a 81.
+  assert(M.cubo.digestVel > 0 && M.cubo.digestDmg > 0, 'il cubo digerisce quello che assorbe');
+  assert(M.cubo.rigurgito >= 3 && M.cubo.rigSpeed > 0, 'e a pancia piena lo rimanda indietro');
+  assert(M.cubo.inglobaDur > 0, 'e al contatto ingloba');
+  assert(/m\.def\.rigurgito && car >= \(m\.def\.digestMax/.test(G), 'il rigurgito parte solo a pancia piena');
+  assert(/m\.assorbiti = 0;/.test(G), 'e lo svuota: se smetti di sparargli, si sgonfia');
+  assert(/if \(ctx\.ingloba\) ctx\.ingloba\(p/.test(G), 'l inglobamento e agganciato al contatto');
+  { const room2 = fs2.readFileSync(path.join(__dirname, '..', 'server', 'Room.js'), 'utf8');
+    assert(/p\.buffs\.ragnatela = Math\.max\(p\.buffs\.ragnatela \|\| 0, dur \|\| 0\.95\)/.test(room2),
+      'e riusa il rallentamento della ragnatela invece di inventarne uno nuovo');
+    assert(/if \(m\.def\.digestVel && m\.assorbiti > 0\) slow \*=/.test(room2),
+      'la digestione passa dal moltiplicatore del movimento, non da m.speed'); }
+
+  // --- 3) GLI OCCHI VEDONO MENO LONTANO -----------------------------------------------------
+  // *«leggermente»*: -12% sul raggio. Era stato provato a -15% e la misura diceva -26% di danno,
+  // che leggero non e': il danno cala piu' del raggio, perche' il tempo che passi dentro il cono
+  // cresce piu' che proporzionalmente con la distanza.
+  const PRIMA = { occhio: 320, occhio_carne: 340, occhio_spettro: 400 };
+  for (const k of Object.keys(PRIMA)) {
+    const d = M[k], q = d.gazeRange / PRIMA[k];
+    assert(q > 0.865 && q < 0.895, k + ' ha il raggio ridotto del 12% circa (' + (100 - q * 100).toFixed(0) + '%)');
+    // la forchetta e stretta apposta: a -15% la misura diceva -26% di danno (troppo), a -7,5%
+    // diceva -0,5% (invisibile). Il 12% e' il punto misurato in cui il raggio cala in modo
+    // percepibile e il danno con lui, senza che l Occhio smetta di essere una minaccia.
+    assert(d.atkRange === d.gazeRange, k + ': raggio di tiro e raggio dello sguardo restano la stessa cosa');
+  }
+  // la distanza di ORBITA non e' stata toccata, e il motivo e' misurato: abbassandola insieme al
+  // raggio, l'Occhio Spettrale faceva il 32% di danno IN PIU' invece che in meno — si avvicinava.
+  assert(M.occhio.strafeDist === 240 && M.occhio_carne.strafeDist === 210 && M.occhio_spettro.strafeDist === 280,
+    'e la distanza a cui ti girano attorno e rimasta quella');
+
+  // --- 4) IL RESTO DEL BESTIARIO NON E' STATO TOCCATO ---------------------------------------
+  assert(M.skeleton.dmg === 14 && M.slime.acidCount === 3 && M.darkmage.summonCount === 2, 'i primi tre sono quelli');
+  assert(M.lama.scattoMul === 7.6 && M.bone_roller.rollTime === 2.3, 'la Lama e la Sfera non sono cambiate');
+  assert(M.padrone.frustaRaggio === 178 && M.padrone.condannaR === 84, 'e nemmeno il Padrone');
+  assert(Mon.BOSSES.rift_colossus.ondaCd === 5.6, 'i boss non sono stati sfiorati');
+  ok('balzo telegrafato, cubo che rigurgita e ingloba, occhi al 88% del raggio');
+}
+
 function testV240() {
   console.log('\n[TEST 98] v2.40 — il mago e il warlock lanciano, e camminano');
   const fs2 = require('fs'), path = require('path');
@@ -10193,6 +10279,6 @@ function testV235() {
   ok('buio spento di partenza, sessanta torce a muro, dieci camini e zero candelabri');
 }
 
-testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testV239(); testV240(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
+testMapThemes(); testLives(); testBoons(); testWeaponEvo(); testModes(); testHitstop(); testXpItems(); testV16(); testV17(); testV18(); testV19(); testV110(); testV111(); testV112(); testV113(); testV139(); testV142(); testV143(); testV145(); testV147(); testV149(); testV150(); testV151(); testV152(); testV153(); testV157(); testV158(); testV159(); testV160(); testV161(); testV162(); testV163(); testV164(); testV166(); testV167(); testV168(); testV169(); testV170(); testV171(); testV172(); testV173(); testV174(); testV1741(); testV175(); testV1752(); testV1761(); testV177(); testV178(); testV179(); testV1791(); testV1792(); testBeholder179(); testV180(); testV181(); testV182(); testV183(); testV184(); testV185(); testV188(); testV189(); testV193(); testV197(); testV199(); testV200(); testStoria(); testSceltePannello(); testSalvataggio(); testSchermataUnica(); testV219(); testSoglie(); testDueMani(); testZombie(); testFendente(); testScarica(); testPassive220(); testMenu2201(); testV221(); testV222(); testV223(); testV224(); testV225(); testV226(); testV227(); testV228(); testV2281(); testV229(); testV230(); testV231(); testV232(); testV233(); testV235(); testV237(); testV238(); testV239(); testV240(); testV242(); testPonteClient(); testSanity(); testFullRun(1, 'solo'); testFullRun(3, 'trio'); testFullRun(6, 'stress');
 console.log('\n=================================================='); console.log(`  RISULTATO: ${PASS} passati, ${FAIL} falliti  (${((Date.now() - T0) / 1000).toFixed(1)}s)`); console.log('==================================================');
 process.exit(FAIL > 0 ? 1 : 0);

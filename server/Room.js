@@ -927,6 +927,14 @@ class Room {
       // il giorno e non ti succedeva niente. Il raggio fa danno a ogni tick finche' ti tiene nel cono, e
       // sotto la distanza di morso smette di guardarti e ti azzanna.
       gazeHit(m, p, dmg) { self.damagePlayer(p, dmg, m.x, m.y, 0); self.events.push({ t: 'gaze_hit', x: p.x, y: p.y, d: dmg }); },
+      // v2.42 — INGLOBATO dal Cubo Gelatinoso. Riusa il rallentamento della RAGNATELA invece di
+      // inventarne uno nuovo: stesso moltiplicatore, stesso indicatore a schermo, zero codice in
+      // piu' sul client. Due effetti identici con due nomi diversi sono il modo in cui un gioco
+      // diventa illeggibile.
+      ingloba(p, dur) {
+        p.buffs.ragnatela = Math.max(p.buffs.ragnatela || 0, dur || 0.95);
+        self.events.push({ t: 'inglobato', x: p.x, y: p.y });
+      },
     };
   }
   // v1.69 — OMBRA: chi e' nascosto non viene proprio considerato come bersaglio. Se pero' sono TUTTI
@@ -4558,6 +4566,11 @@ class Room {
       // i piedi. Questo moltiplicatore invece e' lo stesso posto dove passano i rallentamenti.
       if (m.infuria) slow *= (C.INFURIA_VEL || 2);
       if (m.cmdV > 1) slow *= m.cmdV;        // v2.23 — il comando del Padrone
+      // v2.42 — IL CUBO DIGERISCE: ogni colpo che si e' mangiato lo rende piu' veloce. Sta qui e
+      // non su `m.speed` per lo stesso motivo dell'infuriato — la velocita' di base la leggono le
+      // animazioni, e gonfiarla farebbe pattinare quello che si muove. Il contatore scade da solo:
+      // se smetti di sparargli, si sgonfia.
+      if (m.def.digestVel && m.assorbiti > 0) slow *= 1 + Math.min(m.def.digestMax || 6, m.assorbiti) * m.def.digestVel;
       // v2.20.0 — VELENO CORROSIVO (assassino): finche' dura, il nemico morde meno. Si tocca `m.dmg`
       // (e si tiene da parte il valore vero) perche' e' l'unico numero che TUTTI i suoi attacchi
       // leggono — mischia, tiro e aree: correggerne uno solo avrebbe corretto un terzo della carta.

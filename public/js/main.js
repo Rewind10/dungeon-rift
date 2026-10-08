@@ -463,6 +463,15 @@
       case 'lama_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.5); R.ring(ev.x, ev.y, '#8be9ff', 3, 30, 0.3); break;
       case 'lama_go': if (ev.e != null) { R._lamaSc = R._lamaSc || {}; R._lamaSc[ev.e] = R.time + 0.30; } R.burst(ev.x, ev.y, '#cfe6ff', 9, 170, 0.3); break;
       case 'lama_muro': R.burst(ev.x, ev.y, '#dbe6f2', 6, 120, 0.25); break;
+      // v2.42 — IL BALZO DEL RAGNO. Il telegrafo passa dal cronometro dei telegrafi (mAtk), lo
+      // stesso della Lama e della Sfera d'Ossa: senza questo l'anello si vedrebbe ma il ragno
+      // resterebbe disegnato fermo, e il preavviso sarebbe meta' preavviso.
+      case 'ragno_wind': if (ev.e != null) R.hitAttack(ev.e, ev.dur || 0.46); R.ring(ev.x, ev.y, ev.c || '#ff3b52', 3, 26, 0.3); break;
+      case 'ragno_balzo': R.burst(ev.x, ev.y, '#ffd0d6', 8, 150, 0.28); break;
+      case 'ragno_morso': A.kill && A.kill(false); R.burst(ev.tx, ev.ty, ev.c || '#ff3b52', 10, 160, 0.3); R.addShake(3); break;
+      // v2.42 — INGLOBATO dal cubo: la stessa riga della ragnatela, perche' e' lo stesso effetto.
+      case 'inglobato': R.ring(ev.x, ev.y, '#b0d878', 4, 30, 0.35); break;
+      case 'rigurgito': A.hit && A.hit(false); R.ring(ev.x, ev.y, ev.c || '#b0d878', 4, 44, 0.4); R.burst(ev.x, ev.y, ev.c || '#b0d878', 14, 170, 0.45); break;
       // v2.23 — IL PADRONE. La carica passa dal cronometro dei telegrafi (mAtk), come la Sfera
       // d'Ossa e la Lama: e' quello che il profilo della marionetta legge per aprire le ali,
       // tirare indietro il braccio e accendere gli occhi.

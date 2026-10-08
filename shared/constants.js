@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.41.0',
+    VERSION: '2.42.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.41.0',
+      v: '2.42.0',
       righe: [
-        'L&rsquo;eroe torna alla misura di prima: <b>46 px</b>. Il corpo fisico, come sempre, non cambia.',
-        'E <b>ondeggia meno</b> camminando: il busto gira la meta&rsquo;, il saliscendi e&rsquo; un terzo piu&rsquo; basso.',
-        'Il passo, gli stivali e i tre tempi del colpo restano quelli.',
+        'I <b>ragni</b> adesso <b>balzano</b>: si raccolgono, scattano e mordono. La tela e&rsquo; piu&rsquo; rada.',
+        'Il <b>Cubo</b> digerisce quello che assorbe &mdash; ogni colpo lo fa piu&rsquo; veloce e piu&rsquo; duro &mdash; e ti <b>ingloba</b>.',
+        'Gli <b>Occhi</b> vedono meno lontano: il raggio scende del 15%.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
