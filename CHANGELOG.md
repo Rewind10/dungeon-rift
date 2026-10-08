@@ -2,6 +2,58 @@
 
 Tutte le modifiche rilevanti del progetto, versione per versione (dalla più recente).
 
+### [2.41.0] — 2026-10-08 · "Piu' piccolo, e che non barcolli"
+
+> *«direi di tornare alle dimensioni precedenti mi sembra troppo grosso il personaggio. ridimensiona
+> anche l'ondeggiamento del personaggio quando cammina»*
+
+Due numeri, e nient'altro.
+
+---
+
+### 📏 LA TAGLIA TORNA QUELLA DI PRIMA
+
+`HERO_VIS` da **1,75 a 1,45** — cioe' esattamente la scala del mondo: 16 × 1,45 = 23,2 di raggio,
+**46 px** di sagoma. Erano 56.
+
+Il **corpo che urta non si e' mosso** (17,28 px), e non si era mosso nemmeno quando l'eroe era grande:
+e' per questo che questa manopola si puo' girare avanti e indietro in una riga, senza ritarare porte,
+corridoi e pertugi di nessuna mappa. Paesani e barra della vita non l'hanno mai seguita.
+
+E la **falcata** si e' riaggiustata da sola: e' espressa in raggi (`r × 2,67`), quindi a 23,2 torna a
+valere 62 px — la misura di sempre. Un passo scritto in pixel fissi, a questo giro, avrebbe fatto
+zampettare l'eroe.
+
+### 🚶 E NON BARCOLLA PIU'
+
+| | prima | adesso |
+|---|---|---|
+| rollio delle spalle | `gamba * 0.13` (7,4°) | **`gamba * 0.07`** (4°) |
+| saliscendi a falcata | `su * 0.035` | **`su * 0.022`** |
+| respiro da fermo | `resp * 0.014` | `resp * 0.014` — **non toccato** |
+
+Non e' un ripensamento sul principio: spalle e bacino **devono** girare al contrario, se no e' una
+statua che trasla, ed e' la cosa che distingue un uomo che cammina da uno che scivola. E' che a 46 px
+sette gradi si leggono come un barcollamento, e un eroe che barcolla sembra ubriaco invece che vivo.
+
+Il **respiro da fermo resta intero**, ed e' deliberato: da fermo quello e' l'unico movimento che c'e',
+e smorzarlo vorrebbe dire non muovere piu' niente.
+
+---
+
+### ✅ COLLAUDO
+
+**7.079 verifiche, zero rosse.** Il TEST 96 e' stato riscritto nell'intento: il *valore* della taglia
+e' una scelta di gusto e cambia (46 → 56 → 46 in tre versioni), quindi il test non difende piu' il
+numero — difende che il numero stia in **un posto solo** e non trascini dietro di se' niente che non
+deve: corpo fisico, paesani, barra della vita, scritte.
+
+Tre sabotaggi, tre rossi: taglia rimessa a 56, ondeggiamento rimesso pieno, ondeggiamento **spento del
+tutto** (perche' dimezzato non vuol dire tolto). E una passata sul gioco vero: 170 fotogrammi per tutte
+e sette le classi, 1.190 disegni, zero eccezioni.
+
+---
+
 ### [2.40.0] — 2026-10-08 · "Il Mago lancia, e ha le mani"
 
 > *«non si potrebbe fare una piccola animazione per l'attacco? ad esempio il lancio della bacchetta

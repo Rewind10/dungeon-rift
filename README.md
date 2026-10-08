@@ -1,4 +1,4 @@
-# ⚔️ DUNGEON RIFT v2.40.0 — Roguelike Co-op Multiplayer 2D
+# ⚔️ DUNGEON RIFT v2.41.0 — Roguelike Co-op Multiplayer 2D
 
 Roguelike frenetico per **fino a 6 giocatori**. Motore **custom a dipendenze zero** (Node.js + Canvas 2D):
 niente `npm install`, niente asset esterni — grafica, musica ed effetti sono **generati proceduralmente**.
@@ -25,6 +25,19 @@ Test: `npm test`
 | **Fotogrammi al secondo** | **F** — acceso/spento, si ricorda |
 | **Buio delle grotte** | **L** — acceso/spento, si ricorda. **Parte spento** |
 | Minimappa | sempre visibile (in basso a sinistra) |
+
+## 📏 v2.41.0 — più piccolo, e che non barcolli
+
+L'eroe torna a **46 px** di sagoma (`HERO_VIS` da 1,75 a 1,45): a 56 era troppo grosso. Il corpo che
+urta non si è mosso — non si muove mai con questa manopola, ed è per questo che la si può girare in
+una riga. La falcata si è riaggiustata da sola, perché è espressa in raggi e non in pixel.
+
+E l'**ondeggiamento è dimezzato**: il rollio delle spalle passa da 7,4° a 4°, il saliscendi da 0,035 a
+0,022. Spalle e bacino continuano a girare al contrario — senza, è una statua che trasla — ma a 46 px
+sette gradi si leggevano come un barcollamento. Il respiro da fermo resta intero: lì è l'unica cosa
+che si muove.
+
+---
 
 ## ✨ v2.40.0 — il Mago lancia, e ha le mani
 

@@ -6,17 +6,17 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const C = {
-    VERSION: '2.40.0',
+    VERSION: '2.41.0',
     // v2.26 — LE NOVITA' IN SCHERMATA. Paolo pubblica una versione ogni due giorni e chi gioca non se
     // ne accorge: il changelog sta in un file .md che nessuno apre. Tre righe, nel menu, accanto al
     // numero di versione. `v` DEVE stare al passo con VERSION qui sopra — un box che annuncia le
     // novita' della versione sbagliata e' peggio che non averlo, e c'e' un test che lo pretende.
     NOVITA: {
-      v: '2.40.0',
+      v: '2.41.0',
       righe: [
-        'Il <b>Mago</b> e il <b>Warlock</b> adesso <b>lanciano</b>: hanno le mani, e il colpo ha tre tempi.',
-        'E camminano &mdash; lo strato di animazione del Barbaro adesso e&rsquo; di tutti e due.',
-        'Orlo luminoso tutto attorno, cuspide arricciata, rune a rombo, vuoto sotto il cappuccio.',
+        'L&rsquo;eroe torna alla misura di prima: <b>46 px</b>. Il corpo fisico, come sempre, non cambia.',
+        'E <b>ondeggia meno</b> camminando: il busto gira la meta&rsquo;, il saliscendi e&rsquo; un terzo piu&rsquo; basso.',
+        'Il passo, gli stivali e i tre tempi del colpo restano quelli.',
       ],
     },
     // v1.66 — limiti del fendente in mischia (misurati: senza cap l'arco valeva 6x le uccisioni di un tiratore)
@@ -31,13 +31,15 @@
 
     VIS_SCALE: 1.45, COL_SCALE: 1.08,  // v1.13 — ridimensionamento LEGGERO: occhi grandi, hitbox quasi invariata (fluidita preservata)
     // v2.38 — QUANTO E' GRANDE L'EROE, e SOLO l'eroe. `VIS_SCALE` e' la scala del MONDO: mostri,
-    // props, paesani. Alzarla avrebbe ingrandito tutto insieme, e sullo schermo non si sarebbe visto
-    // niente. Questa e' la scala dei personaggi GIOCATI e prende il POSTO di VIS_SCALE per loro
-    // (`Renderer._rEroe`): 16 × 1,75 = 28 di raggio, cioe' 56 px di sagoma — la misura chiesta da
-    // Paolo. Il corpo FISICO resta PLAYER_RADIUS × COL_SCALE: cambia quanto si VEDE, non quanto si
-    // URTA, ed e' l'unico modo di ingrandire l'eroe senza ritarare collisioni, porte e corridoi di
-    // tutte le mappe.
-    HERO_VIS: 1.75,
+    // props, paesani. Questa e' la scala dei personaggi GIOCATI e prende il POSTO di VIS_SCALE per
+    // loro (`Renderer._rEroe`). Il corpo FISICO resta PLAYER_RADIUS × COL_SCALE: cambia quanto si
+    // VEDE, non quanto si URTA — ed e' per questo che si puo' girare questa manopola in qualunque
+    // momento senza ritarare collisioni, porte e corridoi di tutte le mappe.
+    //
+    // v2.41 — TORNATA A 1,45, cioe' esattamente la scala del mondo: 16 × 1,45 = 23,2 di raggio,
+    // 46 px di sagoma. A 1,75 (56 px) Paolo l'ha trovato *«troppo grosso»*. La manopola resta —
+    // serve proprio a questo, e cambiarla e' una riga.
+    HERO_VIS: 1.45,
     TICK_RATE: 30, SNAPSHOT_RATE: 20, MAX_PLAYERS: 6,
     TILE: 48, MAP_W: 64, MAP_H: 46,
     T_FLOOR: 0, T_WALL: 1, T_TRAP: 2, T_HAZARD: 3, T_DECO: 4, T_EXIT: 5,

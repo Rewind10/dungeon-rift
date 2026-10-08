@@ -4819,8 +4819,14 @@
       // --- IL CORPO: quello di sempre, dentro una scatola che si muove ---------------------------
       ctx.save();
       ctx.translate(r * spinta, peso * r * 0.035);     // entra nel colpo · oscilla da fermo
-      ctx.rotate(gamba * 0.13 - S.da * 0.18);          // spalle contro bacino · il busto resta indietro
-      const kk = 1 + su * 0.035 + resp * 0.014;        // sale due volte a falcata · e respira da fermo
+      // v2.41 — L'ONDEGGIAMENTO E' DIMEZZATO. Paolo, camminando: ondeggiava troppo. Il rollio delle
+      // spalle passa da 0,13 a 0,07 (da 7,4 a 4 gradi) e il saliscendi da 0,035 a 0,022. Non e' un
+      // ripensamento sul principio: spalle e bacino DEVONO girare al contrario, se no e' una statua
+      // che trasla. E' che a 46 px di sagoma sette gradi si vedono come un barcollamento, e un eroe
+      // che barcolla sembra ubriaco invece che vivo. Il respiro da fermo non si tocca: li' il corpo
+      // e' l'unica cosa che si muove, e se lo smorzi non si muove piu' niente.
+      ctx.rotate(gamba * 0.07 - S.da * 0.18);          // spalle contro bacino · il busto resta indietro
+      const kk = 1 + su * 0.022 + resp * 0.014;        // sale due volte a falcata · e respira da fermo
       ctx.scale(kk, kk);
       disegna(ctx, r, t, re, eq);                      // <- il corpo, non toccato
       ctx.restore();

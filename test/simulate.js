@@ -9778,30 +9778,30 @@ function testV233() {
 // Il terzo punto dice cosa NON si tocca, ed e' la meta' piu' importante del collaudo: elmo,
 // pelliccia, braccia e gambe della v2.37 devono uscire da qui identici.
 function testV238() {
-  console.log('\n[TEST 96] v2.38 — eroe piu grande, giro su se stesso tarato');
+  console.log('\n[TEST 96] v2.38/2.41 — la manopola della taglia, e il giro su se stesso');
   const fs2 = require('fs'), path = require('path');
   const R = (f) => fs2.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const src = R(path.join('public', 'js', 'renderer.js'));
 
-  // --- 1) PIU' GRANDE, E SOLO LUI ------------------------------------------------------------
-  // Alzare VIS_SCALE sarebbe stato il modo sbagliato: e' la scala di mostri, props e paesani, e
-  // l'eroe sarebbe cresciuto INSIEME allo sfondo — sullo schermo, nessuna differenza.
-  assert(typeof C.HERO_VIS === 'number' && C.HERO_VIS > 1, 'esiste una scala solo per l eroe, ed e maggiore di 1');
+  // --- 1) UNA MANOPOLA SOLA PER LA TAGLIA DELL'EROE ------------------------------------------
+  // Il VALORE e' una scelta di gusto e cambia: 46 px in v2.37, 56 in v2.38, di nuovo 46 in v2.41
+  // (*«mi sembra troppo grosso»*). Quello che il test difende non e' il numero: e' che il numero
+  // stia in UN posto e non trascini dietro di se' niente che non deve.
+  assert(typeof C.HERO_VIS === 'number' && C.HERO_VIS > 0, 'esiste una scala solo per l eroe');
   assert(Math.abs(C.VIS_SCALE - 1.45) < 1e-9, 'e la scala del MONDO non e stata toccata');
   const rEroe = C.PLAYER_RADIUS * C.HERO_VIS;
-  assert(Math.abs(rEroe * 2 - 56) < 1.0, 'la sagoma dell eroe misura 56 px (' + (rEroe * 2).toFixed(1) + ')');
-  assert(rEroe > C.PLAYER_RADIUS * C.VIS_SCALE, 'cioe piu di prima (era ' + (C.PLAYER_RADIUS * C.VIS_SCALE * 2).toFixed(1) + ' px)');
+  assert(Math.abs(rEroe * 2 - 46.4) < 0.5, 'oggi la sagoma dell eroe misura 46 px (' + (rEroe * 2).toFixed(1) + ')');
 
-  // --- 2) IL CORPO FISICO NON E' CRESCIUTO ---------------------------------------------------
-  // E' il punto che rende la modifica sicura: se cresceva anche l'urto, porte, corridoi e
-  // pertugi di TUTTE le mappe andavano ritarati, e il giocatore si sarebbe incastrato.
+  // --- 2) IL CORPO FISICO NON SEGUE LA MANOPOLA ----------------------------------------------
+  // E' il punto che rende la manopola girabile in qualunque momento: se la seguisse anche l'urto,
+  // ogni giro di manopola vorrebbe dire ritarare porte, corridoi e pertugi di TUTTE le mappe.
   const room = R(path.join('server', 'Room.js'));
   assert(/radius:\s*C\.PLAYER_RADIUS \* \(C\.COL_SCALE \|\| 1\)/.test(room),
     'il corpo che urta resta PLAYER_RADIUS x COL_SCALE');
   assert(!/HERO_VIS/.test(room), 'e il server non sa nemmeno che la scala di disegno esista');
   assert(Math.abs(C.PLAYER_RADIUS * C.COL_SCALE - 17.28) < 1e-6, 'il raggio di collisione e quello di sempre');
 
-  // --- 3) CRESCE L'EROE, NON IL VILLAGGIO ----------------------------------------------------
+  // --- 3) LA MANOPOLA MUOVE L'EROE, NON IL VILLAGGIO -----------------------------------------
   assert(/_rEroe\(\)\s*\{\s*return C\.PLAYER_RADIUS \* \(C\.HERO_VIS \|\| C\.VIS_SCALE \|\| 1\);/.test(src),
     'la misura dell eroe sta in un posto solo');
   const corpo = (nome, fine) => { const i = src.indexOf(nome); return src.slice(i, src.indexOf(fine, i)); };
@@ -9814,7 +9814,7 @@ function testV238() {
     'il fabbro e i paesani NO: sono gente del mondo e si misurano col mondo');
   assert((src.match(/this\._rEroe\(\)/g) || []).length === 2, 'e non e finita in nessun altro posto');
 
-  // --- 4) L'INTERFACCIA NON E' CRESCIUTA CON LUI ---------------------------------------------
+  // --- 4) E NEMMENO L'INTERFACCIA ------------------------------------------------------------
   // Tre barre della vita piu' larghe, in co-op, si sovrappongono: sono interfaccia, non corpo.
   assert(/const bw = C\.PLAYER_RADIUS \* \(C\.VIS_SCALE \|\| 1\) \* 2\.6;/.test(src),
     'la barra della vita resta della misura di sempre');
@@ -9837,8 +9837,13 @@ function testV238() {
   assert(/r \* \(0\.03 \+ av \* 0\.38\), sgn \* r \* 0\.24/.test(B), 'gli stivali scavalcano il centro');
   assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'e sono in opposizione');
   // d) il busto resta indietro di poco: erano 14 gradi tenuti per tutto il giro, adesso sono 5
-  assert(/ctx\.rotate\(gamba \* 0\.13 - S\.da \* 0\.18\)/.test(B), 'il busto ritarda di un inezia');
+  assert(/ctx\.rotate\(gamba \* 0\.07 - S\.da \* 0\.18\)/.test(B), 'il busto ritarda di un inezia');
   assert(!/S\.da \* 0\.5\)/.test(B), 'non piu di 14 gradi tenuti per tutto il giro');
+  // v2.41 — l'ondeggiamento e' dimezzato, ma NON spento: spalle e bacino devono ancora girare al
+  // contrario, se no e' una statua che trasla. Sette gradi erano un barcollamento, quattro no.
+  assert(/gamba \* 0\.07/.test(B) && !/gamba \* 0\.13/.test(B), 'il rollio delle spalle e dimezzato (0,07)');
+  assert(/su \* 0\.022/.test(B) && !/su \* 0\.035/.test(B), 'e il saliscendi abbassato (0,022)');
+  assert(/resp \* 0\.014/.test(B), 'ma il respiro da fermo non e stato toccato: li e l unica cosa che si muove');
   // e) il disegno resta chiuso: ogni save ha il suo restore
   assert(B.split('ctx.save()').length === B.split('ctx.restore()').length,
     'save e restore sono in pari (' + (B.split('ctx.save()').length - 1) + ')');
@@ -9852,7 +9857,7 @@ function testV238() {
     for (const k of ['barbaro', 'paladino', 'maestro', 'assassino', 'arciere', 'mago', 'warlock'])
       assert(new RegExp('\\n\\s*' + k + ':\\s*\\{').test(tab), k + ' e ancora nella tabella degli stili'); }
   assert(C.NOVITA.v === C.VERSION, 'e il riquadro delle novita parla della versione giusta');
-  ok('eroe a 56 px con urto invariato, giro su se stesso tarato e dettagli della v2.37 intatti');
+  ok('taglia in una manopola sola, urto invariato, giro tarato e ondeggiamento dimezzato');
 }
 
 // =============================================================================================
@@ -9974,7 +9979,7 @@ function testV239() {
   assert(/\(S\.d \/ \(r \* 2\.67\)\)/.test(B), 'la falcata e proporzionale alla taglia dell eroe');
   assert(/Math\.abs\(Math\.cos\(f\)\)/.test(B), 'il corpo sale due volte a falcata');
   assert(/piede\(1, gamba\); piede\(-1, -gamba\)/.test(B), 'i due stivali sono in opposizione');
-  assert(/ctx\.rotate\(gamba \* 0\.13 - S\.da \* 0\.18\)/.test(B), 'spalle contro bacino, e il busto ritarda di un inezia');
+  assert(/ctx\.rotate\(gamba \* 0\.07 - S\.da \* 0\.18\)/.test(B), 'spalle contro bacino, e il busto ritarda di un inezia');
   // il colpo: si ri-temporizza il NUMERO, il disegno non sa niente di tre tempi
   assert(/re = 0\.06 \* u/.test(B) && /re = 0\.06 \+ 0\.64/.test(B) && /re = 0\.70 \+ 0\.30/.test(B),
     'il colpo ha tre tempi, ottenuti ri-temporizzando il numero passato al corpo');
